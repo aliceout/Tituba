@@ -70,7 +70,7 @@ export default function MediaEditViewClient({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Erreurs par champ — affichées sous l'input concerné (cf. pattern
-  // PostEditView fieldErrors). Plus lisible qu'un message générique
+  // PublicationEditView fieldErrors). Plus lisible qu'un message générique
   // dans la bannière error en haut du form.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);

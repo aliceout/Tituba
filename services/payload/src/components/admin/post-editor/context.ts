@@ -2,7 +2,7 @@
 
 // Context propagé aux DecoratorNodes Lexical (BiblioInlineRenderer)
 // pour qu'ils puissent peupler leurs pickers depuis la liste de
-// références chargée par PostEditView au mount. Externalisé ici plutôt
+// références chargée par PublicationEditView au mount. Externalisé ici plutôt
 // que dans Editor.tsx pour éviter un cycle d'import avec nodes.tsx
 // (Editor importe les nodes ; les nodes importent le hook).
 
@@ -30,7 +30,7 @@ export function useBiblioOptions(): BibEntry[] {
 }
 
 // ─── Médias ───────────────────────────────────────────────────────
-// Liste des médias chargée par PostEditView au mount, propagée aux
+// Liste des médias chargée par PublicationEditView au mount, propagée aux
 // FigureRenderer pour qu'ils puissent peupler leur picker (search +
 // preview thumbnail) au lieu de demander à l'utilisateur·rice de
 // coller un id Payload — UX inacceptable.

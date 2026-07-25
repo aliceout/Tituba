@@ -1,6 +1,6 @@
 'use client';
 
-// PostEditView (client) — vue Édition custom d'un Post qui matche le
+// PublicationEditView (client) — vue Édition custom d'un Post qui matche le
 // handoff admin (cf Design/design_handoff_admin/tituba-admin.html →
 // ScreenDoc). Layout :
 //
@@ -48,9 +48,13 @@ import PostBodyEditor, {
   type LexicalState,
 } from './post-editor/Editor';
 
-const API_POSTS = '/cms/api/posts';
+import {
+  emptyExtraValues,
+  getPublicationSpec,
+  pickExtraValues,
+} from './publications/registry';
 
-type PostType = 'analyse' | 'note' | 'fiche';
+type PostType = string;
 
 type Theme = { id: number | string; slug: string; name: string };
 type Tag = { id: number | string; slug: string; name: string };
@@ -106,13 +110,14 @@ type Post = {
   draft?: boolean;
 };
 
-type Status = 'draft' | 'scheduled' | 'published';
+// Les champs propres au format (audio d'un podcast, lien d'un outil…)
+// sont décrits par `extraFields` dans le registre et ne sont donc pas
+// listés dans `Post`. On y accède via ce cast plutôt qu'avec une index
+// signature sur `Post` : une index signature élargirait tous les champs
+// de base à `unknown` et ferait perdre le typage de tout le composant.
+type WithExtras = Record<string, unknown>;
 
-const TYPE_LABELS: Record<PostType, string> = {
-  analyse: 'Article',
-  note: 'Note de lecture',
-  fiche: 'Fiche',
-};
+type Status = 'draft' | 'scheduled' | 'published';
 
 const STATUS_LABEL: Record<Status, string> = {
   draft: 'Brouillon',
@@ -149,30 +154,46 @@ function relativeSavedAt(at: number | null): string {
   return `il y a ${h} h`;
 }
 
-const EMPTY_DRAFT: Omit<Post, 'id'> & { id?: number | string | null } = {
-  numero: null,
-  title: '',
-  slug: '',
-  type: 'analyse',
-  themes: [],
-  tags: [],
-  authors: [],
-  publishedAt: new Date().toISOString().slice(0, 10),
-  lede: '',
-  body: null,
-  bibliography: [],
-  draft: true,
-};
-
-export default function PostEditViewClient({
+export default function PublicationEditViewClient({
   docId,
+  collectionSlug,
 }: {
   docId: string | null;
+  collectionSlug: string | null;
 }): React.ReactElement {
+  const spec = useMemo(() => getPublicationSpec(collectionSlug), [collectionSlug]);
+  const API_POSTS = spec.apiBase;
+  const TYPE_LABELS = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const o of spec.subtypes?.options ?? []) out[o.value] = o.label;
+    return out;
+  }, [spec]);
+
+  // Brouillon vierge dérivé du registre : les champs de format y sont
+  // initialisés depuis `extraFields`, jamais listés à la main.
+  const EMPTY_DRAFT = useMemo<Omit<Post, 'id'> & { id?: number | string | null }>(
+    () => ({
+      numero: null,
+      title: '',
+      slug: '',
+      type: spec.subtypes?.defaultValue ?? '',
+      themes: [],
+      tags: [],
+      authors: [],
+      publishedAt: new Date().toISOString().slice(0, 10),
+      lede: '',
+      body: null,
+      bibliography: [],
+      draft: true,
+      ...emptyExtraValues(spec),
+    }),
+    [spec],
+  );
+
   const [post, setPost] = useState<Post | (Omit<Post, 'id'> & { id?: number | string | null })>(
     EMPTY_DRAFT,
   );
-  const [initialJson, setInitialJson] = useState<string>(JSON.stringify(EMPTY_DRAFT));
+  const [initialJson, setInitialJson] = useState<string>(() => JSON.stringify(EMPTY_DRAFT));
   const [themes, setThemes] = useState<Theme[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [allUsers, setAllUsers] = useState<CarnetUser[]>([]);
@@ -301,7 +322,11 @@ export default function PostEditViewClient({
     Promise.all([themesP, tagsP, biblioP, mediaP, usersP, meP, postP]).finally(() =>
       setLoading(false),
     );
-  }, [docId]);
+  // API_POSTS et EMPTY_DRAFT dérivent de `spec`, lui-même mémoïsé sur
+  // collectionSlug : ils sont stables tant que la collection ne change
+  // pas. On les déclare quand même, pour que le rechargement suive si
+  // la vue était un jour montée sur une autre collection sans remount.
+  }, [docId, API_POSTS, EMPTY_DRAFT]);
 
   const dirty = JSON.stringify(post) !== initialJson;
   const status: Status = inferStatus(post);
@@ -497,15 +522,26 @@ export default function PostEditViewClient({
   }
 
   async function save(opts: { publish?: boolean } = {}) {
-    // Validation client AVANT toute requête. On vérifie tous les champs
-    // déclarés `required: true` côté Posts.ts (title, slug, lede, body)
-    // pour afficher les erreurs en rouge inline plutôt que recevoir un
-    // 400 générique de Payload après l'envoi.
+    // Validation client AVANT toute requête, pour afficher les erreurs
+    // en rouge inline plutôt que recevoir un 400 générique de Payload
+    // après l'envoi. La liste des champs obligatoires vient du registre
+    // (`spec.required`) : chaque format a la sienne — un podcast peut
+    // n'avoir aucun corps rédigé, un outil aucun chapô.
     const errs: Record<string, string> = {};
-    if (!post.title.trim()) errs.title = 'Champ obligatoire.';
-    if (!post.slug.trim()) errs.slug = 'Champ obligatoire.';
-    if (!post.lede.trim()) errs.lede = 'Champ obligatoire.';
-    if (isLexicalBodyEmpty(post.body ?? null)) errs.body = 'Le corps de l’article est vide.';
+    const req = new Set(spec.required);
+    if (req.has('title') && !post.title.trim()) errs.title = 'Champ obligatoire.';
+    if (req.has('slug') && !post.slug.trim()) errs.slug = 'Champ obligatoire.';
+    if (req.has('lede') && !post.lede.trim()) errs.lede = 'Champ obligatoire.';
+    if (req.has('body') && isLexicalBodyEmpty(post.body ?? null)) {
+      errs.body = 'Le corps de l’article est vide.';
+    }
+    for (const f of spec.extraFields) {
+      if (!req.has(f.name)) continue;
+      const v = (post as WithExtras)[f.name];
+      if (v == null || (typeof v === 'string' && !v.trim())) {
+        errs[f.name] = 'Champ obligatoire.';
+      }
+    }
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
       // Focus / scroll au premier champ en erreur pour signal visuel.
@@ -529,7 +565,10 @@ export default function PostEditViewClient({
       const body: Record<string, unknown> = {
         title: post.title,
         slug: post.slug,
-        type: post.type,
+        // Champs de format sérialisés depuis le registre. C'est ce qui
+        // évite qu'une URL audio saisie dans l'éditeur soit
+        // silencieusement absente de la requête, donc jamais persistée.
+        ...pickExtraValues(spec, post as Record<string, unknown>),
         themes: (post.themes ?? []).map((t) => (typeof t === 'object' ? t.id : t)),
         tags: (post.tags ?? []).map((t) => (typeof t === 'object' ? t.id : t)),
         // authors : on remappe l'objet user populé en simple ID pour le PATCH
@@ -554,6 +593,12 @@ export default function PostEditViewClient({
       if (typeof post.numero === 'number' && post.numero > 0) {
         body.numero = post.numero;
       }
+      // `type` (sous-genre) n'existe que sur les collections qui en
+      // déclarent. Ailleurs, le format est porté par la collection
+      // elle-même et envoyer le champ ferait échouer la validation.
+      if (spec.subtypes) {
+        body.type = post.type;
+      }
       const url =
         post.id != null && post.id !== ''
           ? `${API_POSTS}/${encodeURIComponent(String(post.id))}`
@@ -571,6 +616,9 @@ export default function PostEditViewClient({
       }
       const json = (await res.json()) as { doc?: Post } | Post;
       const fresh: Post = (json as { doc?: Post }).doc ?? (json as Post);
+      // Le spread de `fresh` fait passer les champs de format sans les
+      // nommer — ne pas le remplacer par une liste explicite, ce serait
+      // rouvrir la porte au champ perdu au save.
       const norm: Post = {
         ...fresh,
         themes: Array.isArray(fresh.themes) ? fresh.themes : [],
@@ -584,7 +632,7 @@ export default function PostEditViewClient({
       setSavedAt(Date.now());
       // Si on vient de créer, redirige vers l'URL d'édition stable
       if (!docId && fresh.id != null) {
-        const path = `/cms/admin/collections/posts/${fresh.id}`;
+        const path = `${spec.adminBase}/${fresh.id}`;
         if (typeof window !== 'undefined') window.history.replaceState(null, '', path);
       }
     } catch (err) {
@@ -608,7 +656,7 @@ export default function PostEditViewClient({
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       if (typeof window !== 'undefined') {
-        window.location.href = '/cms/admin/collections/posts';
+        window.location.href = spec.adminBase;
       }
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -729,7 +777,7 @@ export default function PostEditViewClient({
       fullWidth
       crumbs={[
         { href: '/cms/admin', label: 'Carnet' },
-        { href: '/cms/admin/collections/posts', label: 'Billets' },
+        { href: spec.adminBase, label: spec.labelPlural },
         { label: <>n°&nbsp;{pad3(post.numero ?? null)}</> },
       ]}
       topbarStatus={
@@ -754,7 +802,7 @@ export default function PostEditViewClient({
           {post.slug && post.id != null && (
             <a
               className="tituba-btn tituba-btn--ghost"
-              href={`/billets/${post.slug}/`}
+              href={`${spec.routePrefix}/${post.slug}/`}
               target="_blank"
               rel="noreferrer"
             >
@@ -1033,25 +1081,72 @@ export default function PostEditViewClient({
             <h3>Métadonnées</h3>
             <div className="row">
               <div className="field">
-                <label>Numéro de billet</label>
+                <label>Numéro</label>
                 <div className="auto" title="Attribué automatiquement à la création">
                   {post.numero != null ? `n° ${pad3(post.numero)}` : 'auto'}
                 </div>
               </div>
-              <div className="field">
-                <label>Type</label>
-                <select
-                  value={post.type}
-                  onChange={(e) => patch('type', e.target.value as PostType)}
-                >
-                  {(Object.keys(TYPE_LABELS) as PostType[]).map((k) => (
-                    <option key={k} value={k}>
-                      {TYPE_LABELS[k]}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Sous-genre : affiché seulement si la collection en
+                  déclare. Pour les formats de Tituba, le format est la
+                  collection, il n'y a rien à choisir ici. */}
+              {spec.subtypes && (
+                <div className="field">
+                  <label>Type</label>
+                  <select
+                    value={post.type}
+                    onChange={(e) => patch('type', e.target.value as PostType)}
+                  >
+                    {spec.subtypes.options.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {TYPE_LABELS[o.value] ?? o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
+
+            {/* Champs propres au format, rendus depuis le registre.
+                Leur sérialisation est prise en charge par
+                pickExtraValues() dans save() — les deux dérivent de la
+                même déclaration, donc ils ne peuvent pas diverger. */}
+            {spec.extraFields.map((f) => (
+              <div
+                key={f.name}
+                className={`field${fieldErrors[f.name] ? ' field--invalid' : ''}`}
+              >
+                <label>{f.label}</label>
+                {f.type === 'select' ? (
+                  <select
+                    value={String((post as WithExtras)[f.name] ?? '')}
+                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+                  >
+                    {f.options.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : f.type === 'textarea' ? (
+                  <textarea
+                    value={String((post as WithExtras)[f.name] ?? '')}
+                    placeholder={f.placeholder}
+                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+                  />
+                ) : (
+                  <input
+                    type={f.type === 'number' ? 'number' : f.type === 'url' ? 'url' : 'text'}
+                    value={String((post as WithExtras)[f.name] ?? '')}
+                    placeholder={f.placeholder}
+                    min={f.type === 'number' ? f.min : undefined}
+                    max={f.type === 'number' ? f.max : undefined}
+                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+                  />
+                )}
+                {f.help && <div className="hint">{f.help}</div>}
+                {fieldErrors[f.name] && <div className="err">{fieldErrors[f.name]}</div>}
+              </div>
+            ))}
             <div className={`field${fieldErrors.slug ? ' field--invalid' : ''}`}>
               <label>Slug</label>
               <input

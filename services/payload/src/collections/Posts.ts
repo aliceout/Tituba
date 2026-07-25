@@ -50,14 +50,14 @@ export const Posts: CollectionConfig = buildPublicationCollection({
         // 300px + .fn-block.
         edit: {
           root: {
-            Component: '@/components/admin/PostEditView#default',
+            Component: '@/components/admin/PublicationEditView#default',
           },
         },
         // List view custom — remplace la liste native par le tableau
         // éditorial (toolbar 4 filtres, chips de statut, pagination
         // compacte).
         list: {
-          Component: '@/components/admin/PostListView#default',
+          Component: '@/components/admin/PublicationListView#default',
         },
       },
     },

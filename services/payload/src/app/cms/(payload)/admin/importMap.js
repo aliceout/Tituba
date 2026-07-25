@@ -22,8 +22,8 @@ import { BlockquoteFeatureClient as BlockquoteFeatureClient_e70f5e05f09f93e00b99
 import { UploadFeatureClient as UploadFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { HorizontalRuleFeatureClient as HorizontalRuleFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { InlineToolbarFeatureClient as InlineToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
-import { default as default_7c96febce50ca24b7bbaad53a9c8dcdb } from '@/components/admin/PostEditView'
-import { default as default_9a392549adc5e7cea5c12dbcd0e775a6 } from '@/components/admin/PostListView'
+import { default as default_92f00ed44889f59f1052230d1b9fc7c5 } from '@/components/admin/PublicationEditView'
+import { default as default_b84cbbf826b93aab328a87939022d537 } from '@/components/admin/PublicationListView'
 import { default as default_6d604e02fd948e3dc45b0ec9060c7c9c } from '@/components/admin/ThemeEditView'
 import { default as default_145dcd377f3e16019ed4fdecfff71610 } from '@/components/admin/ThemeListView'
 import { default as default_647f33596a337ffc33a6023b76b64f36 } from '@/components/admin/TagEditView'
@@ -79,8 +79,8 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#UploadFeatureClient": UploadFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#HorizontalRuleFeatureClient": HorizontalRuleFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#InlineToolbarFeatureClient": InlineToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
-  "@/components/admin/PostEditView#default": default_7c96febce50ca24b7bbaad53a9c8dcdb,
-  "@/components/admin/PostListView#default": default_9a392549adc5e7cea5c12dbcd0e775a6,
+  "@/components/admin/PublicationEditView#default": default_92f00ed44889f59f1052230d1b9fc7c5,
+  "@/components/admin/PublicationListView#default": default_b84cbbf826b93aab328a87939022d537,
   "@/components/admin/ThemeEditView#default": default_6d604e02fd948e3dc45b0ec9060c7c9c,
   "@/components/admin/ThemeListView#default": default_145dcd377f3e16019ed4fdecfff71610,
   "@/components/admin/TagEditView#default": default_647f33596a337ffc33a6023b76b64f36,

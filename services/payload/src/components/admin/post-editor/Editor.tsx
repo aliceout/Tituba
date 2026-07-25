@@ -650,7 +650,7 @@ function KeyboardPlugin() {
 }
 
 // ─── Plugin pour exposer l'éditeur au parent ─────────────────────
-// PostEditView a besoin d'une référence à l'éditeur Lexical pour
+// PublicationEditView a besoin d'une référence à l'éditeur Lexical pour
 // pouvoir supprimer un node par sa key (× sur les rangées du
 // .fn-block / .bib-block). On l'expose via une callback prop dans
 // un Plugin qui vit à l'intérieur de <LexicalComposer> (donc a
@@ -744,7 +744,7 @@ export default function PostBodyEditor({
     [onChange],
   );
 
-  // Note : pas de mécanisme de re-load externe. PostEditView ne monte
+  // Note : pas de mécanisme de re-load externe. PublicationEditView ne monte
   // ce composant qu'après le fetch initial (loading=false), donc value
   // est déjà bon au mount. Les changements de value viennent de notre
   // propre onChange — on ne veut pas re-injecter (sinon on perd le

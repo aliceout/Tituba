@@ -1,6 +1,6 @@
 'use client';
 
-// PostListView (client) — vue Liste custom Posts qui matche le handoff
+// PublicationListView (client) — vue Liste custom Posts qui matche le handoff
 // admin (cf Design/design_handoff_admin/tituba-admin.html → ScreenList).
 //
 // Layout :
@@ -18,6 +18,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 import CarnetPage from './CarnetPage';
+import { getPublicationSpec } from './publications/registry';
 
 const PER_PAGE = 25;
 
@@ -48,7 +49,7 @@ type FetchResult = {
   totalPages: number;
 };
 
-type FilterType = 'all' | 'analyse' | 'note' | 'fiche';
+type FilterType = string;
 // Filtre Statut : 4 états de publication + 1 état orthogonal (zones
 // brouillon dans le corps). Sélectionner « withDraftZones » remplace
 // le filtre par état de publication — c'est mutuellement exclusif
@@ -56,11 +57,7 @@ type FilterType = 'all' | 'analyse' | 'note' | 'fiche';
 type FilterStatut = 'all' | 'draft' | 'published' | 'scheduled' | 'withDraftZones';
 type FilterScope = 'all' | 'mine';
 
-const TYPE_LABELS: Record<Post['type'], string> = {
-  analyse: 'Article',
-  note: 'Note de lecture',
-  fiche: 'Fiche',
-};
+
 
 function isoDate(d: string): string {
   if (!d) return '—';
@@ -98,7 +95,17 @@ const STATUS_LABEL: Record<'draft' | 'scheduled' | 'published', string> = {
   published: 'Publié',
 };
 
-export default function PostListViewClient(): React.ReactElement {
+export default function PublicationListViewClient({
+  collectionSlug,
+}: {
+  collectionSlug: string | null;
+}): React.ReactElement {
+  const spec = getPublicationSpec(collectionSlug);
+  // Libellés des sous-genres. Vide pour les collections sans subtypes,
+  // auquel cas le filtre Type disparaît de la barre d outils.
+  const TYPE_LABELS: Record<string, string> = Object.fromEntries(
+    (spec.subtypes?.options ?? []).map((o) => [o.value, o.label]),
+  );
   const [type, setType] = useState<FilterType>('all');
   const [pole, setPole] = useState<string>('all');
   const [statut, setStatut] = useState<FilterStatut>('all');
@@ -192,7 +199,7 @@ export default function PostListViewClient(): React.ReactElement {
       params.append('where[title][like]', search.trim());
     }
 
-    fetch(`/cms/api/posts?${params.toString()}`, { credentials: 'include' })
+    fetch(`${spec.apiBase}?${params.toString()}`, { credentials: 'include' })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -244,7 +251,7 @@ export default function PostListViewClient(): React.ReactElement {
   return (
     <CarnetPage
       variant="listview"
-      modifier="posts"
+      modifier="publication"
       crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Billets' }]}
       topbarActions={
         <>
@@ -256,7 +263,7 @@ export default function PostListViewClient(): React.ReactElement {
             Exporter
           </button>
           <Link
-            href="/cms/admin/collections/posts/create"
+            href={`${spec.adminBase}/create`}
             className="tituba-btn tituba-btn--accent"
           >
             Nouveau billet
@@ -277,15 +284,22 @@ export default function PostListViewClient(): React.ReactElement {
           />
         </div>
 
-        <label className="tituba-listview__filter">
-          <span className="lbl">Type :</span>
-          <select value={type} onChange={(e) => setType(e.target.value as FilterType)}>
-            <option value="all">tous</option>
-            <option value="analyse">Analyse</option>
-            <option value="note">Note de lecture</option>
-            <option value="fiche">Fiche</option>
-          </select>
-        </label>
+        {/* Filtre Type : seulement pour les collections a sous-genres.
+            Les formats de Tituba n en ont pas — le format est la
+            collection, filtrer dessus n aurait aucun sens. */}
+        {spec.subtypes && (
+          <label className="tituba-listview__filter">
+            <span className="lbl">Type :</span>
+            <select value={type} onChange={(e) => setType(e.target.value as FilterType)}>
+              <option value="all">tous</option>
+              {spec.subtypes.options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label className="tituba-listview__filter">
           <span className="lbl">Thème :</span>
@@ -355,7 +369,7 @@ export default function PostListViewClient(): React.ReactElement {
             return (
               <Link
                 key={p.id}
-                href={`/cms/admin/collections/posts/${p.id}`}
+                href={`${spec.adminBase}/${p.id}`}
                 className={`tituba-listview__row${
                   scope === 'all' ? ' tituba-listview__row--with-authors' : ''
                 }`}

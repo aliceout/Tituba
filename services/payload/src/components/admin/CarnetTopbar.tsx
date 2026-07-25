@@ -32,7 +32,7 @@ export default function CarnetTopbar({
   crumbs: Crumb[];
   status?: React.ReactNode;
   children?: React.ReactNode;
-  // PostEditView a un state initial qui diverge entre SSR et client
+  // PublicationEditView a un state initial qui diverge entre SSR et client
   // après mount → besoin de supprimer le warning React 19 sur
   // l'attribut disabled. Optionnel, défaut false.
   suppressHydrationWarningOnActions?: boolean;
