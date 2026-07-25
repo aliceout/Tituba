@@ -22,13 +22,36 @@ type Props = {
   user?: { displayName?: string | null; email?: string };
 };
 
+/**
+ * Les cinq formats de publication, avec ce qu'il faut pour compter,
+ * relier et nommer. L'ordre est celui du menu.
+ */
+const FORMATS = [
+  { slug: 'articles', singular: 'article de recherche', plural: 'articles de recherche' },
+  { slug: 'analyses', singular: "billet d'analyse", plural: "billets d'analyse" },
+  { slug: 'actus', singular: "billet d'actu", plural: "billets d'actu" },
+  { slug: 'podcasts', singular: 'podcast', plural: 'podcasts' },
+  { slug: 'outils', singular: 'outil', plural: 'outils' },
+] as const;
+
+type FormatSlug = (typeof FORMATS)[number]['slug'];
+
+type PubRow = {
+  id: number | string;
+  numero?: number;
+  title: string;
+  updatedAt?: string;
+  publishedAt?: string;
+  collection: FormatSlug;
+};
+
 async function fetchCount(
   payload: Awaited<ReturnType<typeof getPayload>>,
-  collection: 'posts' | 'themes' | 'bibliography',
+  collection: string,
   where?: Record<string, unknown>,
 ): Promise<number> {
   const res = await payload.find({
-    collection,
+    collection: collection as never,
     where: where as never,
     limit: 1,
     depth: 0,
@@ -37,53 +60,70 @@ async function fetchCount(
   return res.totalDocs;
 }
 
+/**
+ * Interroge les cinq collections et fusionne le résultat.
+ *
+ * On ne peut pas s'en remettre à l'endpoint SQL unifié ici : ce
+ * composant est rendu côté serveur au sein de Payload, une requête HTTP
+ * vers sa propre API serait un aller-retour inutile. Cinq `find`
+ * limités à 3 documents restent négligeables.
+ */
+async function findAcrossFormats(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  where: Record<string, unknown>,
+  sort: string,
+  limit: number,
+): Promise<{ docs: PubRow[]; total: number }> {
+  const results = await Promise.all(
+    FORMATS.map(async (f) => {
+      const res = await payload.find({
+        collection: f.slug as never,
+        where: where as never,
+        sort,
+        limit,
+        depth: 0,
+        overrideAccess: true,
+      });
+      return {
+        total: res.totalDocs,
+        docs: (res.docs as PubRow[]).map((d) => ({ ...d, collection: f.slug })),
+      };
+    }),
+  );
+  const total = results.reduce((acc, r) => acc + r.total, 0);
+  const key = sort.replace(/^-/, '') as 'updatedAt' | 'publishedAt';
+  const desc = sort.startsWith('-');
+  const docs = results
+    .flatMap((r) => r.docs)
+    .sort((a, b) => {
+      const av = new Date(a[key] ?? 0).getTime();
+      const bv = new Date(b[key] ?? 0).getTime();
+      return desc ? bv - av : av - bv;
+    })
+    .slice(0, limit);
+  return { docs, total };
+}
+
 export default async function Dashboard({ user }: Props): Promise<React.ReactElement> {
   const payload = await getPayload({ config });
 
-  // Stats publiées (draft: false) + total des thèmes
-  const [analyses, notes, fiches, themes] = await Promise.all([
-    fetchCount(payload, 'posts', { type: { equals: 'analyse' }, draft: { equals: false } }),
-    fetchCount(payload, 'posts', { type: { equals: 'note' }, draft: { equals: false } }),
-    fetchCount(payload, 'posts', { type: { equals: 'fiche' }, draft: { equals: false } }),
+  // Compteurs par format (publiés seulement) + total des thématiques.
+  const [counts, themes] = await Promise.all([
+    Promise.all(FORMATS.map((f) => fetchCount(payload, f.slug, { draft: { equals: false } }))),
     fetchCount(payload, 'themes'),
   ]);
 
-  // Brouillons en cours (3 derniers édités)
-  const draftsRes = await payload.find({
-    collection: 'posts',
-    where: { draft: { equals: true } } as never,
-    sort: '-updatedAt',
-    limit: 3,
-    depth: 0,
-    overrideAccess: true,
-  });
-  const drafts = draftsRes.docs as Array<{
-    id: number | string;
-    numero?: number;
-    title: string;
-    type: string;
-    updatedAt: string;
-  }>;
+  const draftsRes = await findAcrossFormats(payload, { draft: { equals: true } }, '-updatedAt', 3);
+  const drafts = draftsRes.docs;
 
-  // Planifié à publier (publishedAt > now et draft=false)
   const now = new Date().toISOString();
-  const scheduledRes = await payload.find({
-    collection: 'posts',
-    where: {
-      draft: { equals: false },
-      publishedAt: { greater_than: now },
-    } as never,
-    sort: 'publishedAt',
-    limit: 3,
-    depth: 0,
-    overrideAccess: true,
-  });
-  const scheduled = scheduledRes.docs as Array<{
-    id: number | string;
-    numero?: number;
-    title: string;
-    publishedAt: string;
-  }>;
+  const scheduledRes = await findAcrossFormats(
+    payload,
+    { draft: { equals: false }, publishedAt: { greater_than: now } },
+    'publishedAt',
+    3,
+  );
+  const scheduled = scheduledRes.docs;
 
   // Fallback : displayName → premier mot du displayName, sinon partie
   // locale de l'email, sinon vide (le rendu masque alors le prénom et
@@ -91,8 +131,8 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
   const userName =
     (user?.displayName ?? '').split(' ')[0] || user?.email?.split('@')[0] || '';
 
-  const totalDrafts = draftsRes.totalDocs;
-  const totalScheduled = scheduledRes.totalDocs;
+  const totalDrafts = draftsRes.total;
+  const totalScheduled = scheduledRes.total;
 
   return (
     <div className="tituba-dashboard">
@@ -119,32 +159,26 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
           )}
           {totalScheduled > 0 && (
             <>
-              {totalScheduled} billet{totalScheduled > 1 ? 's' : ''} planifié
+              {totalScheduled} publication{totalScheduled > 1 ? 's' : ''} planifiée
               {totalScheduled > 1 ? 's' : ''}
             </>
           )}
           {totalDrafts === 0 && totalScheduled === 0 && (
-            <>Aucun brouillon en cours, aucun billet planifié.</>
+            <>Aucun brouillon en cours, aucune publication planifiée.</>
           )}
         </p>
       </header>
 
       <section className="tituba-dashboard__stats" aria-label="Statistiques">
-        <div className="tituba-dashboard__stat">
-          <span className="n">{analyses}</span>
-          <span className="lbl">analyse{analyses > 1 ? 's' : ''} publiée{analyses > 1 ? 's' : ''}</span>
-        </div>
-        <div className="tituba-dashboard__stat">
-          <span className="n">{notes}</span>
-          <span className="lbl">note{notes > 1 ? 's' : ''} de lecture</span>
-        </div>
-        <div className="tituba-dashboard__stat">
-          <span className="n">{fiches}</span>
-          <span className="lbl">fiche{fiches > 1 ? 's' : ''} thématique{fiches > 1 ? 's' : ''}</span>
-        </div>
+        {FORMATS.map((f, i) => (
+          <div className="tituba-dashboard__stat" key={f.slug}>
+            <span className="n">{counts[i]}</span>
+            <span className="lbl">{counts[i] > 1 ? f.plural : f.singular}</span>
+          </div>
+        ))}
         <div className="tituba-dashboard__stat">
           <span className="n">{themes}</span>
-          <span className="lbl">thème{themes > 1 ? 's' : ''}</span>
+          <span className="lbl">thématique{themes > 1 ? 's' : ''}</span>
         </div>
       </section>
 
@@ -157,7 +191,7 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
             <ul className="tituba-dashboard__list">
               {drafts.map((d) => (
                 <li key={d.id}>
-                  <a href={`/cms/admin/collections/posts/${d.id}`}>
+                  <a href={`/cms/admin/collections/${d.collection}/${d.id}`}>
                     {d.numero !== undefined && (
                       <span className="tituba-mono">n° {String(d.numero).padStart(3, '0')}</span>
                     )}
@@ -172,12 +206,12 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
         <section className="tituba-dashboard__col">
           <h2 className="tituba-dashboard__col-h">Planifié à publier</h2>
           {scheduled.length === 0 ? (
-            <p className="tituba-dashboard__empty">Aucun billet planifié.</p>
+            <p className="tituba-dashboard__empty">Aucune publication planifiée.</p>
           ) : (
             <ul className="tituba-dashboard__list">
               {scheduled.map((s) => (
                 <li key={s.id}>
-                  <a href={`/cms/admin/collections/posts/${s.id}`}>
+                  <a href={`/cms/admin/collections/${s.collection}/${s.id}`}>
                     {s.numero !== undefined && (
                       <span className="tituba-mono">n° {String(s.numero).padStart(3, '0')}</span>
                     )}
@@ -193,18 +227,16 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
       <section className="tituba-dashboard__shortcuts" aria-label="Raccourcis">
         <h2 className="tituba-dashboard__col-h">Raccourcis</h2>
         <div className="tituba-dashboard__shortcuts-grid">
-          <a className="tituba-dashboard__shortcut" href="/cms/admin/collections/posts/create">
-            <span className="lbl tituba-mono">⌘N</span>
-            <span className="t">Nouveau billet</span>
-          </a>
-          <a className="tituba-dashboard__shortcut" href="/cms/admin/collections/posts/create">
-            <span className="lbl tituba-mono">#note</span>
-            <span className="t">Nouvelle note de lecture</span>
-          </a>
-          <a className="tituba-dashboard__shortcut" href="/cms/admin/collections/posts/create">
-            <span className="lbl tituba-mono">#fiche</span>
-            <span className="t">Nouvelle fiche thématique</span>
-          </a>
+          {FORMATS.map((f) => (
+            <a
+              className="tituba-dashboard__shortcut"
+              href={`/cms/admin/collections/${f.slug}/create`}
+              key={f.slug}
+            >
+              <span className="lbl tituba-mono">#{f.slug}</span>
+              <span className="t">Nouveau : {f.singular}</span>
+            </a>
+          ))}
         </div>
       </section>
     </div>

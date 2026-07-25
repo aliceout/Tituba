@@ -54,13 +54,31 @@ export type BuildPublicationArgs = {
   subtypes?: { options: { label: string; value: string }[]; defaultValue: string };
   /** Champs propres au format (audio d'un podcast, lien d'un outil…). */
   extraFields?: Field[];
+  /**
+   * Rend le chapô et/ou le corps facultatifs. Un outil peut n'être
+   * qu'un lien accompagné d'une description, un podcast qu'un fichier
+   * audio avec ses notes d'épisode : leur imposer un corps rédigé
+   * n'aurait pas de sens.
+   */
+  ledeRequired?: boolean;
+  bodyRequired?: boolean;
   /** Hooks `afterChange` — indexation recherche, notifications mail. */
   afterChange?: CollectionAfterChangeHook[];
   admin?: CollectionConfig['admin'];
 };
 
 export function buildPublicationCollection(args: BuildPublicationArgs): CollectionConfig {
-  const { slug, labels, idPrefix, subtypes, extraFields = [], afterChange = [], admin } = args;
+  const {
+    slug,
+    labels,
+    idPrefix,
+    subtypes,
+    extraFields = [],
+    afterChange = [],
+    admin,
+    ledeRequired = true,
+    bodyRequired = true,
+  } = args;
 
   return {
     slug,
@@ -85,8 +103,8 @@ export function buildPublicationCollection(args: BuildPublicationArgs): Collecti
       tagsField(),
       authorsField(),
       publishedAtField(),
-      ledeField(),
-      bodyField(),
+      ledeField(ledeRequired),
+      bodyField(bodyRequired),
       bibliographyField(),
       // Champs de format insérés après le socle éditorial et avant les
       // champs calculés, pour qu'ils tombent au bon endroit dans l'ordre

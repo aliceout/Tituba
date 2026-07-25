@@ -63,33 +63,114 @@ export type PublicationSpec = {
 const BASE_REQUIRED = ['title', 'slug', 'lede', 'body'];
 
 export const PUBLICATIONS: Record<string, PublicationSpec> = {
-  // Collection héritée du Carnet, en sursis le temps de la bascule vers
-  // les cinq formats de Tituba. Seule entrée à déclarer des `subtypes`.
-  posts: {
-    apiBase: '/cms/api/posts',
-    adminBase: '/cms/admin/collections/posts',
-    routePrefix: '/billets',
-    labelSingular: 'Billet',
-    labelPlural: 'Billets',
-    subtypes: {
-      defaultValue: 'analyse',
-      options: [
-        { label: 'Article', value: 'analyse' },
-        { label: 'Note de lecture', value: 'note' },
-        { label: 'Fiche', value: 'fiche' },
-      ],
-    },
+  articles: {
+    apiBase: '/cms/api/articles',
+    adminBase: '/cms/admin/collections/articles',
+    routePrefix: '/articles',
+    labelSingular: 'Article de recherche',
+    labelPlural: 'Articles de recherche',
+    extraFields: [
+      {
+        name: 'doi',
+        type: 'text',
+        label: 'DOI',
+        placeholder: '10.5281/zenodo.1234567',
+        help: "Si l'article est aussi déposé sur HAL, Zenodo ou dans une revue. Repris dans les exports de citation.",
+      },
+    ],
+    required: BASE_REQUIRED,
+    readingLabel: 'minutes',
+  },
+  analyses: {
+    apiBase: '/cms/api/analyses',
+    adminBase: '/cms/admin/collections/analyses',
+    routePrefix: '/analyses',
+    labelSingular: "Billet d'analyse",
+    labelPlural: "Billets d'analyse",
     extraFields: [],
     required: BASE_REQUIRED,
     readingLabel: 'minutes',
+  },
+  actus: {
+    apiBase: '/cms/api/actus',
+    adminBase: '/cms/admin/collections/actus',
+    routePrefix: '/actus',
+    labelSingular: "Billet d'actu",
+    labelPlural: "Billets d'actu",
+    extraFields: [],
+    required: BASE_REQUIRED,
+    readingLabel: 'minutes',
+  },
+  podcasts: {
+    apiBase: '/cms/api/podcasts',
+    adminBase: '/cms/admin/collections/podcasts',
+    routePrefix: '/podcasts',
+    labelSingular: 'Podcast',
+    labelPlural: 'Podcasts',
+    extraFields: [
+      {
+        name: 'audioUrl',
+        type: 'url',
+        label: 'Lien du fichier audio',
+        placeholder: 'https://…/episode-03.mp3',
+        help: "URL directe du fichier ou de la page d'écoute. C'est ce lien qui alimente le lecteur côté site.",
+      },
+      {
+        name: 'durationSeconds',
+        type: 'number',
+        min: 0,
+        label: 'Durée (secondes)',
+        help: 'Affichée en « 42 min ». Remplace le temps de lecture, sans objet pour de l’audio.',
+      },
+      {
+        name: 'guests',
+        type: 'text',
+        label: 'Invité·es',
+        help: 'Séparées par des virgules. Distinct des auteur·ices, qui signent la production.',
+      },
+    ],
+    // Un épisode n'a pas forcément de corps rédigé : l'audio est le
+    // contenu, le corps ne sert qu'aux notes d'épisode.
+    required: ['title', 'slug', 'lede', 'audioUrl'],
+    readingLabel: 'duration',
+  },
+  outils: {
+    apiBase: '/cms/api/outils',
+    adminBase: '/cms/admin/collections/outils',
+    routePrefix: '/outils',
+    labelSingular: 'Outil',
+    labelPlural: 'Outils',
+    extraFields: [
+      {
+        name: 'resourceUrl',
+        type: 'url',
+        label: 'Lien de la ressource',
+        placeholder: 'https://…/guide.pdf',
+        help: 'Fichier à télécharger ou page qui l’héberge.',
+      },
+      {
+        name: 'audience',
+        type: 'select',
+        label: 'Public visé',
+        options: [
+          { label: 'Tous publics', value: 'tous' },
+          { label: 'Militant·es et collectifs', value: 'militantes' },
+          { label: 'Professionnel·les', value: 'pros' },
+          { label: 'Structures et institutions', value: 'structures' },
+        ],
+      },
+    ],
+    // Une ressource peut se suffire de son lien et de son chapô.
+    required: ['title', 'slug', 'lede', 'resourceUrl'],
+    readingLabel: 'none',
   },
 };
 
 /** Repli neutre — évite un crash si un slug inconnu atteint la vue. */
 const FALLBACK: PublicationSpec = {
-  apiBase: '/cms/api/posts',
-  adminBase: '/cms/admin/collections/posts',
-  routePrefix: '/billets',
+  apiBase: '/cms/api/articles',
+  adminBase: '/cms/admin/collections/articles',
+  routePrefix: '/articles',
   labelSingular: 'Publication',
   labelPlural: 'Publications',
   extraFields: [],

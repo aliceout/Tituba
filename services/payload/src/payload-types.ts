@@ -67,7 +67,11 @@ export interface Config {
   };
   blocks: {};
   collections: {
-    posts: Post;
+    articles: Article;
+    analyses: Analysis;
+    actus: Actus;
+    podcasts: Podcast;
+    outils: Outil;
     themes: Theme;
     tags: Tag;
     bibliography: Bibliography;
@@ -82,7 +86,11 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
-    posts: PostsSelect<false> | PostsSelect<true>;
+    articles: ArticlesSelect<false> | ArticlesSelect<true>;
+    analyses: AnalysesSelect<false> | AnalysesSelect<true>;
+    actus: ActusSelect<false> | ActusSelect<true>;
+    podcasts: PodcastsSelect<false> | PodcastsSelect<true>;
+    outils: OutilsSelect<false> | OutilsSelect<true>;
     themes: ThemesSelect<false> | ThemesSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
     bibliography: BibliographySelect<false> | BibliographySelect<true>;
@@ -143,9 +151,9 @@ export interface UserAuthOperations {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "posts".
+ * via the `definition` "articles".
  */
-export interface Post {
+export interface Article {
   id: number;
   /**
    * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
@@ -156,7 +164,6 @@ export interface Post {
    * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
    */
   slug: string;
-  type: 'analyse' | 'note' | 'fiche';
   /**
    * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
    */
@@ -211,11 +218,15 @@ export interface Post {
    */
   bibliography?: (number | Bibliography)[] | null;
   /**
+   * Identifiant pérenne, si l'article est aussi déposé sur HAL, Zenodo ou une revue. Ex. « 10.5281/zenodo.1234567 ». Repris dans les exports de citation.
+   */
+  doi?: string | null;
+  /**
    * Calculé automatiquement depuis le corps au save.
    */
   readingTime?: number | null;
   /**
-   * Identifiant stable, dérivé de l’année et du numéro (ex : carnet:2026-042).
+   * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:article:2026-042).
    */
   idCarnet?: string | null;
   draft?: boolean | null;
@@ -408,6 +419,375 @@ export interface Bibliography {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "analyses".
+ */
+export interface Analysis {
+  id: number;
+  /**
+   * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
+   */
+  numero: number;
+  title: string;
+  /**
+   * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
+   */
+  slug: string;
+  /**
+   * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
+   */
+  themes?: (number | Theme)[] | null;
+  /**
+   * Mots-clés libres, ajoutés à la volée depuis l’édition du billet. Différents des thèmes (qui sont structurants).
+   */
+  tags?: (number | Tag)[] | null;
+  /**
+   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
+   */
+  authors?:
+    | {
+        kind: 'user' | 'external';
+        user?: (number | null) | User;
+        /**
+         * Ex. « Aïcha Touré »
+         */
+        name?: string | null;
+        /**
+         * Optionnel, ex. « LATTS ».
+         */
+        affiliation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  publishedAt: string;
+  /**
+   * ~2-3 phrases — affichées en deck sous le titre.
+   */
+  lede: string;
+  /**
+   * Lexical — slash menu pour insérer des notes, citations longues, références biblio, figures.
+   */
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Références listées en pied du billet, dans l’ordre choisi ici. Cliquables depuis les biblio_inline du corps.
+   */
+  bibliography?: (number | Bibliography)[] | null;
+  /**
+   * Calculé automatiquement depuis le corps au save.
+   */
+  readingTime?: number | null;
+  /**
+   * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:analyse:2026-042).
+   */
+  idCarnet?: string | null;
+  draft?: boolean | null;
+  /**
+   * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
+   */
+  notificationsSentAt?: string | null;
+  /**
+   * Calculé automatiquement — vrai si le corps contient au moins une zone marquée brouillon. Filtrable depuis la liste des billets.
+   */
+  hasDraftZones?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "actus".
+ */
+export interface Actus {
+  id: number;
+  /**
+   * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
+   */
+  numero: number;
+  title: string;
+  /**
+   * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
+   */
+  slug: string;
+  /**
+   * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
+   */
+  themes?: (number | Theme)[] | null;
+  /**
+   * Mots-clés libres, ajoutés à la volée depuis l’édition du billet. Différents des thèmes (qui sont structurants).
+   */
+  tags?: (number | Tag)[] | null;
+  /**
+   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
+   */
+  authors?:
+    | {
+        kind: 'user' | 'external';
+        user?: (number | null) | User;
+        /**
+         * Ex. « Aïcha Touré »
+         */
+        name?: string | null;
+        /**
+         * Optionnel, ex. « LATTS ».
+         */
+        affiliation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  publishedAt: string;
+  /**
+   * ~2-3 phrases — affichées en deck sous le titre.
+   */
+  lede: string;
+  /**
+   * Lexical — slash menu pour insérer des notes, citations longues, références biblio, figures.
+   */
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Références listées en pied du billet, dans l’ordre choisi ici. Cliquables depuis les biblio_inline du corps.
+   */
+  bibliography?: (number | Bibliography)[] | null;
+  /**
+   * Calculé automatiquement depuis le corps au save.
+   */
+  readingTime?: number | null;
+  /**
+   * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:actu:2026-042).
+   */
+  idCarnet?: string | null;
+  draft?: boolean | null;
+  /**
+   * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
+   */
+  notificationsSentAt?: string | null;
+  /**
+   * Calculé automatiquement — vrai si le corps contient au moins une zone marquée brouillon. Filtrable depuis la liste des billets.
+   */
+  hasDraftZones?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "podcasts".
+ */
+export interface Podcast {
+  id: number;
+  /**
+   * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
+   */
+  numero: number;
+  title: string;
+  /**
+   * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
+   */
+  slug: string;
+  /**
+   * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
+   */
+  themes?: (number | Theme)[] | null;
+  /**
+   * Mots-clés libres, ajoutés à la volée depuis l’édition du billet. Différents des thèmes (qui sont structurants).
+   */
+  tags?: (number | Tag)[] | null;
+  /**
+   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
+   */
+  authors?:
+    | {
+        kind: 'user' | 'external';
+        user?: (number | null) | User;
+        /**
+         * Ex. « Aïcha Touré »
+         */
+        name?: string | null;
+        /**
+         * Optionnel, ex. « LATTS ».
+         */
+        affiliation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  publishedAt: string;
+  /**
+   * ~2-3 phrases — affichées en deck sous le titre.
+   */
+  lede: string;
+  /**
+   * Lexical — slash menu pour insérer des notes, citations longues, références biblio, figures.
+   */
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Références listées en pied du billet, dans l’ordre choisi ici. Cliquables depuis les biblio_inline du corps.
+   */
+  bibliography?: (number | Bibliography)[] | null;
+  /**
+   * URL directe du fichier (mp3, ogg…) ou de la page d'écoute chez l'hébergeur. C'est ce lien qui alimente le lecteur côté site.
+   */
+  audioUrl: string;
+  /**
+   * Durée de l'épisode, affichée en « 42 min » côté lecteur·ice. Remplace le temps de lecture, qui n'a pas de sens pour de l'audio.
+   */
+  durationSeconds?: number | null;
+  /**
+   * Personnes reçues dans l'épisode, séparées par des virgules. Distinct des auteur·ices, qui signent la production.
+   */
+  guests?: string | null;
+  /**
+   * Calculé automatiquement depuis le corps au save.
+   */
+  readingTime?: number | null;
+  /**
+   * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:podcast:2026-042).
+   */
+  idCarnet?: string | null;
+  draft?: boolean | null;
+  /**
+   * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
+   */
+  notificationsSentAt?: string | null;
+  /**
+   * Calculé automatiquement — vrai si le corps contient au moins une zone marquée brouillon. Filtrable depuis la liste des billets.
+   */
+  hasDraftZones?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "outils".
+ */
+export interface Outil {
+  id: number;
+  /**
+   * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
+   */
+  numero: number;
+  title: string;
+  /**
+   * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
+   */
+  slug: string;
+  /**
+   * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
+   */
+  themes?: (number | Theme)[] | null;
+  /**
+   * Mots-clés libres, ajoutés à la volée depuis l’édition du billet. Différents des thèmes (qui sont structurants).
+   */
+  tags?: (number | Tag)[] | null;
+  /**
+   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
+   */
+  authors?:
+    | {
+        kind: 'user' | 'external';
+        user?: (number | null) | User;
+        /**
+         * Ex. « Aïcha Touré »
+         */
+        name?: string | null;
+        /**
+         * Optionnel, ex. « LATTS ».
+         */
+        affiliation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  publishedAt: string;
+  /**
+   * ~2-3 phrases — affichées en deck sous le titre.
+   */
+  lede: string;
+  /**
+   * Lexical — slash menu pour insérer des notes, citations longues, références biblio, figures.
+   */
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Références listées en pied du billet, dans l’ordre choisi ici. Cliquables depuis les biblio_inline du corps.
+   */
+  bibliography?: (number | Bibliography)[] | null;
+  /**
+   * URL du fichier à télécharger (média Tituba ou hébergement externe), ou de la page qui l'héberge.
+   */
+  resourceUrl: string;
+  audience?: ('tous' | 'militantes' | 'pros' | 'structures') | null;
+  /**
+   * Calculé automatiquement depuis le corps au save.
+   */
+  readingTime?: number | null;
+  /**
+   * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:outil:2026-042).
+   */
+  idCarnet?: string | null;
+  draft?: boolean | null;
+  /**
+   * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
+   */
+  notificationsSentAt?: string | null;
+  /**
+   * Calculé automatiquement — vrai si le corps contient au moins une zone marquée brouillon. Filtrable depuis la liste des billets.
+   */
+  hasDraftZones?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages".
  */
 export interface Page {
@@ -559,8 +939,24 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: 'posts';
-        value: number | Post;
+        relationTo: 'articles';
+        value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'analyses';
+        value: number | Analysis;
+      } | null)
+    | ({
+        relationTo: 'actus';
+        value: number | Actus;
+      } | null)
+    | ({
+        relationTo: 'podcasts';
+        value: number | Podcast;
+      } | null)
+    | ({
+        relationTo: 'outils';
+        value: number | Outil;
       } | null)
     | ({
         relationTo: 'themes';
@@ -634,13 +1030,12 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "posts_select".
+ * via the `definition` "articles_select".
  */
-export interface PostsSelect<T extends boolean = true> {
+export interface ArticlesSelect<T extends boolean = true> {
   numero?: T;
   title?: T;
   slug?: T;
-  type?: T;
   themes?: T;
   tags?: T;
   authors?:
@@ -656,6 +1051,136 @@ export interface PostsSelect<T extends boolean = true> {
   lede?: T;
   body?: T;
   bibliography?: T;
+  doi?: T;
+  readingTime?: T;
+  idCarnet?: T;
+  draft?: T;
+  notificationsSentAt?: T;
+  hasDraftZones?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "analyses_select".
+ */
+export interface AnalysesSelect<T extends boolean = true> {
+  numero?: T;
+  title?: T;
+  slug?: T;
+  themes?: T;
+  tags?: T;
+  authors?:
+    | T
+    | {
+        kind?: T;
+        user?: T;
+        name?: T;
+        affiliation?: T;
+        id?: T;
+      };
+  publishedAt?: T;
+  lede?: T;
+  body?: T;
+  bibliography?: T;
+  readingTime?: T;
+  idCarnet?: T;
+  draft?: T;
+  notificationsSentAt?: T;
+  hasDraftZones?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "actus_select".
+ */
+export interface ActusSelect<T extends boolean = true> {
+  numero?: T;
+  title?: T;
+  slug?: T;
+  themes?: T;
+  tags?: T;
+  authors?:
+    | T
+    | {
+        kind?: T;
+        user?: T;
+        name?: T;
+        affiliation?: T;
+        id?: T;
+      };
+  publishedAt?: T;
+  lede?: T;
+  body?: T;
+  bibliography?: T;
+  readingTime?: T;
+  idCarnet?: T;
+  draft?: T;
+  notificationsSentAt?: T;
+  hasDraftZones?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "podcasts_select".
+ */
+export interface PodcastsSelect<T extends boolean = true> {
+  numero?: T;
+  title?: T;
+  slug?: T;
+  themes?: T;
+  tags?: T;
+  authors?:
+    | T
+    | {
+        kind?: T;
+        user?: T;
+        name?: T;
+        affiliation?: T;
+        id?: T;
+      };
+  publishedAt?: T;
+  lede?: T;
+  body?: T;
+  bibliography?: T;
+  audioUrl?: T;
+  durationSeconds?: T;
+  guests?: T;
+  readingTime?: T;
+  idCarnet?: T;
+  draft?: T;
+  notificationsSentAt?: T;
+  hasDraftZones?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "outils_select".
+ */
+export interface OutilsSelect<T extends boolean = true> {
+  numero?: T;
+  title?: T;
+  slug?: T;
+  themes?: T;
+  tags?: T;
+  authors?:
+    | T
+    | {
+        kind?: T;
+        user?: T;
+        name?: T;
+        affiliation?: T;
+        id?: T;
+      };
+  publishedAt?: T;
+  lede?: T;
+  body?: T;
+  bibliography?: T;
+  resourceUrl?: T;
+  audience?: T;
   readingTime?: T;
   idCarnet?: T;
   draft?: T;

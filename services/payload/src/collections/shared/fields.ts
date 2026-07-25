@@ -189,11 +189,11 @@ export function publishedAtField(): Field {
   };
 }
 
-export function ledeField(): Field {
+export function ledeField(required = true): Field {
   return {
     name: 'lede',
     type: 'textarea',
-    required: true,
+    required,
     label: 'Chapô',
     admin: {
       description: '~2-3 phrases — affichées en deck sous le titre.',
@@ -220,11 +220,11 @@ export function ledeField(): Field {
  * `type='inlineBlock'` et rendus par renderLexicalWithFootnotes
  * (cf. src/lib/lexical.ts), qui collecte les Footnote en pied.
  */
-export function bodyField(): Field {
+export function bodyField(required = true): Field {
   return {
     name: 'body',
     type: 'richText',
-    required: true,
+    required,
     label: "Corps de l'article",
     admin: {
       description:

@@ -7,7 +7,11 @@ import sharp from 'sharp';
 
 import { Users } from './collections/Users';
 import { Media } from './collections/Media';
-import { Posts } from './collections/Posts';
+import { Articles } from './collections/Articles';
+import { Analyses } from './collections/Analyses';
+import { Actus } from './collections/Actus';
+import { Podcasts } from './collections/Podcasts';
+import { Outils } from './collections/Outils';
 import { Themes } from './collections/Themes';
 import { Tags } from './collections/Tags';
 import { Bibliography } from './collections/Bibliography';
@@ -20,9 +24,13 @@ import { Identity } from './globals/Identity';
 import { Subscriptions } from './globals/Subscriptions';
 import { authEndpoints } from './auth/endpoints';
 import { zoteroEndpoints } from './zotero/endpoints';
-import { postsSearchEndpoint } from './endpoints/posts-search';
+import { publicationsSearchEndpoint } from './endpoints/publications-search';
+import {
+  publicationsCountsEndpoint,
+  publicationsFeedEndpoint,
+} from './endpoints/publications-feed';
 import { subscribersEndpoints } from './endpoints/subscribers';
-import { extendPostsSearchVector } from './db/extend-posts-search-vector';
+import { extendPublicationsSearchVector } from './db/extend-publications-search-vector';
 import { buildEmailAdapter } from './auth/transport';
 import { startCleanupJob } from './auth/cleanup';
 import { bootstrapRootUser } from './auth/bootstrap';
@@ -53,15 +61,6 @@ const UsersWithEndpoints = {
       beforeListTable: ['@/components/auth/InviteUserButton#default'],
     },
   },
-};
-
-// Endpoint custom de recherche fulltext (FTS Postgres) branché sur la
-// collection posts → exposé sous /cms/api/posts/search. Cf
-// endpoints/posts-search.ts.
-const postsBaseEndpoints = Array.isArray(Posts.endpoints) ? Posts.endpoints : [];
-const PostsWithEndpoints = {
-  ...Posts,
-  endpoints: [...postsBaseEndpoints, postsSearchEndpoint],
 };
 
 // Endpoints publics du flow d'alertes mail (subscribe, confirm,
@@ -130,7 +129,11 @@ export default buildConfig({
     },
   },
   collections: [
-    PostsWithEndpoints,
+    Articles,
+    Analyses,
+    Actus,
+    Podcasts,
+    Outils,
     Themes,
     Tags,
     Bibliography,
@@ -140,6 +143,14 @@ export default buildConfig({
     SubscribersWithEndpoints,
   ],
   globals: [Site, Navigation, IndexPages, Identity, Subscriptions],
+  // Endpoints montés à la racine et non sur une collection : ils
+  // portent tous les trois sur les cinq formats à la fois. Les
+  // rattacher à l'un d'eux donnerait des URLs trompeuses — un
+  // /cms/api/articles/search qui renvoie aussi des podcasts.
+  //   GET /cms/api/search              recherche plein texte unifiée
+  //   GET /cms/api/publications        flux fusionné, paginé en SQL
+  //   GET /cms/api/publications/counts compteurs par thématique / tag
+  endpoints: [publicationsSearchEndpoint, publicationsFeedEndpoint, publicationsCountsEndpoint],
   editor: lexicalEditor(),
   email: buildEmailAdapter(),
   secret: process.env.PAYLOAD_SECRET || '',
@@ -171,10 +182,11 @@ export default buildConfig({
     },
     push: process.env.NODE_ENV !== 'production',
     // Étend le schéma Drizzle généré par Payload pour y déclarer la
-    // colonne `posts.search_vector` (tsvector, FTS Postgres) + son
-    // index GIN. Sans ça, `push: true` la verrait comme inconnue et
-    // proposerait de la drop à chaque boot dev.
-    afterSchemaInit: [extendPostsSearchVector],
+    // colonne `search_vector` (tsvector, FTS Postgres) + son index GIN
+    // sur chacune des cinq tables de publication. Sans ça, `push: true`
+    // les verrait comme inconnues et proposerait de les drop à chaque
+    // boot dev.
+    afterSchemaInit: [extendPublicationsSearchVector],
   }),
   serverURL: ADDRESS,
   // CORS : restreint aux domaines connus. En dev on autorise les

@@ -19,6 +19,19 @@ import { fetchAllItems, type ZoteroCreds, type ZoteroLibraryType } from './api';
 import { mapItem, makeSlug } from './mapping';
 import type { ZoteroSyncResult } from './types';
 
+/**
+ * Collections susceptibles de citer une référence bibliographique.
+ * Littéral figé plutôt que dérivé de PUBLICATION_TABLES : Payload exige
+ * ici un slug littéral pour typer le retour de `find`.
+ */
+const PUBLICATION_COLLECTIONS = [
+  'articles',
+  'analyses',
+  'actus',
+  'podcasts',
+  'outils',
+] as const;
+
 type UserDoc = {
   id: string | number;
   zotero?: {
@@ -239,24 +252,33 @@ export async function syncZoteroForUser(opts: {
     if (!key || seenKeys.has(key)) continue;
 
     // Cette ref est en DB mais disparue côté Zotero. Cherche les
-    // billets qui la citent.
+    // publications qui la citent, dans les cinq formats : une référence
+    // citée par un seul podcast doit être conservée au même titre
+    // qu'une référence citée par dix articles.
     let cited: { totalDocs: number; docs: Array<{ numero?: number }> } = {
       totalDocs: 0,
       docs: [],
     };
     try {
-      const r = await payload.find({
-        collection: 'posts',
-        where: { bibliography: { in: [ref.id] } },
-        limit: 50,
-        depth: 0,
-        overrideAccess: true,
-      });
-      cited = { totalDocs: r.totalDocs, docs: r.docs as Array<{ numero?: number }> };
+      const results = await Promise.all(
+        PUBLICATION_COLLECTIONS.map((collection) =>
+          payload.find({
+            collection,
+            where: { bibliography: { in: [ref.id] } },
+            limit: 50,
+            depth: 0,
+            overrideAccess: true,
+          }),
+        ),
+      );
+      cited = {
+        totalDocs: results.reduce((acc, r) => acc + r.totalDocs, 0),
+        docs: results.flatMap((r) => r.docs as Array<{ numero?: number }>),
+      };
     } catch {
-      // Lecture des billets impossible — par prudence on conserve
-      // la ref (mieux vaut un faux positif "gardé" qu'une suppression
-      // qui casserait des citations).
+      // Lecture impossible — par prudence on conserve la ref. Mieux
+      // vaut un faux positif « gardé » qu'une suppression qui casserait
+      // des citations existantes.
       cited = { totalDocs: 1, docs: [] };
     }
 

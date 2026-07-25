@@ -117,12 +117,19 @@ function formatByline(authors: PostAuthorEntry[] | null | undefined): string {
   return `par ${parts.slice(0, -1).join(', ')} et ${parts[parts.length - 1]}`;
 }
 
+/**
+ * Ce qui distingue une collection de publication d'une autre, du point
+ * de vue des mails d'alerte : où pointe le lien, et comment nommer le
+ * format dans le corps du message.
+ */
+type PublicationCtx = { slug: string; routePrefix: string; label: string };
+
 // Construction de l'URL publique du billet pour le lien dans le mail.
 // Convention Infisical : ADDRESS contient le domaine sans schème.
-function buildPostUrl(slug: string): string {
+function buildPostUrl(routePrefix: string, slug: string): string {
   const raw = process.env.ADDRESS || 'http://localhost:4321';
   const withScheme = /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
-  return `${withScheme.replace(/\/$/, '')}/billets/${slug}/`;
+  return `${withScheme.replace(/\/$/, '')}${routePrefix}/${slug}/`;
 }
 
 async function isEmailFeatureEnabled(req: PayloadRequest): Promise<boolean> {
@@ -143,7 +150,11 @@ type Subscriber = {
 // retour du hook (cf. setImmediate côté caller), il ne faut pas
 // dépendre d'un objet de requête potentiellement nettoyé. L'instance
 // `payload` est singleton et reste valide tant que le process tourne.
-async function dispatchPostNotifications(payload: Payload, post: PostDoc): Promise<void> {
+async function dispatchPostNotifications(
+  payload: Payload,
+  post: PostDoc,
+  ctx: PublicationCtx,
+): Promise<void> {
   if (!post.slug || !post.title) {
     payload.logger.warn({ postId: post.id }, 'notify_new_post: missing slug/title, skipping');
     return;
@@ -156,7 +167,7 @@ async function dispatchPostNotifications(payload: Payload, post: PostDoc): Promi
   let postFull: (PostDoc & PostRelations) = post;
   try {
     const fresh = (await payload.findByID({
-      collection: 'posts',
+      collection: ctx.slug as never,
       id: post.id,
       depth: 2,
       overrideAccess: true,
@@ -186,9 +197,11 @@ async function dispatchPostNotifications(payload: Payload, post: PostDoc): Promi
   }
 
   const siteName = await getSiteName(payload);
-  const postUrl = buildPostUrl(post.slug);
+  const postUrl = buildPostUrl(ctx.routePrefix, post.slug);
   const byline = formatByline(postFull.authors);
-  const typeLabel = postFull.type ? TYPE_LABEL[postFull.type] : '';
+  // Le format est désormais porté par la collection : son libellé vient
+  // du contexte, plutôt que d'un champ `type` sur le document.
+  const typeLabel = ctx.label;
   const themeNames = (postFull.themes ?? [])
     .map((t) => (t?.slug ?? t?.name ?? '').trim())
     .filter(Boolean);
@@ -243,7 +256,8 @@ async function dispatchPostNotifications(payload: Payload, post: PostDoc): Promi
   );
 }
 
-export const notifyNewPost: CollectionAfterChangeHook = async ({ doc, req }) => {
+export function makeNotifyNewPublication(ctx: PublicationCtx): CollectionAfterChangeHook {
+  return async ({ doc, req }) => {
   const post = doc as PostDoc;
 
   // Garde d'idempotence : déjà notifié → exit
@@ -269,11 +283,11 @@ export const notifyNewPost: CollectionAfterChangeHook = async ({ doc, req }) => 
   // l'update voit le row dans la même transaction.
   try {
     await req.payload.update({
-      collection: 'posts',
+      collection: ctx.slug as never,
       id: post.id,
       overrideAccess: true,
       req,
-      data: { notificationsSentAt: new Date().toISOString() },
+      data: { notificationsSentAt: new Date().toISOString() } as never,
     });
   } catch (err) {
     req.payload.logger.error(
@@ -293,7 +307,7 @@ export const notifyNewPost: CollectionAfterChangeHook = async ({ doc, req }) => 
   const payload = req.payload;
   const postSnapshot = post;
   setImmediate(() => {
-    dispatchPostNotifications(payload, postSnapshot).catch((err) => {
+    dispatchPostNotifications(payload, postSnapshot, ctx).catch((err) => {
       payload.logger.error(
         { err, postId: postSnapshot.id },
         'notify_new_post: dispatch failed',
@@ -301,5 +315,6 @@ export const notifyNewPost: CollectionAfterChangeHook = async ({ doc, req }) => 
     });
   });
 
-  return doc;
-};
+    return doc;
+  };
+}

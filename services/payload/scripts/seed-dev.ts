@@ -30,15 +30,44 @@ if (process.env.NODE_ENV === 'production') {
 // ─── Données ─────────────────────────────────────────────────────
 
 const THEMES = [
-  { slug: 'genre-geopolitique', name: 'Genre & géopolitique', description: "Comment le genre devient un opérateur de la politique internationale — et inversement." },
-  { slug: 'lgbtqi-international', name: 'LGBTQI+ & international', description: "Vingt ans de diplomatie autour de l'orientation sexuelle et de l'identité de genre, lus depuis le Sud." },
-  { slug: 'humanitaire-genre', name: 'Humanitaire & genre', description: "Ce que mes années de coordination humanitaire m'ont enseigné sur les angles morts de l'aide internationale." },
-  { slug: 'migrations-exil', name: 'Migrations & exil', description: "Persécutions liées au genre, statut de réfugié·e LGBTQI+, jurisprudence en mouvement." },
-  { slug: 'conflits-minorites', name: 'Conflits & minorités', description: "Les minorités de genre dans la guerre — Ukraine, RDC, Centrafrique, ailleurs." },
-  { slug: 'theorie-feministe', name: 'Théorie féministe', description: 'Lectures et relectures de la théorie féministe contemporaine.' },
-  { slug: 'queer-theory', name: 'Queer theory', description: 'Relectures de la théorie queer américaine et de ses réceptions francophones.' },
-  { slug: 'postcolonial', name: 'Postcolonial', description: 'Lectures situées des études postcoloniales.' },
+  { slug: 'genre-ri', name: 'Genre et RI', description: "Le genre comme opérateur des relations internationales — et inversement." },
+  { slug: 'genre-solidarite-internationale', name: 'Genre & solidarité internationale', description: "Angles morts de l'aide, du développement et de l'action humanitaire." },
+  { slug: 'ecofeminismes', name: 'Écoféminismes', description: 'Croisements entre justice de genre et justice environnementale.' },
+  { slug: 'genre-mer', name: 'Genre et mer', description: "Pêche, marine, littoraux, économie bleue : ce que le genre y joue." },
+  { slug: 'genre-dssr', name: 'Genre et DSSR', description: 'Droits et santé sexuels et reproductifs, ici et ailleurs.' },
+  { slug: 'violences-sexistes-sexuelles', name: 'Violences sexistes et sexuelles', description: 'Prévention, prise en charge, responsabilité des institutions.' },
+  { slug: 'genre-justice', name: 'Genre et justice', description: 'Justice pénale, justice transitionnelle, accès au droit.' },
+  { slug: 'genre-exil', name: 'Genre et exil', description: "Persécutions liées au genre, asile, statut de réfugié·e LGBTQI+." },
+  { slug: 'genre-tech', name: 'Genre et tech', description: 'Technologies, données, plateformes : reproduction et contestation des rapports de genre.' },
+  { slug: 'genre-politiques', name: 'Genre et politiques', description: "Politiques publiques d'égalité, mouvements anti-genre, rapports de force institutionnels." },
 ];
+
+/**
+ * Correspondance entre les thématiques de démo héritées du Carnet et
+ * les axes de TITUBA. Les billets d'exemple gardent ainsi un rattachement
+ * plausible sans qu'on ait à réécrire chacun d'eux.
+ */
+const THEME_REMAP: Record<string, string> = {
+  'genre-geopolitique': 'genre-ri',
+  'lgbtqi-international': 'genre-politiques',
+  'humanitaire-genre': 'genre-solidarite-internationale',
+  'migrations-exil': 'genre-exil',
+  'conflits-minorites': 'genre-justice',
+  'theorie-feministe': 'genre-dssr',
+  'queer-theory': 'genre-tech',
+  postcolonial: 'ecofeminismes',
+};
+
+/**
+ * Répartition des billets de démo sur les cinq formats. L'ancien champ
+ * `type` du Carnet ne survit pas à la bascule : le format est désormais
+ * porté par la collection.
+ */
+const TYPE_TO_COLLECTION: Record<string, 'articles' | 'analyses' | 'actus' | 'podcasts' | 'outils'> = {
+  analyse: 'articles',
+  note: 'analyses',
+  fiche: 'actus',
+};
 
 // Type local pour le seed — aligné sur la collection Bibliography (cf.
 // payload-types.ts → interface Bibliography). Sans cette annotation, TS
@@ -663,7 +692,9 @@ async function main() {
 
   if (RESET) {
     console.log('[seed-dev] --reset : wiping content collections');
-    await wipeCollection(payload, 'posts');
+    for (const c of ['articles', 'analyses', 'actus', 'podcasts', 'outils'] as const) {
+      await wipeCollection(payload, c);
+    }
     await wipeCollection(payload, 'bibliography');
     await wipeCollection(payload, 'themes');
     await wipeCollection(payload, 'pages');
@@ -707,24 +738,24 @@ async function main() {
 
   // 3. Posts
   for (const post of POSTS) {
-    const existing = await findBySlug(payload, 'posts', post.slug);
+    const collection = TYPE_TO_COLLECTION[post.type] ?? 'analyses';
+    const existing = await findBySlug(payload, collection, post.slug);
     if (existing) {
-      console.log(`[seed-dev] SKIP post ${post.slug} (existe)`);
+      console.log(`[seed-dev] SKIP ${collection} ${post.slug} (existe)`);
       continue;
     }
     const themeIds = post.themeSlugs
-      .map((s) => themeIdBySlug.get(s))
+      .map((s) => themeIdBySlug.get(THEME_REMAP[s] ?? s))
       .filter((id): id is number | string => id !== undefined);
     const biblioIds = (post.biblioSlugs ?? [])
       .map((s) => biblioIdBySlug.get(s))
       .filter((id): id is number | string => id !== undefined);
     await payload.create({
-      collection: 'posts',
+      collection,
       data: {
         numero: post.numero,
         slug: post.slug,
         title: post.title,
-        type: post.type,
         themes: themeIds as number[],
         publishedAt: post.publishedAt,
         lede: post.lede,
@@ -734,7 +765,7 @@ async function main() {
       },
       overrideAccess: true,
     });
-    console.log(`[seed-dev] +post n°${post.numero} ${post.slug}`);
+    console.log(`[seed-dev] +${collection} n°${post.numero} ${post.slug}`);
   }
 
   // 4. Page À propos — avec sections Prose

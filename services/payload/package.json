@@ -16,7 +16,7 @@
     "migrate:create": "dotenv -e ../../.env -- cross-env NODE_OPTIONS=\"--no-deprecation --import tsx\" node ./node_modules/payload/bin.js migrate:create --disable-transpile",
     "migrate:status": "dotenv -e ../../.env -- cross-env NODE_OPTIONS=--no-deprecation payload migrate:status",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
-    "apply:search-vector": "dotenv -e ../../.env -- cross-env NODE_OPTIONS=--no-deprecation tsx scripts/apply-search-vector.ts",
+    "seed:themes": "dotenv -e ../../.env -- cross-env NODE_OPTIONS=--no-deprecation tsx scripts/seed-themes.ts",
     "seed:dev": "dotenv -e ../../.env -- cross-env NODE_OPTIONS=--no-deprecation tsx scripts/seed-dev.ts",
     "seed:dev:reset": "dotenv -e ../../.env -- cross-env NODE_OPTIONS=--no-deprecation tsx scripts/seed-dev.ts --reset",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start -p 3001",

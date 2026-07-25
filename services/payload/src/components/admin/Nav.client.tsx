@@ -41,7 +41,11 @@ const ACCENT_HEX_TO_SLUG: Record<string, string> = {
 };
 
 type Counts = {
-  posts: number;
+  articles: number;
+  analyses: number;
+  actus: number;
+  podcasts: number;
+  outils: number;
   themes: number;
   tags: number;
   bibliography: number;
@@ -192,7 +196,19 @@ export default function NavClient({ activePath: serverActive, counts, version, i
     {
       label: 'Contenu',
       items: [
-        { label: 'Billets', href: `${ADMIN}/collections/posts`, count: counts.posts },
+        // Les cinq formats de publication, dans l'ordre éditorial.
+        // Ils poussent le reste du menu vers le bas : on les garde
+        // groupés en tête de « Contenu » pour que la hiérarchie reste
+        // lisible.
+        {
+          label: 'Articles de recherche',
+          href: `${ADMIN}/collections/articles`,
+          count: counts.articles,
+        },
+        { label: "Billets d'analyse", href: `${ADMIN}/collections/analyses`, count: counts.analyses },
+        { label: "Billets d'actu", href: `${ADMIN}/collections/actus`, count: counts.actus },
+        { label: 'Podcasts', href: `${ADMIN}/collections/podcasts`, count: counts.podcasts },
+        { label: 'Outils', href: `${ADMIN}/collections/outils`, count: counts.outils },
         { label: 'Thèmes', href: `${ADMIN}/collections/themes`, count: counts.themes },
         { label: 'Bibliographie', href: `${ADMIN}/collections/bibliography`, count: counts.bibliography },
         { label: 'Tags', href: `${ADMIN}/collections/tags`, count: counts.tags },

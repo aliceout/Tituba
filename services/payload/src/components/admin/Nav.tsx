@@ -32,7 +32,11 @@ import NavClient from './Nav.client';
 async function fetchCount(
   payload: Awaited<ReturnType<typeof getPayload>>,
   collection:
-    | 'posts'
+    | 'articles'
+    | 'analyses'
+    | 'actus'
+    | 'podcasts'
+    | 'outils'
     | 'themes'
     | 'tags'
     | 'bibliography'
@@ -57,9 +61,26 @@ async function fetchCount(
 export default async function Nav(): Promise<React.ReactElement> {
   const payload = await getPayload({ config });
 
-  const [posts, themes, tags, bibliography, media, users, pages, subscribers] =
+  const [
+    articles,
+    analyses,
+    actus,
+    podcasts,
+    outils,
+    themes,
+    tags,
+    bibliography,
+    media,
+    users,
+    pages,
+    subscribers,
+  ] =
     await Promise.all([
-      fetchCount(payload, 'posts'),
+      fetchCount(payload, 'articles'),
+      fetchCount(payload, 'analyses'),
+      fetchCount(payload, 'actus'),
+      fetchCount(payload, 'podcasts'),
+      fetchCount(payload, 'outils'),
       fetchCount(payload, 'themes'),
       fetchCount(payload, 'tags'),
       fetchCount(payload, 'bibliography'),
@@ -107,7 +128,20 @@ export default async function Nav(): Promise<React.ReactElement> {
   return (
     <NavClient
       activePath={activePath}
-      counts={{ posts, themes, tags, bibliography, media, users, pages, subscribers }}
+      counts={{
+        articles,
+        analyses,
+        actus,
+        podcasts,
+        outils,
+        themes,
+        tags,
+        bibliography,
+        media,
+        users,
+        pages,
+        subscribers,
+      }}
       version={version}
       initialMe={me}
     />

@@ -2,8 +2,8 @@
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.posts_authors": {
-      "name": "posts_authors",
+    "public.articles_authors": {
+      "name": "articles_authors",
       "schema": "",
       "columns": {
         "_order": {
@@ -26,7 +26,7 @@
         },
         "kind": {
           "name": "kind",
-          "type": "enum_posts_authors_kind",
+          "type": "enum_articles_authors_kind",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
@@ -52,8 +52,8 @@
         }
       },
       "indexes": {
-        "posts_authors_order_idx": {
-          "name": "posts_authors_order_idx",
+        "articles_authors_order_idx": {
+          "name": "articles_authors_order_idx",
           "columns": [
             {
               "expression": "_order",
@@ -67,8 +67,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_authors_parent_id_idx": {
-          "name": "posts_authors_parent_id_idx",
+        "articles_authors_parent_id_idx": {
+          "name": "articles_authors_parent_id_idx",
           "columns": [
             {
               "expression": "_parent_id",
@@ -82,8 +82,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_authors_user_idx": {
-          "name": "posts_authors_user_idx",
+        "articles_authors_user_idx": {
+          "name": "articles_authors_user_idx",
           "columns": [
             {
               "expression": "user_id",
@@ -99,9 +99,9 @@
         }
       },
       "foreignKeys": {
-        "posts_authors_user_id_users_id_fk": {
-          "name": "posts_authors_user_id_users_id_fk",
-          "tableFrom": "posts_authors",
+        "articles_authors_user_id_users_id_fk": {
+          "name": "articles_authors_user_id_users_id_fk",
+          "tableFrom": "articles_authors",
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
@@ -112,10 +112,10 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "posts_authors_parent_id_fk": {
-          "name": "posts_authors_parent_id_fk",
-          "tableFrom": "posts_authors",
-          "tableTo": "posts",
+        "articles_authors_parent_id_fk": {
+          "name": "articles_authors_parent_id_fk",
+          "tableFrom": "articles_authors",
+          "tableTo": "articles",
           "columnsFrom": [
             "_parent_id"
           ],
@@ -132,8 +132,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.posts": {
-      "name": "posts",
+    "public.articles": {
+      "name": "articles",
       "schema": "",
       "columns": {
         "id": {
@@ -160,13 +160,538 @@
           "primaryKey": false,
           "notNull": true
         },
-        "type": {
-          "name": "type",
-          "type": "enum_posts_type",
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lede": {
+          "name": "lede",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "doi": {
+          "name": "doi",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reading_time": {
+          "name": "reading_time",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_carnet": {
+          "name": "id_carnet",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "draft": {
+          "name": "draft",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "notifications_sent_at": {
+          "name": "notifications_sent_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_draft_zones": {
+          "name": "has_draft_zones",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "articles_numero_idx": {
+          "name": "articles_numero_idx",
+          "columns": [
+            {
+              "expression": "numero",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_slug_idx": {
+          "name": "articles_slug_idx",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_has_draft_zones_idx": {
+          "name": "articles_has_draft_zones_idx",
+          "columns": [
+            {
+              "expression": "has_draft_zones",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_updated_at_idx": {
+          "name": "articles_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_created_at_idx": {
+          "name": "articles_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_search_vector_idx": {
+          "name": "articles_search_vector_idx",
+          "columns": [
+            {
+              "expression": "search_vector",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.articles_rels": {
+      "name": "articles_rels",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "themes_id": {
+          "name": "themes_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags_id": {
+          "name": "tags_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bibliography_id": {
+          "name": "bibliography_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "articles_rels_order_idx": {
+          "name": "articles_rels_order_idx",
+          "columns": [
+            {
+              "expression": "order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_rels_parent_idx": {
+          "name": "articles_rels_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_rels_path_idx": {
+          "name": "articles_rels_path_idx",
+          "columns": [
+            {
+              "expression": "path",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_rels_themes_id_idx": {
+          "name": "articles_rels_themes_id_idx",
+          "columns": [
+            {
+              "expression": "themes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_rels_tags_id_idx": {
+          "name": "articles_rels_tags_id_idx",
+          "columns": [
+            {
+              "expression": "tags_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_rels_bibliography_id_idx": {
+          "name": "articles_rels_bibliography_id_idx",
+          "columns": [
+            {
+              "expression": "bibliography_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "articles_rels_parent_fk": {
+          "name": "articles_rels_parent_fk",
+          "tableFrom": "articles_rels",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "articles_rels_themes_fk": {
+          "name": "articles_rels_themes_fk",
+          "tableFrom": "articles_rels",
+          "tableTo": "themes",
+          "columnsFrom": [
+            "themes_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "articles_rels_tags_fk": {
+          "name": "articles_rels_tags_fk",
+          "tableFrom": "articles_rels",
+          "tableTo": "tags",
+          "columnsFrom": [
+            "tags_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "articles_rels_bibliography_fk": {
+          "name": "articles_rels_bibliography_fk",
+          "tableFrom": "articles_rels",
+          "tableTo": "bibliography",
+          "columnsFrom": [
+            "bibliography_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.analyses_authors": {
+      "name": "analyses_authors",
+      "schema": "",
+      "columns": {
+        "_order": {
+          "name": "_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_parent_id": {
+          "name": "_parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "enum_analyses_authors_kind",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'analyse'"
+          "default": "'user'"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "affiliation": {
+          "name": "affiliation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "analyses_authors_order_idx": {
+          "name": "analyses_authors_order_idx",
+          "columns": [
+            {
+              "expression": "_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "analyses_authors_parent_id_idx": {
+          "name": "analyses_authors_parent_id_idx",
+          "columns": [
+            {
+              "expression": "_parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "analyses_authors_user_idx": {
+          "name": "analyses_authors_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "analyses_authors_user_id_users_id_fk": {
+          "name": "analyses_authors_user_id_users_id_fk",
+          "tableFrom": "analyses_authors",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "analyses_authors_parent_id_fk": {
+          "name": "analyses_authors_parent_id_fk",
+          "tableFrom": "analyses_authors",
+          "tableTo": "analyses",
+          "columnsFrom": [
+            "_parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.analyses": {
+      "name": "analyses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "numero": {
+          "name": "numero",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
         },
         "published_at": {
           "name": "published_at",
@@ -240,8 +765,8 @@
         }
       },
       "indexes": {
-        "posts_numero_idx": {
-          "name": "posts_numero_idx",
+        "analyses_numero_idx": {
+          "name": "analyses_numero_idx",
           "columns": [
             {
               "expression": "numero",
@@ -255,8 +780,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_slug_idx": {
-          "name": "posts_slug_idx",
+        "analyses_slug_idx": {
+          "name": "analyses_slug_idx",
           "columns": [
             {
               "expression": "slug",
@@ -270,8 +795,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_has_draft_zones_idx": {
-          "name": "posts_has_draft_zones_idx",
+        "analyses_has_draft_zones_idx": {
+          "name": "analyses_has_draft_zones_idx",
           "columns": [
             {
               "expression": "has_draft_zones",
@@ -285,8 +810,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_updated_at_idx": {
-          "name": "posts_updated_at_idx",
+        "analyses_updated_at_idx": {
+          "name": "analyses_updated_at_idx",
           "columns": [
             {
               "expression": "updated_at",
@@ -300,8 +825,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_created_at_idx": {
-          "name": "posts_created_at_idx",
+        "analyses_created_at_idx": {
+          "name": "analyses_created_at_idx",
           "columns": [
             {
               "expression": "created_at",
@@ -315,8 +840,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_search_vector_idx": {
-          "name": "posts_search_vector_idx",
+        "analyses_search_vector_idx": {
+          "name": "analyses_search_vector_idx",
           "columns": [
             {
               "expression": "search_vector",
@@ -338,8 +863,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.posts_rels": {
-      "name": "posts_rels",
+    "public.analyses_rels": {
+      "name": "analyses_rels",
       "schema": "",
       "columns": {
         "id": {
@@ -386,8 +911,8 @@
         }
       },
       "indexes": {
-        "posts_rels_order_idx": {
-          "name": "posts_rels_order_idx",
+        "analyses_rels_order_idx": {
+          "name": "analyses_rels_order_idx",
           "columns": [
             {
               "expression": "order",
@@ -401,8 +926,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_rels_parent_idx": {
-          "name": "posts_rels_parent_idx",
+        "analyses_rels_parent_idx": {
+          "name": "analyses_rels_parent_idx",
           "columns": [
             {
               "expression": "parent_id",
@@ -416,8 +941,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_rels_path_idx": {
-          "name": "posts_rels_path_idx",
+        "analyses_rels_path_idx": {
+          "name": "analyses_rels_path_idx",
           "columns": [
             {
               "expression": "path",
@@ -431,8 +956,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_rels_themes_id_idx": {
-          "name": "posts_rels_themes_id_idx",
+        "analyses_rels_themes_id_idx": {
+          "name": "analyses_rels_themes_id_idx",
           "columns": [
             {
               "expression": "themes_id",
@@ -446,8 +971,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_rels_tags_id_idx": {
-          "name": "posts_rels_tags_id_idx",
+        "analyses_rels_tags_id_idx": {
+          "name": "analyses_rels_tags_id_idx",
           "columns": [
             {
               "expression": "tags_id",
@@ -461,8 +986,8 @@
           "method": "btree",
           "with": {}
         },
-        "posts_rels_bibliography_id_idx": {
-          "name": "posts_rels_bibliography_id_idx",
+        "analyses_rels_bibliography_id_idx": {
+          "name": "analyses_rels_bibliography_id_idx",
           "columns": [
             {
               "expression": "bibliography_id",
@@ -478,10 +1003,10 @@
         }
       },
       "foreignKeys": {
-        "posts_rels_parent_fk": {
-          "name": "posts_rels_parent_fk",
-          "tableFrom": "posts_rels",
-          "tableTo": "posts",
+        "analyses_rels_parent_fk": {
+          "name": "analyses_rels_parent_fk",
+          "tableFrom": "analyses_rels",
+          "tableTo": "analyses",
           "columnsFrom": [
             "parent_id"
           ],
@@ -491,9 +1016,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "posts_rels_themes_fk": {
-          "name": "posts_rels_themes_fk",
-          "tableFrom": "posts_rels",
+        "analyses_rels_themes_fk": {
+          "name": "analyses_rels_themes_fk",
+          "tableFrom": "analyses_rels",
           "tableTo": "themes",
           "columnsFrom": [
             "themes_id"
@@ -504,9 +1029,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "posts_rels_tags_fk": {
-          "name": "posts_rels_tags_fk",
-          "tableFrom": "posts_rels",
+        "analyses_rels_tags_fk": {
+          "name": "analyses_rels_tags_fk",
+          "tableFrom": "analyses_rels",
           "tableTo": "tags",
           "columnsFrom": [
             "tags_id"
@@ -517,9 +1042,1622 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "posts_rels_bibliography_fk": {
-          "name": "posts_rels_bibliography_fk",
-          "tableFrom": "posts_rels",
+        "analyses_rels_bibliography_fk": {
+          "name": "analyses_rels_bibliography_fk",
+          "tableFrom": "analyses_rels",
+          "tableTo": "bibliography",
+          "columnsFrom": [
+            "bibliography_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.actus_authors": {
+      "name": "actus_authors",
+      "schema": "",
+      "columns": {
+        "_order": {
+          "name": "_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_parent_id": {
+          "name": "_parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "enum_actus_authors_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'user'"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "affiliation": {
+          "name": "affiliation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "actus_authors_order_idx": {
+          "name": "actus_authors_order_idx",
+          "columns": [
+            {
+              "expression": "_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_authors_parent_id_idx": {
+          "name": "actus_authors_parent_id_idx",
+          "columns": [
+            {
+              "expression": "_parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_authors_user_idx": {
+          "name": "actus_authors_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "actus_authors_user_id_users_id_fk": {
+          "name": "actus_authors_user_id_users_id_fk",
+          "tableFrom": "actus_authors",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "actus_authors_parent_id_fk": {
+          "name": "actus_authors_parent_id_fk",
+          "tableFrom": "actus_authors",
+          "tableTo": "actus",
+          "columnsFrom": [
+            "_parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.actus": {
+      "name": "actus",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "numero": {
+          "name": "numero",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lede": {
+          "name": "lede",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reading_time": {
+          "name": "reading_time",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_carnet": {
+          "name": "id_carnet",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "draft": {
+          "name": "draft",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "notifications_sent_at": {
+          "name": "notifications_sent_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_draft_zones": {
+          "name": "has_draft_zones",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "actus_numero_idx": {
+          "name": "actus_numero_idx",
+          "columns": [
+            {
+              "expression": "numero",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_slug_idx": {
+          "name": "actus_slug_idx",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_has_draft_zones_idx": {
+          "name": "actus_has_draft_zones_idx",
+          "columns": [
+            {
+              "expression": "has_draft_zones",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_updated_at_idx": {
+          "name": "actus_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_created_at_idx": {
+          "name": "actus_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_search_vector_idx": {
+          "name": "actus_search_vector_idx",
+          "columns": [
+            {
+              "expression": "search_vector",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.actus_rels": {
+      "name": "actus_rels",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "themes_id": {
+          "name": "themes_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags_id": {
+          "name": "tags_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bibliography_id": {
+          "name": "bibliography_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "actus_rels_order_idx": {
+          "name": "actus_rels_order_idx",
+          "columns": [
+            {
+              "expression": "order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_rels_parent_idx": {
+          "name": "actus_rels_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_rels_path_idx": {
+          "name": "actus_rels_path_idx",
+          "columns": [
+            {
+              "expression": "path",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_rels_themes_id_idx": {
+          "name": "actus_rels_themes_id_idx",
+          "columns": [
+            {
+              "expression": "themes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_rels_tags_id_idx": {
+          "name": "actus_rels_tags_id_idx",
+          "columns": [
+            {
+              "expression": "tags_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "actus_rels_bibliography_id_idx": {
+          "name": "actus_rels_bibliography_id_idx",
+          "columns": [
+            {
+              "expression": "bibliography_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "actus_rels_parent_fk": {
+          "name": "actus_rels_parent_fk",
+          "tableFrom": "actus_rels",
+          "tableTo": "actus",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "actus_rels_themes_fk": {
+          "name": "actus_rels_themes_fk",
+          "tableFrom": "actus_rels",
+          "tableTo": "themes",
+          "columnsFrom": [
+            "themes_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "actus_rels_tags_fk": {
+          "name": "actus_rels_tags_fk",
+          "tableFrom": "actus_rels",
+          "tableTo": "tags",
+          "columnsFrom": [
+            "tags_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "actus_rels_bibliography_fk": {
+          "name": "actus_rels_bibliography_fk",
+          "tableFrom": "actus_rels",
+          "tableTo": "bibliography",
+          "columnsFrom": [
+            "bibliography_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.podcasts_authors": {
+      "name": "podcasts_authors",
+      "schema": "",
+      "columns": {
+        "_order": {
+          "name": "_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_parent_id": {
+          "name": "_parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "enum_podcasts_authors_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'user'"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "affiliation": {
+          "name": "affiliation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "podcasts_authors_order_idx": {
+          "name": "podcasts_authors_order_idx",
+          "columns": [
+            {
+              "expression": "_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_authors_parent_id_idx": {
+          "name": "podcasts_authors_parent_id_idx",
+          "columns": [
+            {
+              "expression": "_parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_authors_user_idx": {
+          "name": "podcasts_authors_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "podcasts_authors_user_id_users_id_fk": {
+          "name": "podcasts_authors_user_id_users_id_fk",
+          "tableFrom": "podcasts_authors",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "podcasts_authors_parent_id_fk": {
+          "name": "podcasts_authors_parent_id_fk",
+          "tableFrom": "podcasts_authors",
+          "tableTo": "podcasts",
+          "columnsFrom": [
+            "_parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.podcasts": {
+      "name": "podcasts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "numero": {
+          "name": "numero",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lede": {
+          "name": "lede",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "audio_url": {
+          "name": "audio_url",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "duration_seconds": {
+          "name": "duration_seconds",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "guests": {
+          "name": "guests",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reading_time": {
+          "name": "reading_time",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_carnet": {
+          "name": "id_carnet",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "draft": {
+          "name": "draft",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "notifications_sent_at": {
+          "name": "notifications_sent_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_draft_zones": {
+          "name": "has_draft_zones",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "podcasts_numero_idx": {
+          "name": "podcasts_numero_idx",
+          "columns": [
+            {
+              "expression": "numero",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_slug_idx": {
+          "name": "podcasts_slug_idx",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_has_draft_zones_idx": {
+          "name": "podcasts_has_draft_zones_idx",
+          "columns": [
+            {
+              "expression": "has_draft_zones",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_updated_at_idx": {
+          "name": "podcasts_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_created_at_idx": {
+          "name": "podcasts_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_search_vector_idx": {
+          "name": "podcasts_search_vector_idx",
+          "columns": [
+            {
+              "expression": "search_vector",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.podcasts_rels": {
+      "name": "podcasts_rels",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "themes_id": {
+          "name": "themes_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags_id": {
+          "name": "tags_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bibliography_id": {
+          "name": "bibliography_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "podcasts_rels_order_idx": {
+          "name": "podcasts_rels_order_idx",
+          "columns": [
+            {
+              "expression": "order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_rels_parent_idx": {
+          "name": "podcasts_rels_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_rels_path_idx": {
+          "name": "podcasts_rels_path_idx",
+          "columns": [
+            {
+              "expression": "path",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_rels_themes_id_idx": {
+          "name": "podcasts_rels_themes_id_idx",
+          "columns": [
+            {
+              "expression": "themes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_rels_tags_id_idx": {
+          "name": "podcasts_rels_tags_id_idx",
+          "columns": [
+            {
+              "expression": "tags_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "podcasts_rels_bibliography_id_idx": {
+          "name": "podcasts_rels_bibliography_id_idx",
+          "columns": [
+            {
+              "expression": "bibliography_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "podcasts_rels_parent_fk": {
+          "name": "podcasts_rels_parent_fk",
+          "tableFrom": "podcasts_rels",
+          "tableTo": "podcasts",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "podcasts_rels_themes_fk": {
+          "name": "podcasts_rels_themes_fk",
+          "tableFrom": "podcasts_rels",
+          "tableTo": "themes",
+          "columnsFrom": [
+            "themes_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "podcasts_rels_tags_fk": {
+          "name": "podcasts_rels_tags_fk",
+          "tableFrom": "podcasts_rels",
+          "tableTo": "tags",
+          "columnsFrom": [
+            "tags_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "podcasts_rels_bibliography_fk": {
+          "name": "podcasts_rels_bibliography_fk",
+          "tableFrom": "podcasts_rels",
+          "tableTo": "bibliography",
+          "columnsFrom": [
+            "bibliography_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.outils_authors": {
+      "name": "outils_authors",
+      "schema": "",
+      "columns": {
+        "_order": {
+          "name": "_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_parent_id": {
+          "name": "_parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "enum_outils_authors_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'user'"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "affiliation": {
+          "name": "affiliation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "outils_authors_order_idx": {
+          "name": "outils_authors_order_idx",
+          "columns": [
+            {
+              "expression": "_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_authors_parent_id_idx": {
+          "name": "outils_authors_parent_id_idx",
+          "columns": [
+            {
+              "expression": "_parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_authors_user_idx": {
+          "name": "outils_authors_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "outils_authors_user_id_users_id_fk": {
+          "name": "outils_authors_user_id_users_id_fk",
+          "tableFrom": "outils_authors",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "outils_authors_parent_id_fk": {
+          "name": "outils_authors_parent_id_fk",
+          "tableFrom": "outils_authors",
+          "tableTo": "outils",
+          "columnsFrom": [
+            "_parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.outils": {
+      "name": "outils",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "numero": {
+          "name": "numero",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lede": {
+          "name": "lede",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resource_url": {
+          "name": "resource_url",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "audience": {
+          "name": "audience",
+          "type": "enum_outils_audience",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'tous'"
+        },
+        "reading_time": {
+          "name": "reading_time",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_carnet": {
+          "name": "id_carnet",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "draft": {
+          "name": "draft",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "notifications_sent_at": {
+          "name": "notifications_sent_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_draft_zones": {
+          "name": "has_draft_zones",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "outils_numero_idx": {
+          "name": "outils_numero_idx",
+          "columns": [
+            {
+              "expression": "numero",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_slug_idx": {
+          "name": "outils_slug_idx",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_has_draft_zones_idx": {
+          "name": "outils_has_draft_zones_idx",
+          "columns": [
+            {
+              "expression": "has_draft_zones",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_updated_at_idx": {
+          "name": "outils_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_created_at_idx": {
+          "name": "outils_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_search_vector_idx": {
+          "name": "outils_search_vector_idx",
+          "columns": [
+            {
+              "expression": "search_vector",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.outils_rels": {
+      "name": "outils_rels",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "themes_id": {
+          "name": "themes_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags_id": {
+          "name": "tags_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bibliography_id": {
+          "name": "bibliography_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "outils_rels_order_idx": {
+          "name": "outils_rels_order_idx",
+          "columns": [
+            {
+              "expression": "order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_rels_parent_idx": {
+          "name": "outils_rels_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_rels_path_idx": {
+          "name": "outils_rels_path_idx",
+          "columns": [
+            {
+              "expression": "path",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_rels_themes_id_idx": {
+          "name": "outils_rels_themes_id_idx",
+          "columns": [
+            {
+              "expression": "themes_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_rels_tags_id_idx": {
+          "name": "outils_rels_tags_id_idx",
+          "columns": [
+            {
+              "expression": "tags_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outils_rels_bibliography_id_idx": {
+          "name": "outils_rels_bibliography_id_idx",
+          "columns": [
+            {
+              "expression": "bibliography_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "outils_rels_parent_fk": {
+          "name": "outils_rels_parent_fk",
+          "tableFrom": "outils_rels",
+          "tableTo": "outils",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "outils_rels_themes_fk": {
+          "name": "outils_rels_themes_fk",
+          "tableFrom": "outils_rels",
+          "tableTo": "themes",
+          "columnsFrom": [
+            "themes_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "outils_rels_tags_fk": {
+          "name": "outils_rels_tags_fk",
+          "tableFrom": "outils_rels",
+          "tableTo": "tags",
+          "columnsFrom": [
+            "tags_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "outils_rels_bibliography_fk": {
+          "name": "outils_rels_bibliography_fk",
+          "tableFrom": "outils_rels",
           "tableTo": "bibliography",
           "columnsFrom": [
             "bibliography_id"
@@ -2403,8 +4541,32 @@
           "primaryKey": false,
           "notNull": true
         },
-        "posts_id": {
-          "name": "posts_id",
+        "articles_id": {
+          "name": "articles_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "analyses_id": {
+          "name": "analyses_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actus_id": {
+          "name": "actus_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "podcasts_id": {
+          "name": "podcasts_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outils_id": {
+          "name": "outils_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2498,11 +4660,71 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_posts_id_idx": {
-          "name": "payload_locked_documents_rels_posts_id_idx",
+        "payload_locked_documents_rels_articles_id_idx": {
+          "name": "payload_locked_documents_rels_articles_id_idx",
           "columns": [
             {
-              "expression": "posts_id",
+              "expression": "articles_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_analyses_id_idx": {
+          "name": "payload_locked_documents_rels_analyses_id_idx",
+          "columns": [
+            {
+              "expression": "analyses_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_actus_id_idx": {
+          "name": "payload_locked_documents_rels_actus_id_idx",
+          "columns": [
+            {
+              "expression": "actus_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_podcasts_id_idx": {
+          "name": "payload_locked_documents_rels_podcasts_id_idx",
+          "columns": [
+            {
+              "expression": "podcasts_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_outils_id_idx": {
+          "name": "payload_locked_documents_rels_outils_id_idx",
+          "columns": [
+            {
+              "expression": "outils_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2633,12 +4855,64 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_posts_fk": {
-          "name": "payload_locked_documents_rels_posts_fk",
+        "payload_locked_documents_rels_articles_fk": {
+          "name": "payload_locked_documents_rels_articles_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "posts",
+          "tableTo": "articles",
           "columnsFrom": [
-            "posts_id"
+            "articles_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_analyses_fk": {
+          "name": "payload_locked_documents_rels_analyses_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "analyses",
+          "columnsFrom": [
+            "analyses_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_actus_fk": {
+          "name": "payload_locked_documents_rels_actus_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "actus",
+          "columnsFrom": [
+            "actus_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_podcasts_fk": {
+          "name": "payload_locked_documents_rels_podcasts_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "podcasts",
+          "columnsFrom": [
+            "podcasts_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_outils_fk": {
+          "name": "payload_locked_documents_rels_outils_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "outils",
+          "columnsFrom": [
+            "outils_id"
           ],
           "columnsTo": [
             "id"
@@ -3619,21 +5893,54 @@
     }
   },
   "enums": {
-    "public.enum_posts_authors_kind": {
-      "name": "enum_posts_authors_kind",
+    "public.enum_articles_authors_kind": {
+      "name": "enum_articles_authors_kind",
       "schema": "public",
       "values": [
         "user",
         "external"
       ]
     },
-    "public.enum_posts_type": {
-      "name": "enum_posts_type",
+    "public.enum_analyses_authors_kind": {
+      "name": "enum_analyses_authors_kind",
       "schema": "public",
       "values": [
-        "analyse",
-        "note",
-        "fiche"
+        "user",
+        "external"
+      ]
+    },
+    "public.enum_actus_authors_kind": {
+      "name": "enum_actus_authors_kind",
+      "schema": "public",
+      "values": [
+        "user",
+        "external"
+      ]
+    },
+    "public.enum_podcasts_authors_kind": {
+      "name": "enum_podcasts_authors_kind",
+      "schema": "public",
+      "values": [
+        "user",
+        "external"
+      ]
+    },
+    "public.enum_outils_authors_kind": {
+      "name": "enum_outils_authors_kind",
+      "schema": "public",
+      "values": [
+        "user",
+        "external"
+      ]
+    },
+    "public.enum_outils_audience": {
+      "name": "enum_outils_audience",
+      "schema": "public",
+      "values": [
+        "tous",
+        "militantes",
+        "pros",
+        "structures"
       ]
     },
     "public.enum_bibliography_authors_role": {
@@ -3768,6 +6075,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "943b23ed-57bd-4c02-b5de-187d296140d1",
+  "id": "46fc5fdd-9395-4a58-b08c-43e72465f79f",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }
