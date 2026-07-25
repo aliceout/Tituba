@@ -1,0 +1,108 @@
+---
+/**
+ * Hero éditorial réutilisable — partagé par toutes les pages haut-niveau
+ * du carnet (home, archives, liste de thèmes, page d'un thème).
+ *
+ * Structure :
+ *   <section.hero>
+ *     <div.container>
+ *       <kicker>     ← optionnel, deux variantes (caps / mono)
+ *       <h1>         ← HTML autorisé (pour <em> en accent)
+ *       <p.lede>     ← optionnel, HTML autorisé
+ *       <slot />     ← contenu additionnel (ex. meta back-link en pied)
+ *
+ * Props :
+ *   - kicker         (string) ligne courte au-dessus du h1
+ *   - kickerVariant  ('caps' default = uppercase letter-spaced accent /
+ *                     'mono' = mono accent — pour les pages thème
+ *                     « #slug »)
+ *   - title          (string HTML) titre h1
+ *   - lede           (string HTML) paragraphe sous le titre, optionnel
+ */
+
+interface Props {
+  kicker?: string;
+  kickerVariant?: 'caps' | 'mono';
+  title: string;
+  lede?: string;
+}
+
+const { kicker, kickerVariant = 'caps', title, lede } = Astro.props;
+---
+
+<section class="hero">
+  <div class="container">
+    {kicker && (
+      <div class={`kicker${kickerVariant === 'mono' ? ' kicker--mono' : ''}`}>
+        {kicker}
+      </div>
+    )}
+    <h1 set:html={title}></h1>
+    {lede && <p class="lede" set:html={lede}></p>}
+    <slot />
+  </div>
+</section>
+
+<style>
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 80px;
+  }
+  @media (max-width: 900px) {
+    .container {
+      padding: 0 24px;
+    }
+  }
+
+  .hero {
+    padding: 36px 0 48px;
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .kicker {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 18px;
+  }
+
+  .kicker--mono {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: 64px;
+    line-height: 1.04;
+    font-weight: 600;
+    letter-spacing: -0.7px;
+    margin: 0 0 20px;
+    max-width: 1080px;
+  }
+
+  h1 :global(em) {
+    font-weight: 500;
+    color: var(--color-accent);
+  }
+
+  .lede {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    line-height: 1.55;
+    color: var(--color-muted);
+    max-width: 1080px;
+    margin: 0;
+  }
+
+  @media (max-width: 720px) {
+    h1 {
+      font-size: 40px;
+    }
+  }
+</style>

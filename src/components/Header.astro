@@ -1,0 +1,413 @@
+---
+/**
+ * Header sticky — wordmark à gauche (siteName depuis Site global, point
+ * en accent), nav à droite (Inter 13px, muted → ink + filet 1.5px accent
+ * sur l'item actif).
+ *
+ * Les onglets sont pilotés depuis Payload Navigation → navHeader (blocks
+ * réordonnables). Trois types d'onglets intégrés (Archives, Thèmes,
+ * Abonnement — câblés en dur ici car ce sont des routes Astro fixes avec
+ * leur matchPaths) + pages éditoriales libres (relationship → Pages).
+ *
+ * Le wordmark (`siteName`) vient du global Identity (siteName) — deux
+ * globals donc deux fetchs.
+ *
+ * Si Payload est down ou que les globals sont vides, on retombe sur un
+ * set par défaut (Archives, Thèmes, Abonnement) — équivalent au
+ * comportement historique avant que le header soit configurable.
+ *
+ * Réf : design_handoff_carnet/Carnet B.html → header.site.
+ */
+import { fetchIdentity, fetchIndexPages, fetchNavigation } from '../lib/payload';
+
+const pathname = Astro.url.pathname;
+
+type NavItem = { href: string; label: string; matchPaths: string[] };
+type IndexTarget = 'archives' | 'themes' | 'subscribe';
+
+// ─── Pages d'index (routes Astro fixes) ────────────────────────────
+// Mappées ici plutôt que côté Payload parce que le `matchPaths` (qui
+// détermine quand l'onglet est « actif ») dépend de la structure des
+// routes Astro — donc du code, pas du contenu.
+const INDEX_TARGETS: Record<IndexTarget, NavItem> = {
+  archives: { href: '/archives/', label: 'Archives', matchPaths: ['/archives'] },
+  themes: { href: '/themes/', label: 'Thèmes', matchPaths: ['/themes', '/theme'] },
+  subscribe: { href: '/abonnement/', label: 'Abonnement', matchPaths: ['/abonnement', '/rss'] },
+};
+
+const DEFAULT_NAV_ITEMS: NavItem[] = [
+  INDEX_TARGETS.archives,
+  INDEX_TARGETS.themes,
+  INDEX_TARGETS.subscribe,
+];
+
+// ─── Types côté globals (subset de payload-types) ──────────────────
+type PagePopulated = {
+  slug?: string;
+  title?: string;
+  eyebrow?: string | null;
+};
+type NavItemEntry = {
+  blockType: 'navItem';
+  kind?: 'index' | 'editorial';
+  indexTarget?: IndexTarget;
+  page?: PagePopulated | number | string | null;
+  label?: string | null;
+};
+type IdentityGlobal = { siteName?: string };
+type NavigationGlobal = {
+  navHeader?: Array<NavItemEntry | { blockType?: string }> | null;
+};
+type IndexPagesGlobal = {
+  archives?: { enabled?: boolean };
+  themes?: { enabled?: boolean };
+  subscribe?: { enabled?: boolean };
+};
+
+let siteName = 'Carnet';
+let items: NavItem[] = DEFAULT_NAV_ITEMS;
+let indexEnabled: Record<IndexTarget, boolean> = {
+  archives: true,
+  themes: true,
+  subscribe: true,
+};
+try {
+  const identity = await fetchIdentity<IdentityGlobal>();
+  siteName = identity.siteName?.trim() || siteName;
+} catch (err) {
+  console.warn('[header] fetchIdentity failed, using defaults:', (err as Error).message);
+}
+try {
+  const ip = await fetchIndexPages<IndexPagesGlobal>();
+  indexEnabled = {
+    archives: ip.archives?.enabled !== false,
+    themes: ip.themes?.enabled !== false,
+    subscribe: ip.subscribe?.enabled !== false,
+  };
+} catch (err) {
+  console.warn('[header] fetchIndexPages failed, using defaults:', (err as Error).message);
+}
+try {
+  const nav = await fetchNavigation<NavigationGlobal>();
+  const configured = nav.navHeader ?? [];
+  if (configured.length > 0) {
+    items = configured.flatMap((entry): NavItem[] => {
+      if (entry.blockType !== 'navItem') return [];
+      const e = entry as NavItemEntry;
+      if (e.kind === 'index') {
+        const target = e.indexTarget;
+        if (!target || !INDEX_TARGETS[target]) return [];
+        // Si la page d'index est désactivée (toggle off dans IndexPages),
+        // on saute silencieusement.
+        if (!indexEnabled[target]) return [];
+        // Override de libellé optionnel.
+        const base = INDEX_TARGETS[target];
+        const label = e.label?.trim() || base.label;
+        return [{ ...base, label }];
+      }
+      if (e.kind === 'editorial') {
+        // depth=1 → relationship populé en objet. Si la page a été
+        // supprimée mais l'entrée nav pas nettoyée, page = id orphelin :
+        // on skip silencieusement.
+        if (!e.page || typeof e.page !== 'object') return [];
+        const slug = e.page.slug;
+        if (!slug) return [];
+        const label =
+          e.label?.trim() ||
+          e.page.eyebrow?.trim() ||
+          e.page.title?.trim() ||
+          slug;
+        return [{ href: `/${slug}/`, label, matchPaths: [`/${slug}`] }];
+      }
+      return [];
+    });
+  } else {
+    // Pas de config → defaults filtrés par les enabled.
+    items = DEFAULT_NAV_ITEMS.filter((it) => {
+      const target = (Object.keys(INDEX_TARGETS) as IndexTarget[]).find(
+        (t) => INDEX_TARGETS[t] === it,
+      );
+      return target ? indexEnabled[target] : true;
+    });
+  }
+} catch (err) {
+  console.warn('[header] fetchNavigation failed, using defaults:', (err as Error).message);
+}
+
+// Recherche : rendue séparément en icône loupe à droite de la nav
+// (même placement et style que le theme-toggle), pas comme un lien
+// texte parmi les autres.
+const searchActive =
+  pathname === '/recherche' || pathname.startsWith('/recherche/');
+
+function isActive(item: NavItem): boolean {
+  return item.matchPaths.some((p) => pathname === p || pathname.startsWith(p + '/'));
+}
+
+// L'onglet « Billets » (home) reste toujours en première position,
+// hardcodé : c'est la racine du site, on ne le pilote pas depuis l'admin.
+const homeActive = pathname === '/' || pathname.startsWith('/billets');
+---
+
+<header class="site" id="site-header">
+  <div class="row">
+    <a class="brand" href="/">{siteName}<span class="dot">.</span></a>
+    <nav>
+      <a
+        href="/"
+        class:list={[{ active: homeActive }]}
+        aria-current={homeActive ? 'page' : undefined}
+      >
+        Billets
+      </a>
+      {items.map((item) => (
+        <a
+          href={item.href}
+          class:list={[{ active: isActive(item) }]}
+          aria-current={isActive(item) ? 'page' : undefined}
+        >
+          {item.label}
+        </a>
+      ))}
+      {/* Recherche : icône loupe à droite des liens texte. Comportement
+          visuel identique au theme-toggle (bouton-icône discret), avec
+          un état actif qui souligne en accent quand on est sur la page. */}
+      <a
+        href="/recherche/"
+        class:list={['nav-icon', 'search-link', { active: searchActive }]}
+        aria-label="Rechercher dans le carnet"
+        title="Rechercher"
+        aria-current={searchActive ? 'page' : undefined}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="m20 20-3.5-3.5"/>
+        </svg>
+      </a>
+      <button
+        type="button"
+        class="theme-toggle"
+        aria-label="Basculer entre thème clair et sombre"
+        title="Basculer le thème"
+        data-theme-toggle
+      >
+        {/*
+          On rend les deux icônes ; le CSS en cache une selon
+          data-theme. Évite de devoir jongler avec le DOM côté JS et
+          permet un rendu correct au premier paint (l'attribut data-theme
+          est posé par le script anti-FOUC dans Layout.astro avant le CSS).
+        */}
+        <svg class="icon icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+        </svg>
+        <svg class="icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2"/>
+          <path d="M12 20v2"/>
+          <path d="m4.93 4.93 1.41 1.41"/>
+          <path d="m17.66 17.66 1.41 1.41"/>
+          <path d="M2 12h2"/>
+          <path d="M20 12h2"/>
+          <path d="m6.34 17.66-1.41 1.41"/>
+          <path d="m19.07 4.93-1.41 1.41"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<style>
+  header.site {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-rule);
+  }
+  header.site .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 80px 18px;
+    max-width: 1280px;
+    margin: 0 auto;
+    transition: padding 0.18s ease;
+  }
+  /* Compact sticky : on retire ~25 % de padding vertical une fois scrollé. */
+  header.site.is-scrolled .row {
+    padding-top: 18px;
+    padding-bottom: 13px;
+  }
+  header.site .brand {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  header.site .brand .dot {
+    color: var(--color-accent);
+  }
+  header.site nav {
+    display: flex;
+    gap: 28px;
+    /* Center-aligned plutôt que baseline pour que le bouton-icône
+       (sans baseline texte) s'aligne visuellement avec le centre
+       optique des liens nav. Avec baseline, le bouton se retrouvait
+       2-3 px plus haut. */
+    align-items: center;
+    font-family: var(--font-sans);
+    font-size: 13px;
+  }
+  header.site nav a {
+    color: var(--color-muted);
+    padding-bottom: 4px;
+    transition: color 0.12s;
+  }
+  header.site nav a:hover {
+    color: var(--color-ink);
+  }
+  header.site nav a.active {
+    color: var(--color-ink);
+    font-weight: 600;
+    border-bottom: 1.5px solid var(--color-accent);
+  }
+  header.site nav a.mono {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  /* Lien icône recherche — même look que le theme-toggle pour rester
+     visuellement cohérent. État actif : pastille accent-tint pour
+     marquer qu'on est sur /recherche/ (vs un underline qui irait
+     bizarrement sur une icône). */
+  header.site nav .search-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    color: var(--color-muted);
+    border-radius: 999px;
+    transition: color 0.12s, background-color 0.12s;
+    /* Override le `padding-bottom: 4px` posé sur `nav a` qui décalerait
+       l'icône d'un demi-pixel par rapport au theme-toggle voisin. */
+    padding-bottom: 4px;
+  }
+  header.site nav .search-link:hover {
+    color: var(--color-ink);
+    background: color-mix(in oklch, var(--color-ink), transparent 92%);
+  }
+  header.site nav .search-link.active {
+    color: var(--color-accent);
+    background: var(--color-accent-tint, color-mix(in oklch, var(--color-accent), transparent 88%));
+    /* Override le `border-bottom` accent posé sur `nav a.active` —
+       sur une icône ronde, ça ferait un trait inesthétique. */
+    border-bottom: 0;
+    font-weight: normal;
+  }
+  header.site nav .search-link:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Toggle thème — bouton icône discret en fin de nav. */
+  header.site nav .theme-toggle {
+    background: transparent;
+    border: 0;
+    padding: 4px;
+    margin-left: 4px;
+    color: var(--color-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    transition: color 0.12s, background-color 0.12s;
+  }
+  header.site nav .theme-toggle:hover {
+    color: var(--color-ink);
+    background: color-mix(in oklch, var(--color-ink), transparent 92%);
+  }
+  header.site nav .theme-toggle:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  /* Affichage conditionnel selon data-theme (posé sur <html> par le
+     script anti-FOUC du Layout). En light : on montre la lune (clic
+     → dark). En dark : on montre le soleil (clic → light). */
+  header.site nav .theme-toggle .icon-sun {
+    display: none;
+  }
+  :global([data-theme='dark']) header.site nav .theme-toggle .icon-moon {
+    display: none;
+  }
+  :global([data-theme='dark']) header.site nav .theme-toggle .icon-sun {
+    display: inline-block;
+  }
+
+  @media (max-width: 720px) {
+    header.site .row {
+      padding: 18px 24px 14px;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-start;
+      position: relative;
+    }
+    header.site.is-scrolled .row {
+      padding-top: 14px;
+      padding-bottom: 10px;
+    }
+    header.site nav {
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    /* Sur mobile, le toggle sort du flux nav et se colle en haut à droite
+       du header, sur la même ligne visuelle que "Carnet.". */
+    header.site nav .theme-toggle {
+      position: absolute;
+      right: 24px;
+      top: 16px;
+    }
+  }
+</style>
+
+<script is:inline>
+  // Compact sticky : la classe `is-scrolled` est posée dès qu'on a quitté
+  // le haut de page. Listener passif + rAF pour éviter le jank.
+  (function () {
+    const el = document.getElementById('site-header');
+    if (!el) return;
+    let ticking = false;
+    function update() {
+      ticking = false;
+      el.classList.toggle('is-scrolled', window.scrollY > 4);
+    }
+    document.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(update);
+        }
+      },
+      { passive: true },
+    );
+    update();
+  })();
+
+  // Toggle thème : flip data-theme sur <html>, persiste dans localStorage.
+  // Le script anti-FOUC du Layout.astro pose le data-theme initial avant
+  // le premier paint, donc ici on se contente de réagir aux clics.
+  (function () {
+    const btn = document.querySelector('[data-theme-toggle]');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try {
+        localStorage.setItem('theme', next);
+      } catch (_) {
+        /* private mode — pas grave, le toggle marche pour cette session */
+      }
+    });
+  })();
+</script>

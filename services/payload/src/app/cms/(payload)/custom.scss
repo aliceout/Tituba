@@ -1,0 +1,6185 @@
+// Overrides CSS de l'admin Payload — applique la palette + typographie
+// Carnet par-dessus le thème natif Payload.
+//
+// Réf : Design/design_handoff_admin/README.md (handoff).
+//
+// L'accent admin reprend désormais celui choisi côté front (Site →
+// Branding) — le mapping est piloté par data-accent sur <html>, posé
+// par Nav.client.tsx au mount. Idem pour le dark mode (data-theme).
+
+// ─── Tokens Carnet en :root ──────────────────────────────────────
+// On utilise un sélecteur :root,html pour bien override les vars
+// Payload qui sont aussi en :root.
+
+:root,
+html {
+  // Largeur de la nav latérale Carnet (220px). Payload v3 utilise
+  // cette var pour calculer la colonne réservée dans le grid de
+  // .template-default (`grid-template-columns: var(--nav-width) auto`).
+  // Sans override, Payload utilise sa valeur par défaut (~256px) qui
+  // crée un gap entre la fin de notre .carnet-nav (220px) et le bord
+  // gauche du content.
+  --nav-width: 220px;
+
+  // Padding horizontal des pages admin (listview + editview + topbar).
+  // Source de vérité unique : changer ici recale tout le layout sans
+  // toucher aux enfants. Conséquence : éviter de hardcoder `24px` à
+  // gauche/droite dans .carnet-listview / .carnet-editview / .carnet-topbar
+  // et leurs descendants — laisser le container gérer.
+  --carnet-pad-x: 24px;
+
+  --b-ink: #1a1d28;
+  --b-bg: #fdfcf8;
+  --b-paper: #fbfaf6;
+  --b-rule: #d6d3c8;
+  --b-muted: #5e6373;
+  --b-accent: #5a3a7a; /* défaut violet, surchargé par data-accent */
+  --b-accent-tint: rgba(90, 58, 122, 0.08);
+
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
+}
+
+// ─── Breakpoints (mixins SCSS) ──────────────────────────────────
+// Source de vérité unique pour les breakpoints responsives.
+// Modifier la valeur ici → toutes les @media qui utilisent le mixin
+// suivent. À utiliser à la place de @media (max-width: ...).
+//
+//   @include mobile      → ≤ 900px       — vrai mobile (smartphone)
+//   @include tablet-sm   → ≤ 1180px      — tablette étroite (englobe mobile)
+//   @include tablet      → ≤ 1440px      — tablette / écran moyen sans nav latérale
+//                                          (englobe mobile + tablet-sm) ; constat
+//                                          empirique Firefox du seuil où le contenu
+//                                          passe sous la nav admin
+//   @include tablet-only → 901–1440px    — comportement DIFFÉRENT de mobile dans
+//                                          la zone tablette/moyenne uniquement
+
+@mixin mobile      { @media (max-width: 900px)  { @content; } }
+@mixin tablet-sm   { @media (max-width: 1180px) { @content; } }
+@mixin tablet      { @media (max-width: 1440px) { @content; } }
+@mixin tablet-only { @media (min-width: 901px) and (max-width: 1440px) { @content; } }
+
+// ─── Variantes d'accent (light) ──────────────────────────────────
+// data-accent est posé sur <html> par Nav.client.tsx au mount,
+// d'après la valeur Site → Branding → Couleur d'accentuation.
+[data-accent='violet'] {
+  --b-accent: #5a3a7a;
+  --b-accent-tint: rgba(90, 58, 122, 0.08);
+}
+[data-accent='rouge'] {
+  --b-accent: #8a3a3a;
+  --b-accent-tint: rgba(138, 58, 58, 0.08);
+}
+[data-accent='bleu'] {
+  --b-accent: #1f3a5a;
+  --b-accent-tint: rgba(31, 58, 90, 0.08);
+}
+[data-accent='gris'] {
+  --b-accent: #3a3a3a;
+  --b-accent-tint: rgba(58, 58, 58, 0.08);
+}
+[data-accent='vert'] {
+  --b-accent: #2d5a3d;
+  --b-accent-tint: rgba(45, 90, 61, 0.08);
+}
+
+// ─── Dark mode ───────────────────────────────────────────────────
+// data-theme="dark" posé sur <html> par Nav.client.tsx (toggle dans
+// le footer de la sidebar). Palette warm dark cohérente avec le
+// front public, accent éclairci pour rester lisible.
+[data-theme='dark'] {
+  --b-ink: #e8e6e0;
+  --b-bg: #22242e;
+  --b-paper: #2a2c38;
+  --b-rule: #3d4150;
+  --b-muted: #9aa0ad;
+  --b-accent: #a888c8; /* défaut violet éclairci */
+  --b-accent-tint: rgba(168, 136, 200, 0.14);
+}
+
+// Variantes dark per-accent — calibrées comme côté front pour rester
+// cohérent (cf. src/styles/global.css côté Astro).
+[data-theme='dark'][data-accent='violet'] {
+  --b-accent: #a888c8;
+  --b-accent-tint: rgba(168, 136, 200, 0.14);
+}
+[data-theme='dark'][data-accent='rouge'] {
+  --b-accent: #d49a9a;
+  --b-accent-tint: rgba(212, 154, 154, 0.14);
+}
+[data-theme='dark'][data-accent='bleu'] {
+  --b-accent: #7ea4cc;
+  --b-accent-tint: rgba(126, 164, 204, 0.14);
+}
+[data-theme='dark'][data-accent='gris'] {
+  --b-accent: #b8b8b8;
+  --b-accent-tint: rgba(184, 184, 184, 0.14);
+}
+[data-theme='dark'][data-accent='vert'] {
+  --b-accent: #8ec4a4;
+  --b-accent-tint: rgba(142, 196, 164, 0.14);
+}
+
+// ─── Override des CSS vars Payload ───────────────────────────────
+// Payload expose un système de couleurs via `--theme-*` et
+// `--theme-elevation-*`. On les remappe sur la palette Carnet.
+
+:root,
+html {
+  // Fond global et texte
+  --theme-bg: var(--b-bg);
+  --theme-text: var(--b-ink);
+  --theme-input-bg: var(--b-paper);
+
+  // Élévations (gradient de fonds entre paper et ink)
+  --theme-elevation-0: var(--b-bg);
+  --theme-elevation-50: var(--b-paper);
+  --theme-elevation-100: var(--b-paper);
+  --theme-elevation-150: var(--b-rule);
+  --theme-elevation-200: var(--b-rule);
+  --theme-elevation-250: var(--b-rule);
+  --theme-elevation-300: var(--b-muted);
+  --theme-elevation-400: var(--b-muted);
+  --theme-elevation-500: var(--b-muted);
+  --theme-elevation-600: var(--b-ink);
+  --theme-elevation-700: var(--b-ink);
+  --theme-elevation-800: var(--b-ink);
+  --theme-elevation-900: var(--b-ink);
+  --theme-elevation-1000: var(--b-ink);
+
+  // Sémantique : success vert sobre, error rouge sobre, warning ambre
+  --theme-success-500: #4a7a4d;
+  --theme-warning-500: #b8842a;
+  --theme-error-500: #b63a3a;
+  --success-500: #4a7a4d;
+  --warning-500: #b8842a;
+  --error-500: #b63a3a;
+
+  // Bordures
+  --theme-border-color: var(--b-rule);
+}
+
+// Le wrapper des pages publiques (login, invitation, forgot, reset)
+// utilise `background-color: var(--theme-bg-color)` côté Payload, mais
+// cette var n'est pas définie dans le CSS généré → en theme dark, le
+// fond reste blanc. On force la bonne var. !important pour passer
+// au-dessus du @layer payload-default.
+.template-minimal {
+  background-color: var(--b-bg) !important;
+}
+
+// ─── Typographies globales ───────────────────────────────────────
+// L'admin Payload utilise par défaut une stack système. On applique
+// Inter sur l'UI et Source Serif 4 sur les titres éditoriaux qu'on
+// peut taguer (h1 du document view, brand login, dashboard hello).
+
+body {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--b-ink);
+  background: var(--b-bg);
+}
+
+// Inputs et formulaires
+input,
+textarea,
+select,
+button {
+  font-family: var(--font-sans);
+}
+
+// Code, mono, pre
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+// Tagger les éléments mono explicitement (utilisé dans les composants
+// custom : numéros de billet, slugs, dates ISO, clés biblio).
+.carnet-mono {
+  font-family: var(--font-mono);
+}
+
+.carnet-serif {
+  font-family: var(--font-serif);
+}
+
+// ─── Nav latérale Payload ────────────────────────────────────────
+// Sélecteurs Payload v3 BEM-like : `.nav`, `.nav__link`, `.nav-group`,
+// etc. On affine sans tout réécrire (la structure reste celle de
+// Payload, juste avec la palette + typo Carnet).
+
+.nav {
+  background: var(--b-bg);
+  border-right: 1px solid var(--b-rule);
+}
+
+.nav__link {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--b-muted);
+  border-left: 2px solid transparent;
+  transition: background 0.12s, color 0.12s, border-left-color 0.12s;
+
+  &:hover {
+    background: var(--b-accent-tint);
+    color: var(--b-ink);
+  }
+
+  &.active,
+  &--active,
+  &[aria-current='page'] {
+    background: var(--b-accent-tint);
+    color: var(--b-ink);
+    border-left-color: var(--b-accent);
+    font-weight: 600;
+  }
+}
+
+// Labels de groupe (Contenu / Pages / Réglages)
+.nav-group__label,
+.nav-group-link__label {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--b-muted);
+}
+
+// ─── Boutons ─────────────────────────────────────────────────────
+
+.btn {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  border-radius: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.btn--style-primary {
+  background: var(--b-accent);
+  color: var(--b-bg);
+  border: 1px solid var(--b-accent);
+
+  &:hover {
+    background: #000;
+    border-color: #000;
+  }
+}
+
+.btn--style-secondary {
+  background: transparent;
+  color: var(--b-ink);
+  border: 1px solid var(--b-rule);
+
+  &:hover {
+    border-color: var(--b-ink);
+  }
+}
+
+// ─── Champs (text, textarea, select) ────────────────────────────
+
+.field-type input,
+.field-type textarea,
+.field-type select,
+input.field-type__input,
+textarea.field-type__input {
+  background: var(--b-paper);
+  border: 1px solid var(--b-rule);
+  border-radius: 0;
+  font-family: var(--font-sans);
+  color: var(--b-ink);
+
+  &:focus {
+    border-color: var(--b-accent);
+    outline: none;
+    box-shadow: none;
+  }
+}
+
+.field-label,
+.tooltip {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--b-muted);
+  text-transform: uppercase;
+}
+
+// ─── Liste de collection (list view) ─────────────────────────────
+
+.collection-list,
+.list-controls {
+  font-family: var(--font-sans);
+}
+
+.cell-id,
+.cell-slug,
+.cell-numero {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--b-ink);
+}
+
+// ─── Headings éditoriaux dans les vues custom ───────────────────
+// Pour les composants custom (LoginView, future dashboard) on tagge
+// les h1 avec une classe `.carnet-h1` qui applique Source Serif 4.
+
+.carnet-h1 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--b-ink);
+}
+
+.carnet-h1--brand {
+  font-size: 64px;
+  line-height: 1;
+
+  .dot {
+    color: var(--b-accent);
+  }
+}
+
+.carnet-kicker {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--b-muted);
+  font-weight: 500;
+}
+
+// ─── Nav latérale custom ─────────────────────────────────────────
+// Composant React custom branché via admin.components.Nav.
+// Remplace la nav native Payload par la structure éditoriale
+// Contenu / Pages / Réglages avec counts mono à droite.
+
+.carnet-nav {
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+  height: 100vh;
+  padding: 0;
+  background: var(--b-bg);
+  border-right: 1px solid var(--b-rule);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  // Sticky : la nav reste affichée à gauche quand on scroll le content.
+  // align-self: start nécessaire dans le grid layout Payload pour que
+  // le sticky fonctionne (sinon la nav s'étire sur toute la hauteur du
+  // grid item et le sticky devient inopérant).
+  position: sticky;
+  top: 0;
+  align-self: start;
+  overflow-y: auto;
+  z-index: 10;
+
+  &__brand {
+    display: block;
+    padding: 20px 24px 8px;
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--b-ink);
+    text-decoration: none;
+
+    .dot {
+      color: var(--b-accent);
+    }
+  }
+
+  // Top row sous le brand : « Voir le site » à gauche + actions
+  // icônes (theme toggle + logout) à droite, alignées sur la même
+  // ligne. Espacement aéré pour rester discret.
+  &__top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 24px 12px;
+    min-height: 22px;
+  }
+
+  // Lien vers le front public. Discret (mono, muted, taille 11px),
+  // flèche ↗ qui indique l'ouverture dans un nouvel onglet.
+  &__view-site {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--b-muted);
+    text-decoration: none;
+    transition: color 0.12s;
+
+    &:hover {
+      color: var(--b-accent);
+    }
+
+    .arrow {
+      font-size: 10px;
+      line-height: 1;
+    }
+  }
+
+  // Cluster d'icônes à droite du top-row : theme toggle + logout.
+  // Boutons ronds discrets, hover en accent.
+  &__top-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  // Icône logout (porte avec flèche) — même style que le theme toggle
+  // pour cohérence visuelle.
+  &__logout-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--b-muted);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: color 0.12s, background 0.12s;
+
+    &:hover {
+      color: var(--b-accent);
+      background: color-mix(in oklch, var(--b-ink), transparent 92%);
+    }
+  }
+
+  &__section {
+    padding: 16px 0 8px;
+  }
+
+  &__section-label {
+    padding: 6px 24px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--b-muted);
+  }
+
+  &__link {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 7px 24px;
+    color: var(--b-muted);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    margin-left: 0;
+    transition: background 0.12s, color 0.12s, border-left-color 0.12s;
+
+    &:hover {
+      background: var(--b-accent-tint);
+      color: var(--b-ink);
+    }
+
+    &--active {
+      background: var(--b-accent-tint);
+      color: var(--b-ink);
+      font-weight: 600;
+      border-left-color: var(--b-accent);
+    }
+
+    &--logout {
+      margin-top: auto;
+      color: var(--b-muted);
+      font-size: 12px;
+    }
+  }
+
+  &__link-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__link-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--b-muted);
+    flex-shrink: 0;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  // Footer : avatar carré 26px (initiale Source Serif sur fond accent)
+  // + nom + rôle muted. Cf maquette handoff sidebar footer.
+  &__footer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 24px 10px;
+    border-top: 1px solid var(--b-rule);
+    margin-top: 8px;
+  }
+
+  // Ligne version (tag · commit) — placée sous le bloc user, en mono
+  // discret. Sert à savoir à coup d'œil quelle version tourne sur
+  // l'environnement courant (dev / prod / staging).
+  &__version {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--b-muted);
+    letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: text;
+  }
+
+  &__avatar {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    background: var(--b-accent);
+    color: var(--b-bg);
+    font-family: var(--font-serif);
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  &__user {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.2;
+  }
+
+  &__user-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--b-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__user-role {
+    font-size: 11px;
+    color: var(--b-muted);
+    text-transform: lowercase;
+    margin-top: 2px;
+  }
+
+  // Toggle dark/light dans le footer de la sidebar (à droite du user
+  // info, opposé à l'avatar). Discret : pas de bordure, pas de fond
+  // par défaut, pastille au hover.
+  // Le theme toggle vit maintenant dans .carnet-nav__top-actions
+  // (top-row, à côté du lien Voir le site et du logout icon). Style
+  // aligné sur __logout-icon pour cohérence visuelle.
+  &__theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--b-muted);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: color 0.12s, background 0.12s;
+
+    &:hover {
+      color: var(--b-accent);
+      background: color-mix(in oklch, var(--b-ink), transparent 92%);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--b-accent);
+      outline-offset: 2px;
+    }
+  }
+}
+
+// ─── Masquage agressif des chromes natifs Payload ────────────────
+// Notre Nav custom + nos custom views (PostListView, BiblioListView,
+// etc.) remplacent l'expérience Payload native. Mais Payload continue
+// d'injecter par-dessus :
+//   - une top bar avec icône logo + breadcrumb + avatar/menu user
+//   - un titre h1 de collection au-dessus du contenu de la list view
+// On masque tout ça pour avoir UNE SEULE topbar (la nôtre) sans
+// double affichage.
+
+// Top bar Payload (header global avec logo + breadcrumb + avatar user)
+header[class*='AppHeader'],
+[class*='AppHeader_appHeader'],
+[class*='AppHeader__appHeader'],
+[class*='appHeader_appHeader'],
+.app-header,
+header.app-header,
+.payload__app-header,
+.payload-app-header {
+  display: none !important;
+}
+
+// Logo Payload (icône cube) sous tous ses noms BEM possibles
+.payload-logo,
+.payload-logo--svg,
+.payload-logo-icon,
+.nav-mobile,
+.nav__brand,
+.nav__brand-link,
+.app-header__logo,
+[class*='PayloadLogo'],
+[class*='AppHeader__logo'],
+[class*='Logo_logo'] {
+  display: none !important;
+}
+
+// Avatar / menu utilisateur natif Payload (cercle en haut à droite)
+[class*='AccountMenu'],
+[class*='UserAvatar'],
+[class*='accountMenu'],
+[class*='userAvatar'] {
+  display: none !important;
+}
+
+// Titre h1 natif des list views (Payload affiche le label pluriel de
+// la collection au-dessus du contenu — chez nous notre custom view
+// rend déjà son propre h1, donc on cache le natif).
+.collection-list__heading,
+[class*='collection-list__heading'],
+[class*='ListHeader__heading'],
+[class*='listHeader_heading'],
+.list-header__heading {
+  display: none !important;
+}
+
+// Headers natifs sur edit/list views (contiennent souvent le breadcrumb
+// + logo). Masque défensif — notre PostEditHeader rend déjà breadcrumb.
+.collection-edit__header svg[class*='Logo'],
+.list-view__header svg[class*='Logo'],
+header svg.icon--logo {
+  display: none !important;
+}
+
+// ─── Pages natives Payload (Media, Users, Pages éditoriales, Mon
+// compte, Site global) — sticky topbar + style boutons cohérent ──
+// On n'a pas de custom view pour ces collections (elles utilisent
+// le rendu natif Payload). On applique du CSS pour qu'elles aient
+// au moins le sticky topbar + les boutons accent.
+
+// Sticky des controls natifs (toolbar + heading + actions)
+.list-controls,
+.list-header,
+.doc-controls,
+.doc-header,
+.collection-list__header,
+.collection-list__header-controls,
+.edit-document__header,
+[class*='ListControls'],
+[class*='listControls'],
+[class*='DocumentHeader'],
+[class*='documentHeader'],
+[class*='doc-controls'] {
+  position: sticky;
+  top: 0;
+  background: var(--b-bg);
+  z-index: 5;
+}
+
+// Heading h1 natif sur les pages list (Pages, Media, Users) :
+// styles cohérents avec notre carnet-listview__h1 (mais on n'enlève
+// pas le h1 ici car il est la seule indication du contexte de page —
+// pas de breadcrumb natif visible)
+.collection-list h1,
+.list-view h1,
+.edit-document h1 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--b-ink);
+}
+
+// Boutons "Create New" / "Save" / "Publish" natifs Payload :
+// forcer la palette accent Carnet (au lieu du gris-béton par défaut).
+// !important nécessaire pour passer le @layer payload-default.
+//
+// Cibles MASSIVES car Payload v3 utilise plein de variantes de classes
+// pour ses boutons : btn--style-primary, btn--style-pill,
+// btn--icon-style-without-border, pill, etc. On cible tous les btn
+// qui ne sont pas explicitement secondaires/ghost.
+.btn--style-primary,
+.btn.btn--style-primary,
+button.btn--style-primary,
+[class*='btn--style-primary'],
+.collection-list__sub-header .btn,
+.collection-list__sub-header .pill,
+.edit-document__header .btn--primary,
+.list-header .pill,
+.list-header .btn,
+.doc-controls .btn--style-primary,
+.doc-header .btn--style-primary {
+  background: var(--b-accent) !important;
+  color: var(--b-bg) !important;
+  border: 1px solid var(--b-accent) !important;
+  border-radius: 0 !important;
+  font-family: var(--font-sans) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  padding: 5px 14px !important;
+
+  &:hover {
+    background: #000 !important;
+    border-color: #000 !important;
+  }
+}
+
+// Pills natives Payload (utilisées pour "Create New" et "Bulk Upload")
+// Souvent rendues avec .pill ou .btn-pill. Style accent pour la pill
+// principale, ghost pour les variants.
+.pill,
+.btn--style-pill,
+[class*='btn--style-pill'],
+[class*='pill_pill'] {
+  border-radius: 0 !important;
+  font-family: var(--font-sans) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  padding: 5px 14px !important;
+  background: var(--b-paper) !important;
+  color: var(--b-ink) !important;
+  border: 1px solid var(--b-rule) !important;
+
+  &:hover {
+    border-color: var(--b-ink) !important;
+  }
+}
+
+// Boutons secondaires natifs (Bulk Upload, Edit, API, etc.) :
+// border discrète, fond paper, plus discret.
+.btn--style-secondary,
+[class*='btn--style-secondary'] {
+  background: var(--b-paper) !important;
+  color: var(--b-ink) !important;
+  border: 1px solid var(--b-rule) !important;
+  border-radius: 0 !important;
+  font-family: var(--font-sans) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  padding: 5px 14px !important;
+
+  &:hover {
+    border-color: var(--b-ink) !important;
+  }
+}
+
+// ─── Wrapper de contenu : suppression du gap sidebar/content ─────
+// Payload v3 met du padding par défaut sur le wrapper du content
+// (.template-default, .payload__main, .app-content selon version) :
+// ce padding crée une bande blanche entre la fin de notre Nav
+// custom (220px) et le début de notre content. On le neutralise
+// pour que la topbar parte directement après la nav, sans gap.
+
+.template-default,
+.payload__main,
+.app-content {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+// Wrapper interne du content à droite de la sidebar (DOM Payload v3
+// confirmé : `.template-default__wrap`). C'est lui qui ajoutait un
+// padding-left qui créait le gap avec la nav custom.
+.template-default__wrap,
+.template-default__content {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+// Wrappers internes des views (list, edit) — préservation du padding
+// vertical qui peut être utile, on neutralise juste les latéraux.
+.collection-list,
+.list-view,
+[class*='ListView'],
+[class*='listView'],
+[class*='CollectionList'],
+[class*='collectionList'] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+// ─── Dashboard custom ────────────────────────────────────────────
+// Composant React custom branché via admin.components.views.dashboard.
+// Remplace le rendu CollectionCards natif par un hero éditorial.
+
+.carnet-dashboard {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 56px 32px 80px;
+  font-family: var(--font-sans);
+
+  &__header {
+    margin-bottom: 48px;
+  }
+
+  // Burger mobile + kicker « Carnet · admin » alignés sur la même ligne
+  // (≤1440 — sur desktop, le burger est display: none donc le kicker
+  // se retrouve seul, naturellement). gap modeste pour rapprocher
+  // visuellement les deux.
+  &__kicker-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__hello {
+    font-size: 48px;
+    line-height: 1.1;
+    margin: 12px 0 16px;
+    font-weight: 600;
+
+    em {
+      font-style: normal;
+      font-weight: 500;
+      color: var(--b-accent);
+    }
+  }
+
+  &__lede {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--b-muted);
+    margin: 0;
+    max-width: 640px;
+  }
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--b-rule);
+    border-bottom: 1px solid var(--b-rule);
+    padding: 24px 0;
+    margin-bottom: 56px;
+
+    @media (max-width: 720px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px 0;
+    }
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 16px;
+    border-right: 1px solid var(--b-rule);
+
+    &:last-child {
+      border-right: 0;
+    }
+
+    .n {
+      font-family: var(--font-serif);
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--b-ink);
+      line-height: 1;
+    }
+
+    .lbl {
+      font-size: 12px;
+      color: var(--b-muted);
+    }
+  }
+
+  &__cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    margin-bottom: 56px;
+
+    @include mobile {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+  }
+
+  &__col {
+    min-width: 0;
+  }
+
+  &__col-h {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--b-ink);
+    margin: 0 0 16px;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    li {
+      border-top: 1px solid var(--b-rule);
+
+      &:last-child {
+        border-bottom: 1px solid var(--b-rule);
+      }
+    }
+
+    a {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 16px;
+      padding: 12px 0;
+      align-items: baseline;
+      color: var(--b-ink);
+      text-decoration: none;
+      transition: color 0.12s, background 0.12s;
+
+      &:hover {
+        background: var(--b-accent-tint);
+
+        .t {
+          color: var(--b-accent);
+        }
+      }
+    }
+
+    .carnet-mono {
+      font-size: 11px;
+      color: var(--b-muted);
+    }
+
+    .t {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1.3;
+      transition: color 0.12s;
+    }
+  }
+
+  &__empty {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    color: var(--b-muted);
+    margin: 0;
+    padding: 12px 0;
+    border-top: 1px solid var(--b-rule);
+    border-bottom: 1px solid var(--b-rule);
+  }
+
+  &__shortcuts {
+    margin-top: 8px;
+  }
+
+  &__shortcuts-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+
+    @media (max-width: 720px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__shortcut {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px 24px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    border-radius: 4px;
+    color: var(--b-ink);
+    text-decoration: none;
+    transition: border-color 0.12s, background 0.12s;
+
+    &:hover {
+      border-color: var(--b-ink);
+      background: var(--b-bg);
+    }
+
+    .lbl {
+      font-size: 11px;
+      color: var(--b-muted);
+    }
+
+    .t {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--b-ink);
+    }
+  }
+}
+
+// ─── Toggle switch (utilisé dans les vues custom) ──────────────
+// Switch carré CSS pur, cohérent avec le langage visuel du reste de
+// l'admin Carnet (bords nets, pas de radius arrondi). Bouton
+// `role="switch"` + `aria-checked`, track muted → accent quand `--on`,
+// pastille qui slide.
+
+.carnet-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--b-rule);
+  background: var(--b-paper);
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+
+  &__thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: var(--b-muted);
+    border-radius: 0;
+    transition: transform 0.15s, background-color 0.15s;
+  }
+
+  &--on {
+    border-color: var(--b-accent);
+    background: var(--b-accent-tint);
+
+    .carnet-toggle__thumb {
+      background: var(--b-accent);
+      transform: translateX(18px);
+    }
+  }
+
+  &:hover {
+    border-color: var(--b-ink);
+  }
+  &--on:hover {
+    border-color: var(--b-accent);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--b-accent);
+    outline-offset: 2px;
+  }
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+// ─── Boutons Carnet (utilisés dans les vues custom) ─────────────
+
+.carnet-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--b-rule);
+  background: var(--b-paper);
+  color: var(--b-ink);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+
+  &:hover {
+    border-color: var(--b-ink);
+  }
+
+  .kbd {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--b-muted);
+    margin-left: 4px;
+  }
+
+  &--ghost {
+    background: transparent;
+    border-color: var(--b-rule);
+    color: var(--b-muted);
+
+    &:hover {
+      color: var(--b-ink);
+      border-color: var(--b-ink);
+    }
+  }
+
+  &--accent {
+    background: var(--b-accent);
+    color: var(--b-bg);
+    border-color: var(--b-accent);
+
+    .kbd {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    &:hover {
+      background: #000;
+      border-color: #000;
+    }
+  }
+
+  // Variante destructive : suppression d'un billet, etc. Rouge
+  // sobre, plein, pour matérialiser l'action irréversible dans une
+  // modale de confirmation.
+  &--danger {
+    background: #b63a3a;
+    color: #fff;
+    border-color: #b63a3a;
+
+    &:hover {
+      background: #8c2828;
+      border-color: #8c2828;
+    }
+  }
+}
+
+// ─── Page admin partagée : body avec padding horizontal ─────────
+// Wrapper rendu par <CarnetPage> entre la topbar et le contenu de la
+// page. Source de vérité unique pour le padding horizontal du contenu
+// admin — listview, editview, postedit l'utilisent tous via le composant
+// React partagé. Le container parent (.carnet-{variant}) n'a aucun
+// padding horizontal pour que la topbar soit full-bleed naturellement.
+//
+// Variante --full : pas de padding (postedit l'utilise pour son
+// __doc grid qui doit prendre toute la largeur — son __center interne
+// gère son propre padding pour la zone d'édition).
+.carnet-page__body {
+  padding-inline: var(--carnet-pad-x);
+}
+.carnet-page__body--full {
+  padding-inline: 0;
+}
+
+// ─── List view custom (Posts) ───────────────────────────────────
+// Composant React custom branché via Posts.admin.components.views.list.
+// Remplace la liste native Payload par le tableau éditorial du handoff.
+
+.carnet-listview {
+  // Container = flex column SANS padding horizontal — la topbar (enfant
+  // direct) est full-bleed naturellement, pas de hack de margin-inline
+  // négative. Le padding latéral du contenu est porté par le wrapper
+  // .carnet-page__body qui l'enveloppe (cf <CarnetPage>).
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 64px;
+  font-family: var(--font-sans);
+  background: var(--b-bg);
+  min-height: 100vh;
+
+  &__h1 {
+    font-family: var(--font-serif);
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.4px;
+    margin: 24px 0 20px;
+    color: var(--b-ink);
+  }
+
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    // Pas de border-top : le .carnet-topbar au-dessus a déjà un
+    // border-bottom — éviter la double ligne.
+    margin-bottom: 0;
+  }
+
+  // Toggle « Tous les billets / Mes billets » au-dessus de la toolbar.
+  // Cf issue #2.
+  &__scope {
+    display: flex;
+    gap: 0;
+    padding: 12px 0 0;
+
+    button {
+      padding: 6px 14px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--b-muted);
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+      &:not(:first-child) {
+        margin-left: -1px;
+      }
+
+      &:hover:not(:disabled):not(.on) {
+        color: var(--b-ink);
+        border-color: var(--b-ink);
+        z-index: 1;
+        position: relative;
+      }
+
+      &.on {
+        background: var(--b-ink);
+        color: var(--b-bg);
+        border-color: var(--b-ink);
+        z-index: 1;
+        position: relative;
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  &__search {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 340px;
+
+    .ic {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--b-muted);
+      font-size: 13px;
+    }
+
+    input {
+      width: 100%;
+      padding: 6px 10px 6px 28px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--b-ink);
+
+      &:focus {
+        outline: none;
+        border-color: var(--b-accent);
+      }
+    }
+  }
+
+  &__filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    font-size: 12px;
+
+    .lbl {
+      color: var(--b-muted);
+    }
+
+    select {
+      border: 0;
+      background: transparent;
+      font-family: inherit;
+      font-size: inherit;
+      color: var(--b-ink);
+      cursor: pointer;
+      padding: 0 16px 0 0;
+
+      &:focus {
+        outline: none;
+      }
+    }
+
+    &:hover {
+      border-color: var(--b-ink);
+    }
+  }
+
+  &__error {
+    padding: 14px;
+    background: rgba(182, 58, 58, 0.06);
+    border: 1px solid #b63a3a;
+    color: #b63a3a;
+    font-size: 12px;
+    margin-top: 14px;
+  }
+
+  &__table {
+    margin: 16px 0 0;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  &__row {
+    display: grid;
+    // Posts : Titre / Type / Thème / Date / Statut / × delete. Numéro
+    // retiré de la liste — l'espace gagné repart au titre via le 1fr.
+    grid-template-columns: 1fr 130px 180px 110px 90px 20px;
+    gap: 24px;
+    padding: 14px 20px;
+    // Centre vertical des cellules — les chips (status, role) et
+    // textes courts s'alignent visuellement avec les titres serif et
+    // les noms qui peuvent wrapper sur 2 lignes (cf. biblio mobile).
+    // baseline donnait des décrochages avec les chips qui ont leur
+    // propre baseline = bas du chip.
+    align-items: center;
+    border-bottom: 1px solid var(--b-rule);
+    color: var(--b-ink);
+    text-decoration: none;
+    transition: background 0.12s, color 0.12s;
+
+    // Variante « Tous les billets » : on insère une colonne Auteur·ice
+    // après Titre. 7 colonnes au lieu de 6.
+    &--with-authors {
+      grid-template-columns: 1fr 140px 130px 180px 110px 90px 20px;
+    }
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    &:not(.carnet-listview__row--head):hover {
+      background: var(--b-accent-tint);
+
+      .title {
+        color: var(--b-accent);
+      }
+    }
+
+    &--head {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--b-muted);
+      padding: 12px 20px;
+      background: var(--b-bg);
+      border-bottom: 1px solid var(--b-rule);
+
+      &:hover {
+        background: var(--b-bg);
+      }
+    }
+
+    .date {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--b-muted);
+    }
+
+    .type {
+      font-size: 12px;
+      color: var(--b-ink);
+    }
+
+    .theme {
+      font-size: 12px;
+      color: var(--b-accent);
+    }
+
+    .authors {
+      font-size: 12px;
+      color: var(--b-muted);
+    }
+
+    .title {
+      font-family: var(--font-serif);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.35;
+      color: var(--b-ink);
+      transition: color 0.12s;
+    }
+
+    .status {
+      text-align: center;
+    }
+
+    // Bouton × en bout de ligne — ouvre la modale de suppression. Le
+    // stopPropagation côté JS évite que le clic remonte au <Link>
+    // wrapper et déclenche la navigation.
+    .row-delete {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: var(--b-muted);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: background 0.12s, color 0.12s;
+
+      &:hover {
+        background: rgba(182, 58, 58, 0.1);
+        color: #b63a3a;
+      }
+    }
+  }
+
+  &__loading,
+  &__empty {
+    padding: 48px 0;
+    text-align: center;
+    color: var(--b-muted);
+    font-size: 12px;
+    border-bottom: 1px solid var(--b-rule);
+  }
+
+  &__pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 14px 0 0;
+    font-size: 12px;
+    color: var(--b-muted);
+  }
+
+  &__pagination-pages {
+    display: flex;
+    gap: 4px;
+
+    button {
+      padding: 4px 10px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--b-muted);
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+      &:hover:not(:disabled) {
+        border-color: var(--b-ink);
+        color: var(--b-ink);
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      &.on {
+        background: var(--b-ink);
+        color: var(--b-bg);
+        border-color: var(--b-ink);
+      }
+    }
+  }
+
+  // Responsive — colonnes les moins critiques cachées en small viewport
+  @include tablet-sm {
+    &__row {
+      grid-template-columns: 100px 130px 1fr 100px;
+    }
+    &__row > .theme {
+      display: none;
+    }
+  }
+
+  @include mobile {
+    // Padding horizontal piloté par .carnet-page__body (--carnet-pad-x).
+    // On n'ajoute rien ici sinon ça doublerait le retrait au-dessus du
+    // contenu ET de la topbar.
+    padding-bottom: 48px;
+
+    &__row {
+      grid-template-columns: 1fr 100px;
+    }
+    &__row > .date,
+    &__row > .type {
+      display: none;
+    }
+  }
+
+  // ── Variantes par collection ─────────────────────────────────
+  // La grille __row par défaut est calibrée pour Posts (6 colonnes).
+  // Themes / Biblio surchargent grid-template-columns.
+
+  // Themes : 3 colonnes (Nom, Description, Billets). Slug retiré
+  // de la liste — visible côté édition uniquement (#slug du billet
+  // dans le hash). En tablette on cache la description.
+  &--themes &__row {
+    grid-template-columns: 220px 1fr 80px;
+  }
+  &--themes &__row .desc {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    color: var(--b-muted);
+    line-height: 1.4;
+  }
+  &--themes &__row .count {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--b-muted);
+    text-align: right;
+  }
+  // En-tête « Billets » (3e cell : <div role="columnheader"> sans
+  // className) aligné à droite pour matcher .count en dessous, à
+  // toutes les tailles d'écran. En mobile (≤ 900) la 2e cell « Description »
+  // est cachée → « Billets » devient nth-child(3) sur 2 cellules visibles
+  // mais reste la 3e dans le DOM, donc ce sélecteur continue de matcher.
+  &--themes &__row--head > *:nth-child(3) {
+    text-align: right;
+  }
+  // ≥ 901px : on garde les 3 colonnes (Nom + Description + Billets)
+  // — y compris en zone tablette (901-1440). Description cachée
+  // uniquement en vrai mobile (≤ 900) où elle bouffe trop de place.
+  @include mobile {
+    &--themes &__row {
+      grid-template-columns: 1fr 60px;
+    }
+    // Hide cellule data .desc + en-tête « Description » (2e cell, sans
+    // className car role=columnheader est plain <div>).
+    &--themes &__row > .desc,
+    &--themes &__row--head > *:nth-child(2) {
+      display: none;
+    }
+  }
+
+  // En-tête « Statut » (posts) centré, à toutes les tailles, pour
+  // matcher les chips .status (eux-mêmes centrés via text-align center
+  // sur la cellule data). Position :nth-last-child(2) — toujours juste
+  // avant la cell Actions, indépendamment du mode `--with-authors`.
+  &--posts &__row--head > *:nth-last-child(2) {
+    text-align: center;
+  }
+
+  // ─── Variante --tags ─────────────────────────────────────────
+  // 4 colonnes : Nom (input éditable), Slug (mono), Billets, Actions.
+  // Pas de lien sur la ligne → on désactive le hover-color de la
+  // grille générique, et le curseur reste par défaut sauf sur les
+  // contrôles eux-mêmes.
+  &--tags &__row {
+    grid-template-columns: 1fr 200px 80px 40px;
+    cursor: default;
+  }
+  &--tags &__row:not(.carnet-listview__row--head):hover {
+    background: transparent;
+
+    .title {
+      color: inherit;
+    }
+  }
+  &--tags &__row .slug {
+    font-size: 12px;
+    color: var(--b-muted);
+
+    &.muted {
+      font-style: italic;
+    }
+  }
+  &--tags &__row .count {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--b-muted);
+  }
+  &--tags &__row .actions {
+    text-align: right;
+  }
+  @include mobile {
+    &--tags &__row {
+      grid-template-columns: 1fr 80px;
+    }
+    // Hide slug et bouton × pour ne garder que Nom + Billets.
+    // Pour la row head : 2=Slug, 4=Actions (sans className car
+    // role=columnheader plain <div>).
+    &--tags &__row > .slug,
+    &--tags &__row > .actions,
+    &--tags &__row--head > *:nth-child(2),
+    &--tags &__row--head > *:last-child {
+      display: none;
+    }
+  }
+
+  // Texte statique cliquable d'une cellule éditable (état « lecture »).
+  // Reprend la typo de .title pour qu'aucun saut visuel n'arrive
+  // quand on passe en édition. C'est un <button> pour l'a11y mais il
+  // se comporte comme du texte avec un hover discret.
+  &__inline-static {
+    display: inline-block;
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: text;
+
+    &:hover:not(:disabled) {
+      color: var(--b-accent);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
+  // Input d'édition inline dans une cellule de tableau. Hérite de la
+  // typo serif du titre (cf .title) pour que le texte ne saute pas
+  // visuellement entre lecture et édition.
+  &__inline-input {
+    width: 100%;
+    padding: 2px 6px;
+    margin: -2px -6px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-accent);
+    border-radius: 3px;
+    font-family: var(--font-serif);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: inherit;
+    color: var(--b-ink);
+
+    &:focus {
+      outline: none;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+
+  // Petit bouton d'action de ligne (× supprimer).
+  &__rowact {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    color: var(--b-muted);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+
+    &:hover {
+      background: rgba(182, 58, 58, 0.08);
+      border-color: rgba(182, 58, 58, 0.4);
+      color: #b63a3a;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  // ─── Variante --pages ────────────────────────────────────────
+  &--pages &__row {
+    grid-template-columns: 1fr 220px 110px;
+  }
+  &--pages &__row .title {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--b-ink);
+  }
+  &--pages &__row .slug {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--b-muted);
+  }
+  &--pages &__row .date {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--b-muted);
+  }
+  @include mobile {
+    &--pages &__row {
+      grid-template-columns: 1fr 100px;
+    }
+    &--pages &__row > .slug {
+      display: none;
+    }
+  }
+
+  // ─── Variante --media ────────────────────────────────────────
+  &--media &__row {
+    grid-template-columns: 60px 1fr 90px 90px 110px;
+    // Override align-items: baseline (défini sur __row par défaut)
+    // pour que la thumb 44×44 et le texte des autres cells (filename,
+    // type, size, date) soient alignés verticalement au centre du row.
+    align-items: center;
+  }
+  &--media &__row .thumb {
+    width: 44px;
+    height: 44px;
+    background: var(--b-bg);
+    border: 1px solid var(--b-rule);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  &--media &__row .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  &--media &__row .thumb .thumb-fallback {
+    color: var(--b-muted);
+    font-family: var(--font-mono);
+    font-size: 18px;
+  }
+  &--media &__row .filename {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--b-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &--media &__row .type-cell,
+  &--media &__row .size {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--b-muted);
+  }
+  &--media &__row .date {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--b-muted);
+  }
+  @include tablet-sm {
+    &--media &__row {
+      grid-template-columns: 60px 1fr 90px 110px;
+    }
+    &--media &__row > .size {
+      display: none;
+    }
+  }
+  @include mobile {
+    &--media &__row {
+      grid-template-columns: 50px 1fr 100px;
+    }
+    &--media &__row > .type-cell {
+      display: none;
+    }
+  }
+
+  // ─── Variante --users ────────────────────────────────────────
+  // Ordre des colonnes (DOM) : Nom · Email · Rôle · Statut · Dernière
+  // connexion. Nom en col 1 fixe (180px), Email en col 2 1fr (récupère
+  // l'espace restant — l'email est plus susceptible d'être long).
+  &--users &__row {
+    grid-template-columns: 180px 1fr 110px 130px 110px;
+  }
+  &--users &__row .email {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--b-ink);
+  }
+  &--users &__row .name {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    color: var(--b-ink);
+  }
+  &--users &__row .date {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--b-muted);
+  }
+  // Contenu Rôle à droite (data ET en-tête) à toutes les tailles —
+  // chip « Root » et en-tête « RÔLE » alignés au même bord droit de la
+  // colonne, l'œil n'a pas à voyager.
+  &--users &__row > .role,
+  &--users &__row--head > *:nth-child(3) {
+    text-align: right;
+  }
+  // ≤ 1180 : on garde Email + Nom affiché + Rôle + Statut. Seule
+  // « Dernière connexion » est cachée (data .date + en-tête nth-child(5)).
+  @include tablet-sm {
+    &--users &__row {
+      grid-template-columns: 180px 1fr 110px 130px;
+    }
+    &--users &__row > .date,
+    &--users &__row--head > *:nth-child(5) {
+      display: none;
+    }
+  }
+  // ≤ 900 : on garde Nom + Rôle, on cache Email, Statut, Date data +
+  // leurs en-têtes. Col 1 large pour le nom (qui peut wrapper), col 2
+  // étroite (juste assez pour le chip Rôle).
+  @include mobile {
+    &--users &__row {
+      grid-template-columns: 1fr 80px;
+      // Override align-items: baseline pour que le chip .carnet-role
+      // soit centré verticalement avec le nom potentiellement multi-
+      // lignes, et que la row head (« RÔLE ») s'aligne pareil.
+      align-items: center;
+    }
+    // Hide cellules data : .email + .status-cell. Hide en-têtes :
+    // « Email » = nth-child(2) (le DOM order est Nom puis Email),
+    // « Statut » = nth-child(4).
+    &--users &__row > .email,
+    &--users &__row > .status-cell,
+    &--users &__row--head > *:nth-child(2),
+    &--users &__row--head > *:nth-child(4) {
+      display: none;
+    }
+  }
+
+  // Biblio : 7 colonnes (Prénom, Nom, Année, Titre, Éditeur/Revue,
+  // Type, Actions). La clé (slug) est retirée — elle reste visible
+  // dans la vue édition de chaque référence (champ slug en mono accent
+  // en haut). On affiche à la place l'éditeur (livres) ou la revue
+  // (articles). La colonne Actions est étroite (× supprimer).
+  &--biblio &__row {
+    grid-template-columns: 110px 130px 60px 1fr 200px 100px 36px;
+  }
+  &--biblio &__row .firstname,
+  &--biblio &__row .lastname {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--b-ink);
+  }
+  &--biblio &__row .lastname__etal {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--b-muted);
+    font-size: 12px;
+    margin-left: 4px;
+  }
+  &--biblio &__row .year {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--b-muted);
+  }
+  &--biblio &__row .title {
+    font-style: italic;
+  }
+  &--biblio &__row .venue {
+    font-family: var(--font-serif);
+    font-size: 13px;
+    color: var(--b-muted);
+    line-height: 1.4;
+  }
+  &--biblio &__row .type-cell {
+    font-size: 12px;
+    color: var(--b-muted);
+    text-transform: lowercase;
+  }
+  &--biblio &__row .actions {
+    text-align: right;
+  }
+  // ── Tablette (901-1440px) ───────────────────────────────────
+  // Ordre voulu de gauche à droite : Auteur·ice (Prénom au-dessus du
+  // Nom) · Année · Titre · Éditeur. Type / bouton × cachés.
+  //
+  //   Prénom    Année    Titre du livre qui peut wrapper      Éditeur / Revue
+  //     Nom              sur deux lignes
+  //
+  // Implémentation : 4 colonnes avec largeurs FIXES sur col 1 et 2,
+  // pour que les positions soient identiques entre row head (« PRÉNOM /
+  // NOM » courts) et row data (« Buyantueva et al. » longs). Sans
+  // largeur fixe, chaque row a sa propre grille avec auto-sizing par
+  // ligne → les colonnes 2 et 3 ne s'alignent pas verticalement entre
+  // l'en-tête et les lignes de données.
+  // Le bloc auteur occupe col 1 sur 2 rangées (Prénom row 1, Nom row 2).
+  // Année / Titre / Éditeur spannent les 2 rangées (alignés au centre).
+  @include tablet-only {
+    &--biblio &__row {
+      // Toutes les colonnes ont une largeur FIXE (sauf le titre en 1fr)
+      // pour que les rows aient EXACTEMENT la même structure — sinon
+      // chaque row étant sa propre grille, `auto` donne des largeurs
+      // de col différentes selon le contenu de chaque ligne.
+      //   170px : auteur (Prénom / Nom empilés)
+      //   56px  : année
+      //   1fr   : titre (toute la largeur restante)
+      //   200px : éditeur / revue (les très longs wrappent en 2 lignes)
+      grid-template-columns: 170px 56px 1fr 200px;
+      grid-template-rows: auto auto;
+      column-gap: 16px;
+      row-gap: 2px;
+      align-items: start;
+    }
+
+    // Data rows
+    &--biblio &__row > .firstname {
+      grid-column: 1;
+      grid-row: 1;
+      align-self: end;
+    }
+    &--biblio &__row > .lastname {
+      grid-column: 1;
+      grid-row: 2;
+      align-self: start;
+    }
+    &--biblio &__row > .year {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+    &--biblio &__row > .title {
+      grid-column: 3;
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+    &--biblio &__row > .venue {
+      grid-column: 4;
+      grid-row: 1 / span 2;
+      align-self: center;
+      text-align: right;  // contenu collé au bord droit de la cellule
+    }
+    &--biblio &__row > .type-cell,
+    &--biblio &__row > *:last-child {
+      display: none;
+    }
+
+    // Head row (nth-child positional, columnheader sans className)
+    // Ordre HTML : 1=Prénom, 2=Nom, 3=Année, 4=Titre, 5=Éditeur, 6=Type, 7=Actions
+    &--biblio &__row--head > *:nth-child(1) {
+      // Prénom
+      grid-column: 1;
+      grid-row: 1;
+    }
+    &--biblio &__row--head > *:nth-child(2) {
+      // Nom
+      grid-column: 1;
+      grid-row: 2;
+    }
+    &--biblio &__row--head > *:nth-child(3) {
+      // Année
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+    &--biblio &__row--head > *:nth-child(4) {
+      // Titre
+      grid-column: 3;
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+    &--biblio &__row--head > *:nth-child(5) {
+      // Éditeur / Revue
+      grid-column: 4;
+      grid-row: 1 / span 2;
+      align-self: center;
+      text-align: right;  // en-tête aligné sur les valeurs
+    }
+    &--biblio &__row--head > *:nth-child(6),
+    &--biblio &__row--head > *:last-child {
+      display: none;
+    }
+  }
+  // ── Mobile (≤ 900px) ─────────────────────────────────────────
+  // Layout demandé : titre à gauche (peut wrapper sur 2 lignes), bloc
+  // auteur·ice à droite avec prénom au-dessus et nom en dessous, alignés
+  // à droite. Année / Éditeur / Type / bouton × cachés.
+  //
+  //   Titre du livre qui peut wrapper                        Prénom
+  //   sur deux lignes                                          Nom
+  //
+  // Implémentation : grid 1fr / auto, 2 rangées. Le titre prend col 1
+  // et span sur les 2 rangées ; firstname/lastname occupent col 2,
+  // rangée 1 et 2 respectivement. La ligne d'en-tête (sans className
+  // sur les cells) est ciblée par nth-child et placée pareil — les
+  // labels « Prénom » / « Nom » servent ainsi d'en-tête colonne 2.
+  @include mobile {
+    &--biblio &__row {
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      column-gap: 12px;
+      row-gap: 2px;
+      align-items: start;
+    }
+
+    // Data rows
+    &--biblio &__row > .firstname {
+      grid-column: 2;
+      grid-row: 1;
+      text-align: right;
+      align-self: end;
+    }
+    &--biblio &__row > .lastname {
+      grid-column: 2;
+      grid-row: 2;
+      text-align: right;
+      align-self: start;
+    }
+    &--biblio &__row > .title {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+    &--biblio &__row > .year,
+    &--biblio &__row > .venue,
+    &--biblio &__row > .type-cell,
+    &--biblio &__row > *:last-child {
+      display: none;
+    }
+
+    // Head row : mêmes positions, ciblées par nth-child puisque les
+    // <div role="columnheader"> n'ont pas de className.
+    // Ordre HTML : 1=Prénom, 2=Nom, 3=Année, 4=Titre, 5=Éditeur, 6=Type, 7=Actions.
+    &--biblio &__row--head > *:nth-child(1) {
+      grid-column: 2;
+      grid-row: 1;
+      text-align: right;
+    }
+    &--biblio &__row--head > *:nth-child(2) {
+      grid-column: 2;
+      grid-row: 2;
+      text-align: right;
+    }
+    &--biblio &__row--head > *:nth-child(4) {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+    &--biblio &__row--head > *:nth-child(3),
+    &--biblio &__row--head > *:nth-child(5),
+    &--biblio &__row--head > *:nth-child(6),
+    &--biblio &__row--head > *:last-child {
+      display: none;
+    }
+  }
+}
+
+// ─── Tags picker (sidebar PostEditView) ──────────────────────────
+// Input autocomplétion sur les tags existants + option « Créer ce
+// tag » si la saisie ne matche aucun tag. Chips muted en pied (les
+// tags sont volontairement plus discrets que les Thèmes accent).
+.tags-picker {
+  position: relative;
+
+  &__input {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--b-ink);
+
+    &:focus {
+      outline: none;
+      border-color: var(--b-accent);
+    }
+  }
+
+  &__menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 2px;
+    z-index: 20;
+    max-height: 220px;
+    overflow: auto;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  &__opt {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 10px;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--b-rule);
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--b-ink);
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    &:hover {
+      background: var(--b-accent-tint);
+    }
+
+    &--create {
+      color: var(--b-accent);
+      font-style: italic;
+    }
+  }
+
+  &__attached {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+}
+
+.tag-chip {
+  padding: 3px 8px;
+  background: var(--b-bg);
+  border: 1px solid var(--b-rule);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--b-muted);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+
+  &:hover {
+    color: #b63a3a;
+    border-color: #b63a3a;
+  }
+}
+
+// ─── Auteur·ices d'un billet (sidebar PostEditView) ────────────
+// Liste de blocs empilés, chaque bloc = une signature (membre du
+// Carnet ou externe). Cf issue #2.
+.authors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__empty {
+    padding: 6px 0;
+    color: var(--b-muted);
+    font-size: 11.5px;
+    font-style: italic;
+  }
+
+  &__row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    background: var(--b-bg);
+    border: 1px solid var(--b-rule);
+
+    select,
+    input {
+      width: 100%;
+      padding: 5px 8px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--b-ink);
+
+      &:focus {
+        outline: none;
+        border-color: var(--b-accent);
+      }
+    }
+  }
+
+  &__head {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+
+    select {
+      flex: 1;
+    }
+  }
+
+  &__moves {
+    display: flex;
+    gap: 2px;
+
+    button {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      font-family: inherit;
+      font-size: 11px;
+      color: var(--b-muted);
+      cursor: pointer;
+      line-height: 1;
+
+      &:hover:not(:disabled) {
+        border-color: var(--b-ink);
+        color: var(--b-ink);
+      }
+
+      &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  &__add {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+
+    button {
+      flex: 1;
+      padding: 5px 10px;
+      background: var(--b-paper);
+      border: 1px dashed var(--b-rule);
+      font-family: inherit;
+      font-size: 11.5px;
+      color: var(--b-muted);
+      cursor: pointer;
+
+      &:hover {
+        border-color: var(--b-accent);
+        color: var(--b-accent);
+      }
+    }
+  }
+}
+
+// ─── Modal réutilisable (invitation user, confirmations, etc.) ───
+.carnet-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.carnet-modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  background: var(--b-paper);
+  border: 1px solid var(--b-rule);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--b-rule);
+
+    h2 {
+      margin: 0;
+      font-family: var(--font-serif);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--b-ink);
+    }
+  }
+
+  &__close {
+    background: transparent;
+    border: 0;
+    color: var(--b-muted);
+    font-family: var(--font-mono);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+
+    &:hover {
+      color: var(--b-ink);
+    }
+  }
+
+  &__error {
+    margin: 12px 20px 0;
+    padding: 10px 14px;
+    background: rgba(182, 58, 58, 0.06);
+    border: 1px solid #b63a3a;
+    color: #b63a3a;
+    font-size: 12px;
+  }
+
+  &__body {
+    padding: 18px 20px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  &__footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--b-rule);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+}
+
+// ─── Media edit view : drop-zone + preview ────────────────────────
+// Drop-zone à la création (pas de fichier encore), puis aperçu + meta
+// en édition.
+
+.carnet-media-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 220px;
+  padding: 24px;
+  background: var(--b-paper);
+  border: 1px dashed var(--b-rule);
+  text-align: center;
+  transition: border-color 0.12s, background 0.12s;
+
+  &--drag {
+    border-color: var(--b-accent);
+    background: var(--b-accent-tint);
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--b-muted);
+    font-size: 13px;
+  }
+
+  &__preview {
+    max-width: 100%;
+    max-height: 280px;
+    background: var(--b-bg);
+    border: 1px solid var(--b-rule);
+  }
+
+  &__filename {
+    font-size: 13px;
+    color: var(--b-ink);
+    background: var(--b-bg);
+    border: 1px solid var(--b-rule);
+    padding: 8px 12px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.carnet-media-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+
+  &__img {
+    max-width: 100%;
+    max-height: 480px;
+    background: var(--b-bg);
+    border: 1px solid var(--b-rule);
+  }
+
+  &__fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    background: var(--b-bg);
+    border: 1px solid var(--b-rule);
+    font-family: var(--font-mono);
+    font-size: 18px;
+    letter-spacing: 0.06em;
+    color: var(--b-muted);
+  }
+
+  // Colonne droite : champs éditables (Titre + Alt) en haut, puis
+  // meta read-only (Type / Taille / Dims) sous une fine règle.
+  // Les .carnet-editview__field qui vivent ici perdent leur max-width
+  // 640 (la colonne fait 320).
+  &__side {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+
+    .carnet-editview__field {
+      max-width: none;
+      margin-bottom: 0;
+      gap: 8px;
+    }
+  }
+
+  &__rule {
+    border: 0;
+    border-top: 1px solid var(--b-rule);
+    margin: 4px 0 0;
+    width: 100%;
+  }
+
+  &__meta {
+    margin: 0;
+    padding: 14px 16px;
+    background: var(--b-bg);
+    border: 1px solid var(--b-rule);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    dt {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--b-muted);
+    }
+
+    dd {
+      margin: 0;
+      font-size: 13px;
+      color: var(--b-ink);
+      word-break: break-all;
+
+      &.mono,
+      .mono {
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+
+      a {
+        color: var(--b-accent);
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ─── Bibliography edit view : aperçu + used-in ────────────────────
+// Réutilisés dans BibliographyEditView (vue Édition custom). Le
+// .carnet-biblio-preview affiche la citation Chicago author-date
+// formatée live ; .carnet-biblio-usedin liste les billets qui
+// référencent l'entrée.
+
+.carnet-biblio-preview {
+  // Rendu à l'intérieur de .carnet-editview qui fournit déjà le padding
+  // horizontal (--carnet-pad-x) — on ne remet pas de marge sur les côtés.
+  margin: 24px 0 0;
+  background: var(--b-bg);
+  border-left: 2px solid var(--b-accent);
+  padding: 14px 18px;
+
+  &__lbl {
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--b-muted);
+    margin-bottom: 6px;
+  }
+
+  &__body {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--b-ink);
+  }
+}
+
+.carnet-biblio-usedin {
+  // Idem : .carnet-editview gère déjà le padding horizontal.
+  margin: 14px 0 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--b-muted);
+
+  a {
+    color: var(--b-accent);
+    text-decoration: none;
+    font-family: var(--font-mono);
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// ─── Header custom Posts edit (breadcrumb + chip statut) ────────
+// Composant React custom branché via Posts.admin.components.edit.
+// beforeDocumentControls. Affiche la fil d'ariane et le chip statut
+// au-dessus de la barre d'actions native Payload.
+
+.carnet-doc-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  margin-bottom: 8px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--b-muted);
+
+  &__crumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    a {
+      color: var(--b-muted);
+      text-decoration: none;
+      transition: color 0.12s;
+
+      &:hover {
+        color: var(--b-ink);
+      }
+    }
+
+    .sep {
+      color: var(--b-rule);
+    }
+  }
+
+  &__current {
+    color: var(--b-ink);
+    font-weight: 600;
+  }
+}
+
+// Chips statut : reproduction fidèle du style de la maquette
+// (carnet-admin.html § "Statut chip"). Border discrète --b-rule par
+// défaut (sauf published qui prend la border accent), point coloré
+// par variante.
+.carnet-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--b-rule);
+  background: var(--b-paper);
+  color: var(--b-muted);
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    background: var(--b-muted);
+  }
+
+  &--draft .carnet-status__dot {
+    background: #b8842a;
+  }
+
+  &--scheduled .carnet-status__dot {
+    background: #3a6a8a;
+  }
+
+  &--published {
+    color: var(--b-accent);
+    border-color: var(--b-accent);
+
+    .carnet-status__dot {
+      background: var(--b-accent);
+    }
+  }
+
+  // Variantes pour les status user (pending / active / disabled)
+  &--pending .carnet-status__dot {
+    background: #b8842a;
+  }
+  &--active {
+    color: var(--b-accent);
+    border-color: var(--b-accent);
+
+    .carnet-status__dot {
+      background: var(--b-accent);
+    }
+  }
+  &--disabled .carnet-status__dot {
+    background: var(--b-muted);
+  }
+}
+
+// Petit marqueur sobre sous la date dans la liste des billets, pour
+// signaler qu'un billet contient encore au moins une zone brouillon
+// non finalisée. Cf issue #1.
+.carnet-chip-draft {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--b-accent);
+  line-height: 1.2;
+}
+
+// Chip de rôle pour les utilisateurs (root / admin / editor)
+.carnet-role {
+  display: inline-block;
+  padding: 2px 8px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--b-rule);
+  background: var(--b-paper);
+  color: var(--b-muted);
+
+  &--root {
+    color: var(--b-accent);
+    border-color: var(--b-accent);
+  }
+  &--admin {
+    color: var(--b-ink);
+    border-color: var(--b-rule);
+  }
+  &--editor {
+    color: var(--b-muted);
+    border-color: var(--b-rule);
+  }
+}
+
+// Méta-ligne mono « Billet n° 042 · carnet:2026-042 » en haut du form
+.carnet-doc-metaline {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--b-muted);
+  letter-spacing: 0.04em;
+  margin: 0 0 16px;
+  padding: 0;
+
+  &__id {
+    color: var(--b-ink);
+  }
+}
+
+// ─── Document edit view (Posts, etc.) ───────────────────────────
+// Pass 1 : overrides CSS sur la vue native Payload pour appliquer la
+// palette + typographie + structure éditoriale du handoff carnet-admin.
+// La mécanique reste celle de Payload (form, validation, autosave).
+//
+// Pass 2 (à faire si besoin) : composant React custom complet avec
+// breadcrumb header + chip statut + bouton "Publier les modifications"
+// custom + slash menu Lexical avec icônes mono. Cf issue #16 commentaires.
+
+.collection-edit,
+.document-page,
+.edit-document {
+  background: var(--b-bg);
+  font-family: var(--font-sans);
+}
+
+// Le wrapper du form principal — on le passe en grid 2 colonnes
+// (éditeur / sidebar méta 300px) à partir de 1180px.
+.collection-edit__form,
+.document-fields {
+  background: var(--b-bg);
+}
+
+// Cadre crème autour du contenu principal (titre + lede + body Lexical)
+.document-fields__edit,
+.collection-edit__main {
+  background: var(--b-paper);
+  border: 1px solid var(--b-rule);
+  border-radius: 4px;
+  padding: 32px 40px 28px;
+}
+
+// Sidebar méta : largeur fixe 300px à partir de 1180px.
+.document-fields__sidebar,
+.collection-edit__sidebar {
+  background: transparent;
+  border-left: 1px solid var(--b-rule);
+  padding: 0 0 0 24px;
+
+  @media (min-width: 1180px) {
+    width: 300px;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 1179px) {
+    border-left: 0;
+    border-top: 1px solid var(--b-rule);
+    padding: 24px 0 0;
+    margin-top: 32px;
+  }
+}
+
+// Titre du billet : Source Serif 4 600 36px, fond transparent, pas de
+// bordure visible. On cible par BEM payload `.field-type--name-title`
+// (la convention v3 : `.field-type--name-<fieldName>`).
+.field-type--name-title input,
+.field-type--name-titre input {
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed transparent;
+  padding: 4px 0;
+  color: var(--b-ink);
+
+  &:focus {
+    border-bottom-color: var(--b-rule);
+    outline: none;
+  }
+}
+
+// Chapô (lede) : Source Serif 4 italique 18px muted
+.field-type--name-lede textarea {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--b-muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed transparent;
+  padding: 4px 0;
+  resize: vertical;
+
+  &:focus {
+    border-bottom-color: var(--b-rule);
+    outline: none;
+  }
+}
+
+// Body Lexical : agrandir la zone d'édition pour le confort de lecture
+.field-type--name-body .rich-text-lexical,
+.field-type--name-body [contenteditable='true'] {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--b-ink);
+  background: transparent;
+  border: 0;
+  padding: 16px 0;
+
+  // Headings dans le Lexical
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    color: var(--b-ink);
+  }
+
+  h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 32px 0 12px;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 24px 0 8px;
+  }
+
+  blockquote {
+    border-left: 2px solid var(--b-accent);
+    padding-left: 16px;
+    margin: 24px 0;
+    font-style: italic;
+    color: var(--b-muted);
+  }
+}
+
+// Header de la doc-page (titre de page Payload + actions à droite)
+.doc-header,
+.collection-edit__header {
+  background: var(--b-bg);
+  border-bottom: 1px solid var(--b-rule);
+  padding: 16px 24px;
+  font-family: var(--font-sans);
+}
+
+.doc-controls,
+.collection-edit__controls {
+  font-family: var(--font-sans);
+  font-size: 13px;
+
+  // Bouton "Save" / "Publish" en accent (noir admin)
+  .btn--style-primary {
+    background: var(--b-accent);
+    color: var(--b-bg);
+    border-color: var(--b-accent);
+
+    &:hover {
+      background: #000;
+      border-color: #000;
+    }
+  }
+}
+
+// Sidebar méta : labels mono uppercase
+.collection-edit__sidebar .field-label,
+.document-fields__sidebar .field-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--b-muted);
+  margin-bottom: 4px;
+}
+
+// Champs auto-calculés (readingTime, idCarnet) : encadré dashed bg
+.field-type--name-readingTime input,
+.field-type--name-idCarnet input,
+.field-type[data-readonly='true'] input {
+  background: var(--b-bg);
+  border: 1px dashed var(--b-rule);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--b-muted);
+}
+
+// Misc helpers pour les chips de statut (Brouillon / Publié / Planifié) —
+// cibles BEM : Payload v3 affiche `.status` ou `.status-pill` selon version.
+.status-pill,
+.doc-status {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border: 1px solid var(--b-rule);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  &--draft,
+  &[data-status='draft'] {
+    color: var(--theme-warning-500, #b8842a);
+    border-color: var(--theme-warning-500, #b8842a);
+  }
+
+  &--published,
+  &[data-status='published'] {
+    color: var(--b-accent);
+    border-color: var(--b-accent);
+  }
+}
+
+// ─── Edit views custom (Site global + Mon compte) ───────────────
+// Vue d'édition custom — remplace entièrement le rendu natif Payload
+// pour /cms/admin/globals/site et /cms/admin/account. Suit le même
+// langage visuel que .carnet-listview (header sticky, crumbs +
+// actions, sections séparées par des filets, chips de statut
+// réutilisés). Branchements : Site.admin.components.views.edit.root
+// et payload.config admin.components.views.account.
+
+.carnet-editview {
+  // Voir .carnet-listview pour la justification : flex column sans
+  // padding horizontal, padding latéral porté par .carnet-page__body.
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 64px;
+  font-family: var(--font-sans);
+  background: var(--b-bg);
+  min-height: 100vh;
+
+  &__dirty,
+  &__saved {
+    font-size: 11.5px;
+    font-family: var(--font-mono);
+    color: var(--b-muted);
+  }
+
+  &__dirty {
+    color: var(--theme-warning-500, #b8842a);
+  }
+
+  &__saved {
+    color: var(--b-accent);
+  }
+
+  &__error {
+    margin-top: 14px;
+    padding: 14px;
+    background: rgba(182, 58, 58, 0.06);
+    border: 1px solid #b63a3a;
+    color: #b63a3a;
+    font-size: 12px;
+  }
+
+  &__loading {
+    padding: 40px 0;
+    color: var(--b-muted);
+    font-size: 12px;
+  }
+
+  &__form {
+    margin-top: 0;
+    padding: 0;
+  }
+
+  &__section {
+    border-top: 1px solid var(--b-rule);
+    padding: 24px 0 24px;
+
+    &:first-of-type {
+      border-top: 0;
+    }
+  }
+
+  &__section-title {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    margin: 0 0 4px;
+    color: var(--b-ink);
+  }
+
+  &__section-help {
+    margin: 0 0 18px;
+    font-size: 12px;
+    color: var(--b-muted);
+    line-height: 1.5;
+  }
+
+  // Hero : grand titre éditorial en haut de la vue (BibliographyEditView,
+  // potentiellement réutilisable). Cf handoff → ScreenBiblio.
+  &__hero {
+    margin: 28px 0 24px;
+
+    .carnet-h1 {
+      font-family: var(--font-serif);
+      font-size: 36px;
+      line-height: 1.1;
+      font-weight: 600;
+      letter-spacing: -0.4px;
+      color: var(--b-ink);
+      margin: 0 0 6px;
+    }
+  }
+
+  &__hero-key {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--b-muted);
+
+    .mono {
+      color: var(--b-ink);
+    }
+  }
+
+  // Row helper : aligne 2 ou 3 fields côte à côte avec gap. Sur écran
+  // étroit, les fields tombent en colonne (flex-wrap) plutôt qu'être
+  // tronqués.
+  &__row {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 16px;
+    // Sans cette règle, deux fields avec des hints de hauteurs différentes
+    // (1 ligne vs 2-3 lignes) peuvent paraître désalignés (le label/input
+    // de la cellule courte se centre verticalement). On force le top.
+    align-items: start;
+    // Quirk grid : `min-width: auto` par défaut sur les grid items les
+    // empêche de descendre sous leur largeur de contenu. Conséquence :
+    // `1fr 1fr` ne donne pas du strict 50/50 quand un côté a un hint
+    // plus long que l'autre — la cellule au contenu plus large prend
+    // sa min-content. `min-width: 0` + `width: 100%` force vraiment
+    // le track à s'imposer et le label à le remplir entièrement.
+    > * {
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    &--2 {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    &--3 {
+      grid-template-columns: minmax(160px, 1fr) minmax(160px, 2fr) minmax(120px, 1fr);
+    }
+
+    // Quand un &__field est dans une row, plus de margin-bottom (le
+    // gap de la grille s'en charge) et la max-width n'est plus
+    // pertinente — chaque cellule prend sa colonne.
+    .carnet-editview__field {
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    @media (max-width: 800px) {
+      &--2,
+      &--3 {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+
+  // ── Éditeur d'array auteur·ice·s (BibliographyEditView) ─────
+  // Bloc dédié sous la row Type/Année. Une ligne par personne :
+  // Nom (1fr) / Prénom (1fr) / Rôle (180px) / actions (3 boutons).
+  // En mobile, on passe en colonne 1fr.
+  &__authors {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    max-width: 800px;
+  }
+  &__authors-head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 4px;
+
+    .lbl {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--b-muted);
+    }
+    .hint {
+      font-size: 11.5px;
+      color: var(--b-muted);
+    }
+  }
+  &__authors-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 180px auto;
+    gap: 8px;
+    align-items: center;
+
+    input[type='text'],
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--b-ink);
+      line-height: 1.5;
+
+      &:focus {
+        outline: none;
+        border-color: var(--b-accent);
+      }
+    }
+
+    .actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    @media (max-width: 800px) {
+      grid-template-columns: 1fr;
+      .actions {
+        justify-content: flex-end;
+      }
+    }
+  }
+  &__authors-act {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--b-rule);
+    color: var(--b-muted);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+
+    &:hover:not(:disabled) {
+      background: var(--b-bg);
+      border-color: var(--b-ink);
+      color: var(--b-ink);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    &--del:hover:not(:disabled) {
+      background: rgba(182, 58, 58, 0.08);
+      border-color: rgba(182, 58, 58, 0.4);
+      color: #b63a3a;
+    }
+  }
+  &__authors-add {
+    align-self: flex-start;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px dashed var(--b-rule);
+    color: var(--b-muted);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.12s, color 0.12s;
+
+    &:hover {
+      border-color: var(--b-accent);
+      color: var(--b-accent);
+    }
+  }
+
+  // Quand on wrappe les sections d'édition dans <fieldset disabled> pour
+  // verrouiller une ref Zotero, on neutralise le style natif de fieldset
+  // (border + padding) et on grise visuellement le contenu.
+  &__fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+
+    &:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+    max-width: 640px;
+
+    .lbl {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--b-muted);
+    }
+
+    .hint {
+      font-size: 11.5px;
+      color: var(--b-muted);
+    }
+
+    input[type='text'],
+    input[type='email'],
+    input[type='url'],
+    input[type='number'],
+    input[type='password'],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--b-ink);
+      line-height: 1.5;
+
+      &:focus {
+        outline: none;
+        border-color: var(--b-accent);
+      }
+
+      // [readonly] (et non :read-only) — la pseudo-classe :read-only
+      // matche aussi les <select> par défaut (ils ne sont pas "user-
+      // editable"), ce qui appliquait le curseur not-allowed à tort.
+      &[readonly],
+      &:disabled {
+        background: var(--b-bg);
+        color: var(--b-muted);
+        cursor: not-allowed;
+      }
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 72px;
+      font-family: var(--font-serif);
+    }
+
+    &--readonly {
+      .lbl {
+        color: var(--b-muted);
+      }
+    }
+
+    &--inline {
+      flex-direction: column;
+      margin-bottom: 0;
+      flex: 1;
+    }
+
+    &--check {
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+
+      input[type='checkbox'] {
+        margin: 0;
+      }
+    }
+
+    // État invalide : bordure rouge sur l'input quand un champ
+    // obligatoire est vide au save (validation client). Cohérent avec
+    // le pattern .ed-title--invalid / .ed-lede--invalid côté PostEditView.
+    &--invalid {
+      input[type='text'],
+      input[type='email'],
+      input[type='url'],
+      input[type='number'],
+      input[type='password'],
+      select,
+      textarea {
+        border-color: #b63a3a;
+
+        &:focus {
+          border-color: #b63a3a;
+        }
+      }
+    }
+  }
+
+  // Variante d'un __field rendu avec un toggle switch CSS pur.
+  // Première ligne : label + switch côte à côte. Deuxième ligne : hint
+  // sur toute la largeur (flex-wrap pour passer à la ligne).
+  //
+  // `width: 13rem` sur le span .lbl : réserve une largeur fixe pour le
+  // label, pour que le switch ne bouge pas quand le texte passe
+  // d'« activé » à « désactivé » (les deux n'ont pas la même longueur).
+  &__field--toggle {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    max-width: 640px;
+
+    > .lbl {
+      flex: 0 0 13rem;
+      width: 13rem;
+      margin-bottom: 0;
+    }
+    > .hint {
+      flex: 0 0 100%;
+      margin: 0;
+      color: var(--b-muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+  }
+
+  // Message d'erreur affiché sous un .carnet-editview__field--invalid.
+  // Margin-top négatif pour grignoter le gap du field et coller le
+  // message à l'input.
+  &__field-error {
+    margin: -2px 0 6px;
+    color: #b63a3a;
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    max-width: 640px;
+  }
+
+  &__readonly-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 24px;
+    max-width: 640px;
+    margin-top: 8px;
+  }
+
+  &__readonly {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .lbl {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--b-muted);
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--b-ink);
+    }
+  }
+
+  // ── Array editor pattern (SiteEditView) ─────────────────────
+  // `__rows` est un flex container vertical, `__rowitem` une ligne.
+  // Pas confondre avec `__row` plus haut qui est un helper de grille
+  // pour mettre 2/3 fields côte-à-côte dans un formulaire (collision
+  // de noms historique → renommé en __rowitem ici).
+  &__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  &__rowitem {
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) auto auto;
+    gap: 12px;
+    align-items: end;
+    padding: 12px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+  }
+
+  &__rowitem-actions {
+    display: flex;
+    gap: 4px;
+    align-self: end;
+  }
+
+  &__rows-actions {
+    margin-top: 4px;
+  }
+
+  &__empty {
+    padding: 16px;
+    background: var(--b-paper);
+    border: 1px dashed var(--b-rule);
+    color: var(--b-muted);
+    font-size: 12px;
+  }
+
+  // Action inline dans un field (texte d'état + bouton à droite).
+  // Utilisé p.ex. dans UserEditView pour « Force unlock » avec le
+  // compteur d'échecs à gauche et le bouton à droite.
+  &__inline-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+
+    .hint {
+      margin: 0;
+      flex: 1;
+      font-size: 11.5px;
+      color: var(--b-muted);
+      line-height: 1.4;
+    }
+  }
+
+  // Petit feedback sous une action ponctuelle (ex : « Compte
+  // déverrouillé. » après Force unlock). Disparaît implicitement
+  // au prochain refresh.
+  &__inline-feedback {
+    display: block;
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: var(--b-muted);
+    font-style: italic;
+  }
+
+  // Bandeau d'information neutre — utilisé pour signaler qu'une partie
+  // de l'édition (ex : éditeur de blocs Pages, étape 2) n'est pas
+  // encore branchée mais que la donnée est préservée.
+  &__notice {
+    padding: 12px 14px;
+    background: var(--b-bg);
+    border-left: 2px solid var(--b-accent);
+    color: var(--b-muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin: 0 0 14px;
+  }
+
+  // Liste read-only des blocs d'une page (PageEditView étape 1).
+  // Énumère « 01 / Texte (prose) », « 02 / Figure », etc. Réplique
+  // visuelle simple, sans actions — l'éditeur arrive en étape 2.
+  &__sections-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12.5px;
+
+    li {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      padding: 10px 14px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      color: var(--b-ink);
+    }
+
+    .carnet-mono {
+      color: var(--b-muted);
+      font-size: 11px;
+    }
+
+    .kind {
+      color: var(--b-ink);
+    }
+  }
+
+  // Section « zone dangereuse » : abrite le bouton « Supprimer cette
+  // page ». Pas de border-top pour ne pas mimer une vraie section
+  // — c'est une zone admin, pas un champ.
+  &__section--danger {
+    border-top: 0;
+    padding-top: 8px;
+
+    .carnet-postedit__delete {
+      max-width: 320px;
+    }
+  }
+
+  // /admin/account a une grille readonly plus dense (3 chips alignés)
+  &--account {
+    .carnet-editview__readonly-grid {
+      grid-template-columns: repeat(3, minmax(0, max-content));
+      gap: 16px 32px;
+    }
+  }
+
+  @include mobile {
+    &__rowitem {
+      grid-template-columns: 1fr 1fr;
+    }
+    &__readonly-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+}
+
+// ─── Éditeur de sections (PageEditView) ─────────────────────────
+// Cards empilables (Prose / Figure / Citation) avec en-tête index +
+// type + preview + actions, body collapsible.
+
+.page-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &__empty {
+    padding: 16px;
+    background: var(--b-paper);
+    border: 1px dashed var(--b-rule);
+    color: var(--b-muted);
+    font-size: 12px;
+    text-align: center;
+  }
+
+  &__add {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+    padding: 12px;
+    background: var(--b-bg);
+    border: 1px dashed var(--b-rule);
+
+    .lbl {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--b-muted);
+    }
+  }
+}
+
+.page-section {
+  background: var(--b-paper);
+  border: 1px solid var(--b-rule);
+
+  &--unknown {
+    background: var(--b-bg);
+    border-style: dashed;
+  }
+
+  &__head {
+    display: grid;
+    grid-template-columns: 30px 130px 1fr auto;
+    align-items: baseline;
+    gap: 14px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--b-rule);
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+  }
+
+  &--collapsed &__head {
+    border-bottom: 0;
+  }
+
+  &__index {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--b-muted);
+  }
+
+  &__kind {
+    font-weight: 600;
+    color: var(--b-ink);
+  }
+
+  &__preview {
+    color: var(--b-muted);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      background: transparent;
+      border: 1px solid var(--b-rule);
+      color: var(--b-muted);
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+      &:hover:not(:disabled) {
+        color: var(--b-ink);
+        border-color: var(--b-ink);
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  &__del {
+    &:hover:not(:disabled) {
+      background: rgba(182, 58, 58, 0.1) !important;
+      color: #b63a3a !important;
+      border-color: #b63a3a !important;
+    }
+  }
+
+  &__body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .carnet-editview__field {
+      margin-bottom: 0;
+      max-width: none;
+    }
+  }
+
+  &__unknown {
+    padding: 12px;
+    background: var(--b-bg);
+    border-left: 2px solid var(--b-muted);
+    color: var(--b-muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+// ─── PageProseEditor (Lexical minimal pour blocs Prose) ─────────
+// Toolbar haut sobre + zone d'édition .ed-body (theme partagé avec
+// PostBodyEditor — voir .carnet-postedit .ed-body pour la structure).
+// On duplique seulement le minimum vital (typo, marges) pour que ça
+// rende correctement hors de la PostEditView.
+
+.page-prose-editor {
+  border: 1px solid var(--b-rule);
+  background: var(--b-paper);
+
+  .page-prose-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--b-rule);
+    background: var(--b-bg);
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 26px;
+      padding: 0 6px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--b-muted);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+      &:hover {
+        color: var(--b-ink);
+        border-color: var(--b-rule);
+        background: var(--b-paper);
+      }
+    }
+
+    .sep {
+      display: inline-block;
+      width: 1px;
+      height: 18px;
+      background: var(--b-rule);
+      margin: 0 4px;
+    }
+  }
+
+  .ed-body {
+    position: relative;
+    padding: 14px;
+    font-family: var(--font-serif);
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--b-ink);
+    min-height: 120px;
+
+    .ed-content {
+      outline: none;
+      min-height: 90px;
+    }
+
+    .ed-placeholder {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      pointer-events: none;
+      color: var(--b-muted);
+      font-style: italic;
+    }
+
+    .ed-p {
+      margin: 0 0 0.9em;
+    }
+
+    .ed-h2 {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 18px 0 10px;
+      letter-spacing: -0.2px;
+      line-height: 1.25;
+    }
+
+    .ed-h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 14px 0 8px;
+      line-height: 1.3;
+    }
+
+    .ed-quote {
+      margin: 14px 0;
+      padding: 0 0 0 14px;
+      border-left: 2px solid var(--b-rule);
+      color: var(--b-muted);
+      font-style: italic;
+    }
+
+    .ed-bold {
+      font-weight: 700;
+    }
+    .ed-italic {
+      font-style: italic;
+    }
+    .ed-underline {
+      text-decoration: underline;
+    }
+    .ed-strike {
+      text-decoration: line-through;
+    }
+    .ed-link {
+      color: var(--b-accent);
+      border-bottom: 1px solid var(--b-accent);
+      text-decoration: none;
+    }
+    .ed-ul,
+    .ed-ol {
+      margin: 0 0 0.9em;
+      padding-left: 22px;
+    }
+    .ed-li {
+      margin-bottom: 4px;
+    }
+  }
+}
+
+// ─── Picker de couleur d'accent (Site global) ───────────────────
+// Swatch + <select> côte à côte. Utilisé dans SiteEditView. Le swatch
+// reflète la couleur actuellement choisie en temps réel.
+.carnet-accent-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+
+  &__swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    flex: 0 0 auto;
+  }
+
+  select {
+    flex: 1;
+  }
+}
+
+// ─── Post edit view custom (ScreenDoc du handoff) ───────────────
+// Vue d'édition entièrement custom des Posts — branchée via
+// Posts.admin.components.views.edit.root. Layout : header sticky +
+// .doc grid 1fr/300px + .ed-card + .fn-block + meta sidebar. Le
+// rich-text Lexical interne (.ed-body) a son propre theme sans aucune
+// chrome Payload.
+
+.carnet-postedit {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  background: var(--b-bg);
+  min-height: 100vh;
+  // Topbar (.carnet-topbar) maintenant rendue par <CarnetTopbar/>.
+
+  &__saved,
+  &__dirty {
+    font-size: 11px;
+    font-family: var(--font-mono);
+  }
+
+  &__saved {
+    color: var(--b-muted);
+  }
+
+  &__dirty {
+    color: var(--theme-warning-500, #b8842a);
+  }
+
+  &__error {
+    margin: 14px 24px 0;
+    padding: 14px;
+    background: rgba(182, 58, 58, 0.06);
+    border: 1px solid #b63a3a;
+    color: #b63a3a;
+    font-size: 12px;
+  }
+
+  &__loading {
+    padding: 40px 24px;
+    color: var(--b-muted);
+    font-size: 12px;
+  }
+
+  &__doc {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+    flex: 1;
+  }
+
+  &__center {
+    padding: 28px 32px;
+    min-width: 0;
+  }
+
+  // Bouton « Supprimer ce billet » en bas de la sidebar Métadonnées.
+  // Sobre par défaut (texte muted, sans bordure) ; rouge au hover pour
+  // matérialiser l'action irréversible. Le clic ouvre une modale de
+  // confirmation (cf .carnet-modal*).
+  &__delete {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    background: transparent;
+    border: 1px solid var(--b-rule);
+    color: var(--b-muted);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+    &:hover {
+      background: rgba(182, 58, 58, 0.08);
+      border-color: #b63a3a;
+      color: #b63a3a;
+    }
+  }
+
+  &__meta {
+    border-left: 1px solid var(--b-rule);
+    background: var(--b-bg);
+    padding: 24px 22px 10px 22px;
+    // Sticky : reste visible quand on scroll le corps du billet.
+    // top = hauteur du header sticky (56px) pour s'aligner dessous.
+    position: sticky;
+    top: 56px;
+    align-self: start;
+    max-height: calc(100vh - 56px);
+    overflow: auto;
+
+    h3 {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--b-muted);
+      margin: 0 0 12px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+
+      // Direct child only — sinon les labels imbriqués (ex : options
+      // d'un multi-select sous .field) héritent du uppercase / bold.
+      & > label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--b-muted);
+        margin-bottom: 5px;
+      }
+
+      input[type='text'],
+      input[type='email'],
+      input[type='url'],
+      input[type='number'],
+      input[type='date'],
+      select,
+      textarea {
+        width: 100%;
+        padding: 7px 10px;
+        background: var(--b-paper);
+        border: 1px solid var(--b-rule);
+        font-family: inherit;
+        font-size: 12.5px;
+        color: var(--b-ink);
+
+        &:focus {
+          outline: none;
+          border-color: var(--b-accent);
+        }
+      }
+
+      .auto {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--b-ink);
+        padding: 7px 10px;
+        background: var(--b-paper);
+        border: 1px dashed var(--b-rule);
+      }
+
+      .help {
+        font-size: 11px;
+        color: var(--b-muted);
+        margin-top: 4px;
+
+        .mono {
+          font-family: var(--font-mono);
+        }
+      }
+
+      // État invalide : bordure rouge sur l'input + message en dessous.
+      // Cohérent avec .ed-title--invalid / .ed-lede--invalid côté card.
+      &--invalid {
+        input,
+        select,
+        textarea {
+          border-color: #b63a3a;
+        }
+      }
+
+      &__error {
+        margin-top: 4px;
+        color: #b63a3a;
+        font-family: var(--font-sans);
+        font-size: 11px;
+      }
+
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 0;
+        font-size: 12px;
+        color: var(--b-ink);
+
+        input {
+          width: auto;
+        }
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    hr {
+      border: 0;
+      border-top: 1px solid var(--b-rule);
+      margin: 22px 0;
+    }
+
+    .biblio-list {
+      border: 1px solid var(--b-rule);
+      background: var(--b-paper);
+      max-height: 240px;
+      overflow: auto;
+
+      .b-row {
+        padding: 8px 28px 8px 10px;
+        border-bottom: 1px solid var(--b-rule);
+        font-size: 11.5px;
+        line-height: 1.4;
+        position: relative;
+
+        &:last-child {
+          border-bottom: 0;
+        }
+
+        &--empty {
+          color: var(--b-muted);
+          font-style: italic;
+          padding: 12px 10px;
+        }
+
+        .au {
+          font-weight: 600;
+          color: var(--b-ink);
+        }
+
+        .ti {
+          color: var(--b-muted);
+          font-style: italic;
+        }
+
+        .x {
+          position: absolute;
+          right: 6px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: transparent;
+          border: 0;
+          color: var(--b-muted);
+          font-family: var(--font-mono);
+          cursor: pointer;
+          padding: 2px 6px;
+
+          &:hover {
+            color: #b63a3a;
+          }
+        }
+      }
+    }
+
+    .add-rel-wrap {
+      margin-top: 8px;
+
+      .add-rel {
+        display: block;
+        padding: 7px 10px;
+        background: transparent;
+        border: 1px dashed var(--b-rule);
+        color: var(--b-muted);
+        font-size: 11.5px;
+        cursor: pointer;
+        text-align: center;
+        list-style: none;
+
+        &::-webkit-details-marker {
+          display: none;
+        }
+
+        &:hover {
+          border-color: var(--b-accent);
+          color: var(--b-accent);
+        }
+      }
+    }
+
+    .add-rel-list {
+      margin-top: 6px;
+      max-height: 240px;
+      overflow: auto;
+      border: 1px solid var(--b-rule);
+      background: var(--b-paper);
+
+      .add-rel-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 7px 10px;
+        background: transparent;
+        border: 0;
+        border-bottom: 1px solid var(--b-rule);
+        font-family: inherit;
+        font-size: 11.5px;
+        color: var(--b-ink);
+        cursor: pointer;
+        line-height: 1.4;
+
+        &:last-child {
+          border-bottom: 0;
+        }
+
+        &:hover {
+          background: var(--b-accent-tint);
+        }
+
+        .au {
+          font-weight: 600;
+        }
+
+        .ti {
+          color: var(--b-muted);
+          font-style: italic;
+        }
+      }
+    }
+
+  }
+
+  // ─── Multi-select (thèmes, etc.) ──────────────────────────────
+  // Pattern <details> qui imite un <select> natif — le summary fait
+  // office de "trigger" comme une caret-arrow de select, le body
+  // déroule des checkboxes scrollables. Les éléments sélectionnés
+  // sont aussi repris en chips sous le multi-select pour retrait
+  // rapide.
+  .multi-select {
+    position: relative;
+
+    & > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 28px 7px 10px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      font-family: inherit;
+      font-size: 12.5px;
+      color: var(--b-ink);
+      cursor: pointer;
+      list-style: none;
+      position: relative;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      &::after {
+        content: '▾';
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--b-muted);
+        font-size: 11px;
+      }
+    }
+
+    &[open] > summary {
+      border-color: var(--b-accent);
+    }
+
+    &__list {
+      // Overlay : on flotte au-dessus du contenu suivant plutôt que
+      // de le pousser quand on ouvre le multi-select. Le parent
+      // .multi-select a `position: relative` (pour ancrer ce
+      // overlay).
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      margin-top: 2px;
+      z-index: 20;
+      max-height: 220px;
+      overflow: auto;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    &__opt {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--b-rule);
+      font-size: 12px;
+      color: var(--b-ink);
+      cursor: pointer;
+      transition: background 0.12s;
+
+      &:last-child {
+        border-bottom: 0;
+      }
+
+      &:hover {
+        background: var(--b-accent-tint);
+      }
+
+      input {
+        margin: 0;
+        width: auto;
+        flex: 0 0 auto;
+      }
+    }
+
+    &__empty {
+      padding: 10px;
+      color: var(--b-muted);
+      font-size: 11.5px;
+      font-style: italic;
+    }
+  }
+
+  // ─── Chip toggle (thèmes) ──────────────────────────────────────
+  .chip-toggle {
+    padding: 4px 10px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--b-ink);
+    cursor: pointer;
+    border-radius: 999px;
+    transition: all 0.12s;
+
+    &:hover {
+      border-color: var(--b-accent);
+    }
+
+    &.on {
+      background: var(--b-accent-tint);
+      border-color: var(--b-accent);
+      color: var(--b-accent);
+    }
+  }
+
+  // ─── Ed-card (zone éditoriale au centre) ──────────────────────
+  .ed-card {
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    // Padding latéral aligné avec .fn-block / .bib-block en dessous
+    // (qui ont padding 20px L/R sur leurs __h et leurs items) — sinon
+    // le titre/corps sont indentés davantage que les items des blocks
+    // suivants, ça crée un décrochage visuel.
+    padding: 32px 20px 28px;
+  }
+
+  .ed-num {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--b-muted);
+    margin-bottom: 16px;
+
+    .id {
+      color: var(--b-ink);
+    }
+
+    &__id {
+      flex: 0 0 auto;
+    }
+
+    &__themes {
+      flex: 1 1 auto;
+      text-align: right;
+      color: var(--b-accent);
+      // Wrap si pas la place — le bandeau passe sur 2 lignes plutôt
+      // que de tronquer.
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+
+      .tag {
+        color: var(--b-accent);
+      }
+    }
+  }
+
+  .ed-title {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font-family: var(--font-serif);
+    font-size: 36px;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.4px;
+    color: var(--b-ink);
+    margin-bottom: 14px;
+    padding: 0;
+    // Wrap multi-ligne (le titre est un <textarea>) sans poignée de
+    // redimensionnement ni scroll interne — la hauteur est ajustée
+    // en JS via useAutoGrow.
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+
+    &:focus {
+      outline: none;
+    }
+
+    &::placeholder {
+      color: var(--b-rule);
+    }
+
+    // État invalide (validation client : titre vide au save). Bordure
+    // basse rouge + placeholder dans la même teinte pour signaler
+    // visuellement le champ obligatoire non rempli.
+    &--invalid {
+      border-bottom: 2px solid #b63a3a;
+      padding-bottom: 4px;
+
+      &::placeholder {
+        color: #b63a3a;
+      }
+    }
+  }
+
+  .ed-title__error {
+    margin-top: -8px;
+    margin-bottom: 14px;
+    color: #b63a3a;
+    font-family: var(--font-sans);
+    font-size: 12px;
+  }
+
+  .ed-lede {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font-family: var(--font-serif);
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--b-muted);
+    margin-bottom: 24px;
+    padding: 0;
+    // Auto-grow JS via useAutoGrow — pas de poignée, pas de scroll.
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+
+    &:focus {
+      outline: none;
+      color: var(--b-ink);
+    }
+
+    &::placeholder {
+      color: var(--b-rule);
+    }
+
+    // Mêmes patterns que .ed-title — bordure basse rouge + placeholder
+    // teinté quand le champ obligatoire est vide au save.
+    &--invalid {
+      border-bottom: 2px solid #b63a3a;
+      padding-bottom: 4px;
+
+      &::placeholder {
+        color: #b63a3a;
+      }
+    }
+  }
+
+  .ed-lede__error,
+  .ed-body__error {
+    margin: -8px 0 14px;
+    color: #b63a3a;
+    font-family: var(--font-sans);
+    font-size: 12px;
+  }
+
+  .ed-divider {
+    border: 0;
+    border-top: 1px solid var(--b-rule);
+    margin: 0 0 24px;
+  }
+
+  // ─── Ed-body (Lexical contenteditable) ────────────────────────
+  .ed-body {
+    position: relative;
+    font-family: var(--font-serif);
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--b-ink);
+
+    &__ce {
+      outline: none;
+      min-height: 200px;
+    }
+
+    &__placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      color: var(--b-muted);
+      font-style: italic;
+    }
+
+    .ed-p {
+      margin: 0 0 1em;
+      text-align: justify;
+      hyphens: auto;
+      -webkit-hyphens: auto;
+    }
+
+    .ed-h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 28px 0 12px;
+      letter-spacing: -0.2px;
+      line-height: 1.25;
+    }
+
+    .ed-h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 24px 0 10px;
+      letter-spacing: -0.1px;
+      line-height: 1.3;
+    }
+
+    .ed-quote {
+      margin: 18px 0;
+      padding: 0 0 0 18px;
+      border-left: 2px solid var(--b-rule);
+      color: var(--b-muted);
+      font-style: italic;
+    }
+
+    .ed-bold {
+      font-weight: 700;
+    }
+
+    .ed-italic {
+      font-style: italic;
+    }
+
+    .ed-underline {
+      text-decoration: underline;
+    }
+
+    .ed-strike {
+      text-decoration: line-through;
+    }
+
+    .ed-code {
+      font-family: var(--font-mono);
+      font-size: 0.92em;
+      background: var(--b-bg);
+      padding: 1px 5px;
+      border: 1px solid var(--b-rule);
+    }
+
+    .ed-link {
+      color: var(--b-accent);
+      text-decoration: underline;
+    }
+
+    .ed-ul,
+    .ed-ol {
+      margin: 0 0 1em 1.5em;
+      padding: 0;
+    }
+
+    .ed-li {
+      margin: 0.25em 0;
+    }
+  }
+
+  // ─── Decorator nodes : Footnote, BiblioInline ─────────────────
+  .ed-fn {
+    position: relative;
+    display: inline;
+
+    &__anchor {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 4px;
+      margin: 0 1px;
+      background: var(--b-accent-tint);
+      color: var(--b-accent);
+      font-family: var(--font-mono);
+      font-size: 0.78em;
+      cursor: pointer;
+      border-radius: 2px;
+      vertical-align: super;
+
+      &:hover {
+        background: var(--b-accent);
+        color: #fff;
+      }
+    }
+
+    // Header du popover : label « NOTE DE BAS DE PAGE » à gauche +
+    // bouton × à droite pour supprimer le node footnote du document.
+    &__pop-h {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    &__close {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: var(--b-muted);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 0.12s;
+
+      &:hover {
+        color: var(--b-ink);
+      }
+    }
+
+    &__pop {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+      width: 360px;
+      max-width: 80vw;
+      background: var(--b-paper);
+      border: 1px solid var(--b-accent);
+      padding: 10px;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-style: normal;
+      color: var(--b-ink);
+      line-height: 1.4;
+
+      // Mobile : full-width viewport (left/right: 24px) avec ancrage
+      // vertical via la CSS var --popover-top que React calcule au
+      // moment de l'ouverture (getBoundingClientRect du trigger).
+      // Pas de calcul de gauche/droite côté CSS — full-width règle
+      // l'horizontal, le seul positionnement à faire est vertical.
+      // Fallback à 50% si la var n'est pas posée (avant mount React).
+      @include mobile {
+        position: fixed;
+        top: var(--popover-top, 50%);
+        left: 24px;
+        right: 24px;
+        transform: none;
+        width: auto;
+        max-width: none;
+        max-height: calc(100vh - var(--popover-top, 50%) - 24px);
+        overflow-y: auto;
+        margin-top: 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      }
+
+      .lbl {
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--b-muted);
+        // Cliquer sur le label faisait clignoter un caret comme si
+        // c'était du texte éditable (cf. .ed-fig .lbl).
+        user-select: none;
+        cursor: default;
+      }
+
+      textarea,
+      input {
+        width: 100%;
+        padding: 6px 8px;
+        background: var(--b-bg);
+        border: 1px solid var(--b-rule);
+        font-family: var(--font-serif);
+        font-size: 13px;
+        color: var(--b-ink);
+        resize: vertical;
+
+        &:focus {
+          outline: none;
+          border-color: var(--b-accent);
+        }
+      }
+    }
+  }
+
+  .ed-bi {
+    position: relative;
+    display: inline;
+
+    &__tag {
+      display: inline-block;
+      padding: 0 6px;
+      background: var(--b-accent-tint);
+      color: var(--b-accent);
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      cursor: pointer;
+      border-radius: 2px;
+
+      &:hover {
+        background: var(--b-accent);
+        color: #fff;
+      }
+    }
+
+    // Header du popover : label « RÉFÉRENCE BIBLIOGRAPHIQUE » à
+    // gauche + bouton × à droite pour supprimer la citation biblio
+    // inline du document.
+    &__pop-h {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    &__close {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: var(--b-muted);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 0.12s;
+
+      &:hover {
+        color: var(--b-ink);
+      }
+    }
+
+    &__pop {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+      width: 460px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-accent);
+      padding: 12px;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-style: normal;
+      color: var(--b-ink);
+
+      // Mobile : full-width viewport (left/right: 24px) avec ancrage
+      // vertical via la CSS var --popover-top que React calcule au
+      // moment de l'ouverture (getBoundingClientRect du trigger).
+      // Pas de calcul de gauche/droite côté CSS — full-width règle
+      // l'horizontal, le seul positionnement à faire est vertical.
+      // Fallback à 50% si la var n'est pas posée (avant mount React).
+      @include mobile {
+        position: fixed;
+        top: var(--popover-top, 50%);
+        left: 24px;
+        right: 24px;
+        transform: none;
+        width: auto;
+        max-width: none;
+        max-height: calc(100vh - var(--popover-top, 50%) - 24px);
+        overflow-y: auto;
+        margin-top: 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      }
+
+      .lbl {
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--b-muted);
+        // Cliquer sur le label faisait clignoter un caret (cf .ed-fig).
+        user-select: none;
+        cursor: default;
+      }
+
+      input {
+        width: 100%;
+        padding: 6px 8px;
+        background: var(--b-bg);
+        border: 1px solid var(--b-rule);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--b-ink);
+
+        &:focus {
+          outline: none;
+          border-color: var(--b-accent);
+        }
+      }
+    }
+
+    // Référence sélectionnée — chip lisible avec × pour la retirer.
+    // Apparaît à la place du champ de recherche quand `entry` est posé.
+    &__selected {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: var(--b-accent-tint);
+      border: 1px solid var(--b-accent);
+    }
+    &__selected-label {
+      flex: 1;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--b-ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    &__selected-clear {
+      flex: 0 0 auto;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: var(--b-muted);
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+
+      &:hover {
+        color: #b63a3a;
+      }
+    }
+
+    // Champ de recherche dans le popover (typeahead biblio).
+    &__search {
+      width: 100%;
+    }
+
+    // Liste filtrée des résultats sous le champ de recherche. Bornée
+    // en hauteur, scrollable, items cliquables.
+    &__results {
+      display: flex;
+      flex-direction: column;
+      max-height: 220px;
+      overflow: auto;
+      border: 1px solid var(--b-rule);
+      background: var(--b-bg);
+    }
+    &__result {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 6px 8px;
+      background: transparent;
+      border: 0;
+      border-bottom: 1px solid var(--b-rule);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--b-ink);
+      cursor: pointer;
+      line-height: 1.4;
+
+      &:last-child {
+        border-bottom: 0;
+      }
+
+      &:hover {
+        background: var(--b-accent-tint);
+      }
+
+      .author {
+        font-weight: 600;
+      }
+      .year {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--b-muted);
+      }
+      .title {
+        color: var(--b-muted);
+        font-style: italic;
+      }
+    }
+    &__empty {
+      display: block;
+      padding: 10px;
+      color: var(--b-muted);
+      font-size: 11.5px;
+      text-align: center;
+    }
+
+    // Row 2 colonnes (Préfixe / Page(s)) pour gagner en compacité dans
+    // le popover élargi.
+    &__row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    &__col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+  }
+
+  // ─── Decorator nodes : CitationBloc, Figure ───────────────────
+  .ed-cit {
+    margin: 18px 0;
+    padding: 14px 18px;
+    border-left: 3px solid var(--b-accent);
+    background: var(--b-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    &__text {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      font-family: var(--font-serif);
+      font-size: 18px;
+      line-height: 1.5;
+      color: var(--b-ink);
+      resize: vertical;
+
+      &:focus {
+        outline: none;
+      }
+    }
+
+    &__src {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--b-muted);
+
+      &:focus {
+        outline: none;
+      }
+    }
+  }
+
+  .ed-fig {
+    position: relative;
+    margin: 18px 0;
+
+    // Tag compact (même style que .ed-fn__anchor / .ed-bi__tag) :
+    // fond accent-tint, texte mono, petit. Click → popover.
+    &__tag {
+      display: inline-block;
+      padding: 0 6px;
+      background: var(--b-accent-tint);
+      color: var(--b-accent);
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      cursor: pointer;
+      border-radius: 2px;
+      border: 0;
+
+      &:hover {
+        background: var(--b-accent);
+        color: #fff;
+      }
+    }
+
+    // Popover d'édition (caché par défaut, ouvert au clic sur le tag).
+    // Mêmes règles de taille que .ed-bi__pop : 460px de large sur
+    // desktop, fixed centré viewport sur mobile.
+    &__pop {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+      width: 460px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-accent);
+      padding: 12px;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--b-ink);
+
+      @include mobile {
+        position: fixed;
+        top: 50%;
+        left: 24px;
+        right: 24px;
+        transform: translateY(-50%);
+        width: auto;
+        max-height: 70vh;
+        overflow-y: auto;
+        margin-top: 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      }
+    }
+
+    // Label commun (« FIGURE ») dans le header du popover, pas
+    // sélectionnable (cf. .ed-fn .lbl).
+    .lbl {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--b-muted);
+      user-select: none;
+      cursor: default;
+    }
+
+    // Header du popover : label « FIGURE » à gauche + bouton × à
+    // droite pour FERMER le popover (PAS supprimer le node).
+    &__pop-h {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    &__close {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: var(--b-muted);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 0.12s;
+
+      &:hover {
+        color: var(--b-ink);
+      }
+    }
+
+    // Picker média : input de recherche + dropdown de résultats avec
+    // thumbnail. Remplace le coller-l'id-Payload qui était inutilisable.
+    // Style aligné sur la barre de recherche du picker biblio
+    // (.ed-bi__pop input) — fond bg, mono, accent au focus.
+    &__search {
+      width: 100%;
+      padding: 6px 8px;
+      background: var(--b-bg);
+      border: 1px solid var(--b-rule);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--b-ink);
+
+      &:focus {
+        outline: none;
+        border-color: var(--b-accent);
+      }
+    }
+    &__results {
+      display: flex;
+      flex-direction: column;
+      max-height: 240px;
+      overflow: auto;
+      border: 1px solid var(--b-rule);
+      background: var(--b-paper);
+      margin-top: 4px;
+    }
+    &__empty {
+      padding: 8px 10px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--b-muted);
+      font-style: italic;
+    }
+    &__result {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 6px 8px;
+      background: transparent;
+      border: 0;
+      border-bottom: 1px solid var(--b-rule);
+      cursor: pointer;
+      text-align: left;
+      font-family: var(--font-sans);
+
+      &:last-child {
+        border-bottom: 0;
+      }
+      &:hover {
+        background: var(--b-accent-tint);
+      }
+    }
+    &__result-thumb {
+      flex: 0 0 auto;
+      width: 36px;
+      height: 36px;
+      object-fit: cover;
+      background: var(--b-bg);
+      border: 1px solid var(--b-rule);
+      // Override le `img` parent qui ajoute margin-top: 8px / max-height
+      margin: 0;
+      max-height: none;
+    }
+    &__result-meta {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    &__result-name {
+      font-size: 12px;
+      color: var(--b-ink);
+      font-family: var(--font-mono);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    &__result-alt {
+      font-size: 11px;
+      color: var(--b-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    // Média sélectionné : thumb + nom + bouton × pour retirer.
+    &__selected {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      background: var(--b-accent-tint);
+      border: 1px solid var(--b-accent);
+    }
+    &__selected-thumb {
+      flex: 0 0 auto;
+      width: 56px;
+      height: 56px;
+      object-fit: cover;
+      background: var(--b-bg);
+      border: 1px solid var(--b-rule);
+      margin: 0;
+      max-height: none;
+    }
+    &__selected-meta {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    &__selected-name {
+      font-size: 12px;
+      color: var(--b-ink);
+      font-family: var(--font-mono);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    &__selected-alt {
+      font-size: 11px;
+      color: var(--b-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    &__selected-clear {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      color: var(--b-muted);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+
+      &:hover {
+        color: #b63a3a;
+      }
+    }
+
+    &__cap {
+      width: 100%;
+      padding: 6px 8px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      font-family: var(--font-serif);
+      font-size: 13px;
+      color: var(--b-ink);
+      resize: vertical;
+      margin-bottom: 6px;
+
+      &:focus {
+        outline: none;
+        border-color: var(--b-accent);
+      }
+    }
+
+    &__credit,
+    &__align {
+      width: 100%;
+      padding: 6px 8px;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--b-ink);
+      margin-bottom: 6px;
+
+      &:focus {
+        outline: none;
+        border-color: var(--b-accent);
+      }
+    }
+  }
+
+  // ─── Container : zone brouillon ───────────────────────────────
+  // ElementNode Lexical — children éditables dans le flux principal.
+  // Volontairement sans boîte ni fond : juste deux marqueurs (balise
+  // ouvrante / balise fermante) en pseudo-elements pour délimiter la
+  // zone sans la sortir du flux de lecture. Cf issue #1.
+  //
+  // Bouton « valider » : rendu par createDOM en premier enfant DOM
+  // (non-Lexical, contenteditable=false). Position absolute pour ne
+  // pas perturber le flux de saisie. Click → CustomEvent que
+  // DraftValidatePlugin (Editor.tsx) capte pour unwrap la zone.
+  .ed-draft {
+    margin: 18px 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    position: relative;
+
+    &::before,
+    &::after {
+      display: block;
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--b-accent);
+      border-top: 1px dashed var(--b-accent);
+      padding: 3px 0 0;
+      pointer-events: none;
+    }
+
+    &::before {
+      content: '⌜ début brouillon';
+      margin-bottom: 6px;
+    }
+
+    &::after {
+      content: '⌞ fin brouillon';
+      margin-top: 6px;
+    }
+
+    &__validate {
+      position: absolute;
+      top: -2px;
+      right: 0;
+      padding: 2px 9px;
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--b-paper);
+      background: var(--b-accent);
+      border: 0;
+      cursor: pointer;
+      user-select: none;
+
+      &:hover {
+        background: var(--b-ink);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--b-accent);
+        outline-offset: 2px;
+      }
+    }
+
+    // Le bouton .ed-draft__validate est en premier enfant DOM mais
+    // position:absolute, donc le premier enfant en flux est en fait
+    // le suivant. On le cible via le sélecteur d'adjacence.
+    > .ed-draft__validate + * {
+      margin-top: 0;
+    }
+    > *:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .ed-block-unknown,
+  .ed-inline-unknown {
+    padding: 6px 10px;
+    background: rgba(182, 58, 58, 0.06);
+    border: 1px solid #b63a3a;
+    color: #b63a3a;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    display: inline-block;
+  }
+
+  // ─── .fn-block et .bib-block sous l'ed-card ───────────────────
+  // Deux panneaux pied de billet alignés sur le même style : la liste
+  // des notes de bas de page (fn-block) et la bibliographie liée
+  // (bib-block, déplacée du sidebar de droite pour mieux refléter ce
+  // qu'on lit en pied d'article côté frontend).
+  .fn-block,
+  .bib-block {
+    margin: 24px 0 0;
+    border: 1px solid var(--b-rule);
+    background: var(--b-paper);
+
+    &__h {
+      padding: 12px 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--b-muted);
+      border-bottom: 1px solid var(--b-rule);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    // Bouton « Tutoriel ▾ » à droite du header — toggle l'accordéon
+    // bib-block__help. Style minimaliste pour rester subordonné au
+    // titre. Le caret pivote selon l'état ouvert/fermé. Casse normale
+    // (pas uppercase) pour le distinguer du titre majuscule à gauche.
+    &__help-toggle {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--b-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: color 0.12s;
+
+      &:hover,
+      &[aria-expanded='true'] {
+        color: var(--b-accent);
+      }
+
+      .caret {
+        font-size: 10px;
+        line-height: 1;
+      }
+    }
+
+    &__empty {
+      padding: 14px 20px;
+      color: var(--b-muted);
+      font-size: 12.5px;
+      line-height: 1.5;
+
+      kbd {
+        display: inline-block;
+        padding: 1px 6px;
+        margin: 0 2px;
+        background: var(--b-bg);
+        border: 1px solid var(--b-rule);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--b-ink);
+        border-radius: 3px;
+      }
+    }
+
+    &__help {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--b-rule);
+      color: var(--b-muted);
+      font-size: 11.5px;
+      line-height: 1.5;
+      background: var(--b-bg);
+
+      kbd {
+        display: inline-block;
+        padding: 1px 6px;
+        margin: 0 2px;
+        background: var(--b-paper);
+        border: 1px solid var(--b-rule);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--b-ink);
+        border-radius: 3px;
+      }
+
+      em {
+        font-style: italic;
+        color: var(--b-ink);
+      }
+    }
+
+    .fn-row {
+      display: grid;
+      grid-template-columns: 36px 1fr 28px;
+      gap: 14px;
+      padding: 9px 20px;
+      border-bottom: 1px solid var(--b-rule);
+      align-items: baseline;
+
+      &:last-child {
+        border-bottom: 0;
+      }
+
+      .n {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--b-accent);
+      }
+
+      .body {
+        font-family: var(--font-serif);
+        font-size: 14px;
+        line-height: 1.55;
+        color: var(--b-ink);
+
+        em {
+          color: var(--b-muted);
+          font-style: italic;
+        }
+      }
+
+      .x {
+        position: static;
+        transform: none;
+        background: transparent;
+        border: 0;
+        color: var(--b-muted);
+        font-family: var(--font-mono);
+        cursor: pointer;
+        padding: 2px 6px;
+        align-self: center;
+        justify-self: end;
+
+        &:hover {
+          color: #b63a3a;
+        }
+      }
+    }
+  }
+
+  // bib-block : tableau des références liées, aligné sur le format
+  // de .fn-row (grille 3 cols : numéro mono accent · citation
+  // serif · bouton × suppression).
+  .bib-block {
+    .biblio-list {
+      border-top: 0;
+      max-height: none;
+      background: transparent;
+      border: 0;
+
+      .b-row {
+        display: grid;
+        grid-template-columns: 36px 1fr 28px;
+        gap: 14px;
+        padding: 9px 20px;
+        border-bottom: 1px solid var(--b-rule);
+        align-items: baseline;
+        font-family: var(--font-serif);
+        font-size: 14px;
+        line-height: 1.55;
+
+        &:last-child {
+          border-bottom: 0;
+        }
+
+        &--empty {
+          display: block;
+          color: var(--b-muted);
+          font-style: italic;
+          padding: 14px 20px;
+        }
+
+        .n {
+          font-family: var(--font-mono);
+          font-size: 11px;
+          color: var(--b-accent);
+        }
+
+        .body {
+          color: var(--b-ink);
+
+          .au {
+            font-weight: 600;
+          }
+
+          .ti {
+            color: var(--b-muted);
+            font-style: italic;
+          }
+        }
+
+        // Reset du positionnement absolu hérité de .biblio-list
+        // .b-row global — ici on est en grille.
+        .x {
+          position: static;
+          transform: none;
+          background: transparent;
+          border: 0;
+          color: var(--b-muted);
+          font-family: var(--font-mono);
+          cursor: pointer;
+          padding: 2px 6px;
+          align-self: center;
+          justify-self: end;
+
+          &:hover {
+            color: #b63a3a;
+          }
+        }
+      }
+    }
+
+    .add-rel-wrap {
+      padding: 10px 20px;
+      border-top: 1px solid var(--b-rule);
+
+      .add-rel {
+        font-size: 12px;
+      }
+
+      .add-rel-list {
+        margin-top: 6px;
+      }
+    }
+
+    // Search picker biblio (remplace le <details> static). Placé
+    // entre l'en-tête .bib-block__h et le bloc d'aide .bib-block__help
+    // pour que l'ajout d'une référence soit l'action principale,
+    // pas planquée en pied. Cf échange #2.
+    .bib-picker {
+      position: relative;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--b-rule);
+
+      &__input {
+        width: 100%;
+        padding: 7px 10px;
+        background: var(--b-paper);
+        border: 1px solid var(--b-rule);
+        font-family: inherit;
+        font-size: 12px;
+        color: var(--b-ink);
+
+        &:focus {
+          outline: none;
+          border-color: var(--b-accent);
+        }
+
+        &::placeholder {
+          color: var(--b-muted);
+        }
+      }
+
+      &__menu {
+        position: absolute;
+        left: 20px;
+        right: 20px;
+        top: 100%;
+        z-index: 20;
+        max-height: 320px;
+        overflow: auto;
+        background: var(--b-paper);
+        border: 1px solid var(--b-rule);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+      }
+
+      &__empty {
+        padding: 10px;
+        font-size: 11.5px;
+        color: var(--b-muted);
+        font-style: italic;
+      }
+
+      &__opt {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 7px 10px;
+        background: transparent;
+        border: 0;
+        border-bottom: 1px solid var(--b-rule);
+        font-family: inherit;
+        font-size: 11.5px;
+        color: var(--b-ink);
+        cursor: pointer;
+        line-height: 1.4;
+
+        &:last-child {
+          border-bottom: 0;
+        }
+
+        &:hover,
+        &:focus {
+          background: var(--b-accent-tint);
+          outline: none;
+        }
+
+        .au {
+          font-weight: 600;
+        }
+
+        .ti {
+          color: var(--b-muted);
+          font-style: italic;
+        }
+      }
+    }
+  }
+
+  @media (max-width: 1100px) {
+    &__doc {
+      grid-template-columns: 1fr;
+    }
+    &__meta {
+      border-left: 0;
+      border-top: 1px solid var(--b-rule);
+    }
+  }
+
+  // ≤ 900px : sticky/scroll de la sidebar n'a plus de sens (la meta
+  // est stackée sous le contenu central via le break à 1100px), on
+  // désactive. On harmonise aussi le padding horizontal entre __center
+  // et __meta pour qu'ils aient la même marge gauche/droite — sinon
+  // l'œil voit deux blocs décalés.
+  @include mobile {
+    &__center {
+      padding-inline: var(--carnet-pad-x);
+    }
+    &__meta {
+      padding-inline: var(--carnet-pad-x);
+      position: static;
+      top: auto;
+      max-height: none;
+      overflow: visible;
+    }
+    // Topbar : compactage intelligent pour ne pas faire wrapper
+    // « Modifications non enregistrées » sur 3 lignes (cf screenshot).
+    //   - Hide les labels texte de dirty/saved : l'état dirty est
+    //     déjà conveyé par le bouton « Sauvegarder » (disabled si rien
+    //     à sauvegarder, actif sinon). Plus besoin du label texte.
+    //   - Le chip status (« Brouillon » / « Publié ») reste visible
+    //     mais on l'empêche de wrap.
+    &__saved,
+    &__dirty {
+      display: none;
+    }
+  }
+}
+
+// ─── Topbar normalisée (CarnetTopbar) ─────────────────────────────
+// Seule barre supérieure utilisée dans tout l'admin Carnet — list
+// views, edit views, vue Édition Posts. Définie au top-level pour
+// que toutes les pages partagent EXACTEMENT le même style. Cf
+// services/payload/src/components/admin/CarnetTopbar.tsx.
+.carnet-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  // Padding horizontal piloté par --carnet-pad-x : crumbs alignés avec
+  // le contenu en dessous à gauche, actions décollées du bord à droite.
+  // La topbar est full-bleed naturellement parce que ses containers
+  // (.carnet-listview / .carnet-editview / .carnet-postedit) ne portent
+  // PAS de padding horizontal. Pas de hack de margin-inline.
+  padding: 0 var(--carnet-pad-x);
+  height: 56px;
+  border-bottom: 1px solid var(--b-rule);
+  background: var(--b-bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  font-size: 12px;
+  color: var(--b-muted);
+  font-family: var(--font-sans);
+
+  &__crumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    a {
+      color: var(--b-muted);
+      text-decoration: none;
+      transition: color 0.12s;
+
+      &:hover {
+        color: var(--b-ink);
+      }
+    }
+
+    .sep {
+      color: var(--b-rule);
+    }
+
+    .cur {
+      color: var(--b-ink);
+    }
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .kbd {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--b-muted);
+      margin-left: 6px;
+    }
+  }
+}
+
+// ─── Slash menu (au top-level car rendu via portal dans <body>) ──
+// Le slash menu de l'éditeur Lexical est portalé hors de la
+// hiérarchie .carnet-postedit pour échapper aux parents avec
+// overflow/transform qui le clipperaient. Donc CSS au top-level.
+.ed-slash {
+  width: 320px;
+  background: var(--b-paper);
+  border: 1px solid var(--b-rule);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 6px 0;
+  font-family: var(--font-sans);
+
+  &__lbl {
+    padding: 8px 14px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--b-muted);
+  }
+
+  &__opt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 8px 14px;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+
+    &.on,
+    &:hover {
+      background: var(--b-accent-tint);
+    }
+
+    .ic {
+      flex: 0 0 28px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-align: center;
+      color: var(--b-accent);
+    }
+
+    .lab {
+      flex: 1;
+      font-size: 13px;
+      color: var(--b-ink);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .desc {
+        font-size: 11px;
+        color: var(--b-muted);
+      }
+    }
+
+    .kbd {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--b-muted);
+    }
+  }
+}
+
+// ─── Misc cleanup ────────────────────────────────────────────────
+
+// Désactive les rayons sur les blocs natifs Payload pour rester dans
+// l'esprit "filets fins, pas de rayon".
+.gutter--left .field-type,
+.field-type__wrap {
+  border-radius: 0;
+}
+
+// Cache le bouton de pliage de la nav (NavToggler de Payload). Notre
+// nav custom ne respecte pas l'état "collapsed" : cliquer le bouton
+// décalait le panneau central sous la nav. Le design Carnet n'a pas
+// de mécanisme de pliage de toute façon.
+.nav-toggler,
+[class*='mobile-nav-toggler'] {
+  display: none !important;
+}
+
+// Burger mobile — rendu dans CarnetTopbar, masqué ≥ 901px.
+// Backdrop : masqué par défaut, visible quand la nav est ouverte.
+.carnet-nav-burger {
+  display: none;
+}
+.carnet-nav-backdrop {
+  display: none;
+}
+
+// Sur écrans étroits (≤ 900px) :
+//   - .template-default sort de sa grille pour que le contenu prenne
+//     toute la largeur (display: block).
+//   - .carnet-nav est masquée par défaut, et apparaît en overlay quand
+//     .is-open est posé (par le bouton burger).
+//   - Le burger s'affiche dans la topbar (à droite des actions), pas
+//     en overlay : pas de chevauchement avec les boutons d'action.
+// Breakpoint mobile/tablet unifié : 1440px. Pixel exact où Firefox
+// fait passer le contenu sous la nav (constat empirique). En dessous,
+// layout mobile complet (nav cachée + burger + filtres 2x2 + tableaux
+// réduits). Au-delà, layout desktop avec nav latérale fixe.
+@include tablet {
+  .template-default {
+    display: block !important;
+  }
+
+  // Crumbs masqués sur mobile : bouffent trop de place dans la topbar.
+  // Le burger + le titre H1 de chaque vue suffisent à se repérer.
+  .carnet-topbar__crumbs {
+    display: none !important;
+  }
+
+  // Padding horizontal piloté entièrement par --carnet-pad-x : pas de
+  // règle ad-hoc qui le strippe ici. Cohérent topbar / listview /
+  // editview, modifiable d'un seul endroit (cf :root).
+
+  // Toolbar : grid 2 colonnes pour que les filtres se rangent 2 par
+  // ligne. Le champ recherche prend toute la largeur en première ligne.
+  // `minmax(0, 1fr)` au lieu de `1fr` pour autoriser les cellules à
+  // shrink en dessous de leur min-content (sinon les filtres avec
+  // long label « Périmètre : » débordent du viewport).
+  .carnet-listview__toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px !important;
+  }
+  .carnet-listview__search {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+  .carnet-listview__filter {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+  }
+  // Le label "Type :" ne doit pas wrap caractère par caractère quand
+  // le select prend toute la largeur. flex-shrink: 0 + nowrap, et le
+  // select prend le reste via flex: 1.
+  .carnet-listview__filter .lbl {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .carnet-listview__filter select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  // Table Posts ≤ 1440 : 3 colonnes Titre + Type + Statut.
+  // Position « Type » dans le DOM :
+  //   - Sans authors (6 cells) : Title=1, Type=2, Theme=3, Date=4, Status=5, Actions=6
+  //   - Avec authors (7 cells) : Title=1, Author=2, Type=3, Theme=4, Date=5, Status=6, Actions=7
+  // Type est toujours :nth-last-child(5), Status toujours :nth-last-child(2).
+  // → On garde 1er (Titre), nth-last-child(5) (Type), nth-last-child(2) (Statut).
+  //
+  // Sous 900px (vrai mobile) le bloc @include mobile en dessous force
+  // le retour à 2 colonnes et cache aussi Type.
+  .carnet-listview--posts .carnet-listview__row {
+    grid-template-columns: 1fr 110px 65px !important;
+    gap: 12px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  .carnet-listview--posts .carnet-listview__row > *:not(:first-child):not(:nth-last-child(5)):not(:nth-last-child(2)) {
+    display: none !important;
+  }
+
+  // Table Themes ≤ 1440 : on conserve les 3 colonnes par défaut
+  // (Nom + Description + Billets) — la description tient encore en
+  // tablette. Hide / réduction à 2 colonnes uniquement en vrai mobile
+  // (cf. @include mobile dans .carnet-listview).
+  .carnet-nav {
+    display: flex !important;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px;
+    max-width: 85vw;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    z-index: 200;
+    overflow-y: auto;
+  }
+  .carnet-nav.is-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.15);
+  }
+
+  // Aligné pixel-près sur .carnet-btn (padding 5px 14px, font 12.5px,
+  // border 1px) pour être à la même hauteur. Padding horizontal réduit
+  // à 9px pour un aspect carré-ish ; le span aria-hidden est sizé en
+  // font-size de l'élément (12.5px) — c'est petit mais cohérent.
+  // Marge à droite (pas à gauche) puisque le burger est désormais en
+  // début de topbar.
+  .carnet-nav-burger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    padding: 5px 9px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    color: var(--b-ink);
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    flex: 0 0 auto;
+
+    span {
+      // Icône ☰ légèrement plus grosse que le texte pour rester
+      // lisible — en font-size relative donc le glyph grossit sans
+      // changer la hauteur du bouton (line-height inherit gère).
+      font-size: 16px;
+      line-height: 1;
+    }
+  }
+  .carnet-nav-burger:hover {
+    border-color: var(--b-ink);
+  }
+
+  // Variante standalone — utilisée par Dashboard qui n'a pas de
+  // CarnetTopbar. Le burger est placé inline avec le kicker
+  // « Carnet · admin » (cf .carnet-dashboard__kicker-row) : pas de
+  // margin-right ni margin-bottom, le gap du flex parent gère l'espace.
+  .carnet-nav-burger--standalone {
+    margin-right: 0;
+  }
+
+  .carnet-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 190;
+  }
+}
+
+// Sous 900px (vrai mobile) : la liste des billets repasse en 2 colonnes
+// (Titre + Statut). On cache aussi la colonne Type qui était visible
+// dans la zone 901-1440. Cf. règles ≤1440 plus haut.
+@include mobile {
+  .carnet-listview--posts .carnet-listview__row {
+    grid-template-columns: 1fr 65px !important;
+  }
+  .carnet-listview--posts .carnet-listview__row > .type,
+  .carnet-listview--posts .carnet-listview__row--head > *:nth-last-child(5) {
+    display: none !important;
+  }
+}
+
+
+
+// ─── Intégration Zotero ─────────────────────────────────────────────
+// Pas de marqueur visuel sur les refs Zotero dans la liste biblio :
+// avec un import majoritaire depuis Zotero, un badge ligne par ligne
+// devenait du bruit. Le filtre « Provenance » dans la toolbar et la
+// banner à l'intérieur de l'édition (`.carnet-zotero-banner`) suffisent
+// à signaler / filtrer / expliquer la lecture seule.
+
+// Banner d'avertissement affiché en haut de l'édition d'une ref Zotero,
+// pour expliquer pourquoi tout est verrouillé.
+.carnet-zotero-banner {
+  // Rendue dans .carnet-editview qui gère le padding horizontal.
+  margin: 16px 0 24px;
+  padding: 14px 16px;
+  background: var(--b-accent-tint);
+  border-left: 3px solid var(--b-accent);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--b-ink);
+}
+
+// Sécurité du compte (2FA + appareils de confiance) — embed dans
+// AccountView et UserEditView, sans accordéon. Deux groupes empilés
+// avec un titre lbl-style et un corps en texte serif.
+.carnet-account-security {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  // Aligne le bord droit sur les autres .carnet-editview__field qui
+  // ont déjà un cap à 640px — sinon les paragraphes 2FA et la liste
+  // d'appareils s'étendent plus loin que le bloc Verrouillage juste
+  // au-dessus.
+  max-width: 640px;
+
+  &__group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--b-muted);
+  }
+
+  &__text {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--b-ink);
+
+    strong {
+      font-weight: 600;
+    }
+  }
+
+  &__empty {
+    margin: 0;
+    font-size: 12px;
+    color: var(--b-muted);
+    font-style: italic;
+  }
+
+  &__devices {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+
+    li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--b-rule);
+
+      &:last-child {
+        border-bottom: 0;
+      }
+
+      .info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .label {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--b-ink);
+      }
+
+      .meta {
+        margin-top: 2px;
+        font-size: 11.5px;
+        color: var(--b-muted);
+        line-height: 1.4;
+      }
+    }
+  }
+}
+
+// Section Zotero de la page Compte. Reprend le style des autres sections
+// editview (gap, typo) avec quelques spécificités : barre de statut
+// (✓/✕), groupe d'actions horizontal, ligne de feedback (info/error).
+.carnet-zotero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__intro {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--b-muted);
+  }
+
+  &__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    align-self: flex-start;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    border-radius: 16px;
+    font-size: 12px;
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--b-muted);
+    }
+
+    &--on {
+      .dot {
+        background: #2d7a3d;
+      }
+    }
+    &--off {
+      color: var(--b-muted);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  &__error {
+    padding: 10px 14px;
+    background: rgba(182, 58, 58, 0.06);
+    border-left: 3px solid #b63a3a;
+    color: #b63a3a;
+    font-size: 12.5px;
+  }
+
+  &__info {
+    padding: 10px 14px;
+    background: rgba(45, 122, 61, 0.06);
+    border-left: 3px solid #2d7a3d;
+    font-size: 12.5px;
+  }
+
+  &__last {
+    font-size: 12.5px;
+    color: var(--b-muted);
+
+    .lbl {
+      font-weight: 600;
+      color: var(--b-ink);
+    }
+  }
+
+  &__loading {
+    font-size: 12.5px;
+    color: var(--b-muted);
+    padding: 12px 0;
+  }
+
+  // Détails des items ignorés au dernier sync. Replié par défaut
+  // (<details> natif). Liste compacte clé Zotero + raison ; pour les
+  // bibliothèques de groupe la clé est cliquable vers Zotero.
+  &__skipped {
+    border: 1px solid var(--b-rule);
+    background: var(--b-bg);
+    padding: 10px 14px;
+    font-size: 12.5px;
+
+    summary {
+      cursor: pointer;
+      color: var(--b-muted);
+      font-weight: 500;
+
+      &:hover {
+        color: var(--b-ink);
+      }
+    }
+
+    .hint {
+      margin: 8px 0 6px;
+      color: var(--b-muted);
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    li {
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--b-rule);
+      line-height: 1.45;
+
+      &:last-child {
+        border-bottom: 0;
+      }
+    }
+
+    .title {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 13px;
+      color: var(--b-ink);
+
+      &.muted {
+        font-style: normal;
+        color: var(--b-muted);
+      }
+    }
+
+    .key {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--b-muted);
+      margin-left: 6px;
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--b-ink);
+    }
+
+    .reason {
+      color: var(--b-muted);
+      font-size: 12px;
+    }
+  }
+}
+
+// Lien neutre dans une hint (carnet-zotero ou carnet-editview__field).
+.carnet-link {
+  color: var(--b-accent);
+  text-decoration: underline;
+
+  &:hover {
+    text-decoration: none;
+  }
+}

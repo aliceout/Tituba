@@ -1,0 +1,583 @@
+---
+/**
+ * Page Abonnement — /abonnement/
+ *
+ * Atterrissage humain pour le bouton « Abonnement » du header. Regroupe
+ * les canaux par lesquels le carnet peut être suivi :
+ *  1. Réseaux sociaux (Mastodon, Bluesky, ORCID, HAL) — affichés
+ *     uniquement si au moins une URL est renseignée dans le global
+ *     Subscriptions. Si tout est vide, la section disparaît.
+ *  2. Flux RSS — explication, URL avec bouton copier, lecteurs
+ *     recommandés. Toute la section disparaît si `rssEnabled` est
+ *     décoché dans Abonnements côté admin.
+ *
+ * Le lien « Flux RSS » du footer pointe directement sur /rss.xml (le
+ * flux brut) pour les feed readers ; cette page sert au public humain.
+ */
+import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero.astro';
+import { fetchIndexPages, fetchSubscriptions } from '../lib/payload';
+import { formatHeroLede, formatHeroTitle } from '../lib/site';
+
+type SubscriptionsGlobal = {
+  rssEnabled?: boolean;
+  emailEnabled?: boolean;
+  mastodon?: string;
+  bluesky?: string;
+  orcid?: string;
+  hal?: string;
+};
+
+type IndexPagesGlobal = {
+  subscribe?: { enabled?: boolean; heroTitle?: string; heroLede?: string };
+};
+
+const DEFAULT_HERO_TITLE = "*S'abonner* aux billets";
+const DEFAULT_HERO_LEDE =
+  "Plusieurs façons de recevoir les nouveaux billets : sur les réseaux où l'autrice est présente, ou via un flux RSS — sans algorithme, sans publicité, sans pisteur.";
+
+let subscriptions: SubscriptionsGlobal = {};
+let indexPages: IndexPagesGlobal = {};
+try {
+  subscriptions = await fetchSubscriptions<SubscriptionsGlobal>();
+} catch (err) {
+  console.warn('[suivre] fetchSubscriptions failed:', (err as Error).message);
+}
+try {
+  indexPages = await fetchIndexPages<IndexPagesGlobal>();
+} catch (err) {
+  console.warn('[suivre] fetchIndexPages failed:', (err as Error).message);
+}
+
+if (indexPages.subscribe?.enabled === false) {
+  return Astro.rewrite('/404');
+}
+
+const rssEnabled = subscriptions.rssEnabled !== false;
+const emailEnabled = subscriptions.emailEnabled !== false;
+
+const heroTitleHtml = formatHeroTitle(
+  indexPages.subscribe?.heroTitle?.trim() || DEFAULT_HERO_TITLE,
+);
+const heroLedeHtml = formatHeroLede(
+  indexPages.subscribe?.heroLede?.trim() || DEFAULT_HERO_LEDE,
+);
+
+const socialEntries = [
+  subscriptions.mastodon ? { label: 'Mastodon', href: subscriptions.mastodon, hint: 'fediverse, sans algorithme' } : null,
+  subscriptions.bluesky ? { label: 'Bluesky', href: subscriptions.bluesky, hint: 'protocole AT, ouvert' } : null,
+  subscriptions.orcid ? { label: 'ORCID', href: subscriptions.orcid, hint: 'identifiant chercheur·euse, publications académiques' } : null,
+  subscriptions.hal ? { label: 'HAL', href: subscriptions.hal, hint: 'archive ouverte de la recherche française' } : null,
+].filter((x): x is { label: string; href: string; hint: string } => x !== null);
+
+const feedUrl = new URL('/rss.xml', Astro.site).toString();
+---
+
+<Layout
+  title="Abonnement"
+  description="Comment s'abonner au carnet : réseaux sociaux et flux RSS."
+>
+  <Hero
+    kicker="Abonnement"
+    title={heroTitleHtml}
+    lede={heroLedeHtml}
+  />
+
+  <section class="container suivre-page">
+    {emailEnabled && (
+      <>
+        <h2>Par mail</h2>
+        <p class="lede secondary">
+          Inscrivez-vous pour recevoir un mail à chaque nouveau billet
+          publié.
+          <br />
+          Désabonnement en un clic depuis chaque mail.
+        </p>
+
+        <form id="subscribe-form" class="subscribe-form" novalidate>
+          <div class="row">
+            <label class="visually-hidden" for="subscribe-email">Votre adresse mail</label>
+            <input
+              id="subscribe-email"
+              type="email"
+              name="email"
+              required
+              placeholder="vous@example.com"
+              autocomplete="email"
+              spellcheck="false"
+            />
+            <button type="submit">S'inscrire</button>
+          </div>
+          <p class="status" data-status aria-live="polite"></p>
+        </form>
+      </>
+    )}
+
+    {socialEntries.length > 0 && (
+      <>
+        <h2>Sur les réseaux</h2>
+        <ul class="socials">
+          {socialEntries.map((s) => (
+            <li>
+              <a href={s.href} rel="noopener" class="ext">{s.label}</a>
+              <span class="hint">— {s.hint}</span>
+            </li>
+          ))}
+        </ul>
+      </>
+    )}
+
+    {rssEnabled && (
+      <>
+        <h2>Par flux RSS</h2>
+        <p class="lede secondary">
+          Le RSS est une façon simple de recevoir les nouveaux billets dans
+          une application dédiée. Vous ajoutez l'URL ci-dessous à votre
+          lecteur de flux, et chaque nouveau billet apparaît automatiquement.
+        </p>
+
+        <div class="url-block">
+          <div class="lbl">URL du flux</div>
+          <div class="url-row">
+            <code>{feedUrl}</code>
+            <button
+              type="button"
+              class="copy-btn"
+              data-url={feedUrl}
+              aria-label="Copier l'URL du flux"
+            >
+              Copier
+            </button>
+          </div>
+          <p class="hint">
+            Vous pouvez aussi <a href="/rss.xml">ouvrir le flux directement</a>
+            — c'est un fichier XML, pas conçu pour la lecture humaine.
+          </p>
+        </div>
+
+        <details class="readers-accordion">
+          <summary>Quelques lecteurs recommandés</summary>
+          <ul class="readers">
+            <li>
+              <a href="https://feedly.com/" rel="noopener" class="ext">Feedly</a>
+              — le plus connu, web et mobile, version gratuite suffisante.
+            </li>
+            <li>
+              <a href="https://netnewswire.com/" rel="noopener" class="ext">NetNewsWire</a>
+              <span class="oss" title="Logiciel libre / open source">open source</span>
+              — léger, macOS et iOS.
+            </li>
+            <li>
+              <a href="https://www.inoreader.com/" rel="noopener" class="ext">Inoreader</a>
+              — multi-plateformes, organisation poussée.
+            </li>
+            <li>
+              <a href="https://www.thunderbird.net/" rel="noopener" class="ext">Thunderbird</a>
+              <span class="oss" title="Logiciel libre / open source">open source</span>
+              — le client mail de Mozilla lit aussi les flux RSS.
+            </li>
+          </ul>
+        </details>
+
+        <p class="footnote">
+          Pas familier avec RSS ? La <a
+            href="https://fr.wikipedia.org/wiki/RSS"
+            rel="noopener"
+            class="ext">page Wikipédia</a
+          > donne une bonne vue d'ensemble.
+        </p>
+      </>
+    )}
+  </section>
+</Layout>
+
+<style>
+  /* Le Hero gère le band haut (1280 / 80px). Le contenu narratif vit
+     dans une grille plus étroite (1080) — même largeur que les pages
+     éditoriales [slug].astro. */
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 80px 64px;
+  }
+  .lede.secondary {
+    font-family: var(--font-serif);
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--color-muted);
+    margin: 0 0 24px;
+  }
+
+  /* Premier h2 de la section (au-dessus de la section "Par mail" ou
+     "Sur les réseaux", selon ce qui est activé) : pas de marge top
+     pour qu'il colle bien au padding du container. */
+  h2:first-of-type {
+    margin-top: 0;
+  }
+  h2 {
+    font-family: var(--font-serif);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    margin: 36px 0 16px;
+  }
+  h3 {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 600;
+    margin: 32px 0 14px;
+  }
+
+  /* Formulaire d'inscription aux alertes mail — section "Par mail".
+     Layout : input + bouton sur une ligne (wrap sur mobile), message
+     de statut en dessous. */
+  .subscribe-form {
+    margin: 0 0 32px;
+  }
+  .subscribe-form .row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+  .subscribe-form input[type='email'] {
+    flex: 1 1 280px;
+    min-width: 0;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: var(--color-ink);
+    background: var(--color-paper);
+    border: 1px solid var(--color-rule);
+    padding: 10px 14px;
+    border-radius: 4px;
+    transition: border-color 0.12s;
+  }
+  .subscribe-form input[type='email']:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+  .subscribe-form button[type='submit'] {
+    flex: 0 0 auto;
+    background: var(--color-accent);
+    color: var(--color-bg);
+    border: 1px solid var(--color-accent);
+    padding: 10px 22px;
+    border-radius: 4px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.12s;
+  }
+  .subscribe-form button[type='submit']:hover {
+    opacity: 0.88;
+  }
+  .subscribe-form button[type='submit']:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .subscribe-form .status {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 12px 0 0;
+    min-height: 1.5em;
+    color: var(--color-muted);
+  }
+  .subscribe-form .status--ok {
+    color: var(--color-accent);
+  }
+  .subscribe-form .status--err {
+    color: #b63a3a;
+  }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .socials {
+    font-family: var(--font-serif);
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--color-body);
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+    display: grid;
+    gap: 10px;
+  }
+  .socials a.ext {
+    color: var(--color-ink);
+    border-bottom: 1px solid var(--color-accent);
+    font-weight: 500;
+  }
+  .socials a.ext:hover {
+    color: var(--color-accent);
+  }
+  .socials .hint {
+    color: var(--color-muted);
+    font-size: 15px;
+  }
+
+  .url-block {
+    background: var(--color-paper);
+    border: 1px solid var(--color-rule);
+    padding: 20px 24px;
+    margin-bottom: 32px;
+    border-radius: 4px;
+  }
+  .url-block .lbl {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 10px;
+  }
+  .url-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .url-row code {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--color-ink);
+    word-break: break-all;
+    flex: 1 1 280px;
+    min-width: 0;
+  }
+  .copy-btn {
+    background: transparent;
+    border: 1px solid var(--color-accent);
+    color: var(--color-accent);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    flex: 0 0 auto;
+  }
+  .copy-btn:hover {
+    background: var(--color-accent);
+    color: var(--color-bg);
+  }
+  .copy-btn.copied {
+    background: var(--color-accent);
+    color: var(--color-bg);
+  }
+  .url-block .hint {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--color-muted);
+    margin: 14px 0 0;
+  }
+  .url-block .hint a {
+    color: var(--color-accent);
+    border-bottom: 1px dotted var(--color-accent);
+  }
+
+  .readers-accordion {
+    margin: 32px 0;
+    border-top: 1px solid var(--color-rule);
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .readers-accordion summary {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 600;
+    padding: 16px 0;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--color-ink);
+  }
+  .readers-accordion summary::-webkit-details-marker {
+    display: none;
+  }
+  .readers-accordion summary::before {
+    content: '+';
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--color-accent);
+    width: 1ch;
+    transition: transform 0.15s;
+  }
+  .readers-accordion[open] summary::before {
+    content: '−';
+  }
+  .readers-accordion summary:hover {
+    color: var(--color-accent);
+  }
+  .readers-accordion summary:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .readers {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--color-body);
+    list-style: none;
+    padding: 0 0 16px;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .readers a.ext {
+    color: var(--color-ink);
+    border-bottom: 1px solid var(--color-accent);
+    font-weight: 500;
+  }
+  .readers a.ext:hover {
+    color: var(--color-accent);
+  }
+  .readers .oss {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    border: 1px solid var(--color-accent);
+    border-radius: 999px;
+    padding: 1px 8px;
+    margin-left: 6px;
+    vertical-align: 2px;
+    cursor: help;
+  }
+
+  .footnote {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--color-muted);
+    margin: 0;
+  }
+  .footnote a.ext {
+    color: var(--color-muted);
+    border-bottom: 1px dotted var(--color-muted);
+  }
+  .footnote a.ext:hover {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+  }
+
+  @media (max-width: 900px) {
+    .container {
+      padding: 32px 24px 48px;
+    }
+    h2 {
+      font-size: 22px;
+    }
+  }
+</style>
+
+<script>
+  // ─── Bouton « Copier l'URL du flux RSS » ────────────────────────────
+  const btn = document.querySelector<HTMLButtonElement>('.copy-btn');
+  if (btn) {
+    const original = btn.textContent ?? 'Copier';
+    btn.addEventListener('click', async () => {
+      const url = btn.dataset.url;
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        btn.textContent = 'Copié ✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 1800);
+      } catch (err) {
+        console.warn('clipboard:', err);
+      }
+    });
+  }
+
+  // ─── Formulaire d'inscription aux alertes mail ──────────────────────
+  // Progressive enhancement : on intercepte le submit pour POSTer en
+  // fetch et afficher un statut inline (succès / erreur) sans recharger
+  // la page. Sans JS, le formulaire ne soumet pas — pas de fallback
+  // serveur pour l'instant (le seul cas où ça serait visible serait JS
+  // désactivé volontairement, marginal pour le public visé).
+  const form = document.getElementById('subscribe-form') as HTMLFormElement | null;
+  if (form) {
+    const status = form.querySelector('[data-status]') as HTMLElement;
+    const input = form.querySelector('input[name="email"]') as HTMLInputElement;
+    const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+    function setStatus(text: string, kind: 'ok' | 'err' | '' = ''): void {
+      status.textContent = text;
+      status.className = kind ? `status status--${kind}` : 'status';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = input.value.trim();
+      if (!email) {
+        setStatus('Saisissez une adresse mail.', 'err');
+        input.focus();
+        return;
+      }
+      submit.disabled = true;
+      setStatus('Envoi en cours…');
+
+      try {
+        const res = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          code?: string;
+        };
+
+        if (res.ok && body.ok) {
+          setStatus(
+            "C'est noté. Un mail de confirmation vient de partir vers " +
+              email +
+              ' — cliquez sur le lien qui s\'y trouve pour finaliser l\'inscription.',
+            'ok',
+          );
+          input.value = '';
+        } else if (res.status === 429) {
+          setStatus(
+            'Trop de tentatives sur cet appareil. Réessayez dans quelques minutes.',
+            'err',
+          );
+        } else if (body.code === 'invalid_email') {
+          setStatus('Adresse mail invalide.', 'err');
+        } else if (body.code === 'disabled') {
+          setStatus(
+            "Les alertes mail sont temporairement désactivées. Réessayez plus tard.",
+            'err',
+          );
+        } else {
+          setStatus("Une erreur est survenue. Réessayez plus tard.", 'err');
+        }
+      } catch (err) {
+        console.warn('subscribe:', err);
+        setStatus('Erreur réseau. Réessayez plus tard.', 'err');
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  }
+</script>

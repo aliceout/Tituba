@@ -1,0 +1,33 @@
+# Dépendances et builds locaux : on les régénère dans le container.
+node_modules
+dist
+.astro
+.output
+
+# Git et CI
+.git
+.gitignore
+.github
+.husky
+
+# Outillage local
+.vscode
+.idea
+.DS_Store
+
+# Référence locale du projet 2mains (gitignored)
+2mains
+Design
+
+# Environnement
+.env
+.env.*
+
+# Tests / docs locaux
+references
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Services à part (build context séparé)
+services

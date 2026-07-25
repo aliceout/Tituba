@@ -1,0 +1,194 @@
+---
+/**
+ * Dispatcher de blocks Page (Pages.sections).
+ *
+ * Chaque entrée de la collection Pages a un champ `sections` typé
+ * `blocks` qui peut contenir Prose, Figure, CitationBloc (cf
+ * services/payload/src/blocks/index.ts → pageBlocks).
+ *
+ * Ici on rend chaque block en HTML/composant Astro selon son
+ * `blockType`. Pour les inconnus on log et on skip — pas de fallback
+ * cassant.
+ */
+import { renderLexical } from '../lib/lexical';
+
+type Block = {
+  blockType?: string;
+  id?: string;
+  // Prose
+  titre?: string;
+  content?: unknown;
+  // Figure
+  image?: { filename?: string; alt?: string } | string | number | null;
+  legende?: string;
+  credit?: string;
+  align?: 'left' | 'center' | 'wide';
+  // CitationBloc
+  text?: string;
+  source?: string;
+};
+
+export interface Props {
+  sections?: Block[] | null;
+  /** URL publique du payload (pour servir les images depuis /cms/api/media/file/). */
+  payloadPublicUrl?: string;
+}
+
+const { sections, payloadPublicUrl } = Astro.props;
+const list = sections ?? [];
+
+function imageUrl(field: Block['image']): string | null {
+  if (!field || typeof field !== 'object') return null;
+  if (!field.filename) return null;
+  const base = (payloadPublicUrl ?? import.meta.env.PUBLIC_PAYLOAD_URL ?? '').replace(/\/$/, '');
+  return `${base}/cms/api/media/file/${encodeURIComponent(field.filename)}`;
+}
+---
+
+{list.map((block) => {
+  switch (block.blockType) {
+    case 'prose':
+      return (
+        <section class="block-prose">
+          {block.titre && <h2>{block.titre}</h2>}
+          {block.content && (
+            <div class="prose-body" set:html={renderLexical(block.content)} />
+          )}
+        </section>
+      );
+
+    case 'figure': {
+      const url = imageUrl(block.image);
+      if (!url) return null;
+      const alignClass = `align-${block.align ?? 'left'}`;
+      return (
+        <figure class:list={['block-figure', alignClass]}>
+          <img
+            src={url}
+            alt={(typeof block.image === 'object' && block.image?.alt) || ''}
+            loading="lazy"
+          />
+          {(block.legende || block.credit) && (
+            <figcaption>
+              {block.legende && <span class="legende">{block.legende}</span>}
+              {block.credit && <span class="credit">{block.credit}</span>}
+            </figcaption>
+          )}
+        </figure>
+      );
+    }
+
+    case 'citation_bloc':
+      return (
+        <section class="block-citation-bloc">
+          <blockquote>
+            <p>{block.text}</p>
+            {block.source && <cite>— {block.source}</cite>}
+          </blockquote>
+        </section>
+      );
+
+    default:
+      console.warn('[PageRenderer] unknown blockType:', block.blockType);
+      return null;
+  }
+})}
+
+<style>
+  /* Les blocs prose s'étendent sur toute la largeur utile de la page
+     éditoriale (920px max — même colonne que le corps des billets
+     sans sommaire). Avant : 720, créait un décalage visuel avec le
+     hero qui lui s'étend plus large. */
+  .block-prose {
+    margin: 0 0 32px;
+    max-width: 920px;
+  }
+  .block-prose h2 {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+    margin: 0 0 24px;
+  }
+  .block-prose .prose-body {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    line-height: 1.65;
+    color: var(--color-body);
+  }
+  .block-prose .prose-body :global(p),
+  .block-prose .prose-body :global(li) {
+    text-align: justify;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+  }
+  .block-prose .prose-body :global(p) {
+    margin: 0 0 16px;
+    max-width: 920px;
+  }
+  .block-prose .prose-body :global(a.ext) {
+    border-bottom: 1px solid var(--color-accent);
+    color: inherit;
+  }
+
+  .block-figure {
+    margin: 32px 0;
+  }
+  .block-figure.align-center {
+    text-align: center;
+  }
+  .block-figure.align-wide {
+    max-width: 920px;
+    margin-left: -100px;
+    margin-right: -100px;
+  }
+  .block-figure img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+  .block-figure figcaption {
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--color-muted);
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .block-figure figcaption .credit {
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+
+  .block-citation-bloc {
+    margin: 36px 0;
+  }
+  .block-citation-bloc blockquote {
+    font-size: 22px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin: 0;
+    padding: 0 0 0 22px;
+    border-left: 2px solid var(--color-accent);
+  }
+  .block-citation-bloc cite {
+    display: block;
+    margin-top: 12px;
+    font-style: normal;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 900px) {
+    .block-figure.align-wide {
+      margin-left: 0;
+      margin-right: 0;
+    }
+  }
+</style>

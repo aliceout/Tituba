@@ -1,0 +1,154 @@
+---
+/**
+ * Page d'un thème individuel — /theme/<slug>/
+ *
+ * Hero spécifique au thème (kicker `Thème · #slug`, h1 du thème,
+ * description éditoriale, compteur + lien retour vers la vue
+ * d'ensemble), puis le même flux d'items que l'accueil filtré
+ * sur ce thème.
+ *
+ * Réf : design_handoff_carnet/Carnet B.html → PolePage (single).
+ */
+import Layout from '../../layouts/Layout.astro';
+import Hero from '../../components/Hero.astro';
+import PostCard from '../../components/PostCard.astro';
+import { fetchBySlug, fetchCollection, fetchIndexPages, filterPublished } from '../../lib/payload';
+
+type IndexPagesGlobal = { themes?: { enabled?: boolean } };
+
+type Theme = {
+  id: number | string;
+  slug: string;
+  name: string;
+  description?: string | null;
+};
+
+type ThemeRef = { id: number | string; slug: string; name: string };
+
+type Post = {
+  id: number | string;
+  numero: number;
+  slug: string;
+  title: string;
+  type: 'analyse' | 'note' | 'fiche';
+  themes?: ThemeRef[] | null;
+  publishedAt: string;
+  lede: string;
+  readingTime?: number | null;
+  draft?: boolean;
+};
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/themes/');
+
+// Toggle « Page Thèmes » désactivé → 404 (cf. Pages d'index → Thèmes).
+// On vérifie ici aussi parce que `/theme/<slug>/` partage la même
+// section que `/themes/`.
+try {
+  const indexPages = await fetchIndexPages<IndexPagesGlobal>();
+  if (indexPages.themes?.enabled === false) {
+    return Astro.rewrite('/404');
+  }
+} catch {
+  /* Payload down — on continue, le toggle est best-effort. */
+}
+
+const theme = await fetchBySlug<Theme>('themes', slug);
+if (!theme) {
+  return new Response('Thème introuvable', { status: 404 });
+}
+
+let posts: Post[] = [];
+try {
+  const raw = await fetchCollection<Post>('posts', {
+    where: [{ field: 'themes.slug', operator: 'equals', value: slug }],
+    sort: '-publishedAt',
+    limit: 500,
+    depth: 2,
+  });
+  posts = filterPublished(raw);
+} catch (err) {
+  console.warn('[theme] posts fetch failed:', (err as Error).message);
+}
+
+const total = posts.length;
+---
+
+<Layout
+  title={theme.name}
+  description={theme.description ?? `Tous les billets du Carnet sur le thème ${theme.name}.`}
+>
+  <Hero
+    kicker={`Thème · #${theme.slug}`}
+    kickerVariant="mono"
+    title={theme.name}
+    lede={theme.description ?? undefined}
+  >
+    <div class="hero-bottom-meta">
+      <span>{total} billet{total > 1 ? 's' : ''}</span>
+      <span aria-hidden="true">·</span>
+      <a class="back mono" href="/themes/">← tous les thèmes</a>
+    </div>
+  </Hero>
+
+  <section class="container feed">
+    {posts.length === 0 ? (
+      <p class="empty">Aucun billet sous ce thème pour l'instant.</p>
+    ) : (
+      posts.map((p) => (
+        <PostCard
+          numero={p.numero}
+          slug={p.slug}
+          title={p.title}
+          type={p.type}
+          themes={p.themes}
+          publishedAt={p.publishedAt}
+          lede={p.lede}
+          readingTime={p.readingTime}
+          showThemes={false}
+        />
+      ))
+    )}
+  </section>
+</Layout>
+
+<style>
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 80px;
+  }
+
+  /* Hero : centralisé dans src/components/Hero.astro. Le pied de hero
+     spécifique à cette page (compteur + back link) est passé via le
+     <slot> et stylé ci-dessous. */
+  .hero-bottom-meta {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--color-muted);
+    margin-top: 24px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  .hero-bottom-meta .back {
+    color: var(--color-accent);
+    transition: color 0.12s;
+  }
+  .hero-bottom-meta .back:hover {
+    color: var(--color-ink);
+  }
+
+  .feed .empty {
+    padding: 64px 0;
+    color: var(--color-muted);
+    text-align: center;
+    font-family: var(--font-sans);
+  }
+
+  @media (max-width: 900px) {
+    .container {
+      padding: 0 24px;
+    }
+  }
+</style>

@@ -1,0 +1,216 @@
+---
+/**
+ * Layout de base — chrome partagé : <head>, Header, slot, Footer.
+ * Réf design : design_handoff_carnet/Carnet B.html (header.site, footer.site).
+ */
+import '../styles/global.css';
+
+// Polices self-hostées via @fontsource — Vite résout les fichiers WOFF2
+// depuis node_modules au build, pas de fetch externe à l'exécution.
+import '@fontsource/source-serif-4/400.css';
+import '@fontsource/source-serif-4/400-italic.css';
+import '@fontsource/source-serif-4/500.css';
+import '@fontsource/source-serif-4/600.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
+
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { fetchIdentity, fetchSite, fetchSubscriptions } from '../lib/payload';
+
+interface Props {
+  /** Titre court de la page — Layout y ajoute le suffixe « — {siteName} ». */
+  title?: string;
+  description?: string;
+  noindex?: boolean;
+  /** Active la barre de progression sticky (uniquement sur les articles). */
+  progressBar?: boolean;
+  /** Classes appliquées au <body> (cf. body.justify, body.notes-classic). */
+  bodyClass?: string;
+}
+
+const {
+  title,
+  description = 'Carnet de recherche. Auto-hébergé.',
+  noindex = false,
+  progressBar = false,
+  bodyClass = '',
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+
+// Couleurs pilotées depuis Payload (global Site → branding). Si Payload
+// n'est pas joignable au SSR, on garde les valeurs fixées dans global.css.
+// Whitelist + mapping hex → slug pour pouvoir poser un attribut
+// data-accent sur <html>, qui pilote les variantes dark mode dans
+// global.css ([data-theme='dark'][data-accent='rouge'] etc.).
+type SiteBranding = {
+  branding?: { accentColor?: string; backgroundColor?: string };
+};
+type IdentityGlobal = { siteName?: string };
+type SubscriptionsGlobal = { rssEnabled?: boolean };
+const ACCENT_HEX_TO_SLUG: Record<string, string> = {
+  '#5a3a7a': 'violet',
+  '#8a3a3a': 'rouge',
+  '#1f3a5a': 'bleu',
+  '#3a3a3a': 'gris',
+  '#2d5a3d': 'vert',
+};
+const BG_WHITELIST = new Set([
+  '#f6f5f1',
+  '#fdfcf8',
+  '#ffffff',
+  '#f1efe8',
+  '#eee9dd',
+  '#e9eaec',
+]);
+let accentOverride: string | null = null;
+let accentSlug: string | null = null;
+let bgOverride: string | null = null;
+let siteName = 'Carnet';
+try {
+  const site = await fetchSite<SiteBranding>();
+  const a = site.branding?.accentColor;
+  if (a && ACCENT_HEX_TO_SLUG[a]) {
+    accentOverride = a;
+    accentSlug = ACCENT_HEX_TO_SLUG[a];
+  }
+  const b = site.branding?.backgroundColor;
+  if (b && BG_WHITELIST.has(b.toLowerCase())) bgOverride = b.toLowerCase();
+} catch (err) {
+  console.warn('[layout] fetchSite failed, using defaults:', (err as Error).message);
+}
+try {
+  const identity = await fetchIdentity<IdentityGlobal>();
+  siteName = identity.siteName?.trim() || siteName;
+} catch (err) {
+  console.warn('[layout] fetchIdentity failed, using defaults:', (err as Error).message);
+}
+
+// Flux RSS pilotable depuis Abonnements. Si désactivé, on n'expose pas
+// le lien <link rel="alternate"> que les readers utilisent pour
+// l'auto-discovery du flux.
+let rssEnabled = true;
+try {
+  const subs = await fetchSubscriptions<SubscriptionsGlobal>();
+  rssEnabled = subs.rssEnabled !== false;
+} catch (err) {
+  console.warn('[layout] fetchSubscriptions failed, using defaults:', (err as Error).message);
+}
+
+// Compose le titre final : `${pageTitle} — ${siteName}` si pageTitle
+// est fourni, sinon juste un titre racine descriptif.
+const pageTitle = title?.trim();
+const fullTitle = pageTitle
+  ? `${pageTitle} — ${siteName}`
+  : `${siteName} — notes de recherche`;
+---
+
+<!doctype html>
+<html lang="fr" data-accent={accentSlug ?? 'violet'}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="fr_FR" />
+    {rssEnabled && (
+      <link
+        rel="alternate"
+        type="application/rss+xml"
+        title={`${siteName} — flux RSS`}
+        href="/rss.xml"
+      />
+    )}
+    {(accentOverride || bgOverride) && (
+      <style
+        set:html={`:root{${accentOverride ? `--color-accent:${accentOverride};` : ''}${bgOverride ? `--color-bg:${bgOverride};` : ''}}`}
+      ></style>
+    )}
+    {/*
+      Anti-FOUC : pose data-theme="dark|light" sur <html> AVANT le
+      premier paint, pour éviter le flash blanc → sombre au chargement.
+      Source de vérité : localStorage 'theme' > prefers-color-scheme.
+      Le toggle dans Header.astro met à jour les deux.
+    */}
+    <script is:inline>
+      (function () {
+        try {
+          const saved = localStorage.getItem('theme');
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const theme = saved === 'dark' || saved === 'light'
+            ? saved
+            : prefersDark
+              ? 'dark'
+              : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (_) {
+          /* localStorage indisponible (private mode, SSR) — on laisse
+             le défaut light s'appliquer. */
+        }
+      })();
+    </script>
+    {/* Slot optionnel pour injecter des balises additionnelles dans
+        <head> (ex. métadonnées Highwire/Zotero sur la page article).
+        Vide par défaut — les pages qui n'en ont pas besoin n'ont rien
+        à fournir. */}
+    <slot name="head" />
+  </head>
+  <body class={bodyClass}>
+    {progressBar && (
+      <div class="progress" id="progress" aria-hidden="true">
+        <div class="progress-fill"></div>
+      </div>
+    )}
+
+    <Header />
+
+    <main>
+      <slot />
+    </main>
+
+    <Footer />
+
+    <style>
+      .progress {
+        position: sticky;
+        top: 0;
+        height: 2px;
+        background: transparent;
+        z-index: 11;
+      }
+      .progress-fill {
+        height: 100%;
+        background: var(--color-accent);
+        width: 0%;
+        transition: width 0.12s;
+      }
+    </style>
+
+    {progressBar && (
+      <script is:inline>
+        (function () {
+          const fill = document.querySelector('.progress-fill');
+          if (!fill) return;
+          function tick() {
+            const h = document.documentElement;
+            const max = h.scrollHeight - h.clientHeight;
+            const pct = max > 0 ? Math.min(100, (h.scrollTop / max) * 100) : 0;
+            fill.style.width = pct + '%';
+          }
+          document.addEventListener('scroll', tick, { passive: true });
+          tick();
+        })();
+      </script>
+    )}
+  </body>
+</html>

@@ -1,0 +1,326 @@
+---
+/**
+ * Page Recherche — /recherche/?q=…&page=…
+ *
+ * SSR : tape l'endpoint custom /cms/api/posts/search (FTS Postgres
+ * avec websearch_to_tsquery + ts_rank + ts_headline). Le hook
+ * services/payload/src/hooks/update-post-search-vector maintient la
+ * colonne `posts.search_vector` à jour à chaque save.
+ *
+ * États gérés :
+ *  - Q vide → écran d'accueil de recherche (input + tip syntaxe)
+ *  - Aucun résultat → message + suggestion
+ *  - Résultats → liste avec excerpts surlignés (mots matchés en
+ *                <mark>) + pagination simple
+ *
+ * Surlignage : ts_headline produit du HTML avec `<mark>...</mark>`.
+ * On l'injecte via set:html — la source est Postgres, pas une saisie
+ * utilisateur brute, donc safe.
+ */
+
+import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero.astro';
+import { searchPosts, type SearchPost } from '../lib/payload';
+import { formatDateIso, formatHeroLede, formatHeroTitle } from '../lib/site';
+
+const url = new URL(Astro.request.url);
+const q = (url.searchParams.get('q') ?? '').trim();
+const pageParam = parseInt(url.searchParams.get('page') ?? '1', 10);
+const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+
+let docs: SearchPost[] = [];
+let totalDocs = 0;
+let totalPages = 1;
+let fetchError: string | null = null;
+
+if (q) {
+  try {
+    const r = await searchPosts(q, { page, limit: 20 });
+    docs = r.docs;
+    totalDocs = r.totalDocs;
+    totalPages = r.totalPages;
+  } catch (err) {
+    fetchError = (err as Error).message;
+    console.warn('[recherche] search failed:', fetchError);
+  }
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+const heroTitleHtml = formatHeroTitle('Chercher dans le *Carnet*.');
+// formatHeroLede échappe tout le HTML reçu — incompatible avec un
+// lede qui contient déjà des balises `<em>` autour de la requête.
+// On échappe nous-mêmes la requête (qui PEUT contenir n'importe quoi)
+// et on bypass formatHeroLede pour le cas avec résultat.
+const heroLedeHtml = q
+  ? `${totalDocs} résultat${totalDocs > 1 ? 's' : ''} pour <em>${escapeHtml(q)}</em>.`
+  : formatHeroLede(
+      'Tapez un mot, une phrase entre guillemets, ou plusieurs mots à la fois. Le moteur cherche dans le titre, le chapô, le corps, les notes et la bibliographie liée.',
+    );
+
+function pageHref(p: number): string {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (p > 1) params.set('page', String(p));
+  const qs = params.toString();
+  return qs ? `/recherche/?${qs}` : '/recherche/';
+}
+---
+
+<Layout
+  title={q ? `Recherche : ${q}` : 'Recherche'}
+  description={q ? `Résultats de recherche pour « ${q} ».` : 'Recherche dans le Carnet.'}
+>
+  <Hero kicker="Recherche" title={heroTitleHtml} lede={heroLedeHtml} />
+
+  <section class="container search">
+    <form method="get" action="/recherche/" class="search-form" role="search">
+      <input
+        type="search"
+        name="q"
+        value={q}
+        placeholder="Cherchez dans le carnet…"
+        autofocus={!q}
+        aria-label="Rechercher"
+      />
+      <button type="submit">Chercher</button>
+    </form>
+
+    {fetchError && (
+      <p class="empty">
+        Une erreur est survenue : {fetchError}.
+      </p>
+    )}
+
+    {!q && !fetchError && (
+      <div class="hints">
+        <h2>Astuces</h2>
+        <ul>
+          <li><code>spivak agency</code> → billets contenant les deux mots</li>
+          <li><code>"théorie postcoloniale"</code> → expression exacte</li>
+          <li><code>spivak -postcolonial</code> → exclure un terme</li>
+          <li><code>queer or trans</code> → l'un ou l'autre</li>
+        </ul>
+      </div>
+    )}
+
+    {q && !fetchError && docs.length === 0 && (
+      <p class="empty">Aucun résultat pour <em>« {q} »</em>.</p>
+    )}
+
+    {q && docs.length > 0 && (
+      <ol class="results">
+        {docs.map((d) => (
+          <li class="result">
+            <a href={`/billets/${d.slug ?? ''}/`} class="result__title">
+              {d.title}
+            </a>
+            <div class="result__meta">
+              {d.publishedAt && <span class="d">{formatDateIso(d.publishedAt)}</span>}
+              {d.idCarnet && <span class="id mono">{d.idCarnet}</span>}
+            </div>
+            {d.excerpt && (
+              <p class="result__excerpt" set:html={d.excerpt}></p>
+            )}
+          </li>
+        ))}
+      </ol>
+    )}
+
+    {q && totalPages > 1 && (
+      <nav class="pagination" aria-label="Pages de résultats">
+        {page > 1 && <a href={pageHref(page - 1)} rel="prev">← Page précédente</a>}
+        <span class="pos">Page {page} sur {totalPages}</span>
+        {page < totalPages && <a href={pageHref(page + 1)} rel="next">Page suivante →</a>}
+      </nav>
+    )}
+  </section>
+</Layout>
+
+<style>
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 80px;
+  }
+  .search {
+    padding-top: 24px;
+    padding-bottom: 80px;
+  }
+
+  .search-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+    max-width: 720px;
+  }
+  .search-form input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--color-rule);
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-serif);
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .search-form input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+  .search-form button {
+    padding: 10px 18px;
+    background: var(--color-accent);
+    color: var(--color-bg);
+    border: 1px solid var(--color-accent);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .search-form button:hover {
+    filter: brightness(0.94);
+  }
+
+  .hints {
+    margin: 24px 0;
+    padding: 18px 22px;
+    border-left: 2px solid var(--color-accent);
+    background: var(--color-bg);
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    color: var(--color-muted);
+  }
+  .hints h2 {
+    margin: 0 0 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .hints ul {
+    margin: 0;
+    padding-left: 18px;
+    line-height: 1.7;
+  }
+  .hints code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--color-ink);
+    background: color-mix(in oklch, var(--color-ink), transparent 92%);
+    padding: 0 4px;
+    border-radius: 2px;
+  }
+
+  .empty {
+    padding: 48px 0;
+    color: var(--color-muted);
+    font-family: var(--font-serif);
+    font-size: 17px;
+    text-align: center;
+  }
+  .empty em {
+    color: var(--color-ink);
+    font-style: italic;
+  }
+
+  .results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .result {
+    border-bottom: 1px solid var(--color-rule);
+    padding-bottom: 24px;
+  }
+  .result:last-child {
+    border-bottom: 0;
+  }
+  .result__title {
+    display: block;
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-ink);
+    text-decoration: none;
+    margin-bottom: 6px;
+  }
+  .result__title:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+  .result__meta {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--color-muted);
+    margin-bottom: 8px;
+  }
+  .result__meta .id {
+    font-family: var(--font-mono);
+  }
+  .result__excerpt {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--color-muted);
+  }
+  /* ts_headline pose des <mark>...</mark> autour des mots matchés. */
+  .result__excerpt :global(mark) {
+    background: color-mix(in oklch, var(--color-accent), transparent 80%);
+    color: var(--color-ink);
+    font-weight: 500;
+    padding: 0 2px;
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-top: 48px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+  }
+  .pagination .pos {
+    color: var(--color-muted);
+  }
+  .pagination a {
+    color: var(--color-ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-rule);
+    padding-bottom: 2px;
+  }
+  .pagination a:hover {
+    border-bottom-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  @media (max-width: 720px) {
+    .container {
+      padding: 0 24px;
+    }
+    .search-form {
+      flex-direction: column;
+    }
+    .pagination {
+      flex-direction: column;
+      align-items: stretch;
+      text-align: center;
+    }
+  }
+</style>

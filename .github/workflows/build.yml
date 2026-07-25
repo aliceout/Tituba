@@ -1,0 +1,250 @@
+name: Docker build
+
+# CI du Carnet — push main → test → build images Docker → push GHCR.
+# Le déclenchement du deploy côté VPS se fait via le webhook GitHub
+# natif configuré dans Settings → Webhooks (event « package » ou
+# « workflow_run »), pas dans ce workflow. Référence : 2mains/.github/
+# workflows/docker-build.yml.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# Force toutes les actions JavaScript déclarant `node20` à tourner sur
+# le runtime Node 24 du runner. Workaround officiel GitHub pour la
+# transition node20 → node24 (déprécié juin 2026, retiré sept. 2026).
+# Cf https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  # ─── Test : type-check + tests + build smoke-test ──────────────
+  # Tourne sur push ET PR. Les jobs build / deploy sont gated sur
+  # push main only via leur `if`.
+  #
+  # Pipeline (failfast — premier step en erreur stoppe le job) :
+  #   1. Lint frontend    (eslint flat config — Astro + TS)
+  #   2. Lint backend     (eslint flat config — Payload TS + react-hooks)
+  #   3. Astro check      (type-check des .astro + TS frontend)
+  #   4. Payload tests    (node --test, sans dépendance DB)
+  #   5. Astro build SSR  (smoke build + check du bundle)
+  #
+  # Références : issues #24 (CI tests) et #25 (lint réparé, configs
+  # passées à typescript-eslint flat — eslint-config-next a un bug
+  # circulaire avec ESLint v9 cf. vercel/next.js#68334).
+  test:
+    name: Lint + type check + tests + build smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Pas de `version:` ici — la version pnpm est portée par le champ
+      # `packageManager` dans package.json (pnpm@10.33.0). Spécifier les
+      # deux fait planter l'action avec ERR_PNPM_BAD_PM_VERSION.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # Le monorepo n'utilise pas pnpm workspaces — services/payload a
+      # son propre package.json + lockfile. On installe les deux côtés.
+      - name: Install root dependencies (Astro)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install backend dependencies (Payload)
+        run: pnpm --dir services/payload install --frozen-lockfile
+
+      - name: Lint frontend (Astro)
+        run: pnpm lint
+
+      - name: Lint backend (Payload)
+        run: pnpm --dir services/payload lint
+
+      - name: Type check (Astro)
+        run: pnpm check
+
+      # PAYLOAD_SECRET sentinelle pour les tests Payload — auth.test.ts
+      # pose un fallback en interne, mais on l'expose ici aussi pour
+      # tout module qui pourrait le checker au top-level. Aucune valeur
+      # sensible : c'est un secret de test fixé, jamais utilisé en prod.
+      - name: Test backend (Payload, node --test)
+        env:
+          PAYLOAD_SECRET: ci-test-secret-not-sensitive-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        run: pnpm --dir services/payload test
+
+      - name: Build (Astro Node SSR)
+        run: pnpm build
+
+      # SSR mode : on vérifie que le bundle Node a bien été produit.
+      - name: Smoke test — SSR bundle exists
+        run: |
+          test -f dist/server/entry.mjs
+          test -d dist/client
+          echo "SSR bundle present."
+
+  # ─── Build & push image site (Astro) ───────────────────────────
+  build-web:
+    name: Build & push web image
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 pour que `git describe --tags` voit l'historique
+      # complet (sinon shallow clone et pas de tags).
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ─── Build-time secrets ──────────────────────────────────
+      # Deux modes mutuellement exclusifs détectés à l'exécution :
+      #   • Infisical (notre setup) : si INFISICAL_API_URL est défini
+      #     en GH secret, on fetch tout depuis Infisical cloud.
+      #   • Fallback GH secret (forks) : sinon, on lit ADDRESS depuis
+      #     un GH secret nommé ADDRESS. Suffit pour build une image
+      #     Docker out-of-the-box.
+      #
+      # La détection passe par un step `run:` qui set un output
+      # booléen — on ne peut pas comparer un secret directement
+      # dans une condition `if:` (les secrets sont masqués).
+      # Cf issue #19.
+      - name: Detect secrets backend
+        id: detect
+        env:
+          INFISICAL_URL: ${{ secrets.INFISICAL_API_URL }}
+        run: |
+          if [ -n "$INFISICAL_URL" ]; then
+            echo "use_infisical=true" >> "$GITHUB_OUTPUT"
+            echo "→ Mode Infisical (INFISICAL_API_URL détecté)"
+          else
+            echo "use_infisical=false" >> "$GITHUB_OUTPUT"
+            echo "→ Mode GH secret (pas d'Infisical configuré)"
+          fi
+
+      # Mode Infisical — Auth Universal Auth via Machine Identity dédiée
+      # CI. Même instance Infisical Cloud que celle qui alimente le
+      # runtime VPS via deploy.sh ; tous deux fetchent sous le path
+      # /services/carnet (la CI lit la racine pour ADDRESS, le VPS
+      # itère sur chaque sous-dossier pour reconstruire le .env).
+      - name: Fetch build-time secrets from Infisical
+        if: steps.detect.outputs.use_infisical == 'true'
+        uses: Infisical/secrets-action@v1.0.7
+        with:
+          method: universal
+          domain: ${{ secrets.INFISICAL_API_URL }}
+          client-id: ${{ secrets.INFISICAL_CI_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CI_CLIENT_SECRET }}
+          # L'action exige `project-slug` (pas l'UUID). Le GH secret est
+          # nommé INFISICAL_PROJECT_ID pour des raisons historiques mais
+          # doit contenir le SLUG du projet (visible dans l'URL admin
+          # Infisical, ex. « carnet-ayz-p »).
+          project-slug: ${{ secrets.INFISICAL_PROJECT_ID }}
+          env-slug: prod
+          secret-path: /services/carnet
+          export-type: env
+
+      # Fallback fork — récupère ADDRESS depuis un GH secret unique.
+      # Si quelqu'un fork le repo, il lui suffit d'ajouter un secret
+      # nommé ADDRESS pour que le build de l'image web passe (cf README,
+      # section « Forker sans Infisical »).
+      - name: Read ADDRESS from GH secret (fallback)
+        if: steps.detect.outputs.use_infisical == 'false'
+        env:
+          ADDRESS_FROM_SECRET: ${{ secrets.ADDRESS }}
+        run: |
+          if [ -z "$ADDRESS_FROM_SECRET" ]; then
+            echo "::error::Pas d'Infisical configuré ET pas de GH secret ADDRESS — l'image Docker ne peut pas se build sans Astro.site valide."
+            exit 1
+          fi
+          echo "ADDRESS=$ADDRESS_FROM_SECRET" >> "$GITHUB_ENV"
+
+      # Récupère le commit court + le tag git le plus récent (ou le
+      # commit si aucun tag) pour l'affichage de version dans le
+      # footer site et l'admin Payload. `actions/checkout@v5` avec
+      # fetch-depth=0 ci-dessus nous donne l'historique complet.
+      - name: Compute version info
+        id: version
+        run: |
+          echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "tag=$(git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.site
+          # ADDRESS baké dans Astro.site au build (cf. astro.config.mjs).
+          # GIT_COMMIT / GIT_TAG affichés dans le footer du site.
+          # Reçus en ARG par le stage `builder` du Dockerfile.
+          build-args: |
+            ADDRESS=${{ env.ADDRESS }}
+            GIT_COMMIT=${{ steps.version.outputs.commit }}
+            GIT_TAG=${{ steps.version.outputs.tag }}
+          push: true
+          tags: |
+            ghcr.io/aliceout/carnet/web:latest
+            ghcr.io/aliceout/carnet/web:${{ github.sha }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+  # ─── Build & push image Payload (CMS) ──────────────────────────
+  build-payload:
+    name: Build & push payload image
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 pour `git describe --tags` (cf. job build-web).
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute version info
+        id: version
+        run: |
+          echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "tag=$(git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push payload
+        uses: docker/build-push-action@v6
+        with:
+          context: services/payload
+          file: services/payload/Dockerfile
+          # GIT_COMMIT / GIT_TAG affichés dans la page Site (Payload admin).
+          build-args: |
+            GIT_COMMIT=${{ steps.version.outputs.commit }}
+            GIT_TAG=${{ steps.version.outputs.tag }}
+          push: true
+          tags: |
+            ghcr.io/aliceout/carnet/payload:latest
+            ghcr.io/aliceout/carnet/payload:${{ github.sha }}
+          cache-from: type=gha,scope=payload
+          cache-to: type=gha,scope=payload,mode=max

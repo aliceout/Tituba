@@ -1,0 +1,69 @@
+# Astro SSR (Node standalone) pour le site public Carnet.
+#
+# Le site n'est pas servi en statique : Astro tourne en mode server
+# (output: 'server' + adapter @astrojs/node mode standalone), ce qui
+# produit `dist/server/entry.mjs` exécutable directement par Node.
+# Le reverse proxy nginx du VPS (hors container) termine TLS et fait
+# proxy_pass vers 127.0.0.1:80XX → ce container :4321.
+#
+# 3 stages :
+#   builder   — node:24 (Debian) car sharp publie des binaires glibc
+#               qui marchent sans recompil. Build = pnpm build.
+#   deps-prod — alpine, install deps de prod uniquement (sharp en
+#               devDeps, donc absent ici → léger).
+#   runner    — alpine + dist/ + node_modules prod. Lance entry.mjs.
+
+FROM node:24 AS builder
+WORKDIR /app
+
+RUN corepack enable
+
+# ADDRESS reçu en --build-arg depuis le workflow CI (Infisical → step
+# « Fetch build-time secrets » dans .github/workflows/build.yml). Promu
+# en ENV pour que `pnpm build` (donc astro.config.mjs → Astro.site) y
+# ait accès via process.env.ADDRESS. Baké dans dist/ : sitemap, RSS,
+# canonical URLs, JSON-LD.
+ARG ADDRESS
+ENV ADDRESS=$ADDRESS
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+RUN pnpm build
+
+
+FROM node:24-alpine AS deps-prod
+WORKDIR /app
+
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+
+FROM node:24-alpine AS runner
+WORKDIR /app
+
+# GIT_COMMIT / GIT_TAG injectés au build (cf. .github/workflows/build.yml).
+# Lus à l'exécution par le footer Astro via process.env.
+ARG GIT_COMMIT=dev
+ARG GIT_TAG=dev
+
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=4321 \
+    GIT_COMMIT=$GIT_COMMIT \
+    GIT_TAG=$GIT_TAG
+
+COPY --from=builder /app/dist ./dist
+COPY --from=deps-prod /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
+EXPOSE 4321
+USER node
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:4321/ > /dev/null 2>&1 || exit 1
+
+CMD ["node", "dist/server/entry.mjs"]

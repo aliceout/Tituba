@@ -1,0 +1,14 @@
+# Régénéré dans le container — sinon `COPY . .` écrase le node_modules
+# Linux de la stage deps avec le node_modules de l'hôte (cassé sur
+# Docker Linux quand l'hôte est Windows).
+node_modules
+.next
+.git
+.env
+.env.*
+*.log
+
+# Docs / outillage
+.vscode
+.idea
+.DS_Store

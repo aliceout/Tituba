@@ -1,0 +1,143 @@
+# Compose PROD — 3 services sur réseau Docker interne.
+#
+# Topologie :
+#   db      (postgres:16-alpine)            non exposé, accessible uniquement par `payload`
+#   payload (ghcr.io/aliceout/carnet/payload) 127.0.0.1:${PORT_PAYLOAD}  → /cms/admin + /cms/api
+#   site    (ghcr.io/aliceout/carnet/web)      127.0.0.1:${PORT_SITE}     → / (Astro SSR)
+#
+# Le reverse proxy nginx du VPS (hors compose) termine TLS et route :
+#   domaine.com/cms/* → 127.0.0.1:${PORT_PAYLOAD}
+#   domaine.com/*     → 127.0.0.1:${PORT_SITE}
+#
+# Convention historique (Infisical defaults) : 8068 pour Payload, 8067 pour
+# le site. Modifiable via Infisical, mais doit rester aligné avec la config
+# nginx du VPS (proxy_pass).
+#
+# Data persistante = bind mounts sous $DATA_DIR (= $HOME/data/carnet,
+# injecté par scripts/deploy.sh) :
+#   $DATA_DIR/postgres/      → /var/lib/postgresql/data
+#   $DATA_DIR/payload-media/ → /app/media
+#
+# Secrets = .env racine, généré à chaque deploy par scripts/deploy.sh
+# depuis Infisical Cloud (arbo `/services/carnet/<sub>`). Jamais commité.
+#
+# Pas de service mail séparé : Payload envoie ses mails (auth, 2FA,
+# invitations) via @payloadcms/email-nodemailer directement sur le SMTP
+# externe (Infomaniak en prod). Voir issue v2 si on ajoute un formulaire
+# de contact public plus tard.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: carnet-db
+    restart: unless-stopped
+    # ${VAR:?...} pour les vars obligatoires (compose s'arrête avant de
+    # créer le container si la var manque dans .env), ${VAR:-} pour les
+    # optionnelles. Docker compose ne forward PAS le .env aux containers
+    # automatiquement — chaque var lue par l'app doit être listée ici.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+    volumes:
+      - ${DATA_DIR}/postgres:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  payload:
+    image: ghcr.io/aliceout/carnet/payload:latest
+    container_name: carnet-payload
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      NODE_ENV: production
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?PAYLOAD_SECRET is required}
+      ADDRESS: ${ADDRESS:?ADDRESS is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: '5432'
+      # SMTP : Payload envoie les mails d'invitation, OTP 2FA et notifs
+      # de sécurité directement via nodemailer.
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST is required}
+      SMTP_PORT: ${SMTP_PORT:?SMTP_PORT is required}
+      SMTP_USER: ${SMTP_USER:?SMTP_USER is required}
+      SMTP_PASS: ${SMTP_PASS:?SMTP_PASS is required}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_FROM: ${SMTP_FROM:?SMTP_FROM is required}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:?SMTP_FROM_NAME is required}
+      # Knobs optionnels — defaults dans services/payload/src/auth/config.ts
+      INVITATION_TTL_DAYS: ${INVITATION_TTL_DAYS:-}
+      OTP_TTL_MINUTES: ${OTP_TTL_MINUTES:-}
+      TRUSTED_DEVICE_TTL_DAYS: ${TRUSTED_DEVICE_TTL_DAYS:-}
+      SESSION_INACTIVE_HOURS: ${SESSION_INACTIVE_HOURS:-}
+      STEP_UP_TTL_MINUTES: ${STEP_UP_TTL_MINUTES:-}
+      PAYLOAD_INSECURE_COOKIES: ${PAYLOAD_INSECURE_COOKIES:-}
+    volumes:
+      - ${DATA_DIR}/payload-media:/app/media
+    ports:
+      - '127.0.0.1:${PORT_PAYLOAD}:3001'
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3001/cms/api/access']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  site:
+    image: ghcr.io/aliceout/carnet/web:latest
+    container_name: carnet-site
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      NODE_ENV: production
+      HOST: '0.0.0.0'
+      PORT: '4321'
+      PAYLOAD_INTERNAL_URL: http://payload:3001
+      ADDRESS: ${ADDRESS:?ADDRESS is required}
+      # Optionnel — quand "1", l'Astro renvoie aussi les drafts Payload.
+      SHOW_DRAFTS: ${SHOW_DRAFTS:-}
+    ports:
+      - '127.0.0.1:${PORT_SITE}:4321'
+    networks:
+      - internal
+    depends_on:
+      payload:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:4321/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+networks:
+  internal:
+    driver: bridge

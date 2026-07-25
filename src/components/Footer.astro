@@ -1,0 +1,211 @@
+---
+/**
+ * Footer 3 colonnes — signature + baseline + copyright (col 1),
+ * "Naviguer" (col 2), "Suivre" (col 3, social + colophon).
+ *
+ * Lit trois globals Payload : Identity (siteName/baseline/copyright),
+ * Navigation (navFooter) et Subscriptions (profils sociaux). Si Payload
+ * n'est pas joignable au SSR, on retombe sur des defaults (le footer
+ * reste affichable sans dépendre de la DB).
+ *
+ * Réf : design_handoff_carnet/Carnet B.html → footer.site.
+ */
+import { fetchIdentity, fetchNavigation, fetchSubscriptions } from '../lib/payload';
+
+type SocialLinks = {
+  mastodon?: string;
+  bluesky?: string;
+  orcid?: string;
+  hal?: string;
+};
+
+type NavFooterLink = {
+  label: string;
+  href: string;
+  external?: boolean;
+};
+
+type IdentityGlobal = {
+  siteName?: string;
+  baseline?: string;
+  copyrightLine?: string;
+};
+
+type NavigationGlobal = {
+  navFooter?: NavFooterLink[];
+};
+
+type SubscriptionsGlobal = SocialLinks & { rssEnabled?: boolean };
+
+// Fallbacks génériques — utilisés uniquement si Payload est down ou
+// si les globals n'ont pas encore été remplis côté admin. Le contenu
+// réel (avec le nom de l'auteur·ice, le domaine prod) vient toujours
+// de Payload → ces strings ne devraient jamais s'afficher en prod.
+const DEFAULT_BASELINE = 'Carnet de recherche. Auto-hébergé.';
+const DEFAULT_COPYRIGHT = 'CC BY-NC-SA 4.0';
+const DEFAULT_NAV: NavFooterLink[] = [
+  { label: 'Thèmes', href: '/themes/' },
+  { label: 'Archives', href: '/archives/' },
+  { label: 'Admin', href: '/cms/admin' },
+];
+
+let identity: IdentityGlobal = {};
+let nav: NavigationGlobal = {};
+let subscriptions: SubscriptionsGlobal = {};
+try {
+  identity = await fetchIdentity<IdentityGlobal>();
+} catch (err) {
+  console.warn('[footer] fetchIdentity failed, using defaults:', (err as Error).message);
+}
+try {
+  nav = await fetchNavigation<NavigationGlobal>();
+} catch (err) {
+  console.warn('[footer] fetchNavigation failed, using defaults:', (err as Error).message);
+}
+try {
+  subscriptions = await fetchSubscriptions<SubscriptionsGlobal>();
+} catch (err) {
+  console.warn('[footer] fetchSubscriptions failed, using defaults:', (err as Error).message);
+}
+
+const siteName = identity.siteName?.trim() || 'Carnet';
+const baseline = identity.baseline || DEFAULT_BASELINE;
+// Tag git injecté au build du container (process.env.GIT_TAG).
+// Fallback 'dev' si non défini (build local ou CI sans build-args).
+const gitTag = process.env.GIT_TAG || 'dev';
+const copyrightLine = identity.copyrightLine || DEFAULT_COPYRIGHT;
+const navFooter = nav.navFooter && nav.navFooter.length > 0 ? nav.navFooter : DEFAULT_NAV;
+const social = subscriptions ?? {};
+const rssEnabled = subscriptions.rssEnabled !== false;
+
+const socialLinks = [
+  // Footer "Suivre" : Flux RSS pointe directement sur le flux brut
+  // /rss.xml (lecture par les feed readers). La page /abonnement/ regroupe
+  // ces mêmes liens + une intro pour les humains, accessible depuis
+  // la nav du header. Le lien disparaît si le flux est désactivé côté
+  // Abonnements.
+  rssEnabled ? { label: 'Flux RSS', href: '/rss.xml' } : null,
+  social.mastodon ? { label: 'Mastodon', href: social.mastodon, external: true } : null,
+  social.bluesky ? { label: 'Bluesky', href: social.bluesky, external: true } : null,
+  social.orcid ? { label: 'ORCID', href: social.orcid, external: true } : null,
+  social.hal ? { label: 'HAL', href: social.hal, external: true } : null,
+  { label: 'Colophon', href: '/about/#colophon' },
+].filter((x): x is { label: string; href: string; external?: boolean } => x !== null);
+---
+
+<footer class="site">
+  <div class="container">
+    <div class="grid">
+      <div>
+        <div class="brand-foot">{siteName}<span class="dot">.</span></div>
+        <p>{baseline}</p>
+        <div class="mono copyright">{copyrightLine}</div>
+        <div class="mono version">Version : {gitTag}</div>
+      </div>
+      <div>
+        <h4>Naviguer</h4>
+        <div class="links">
+          {navFooter.map((link) => (
+            <a
+              href={link.href}
+              rel={link.external ? 'noopener' : undefined}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h4>S'abonner</h4>
+        <div class="links">
+          {socialLinks.map((link) => (
+            <a
+              href={link.href}
+              rel={link.external ? 'noopener' : undefined}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<style>
+  footer.site {
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-rule);
+    margin-top: 80px;
+    padding: 64px 0 56px;
+  }
+  footer.site .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 80px;
+  }
+  footer.site .grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 56px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--color-ink);
+  }
+  footer.site h4 {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+  footer.site .links {
+    display: grid;
+    gap: 6px;
+  }
+  footer.site .links a {
+    color: var(--color-ink);
+    transition: color 0.12s;
+  }
+  footer.site .links a:hover {
+    color: var(--color-accent);
+  }
+  footer.site .brand-foot {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  footer.site .brand-foot .dot {
+    color: var(--color-accent);
+  }
+  footer.site p {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--color-muted);
+    margin: 0;
+    max-width: 460px;
+  }
+  footer.site .copyright {
+    font-size: 11px;
+    color: var(--color-accent);
+    margin-top: 24px;
+  }
+  footer.site .version {
+    font-size: 11px;
+    color: var(--color-muted);
+    margin-top: 4px;
+  }
+
+  @media (max-width: 900px) {
+    footer.site .container {
+      padding: 0 24px;
+    }
+    footer.site .grid {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+  }
+</style>

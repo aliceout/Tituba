@@ -1,0 +1,127 @@
+---
+/**
+ * Page Désabonner — /abonnement/desabonner/?id=…&sig=…
+ *
+ * Atterrissage du lien désabo cliqué dans un mail d'alerte nouveau
+ * billet. Le lien contient l'id du subscriber et une signature HMAC
+ * (cf endpoints/subscribers.ts → buildUnsubSig). On POSTe vers Payload
+ * server-side qui vérifie la sig et flip le statut vers `unsubscribed`.
+ *
+ * L'action est idempotente : si on clique deux fois, on reste désabonné.
+ */
+import Layout from '../../layouts/Layout.astro';
+import Hero from '../../components/Hero.astro';
+import { postPayload } from '../../lib/payload';
+
+const id = (Astro.url.searchParams.get('id') ?? '').trim();
+const sig = (Astro.url.searchParams.get('sig') ?? '').trim();
+
+type UnsubResponse = { ok?: boolean; code?: string; email?: string };
+
+let state: 'success' | 'invalid' | 'missing' = 'missing';
+let unsubEmail: string | null = null;
+
+if (id && sig) {
+  try {
+    const { status, body } = await postPayload<UnsubResponse>(
+      '/subscribers/unsubscribe',
+      { id, sig },
+    );
+    if (status === 200 && body.ok) {
+      state = 'success';
+      unsubEmail = body.email ?? null;
+    } else {
+      state = 'invalid';
+    }
+  } catch (err) {
+    console.warn('[desabonner] postPayload failed:', (err as Error).message);
+    state = 'invalid';
+  }
+}
+
+const TITLES: Record<typeof state, string> = {
+  success: 'Désabonnement confirmé',
+  invalid: 'Lien invalide',
+  missing: 'Lien incomplet',
+};
+const title = TITLES[state];
+---
+
+<Layout title={title} noindex={true}>
+  <Hero kicker="Désabonnement" title={title} />
+
+  <section class="container">
+    {state === 'success' && (
+      <>
+        <p class="lede">
+          C'est fait. L'adresse {unsubEmail && <strong>{unsubEmail}</strong>}
+          ne recevra plus d'alertes mail.
+        </p>
+        <p class="hint">
+          Vous pouvez vous réinscrire à tout moment depuis la
+          <a href="/abonnement/">page d'abonnement</a>.
+        </p>
+      </>
+    )}
+    {state === 'invalid' && (
+      <>
+        <p class="lede">
+          Ce lien de désabonnement n'est pas valide.
+        </p>
+        <p class="hint">
+          Si vous voulez vous désabonner, ouvrez le dernier mail
+          d'alerte reçu et cliquez sur le lien « se désabonner » qui s'y
+          trouve. Si ce n'est pas possible, écrivez à l'autrice depuis la
+          <a href="/abonnement/">page d'abonnement</a>.
+        </p>
+      </>
+    )}
+    {state === 'missing' && (
+      <>
+        <p class="lede">
+          L'URL est incomplète : les paramètres <code>id</code> et
+          <code>sig</code> manquent.
+        </p>
+        <p class="hint">
+          Si vous avez cliqué un lien depuis un mail, copiez l'URL complète
+          dans votre navigateur.
+        </p>
+      </>
+    )}
+  </section>
+</Layout>
+
+<style>
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 80px 64px;
+  }
+  .lede {
+    font-family: var(--font-serif);
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--color-body);
+    margin: 0 0 20px;
+  }
+  .lede strong {
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+  .hint {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--color-muted);
+    margin: 0;
+  }
+  .hint a {
+    color: var(--color-accent);
+    border-bottom: 1px solid var(--color-accent);
+  }
+
+  @media (max-width: 900px) {
+    .container {
+      padding: 32px 24px 48px;
+    }
+  }
+</style>

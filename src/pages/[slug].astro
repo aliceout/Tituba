@@ -1,0 +1,70 @@
+---
+/**
+ * Catch-all des pages éditoriales libres — /<slug>/
+ *
+ * Matche tout ce qui n'est pas géré par les routes plus spécifiques
+ * (/, /archives/, /themes/, /theme/<slug>/, /billets/<slug>/,
+ * /rss.xml). Lit la collection `pages` Payload par slug.
+ *
+ * Réf : design_handoff_carnet/Carnet B.html → About + autres pages
+ * structurées (terrains, recherche, publications, colophon).
+ */
+import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero.astro';
+import PageRenderer from '../components/PageRenderer.astro';
+import { fetchBySlug } from '../lib/payload';
+
+type PageDoc = {
+  id: number | string;
+  slug: string;
+  title: string;
+  description?: string | null;
+  noindex?: boolean;
+  eyebrow?: string | null;
+  lede?: string | null;
+  sections?: Array<Record<string, unknown>> | null;
+};
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/');
+
+const page = await fetchBySlug<PageDoc>('pages', slug);
+if (!page) {
+  return Astro.rewrite('/404');
+}
+---
+
+<Layout
+  title={page.title}
+  description={page.description ?? page.lede ?? undefined}
+  noindex={page.noindex ?? false}
+>
+  <article class="page-article">
+    <Hero
+      kicker={page.eyebrow ?? undefined}
+      title={page.title}
+      lede={page.lede ?? undefined}
+    />
+
+    <div class="sections narrow">
+      <PageRenderer sections={page.sections as never} />
+    </div>
+  </article>
+</Layout>
+
+<style>
+  /* Body inset dans le Hero : container 1080 (vs Hero 1280), centré.
+     Même convention que /abonnement/ — le body apparaît visuellement
+     « niché » à l'intérieur du band Hero. */
+  .sections {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 80px 64px;
+  }
+
+  @media (max-width: 900px) {
+    .sections {
+      padding: 32px 24px 48px;
+    }
+  }
+</style>

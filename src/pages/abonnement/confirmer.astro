@@ -1,0 +1,140 @@
+---
+/**
+ * Page Confirmer abonnement — /abonnement/confirmer/?token=…
+ *
+ * Atterrissage du lien cliqué dans le mail de confirmation. La page lit
+ * le token depuis l'URL et POSTe vers Payload server-side. Le visiteur
+ * voit un message de succès / d'erreur, pas le JSON brut.
+ *
+ * Status retournés par /cms/api/subscribers/confirm :
+ *  - 200 { ok: true, email }  → confirmation OK
+ *  - 400 { ok: false, code: 'invalid_token' }
+ *  - 400 { ok: false, code: 'expired' }
+ */
+import Layout from '../../layouts/Layout.astro';
+import Hero from '../../components/Hero.astro';
+import { postPayload } from '../../lib/payload';
+
+const token = (Astro.url.searchParams.get('token') ?? '').trim();
+
+type ConfirmResponse = { ok?: boolean; code?: string; email?: string };
+
+let state: 'success' | 'invalid' | 'expired' | 'missing' = 'missing';
+let confirmedEmail: string | null = null;
+
+if (token) {
+  try {
+    const { status, body } = await postPayload<ConfirmResponse>(
+      '/subscribers/confirm',
+      { token },
+    );
+    if (status === 200 && body.ok) {
+      state = 'success';
+      confirmedEmail = body.email ?? null;
+    } else if (body.code === 'expired') {
+      state = 'expired';
+    } else {
+      state = 'invalid';
+    }
+  } catch (err) {
+    console.warn('[confirmer] postPayload failed:', (err as Error).message);
+    state = 'invalid';
+  }
+}
+
+const TITLES: Record<typeof state, string> = {
+  success: 'Abonnement confirmé',
+  invalid: 'Lien invalide',
+  expired: 'Lien expiré',
+  missing: 'Lien incomplet',
+};
+const title = TITLES[state];
+---
+
+<Layout title={title} noindex={true}>
+  <Hero kicker="Abonnement" title={title} />
+
+  <section class="container">
+    {state === 'success' && (
+      <>
+        <p class="lede">
+          Merci ! L'adresse {confirmedEmail && <strong>{confirmedEmail}</strong>}
+          est désormais inscrite aux alertes mail. Vous recevrez un mail à
+          chaque nouveau billet publié.
+        </p>
+        <p class="hint">
+          Chaque mail contiendra un lien pour vous désabonner en un clic.
+        </p>
+      </>
+    )}
+    {state === 'invalid' && (
+      <>
+        <p class="lede">
+          Ce lien n'est pas valide. Il a peut-être déjà été utilisé, ou
+          l'inscription correspondante a été annulée.
+        </p>
+        <p class="hint">
+          Vous pouvez réessayer depuis la <a href="/abonnement/">page d'abonnement</a>.
+        </p>
+      </>
+    )}
+    {state === 'expired' && (
+      <>
+        <p class="lede">
+          Ce lien a expiré (validité de 7 jours).
+        </p>
+        <p class="hint">
+          Vous pouvez recommencer depuis la <a href="/abonnement/">page d'abonnement</a> —
+          un nouveau mail vous sera envoyé.
+        </p>
+      </>
+    )}
+    {state === 'missing' && (
+      <>
+        <p class="lede">
+          L'URL est incomplète : le paramètre <code>token</code> manque.
+        </p>
+        <p class="hint">
+          Si vous avez cliqué un lien depuis un mail, copiez l'URL complète
+          dans votre navigateur. Sinon, recommencez depuis la
+          <a href="/abonnement/">page d'abonnement</a>.
+        </p>
+      </>
+    )}
+  </section>
+</Layout>
+
+<style>
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 80px 64px;
+  }
+  .lede {
+    font-family: var(--font-serif);
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--color-body);
+    margin: 0 0 20px;
+  }
+  .lede strong {
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+  .hint {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--color-muted);
+    margin: 0;
+  }
+  .hint a {
+    color: var(--color-accent);
+    border-bottom: 1px solid var(--color-accent);
+  }
+
+  @media (max-width: 900px) {
+    .container {
+      padding: 32px 24px 48px;
+    }
+  }
+</style>

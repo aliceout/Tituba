@@ -1,0 +1,54 @@
+#!/usr/bin/env sh
+
+# Auto-génération des migrations Payload.
+#
+# Pourquoi : Drizzle refuse `push: true` en prod (sécurité). On a donc
+# besoin de fichiers SQL versionnés dans services/payload/src/migrations/.
+# Plutôt que de demander à l'autrice de penser à `payload migrate:create`
+# à chaque modif de schéma, ce hook le fait automatiquement.
+#
+# Comment : si le commit en cours touche un fichier de schéma Payload
+# (collections / globals / blocks / payload.config.ts), on lance
+# `payload migrate:create` avec un nom auto, on stage les fichiers
+# générés, et le commit continue.
+#
+# Pré-requis : Postgres dev qui tourne (compose.dev.yml up). Si la DB
+# n'est pas joignable, le hook échoue et bloque le commit — c'est
+# voulu, mieux vaut bloquer que pousser un schéma sans migration SQL.
+
+# Détection des fichiers de schéma stagés.
+SCHEMA_CHANGED=$(git diff --cached --name-only --diff-filter=ACMR | \
+  grep -E '^services/payload/src/(collections|globals|blocks)/.+\.ts$|^services/payload/src/payload\.config\.ts$' || true)
+
+if [ -z "$SCHEMA_CHANGED" ]; then
+  # Aucun changement de schéma — on saute la génération.
+  exit 0
+fi
+
+echo "→ Schéma Payload modifié, génération de la migration…"
+echo "$SCHEMA_CHANGED" | sed 's/^/   /'
+
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+MIGRATION_NAME="auto-${TIMESTAMP}"
+
+cd services/payload
+
+# Compte les fichiers existants AVANT la génération pour détecter si
+# une nouvelle migration a été créée (migrate:create ne crée rien si
+# le snapshot n'a pas changé — c'est le cas si tu modifies juste un
+# label ou une description sans toucher à la DB).
+BEFORE=$(ls src/migrations/*.ts 2>/dev/null | wc -l)
+
+pnpm exec dotenv -e ../../.env -- cross-env NODE_OPTIONS=--no-deprecation \
+  payload migrate:create "$MIGRATION_NAME" 2>&1 | sed 's/^/   /'
+
+AFTER=$(ls src/migrations/*.ts 2>/dev/null | wc -l)
+
+cd ../..
+
+if [ "$AFTER" -gt "$BEFORE" ]; then
+  echo "→ Migration générée, ajout au commit en cours."
+  git add services/payload/src/migrations/
+else
+  echo "→ Pas de changement schéma effectif (label/description seulement) — aucune migration à ajouter."
+fi

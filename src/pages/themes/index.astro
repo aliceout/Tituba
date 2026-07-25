@@ -1,0 +1,219 @@
+---
+/**
+ * Vue d'ensemble des thèmes — /themes/
+ *
+ * Hero + grille 2 colonnes des thèmes avec compteur d'usages.
+ * Chaque carte = `#slug` mono accent, nom du thème 24 px, compteur
+ * à droite.
+ *
+ * Réf : design_handoff_carnet/Carnet B.html → PolePage (overview).
+ */
+import Layout from '../../layouts/Layout.astro';
+import Hero from '../../components/Hero.astro';
+import { fetchCollection, fetchIndexPages, filterPublished } from '../../lib/payload';
+import { formatHeroLede, formatHeroTitle } from '../../lib/site';
+
+type Theme = {
+  id: number | string;
+  slug: string;
+  name: string;
+  description?: string | null;
+};
+
+type PostLite = {
+  id: number | string;
+  draft?: boolean;
+  themes?: Array<{ id: number | string; slug: string } | number | string> | null;
+};
+
+type IndexPagesGlobal = {
+  themes?: { enabled?: boolean; heroTitle?: string; heroLede?: string };
+};
+
+const DEFAULT_TITLE = 'Les *thèmes* du carnet.';
+const DEFAULT_LEDE =
+  'Chaque billet est rattaché à un ou plusieurs thèmes. La taxonomie est libre et évolue avec le carnet.';
+
+let themes: Theme[] = [];
+let counts: Map<string, number> = new Map();
+let indexPages: IndexPagesGlobal = {};
+try {
+  themes = await fetchCollection<Theme>('themes', {
+    sort: 'name',
+    limit: 100,
+    depth: 0,
+  });
+  const posts = filterPublished(
+    await fetchCollection<PostLite>('posts', { limit: 1000, depth: 0 }),
+  );
+  // post.themes en depth 0 est un array d'IDs ; on compte par theme.id
+  const idToSlug = new Map<number | string, string>(themes.map((t) => [t.id, t.slug]));
+  for (const post of posts) {
+    for (const tref of post.themes ?? []) {
+      const tid = typeof tref === 'object' && tref !== null ? tref.id : tref;
+      const slug = idToSlug.get(tid as number | string);
+      if (!slug) continue;
+      counts.set(slug, (counts.get(slug) ?? 0) + 1);
+    }
+  }
+} catch (err) {
+  console.warn('[themes] fetch failed:', (err as Error).message);
+}
+try {
+  indexPages = await fetchIndexPages<IndexPagesGlobal>();
+} catch (err) {
+  console.warn('[themes] fetchIndexPages failed, using defaults:', (err as Error).message);
+}
+
+// Si le toggle « Page Thèmes » est désactivé côté admin, on 404 aussi
+// bien /themes/ que /theme/<slug>/ (cf. pages/theme/[slug].astro qui
+// fait la même vérification).
+if (indexPages.themes?.enabled === false) {
+  return Astro.rewrite('/404');
+}
+
+// Tri : décroissant par usage, puis alpha
+const sorted = themes.slice().sort((a, b) => {
+  const ca = counts.get(a.slug) ?? 0;
+  const cb = counts.get(b.slug) ?? 0;
+  if (ca !== cb) return cb - ca;
+  return a.name.localeCompare(b.name, 'fr');
+});
+
+const total = sorted.length;
+
+const heroTitleHtml = formatHeroTitle(
+  indexPages.themes?.heroTitle?.trim() || DEFAULT_TITLE,
+);
+const heroLedeHtml = formatHeroLede(
+  indexPages.themes?.heroLede?.trim() || DEFAULT_LEDE,
+);
+---
+
+<Layout
+  title="Thèmes"
+  description="Les sujets de recherche du Carnet — taxonomie multivaluée et libre."
+>
+  <Hero
+    kicker={`Thèmes thématiques · ${total} thème${total > 1 ? 's' : ''}`}
+    title={heroTitleHtml}
+    lede={heroLedeHtml}
+  />
+
+  <section class="container themes-list">
+    {sorted.length === 0 ? (
+      <p class="empty">Aucun thème pour l'instant.</p>
+    ) : (
+      <div class="grid">
+        {sorted.map((t) => {
+          const count = counts.get(t.slug) ?? 0;
+          return (
+            <a class="theme-card" href={`/theme/${t.slug}/`}>
+              <div class="left">
+                <div class="ty mono">#{t.slug}</div>
+                <div class="t">{t.name}</div>
+                {t.description && <p class="desc">{t.description}</p>}
+              </div>
+              <div class="right">
+                {count} billet{count > 1 ? 's' : ''}
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    )}
+  </section>
+</Layout>
+
+<style>
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 80px;
+  }
+
+  /* Hero : centralisé dans src/components/Hero.astro */
+
+  .themes-list {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+  .themes-list .empty {
+    padding: 64px 0;
+    color: var(--color-muted);
+    text-align: center;
+    font-family: var(--font-sans);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .theme-card {
+    display: grid;
+    grid-template-columns: 1fr 100px;
+    gap: 24px;
+    padding: 24px 0;
+    border-top: 1px solid var(--color-rule);
+    align-items: baseline;
+    color: inherit;
+    transition: color 0.12s;
+  }
+  .theme-card:nth-child(odd) {
+    padding-right: 24px;
+    border-right: 1px solid var(--color-rule);
+  }
+  .theme-card:nth-child(even) {
+    padding-left: 24px;
+  }
+  .theme-card:hover .t {
+    color: var(--color-accent);
+  }
+  .theme-card .ty {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-accent);
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+  }
+  .theme-card .t {
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 600;
+    margin: 0 0 8px;
+    letter-spacing: -0.3px;
+    transition: color 0.12s;
+  }
+  .theme-card .desc {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--color-muted);
+    margin: 0;
+  }
+  .theme-card .right {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--color-muted);
+    text-align: right;
+  }
+
+  @media (max-width: 900px) {
+    .container {
+      padding: 0 24px;
+    }
+    .hero h1 {
+      font-size: 40px;
+    }
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .theme-card:nth-child(odd) {
+      padding-right: 0;
+      border-right: 0;
+    }
+    .theme-card:nth-child(even) {
+      padding-left: 0;
+    }
+  }
+</style>

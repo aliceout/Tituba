@@ -1,0 +1,62 @@
+# Stack DEV uniquement — Postgres + Mailpit pour tester en local.
+#
+# Usage : `docker compose -f compose.dev.yml up -d`
+# Stop  : `docker compose -f compose.dev.yml down`
+#
+# Le `compose.yml` racine est la config PROD avec les 3 services
+# (db, payload, site). Celui-ci ne lance que ce dont on a besoin
+# pour coder/tester en local : Postgres + un SMTP catch-all qui
+# capture les mails d'auth Payload (invitations, OTP 2FA).
+#
+# Données persistantes Postgres dans un volume Docker nommé `pgdata`
+# (géré par Docker, hors repo). `docker volume rm carnet_pgdata` pour wipe.
+# Mailpit garde les mails en mémoire — vidés à chaque restart, c'est voulu.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: carnet-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-payload}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payload}
+      POSTGRES_DB: ${POSTGRES_DB:-carnet}
+    ports:
+      # Exposé sur 5432 host pour qu'on puisse connecter Payload local
+      # sans passer dans Docker. Pas exposé en prod (réseau interne).
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-payload} -d ${POSTGRES_DB:-carnet}']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Mailpit = SMTP catch-all + UI web pour inspecter les mails envoyés en
+  # dev (invitations, OTP 2FA). Aucun mail ne sort sur internet — tout
+  # reste local et visible sur http://localhost:8025.
+  #
+  # Pour brancher Payload dessus, dans le .env racine :
+  #   SMTP_HOST=localhost
+  #   SMTP_PORT=1025
+  #   SMTP_USER=dev
+  #   SMTP_PASS=dev
+  #   SMTP_SECURE=false
+  #   SMTP_FROM=noreply@carnet.local
+  # Mailpit accepte n'importe quel user/pass (auth non vérifiée).
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: carnet-mailpit
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP
+      - '8025:8025' # Web UI
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  pgdata:

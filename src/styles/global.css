@@ -1,0 +1,112 @@
+/* Tokens du design Carnet — repris depuis design_handoff_carnet/.
+   Valeurs figées par le client : accent violet #5a3a7a, fond #f6f5f1,
+   notes classiques, lettrine activée, justify+hyphens. */
+
+@import 'tailwindcss';
+
+/* Polices self-hostées via @fontsource (importées dans Layout.astro). */
+
+@theme {
+  /* Couleurs (valeurs light mode par défaut — surchargeables par
+     Payload Site → Branding via une <style> :root inline dans le
+     <head>, et par data-theme="dark" pour le mode sombre). */
+  --color-ink: #1a1d28;
+  --color-bg: #f6f5f1;
+  --color-paper: #ffffff;
+  --color-rule: #d6d3c8;
+  --color-muted: #5e6373;
+  --color-accent: #5a3a7a;
+
+  /* Couleurs corps (texte courant article + items d'accueil/biblio) */
+  --color-body: #22242e;
+  --color-body-soft: #3b3f4d;
+
+  /* Familles */
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Densité du flux d'accueil — multiplicateur sur paddings d'item.
+     Valeur figée par le client : 0.7 (serré). */
+  --density-feed: 0.7;
+}
+
+/* Couleur de surface utilisée par les cartouches « Pour citer cet
+   article ». Légèrement plus chaude que --color-paper en light, plus
+   sombre que --color-bg en dark — donne une note de surface visible
+   sans casser le rythme. */
+:root {
+  --color-citation-bg: #ece9e0;
+}
+
+/* Dark mode — appliqué quand <html> porte data-theme="dark" (cf.
+   script anti-FOUC du Layout). Palette warm dark, pas noir pur. */
+[data-theme='dark'] {
+  --color-bg: #22242e;
+  --color-paper: #2a2c38;
+  --color-ink: #e8e6e0;
+  --color-rule: #3d4150;
+  --color-muted: #9aa0ad;
+  --color-body: #d8d6d0;
+  --color-body-soft: #b8b6b0;
+  --color-citation-bg: #2c2f3c;
+}
+
+/* Variantes dark de l'accent — une par couleur d'accent disponible
+   dans Payload (Site → Branding). Le slug est posé en data-accent
+   sur <html> par Layout.astro au SSR (mapping hex → slug). On utilise
+   data-accent (spécificité 0,1,0) plutôt que var()+color-mix(), ce
+   qui évite tout problème de cascade entre l'injection SSR et la
+   feuille bundlée. Le defaut violet sert de fallback si data-accent
+   n'est pas posé. */
+[data-theme='dark'] {
+  --color-accent: #a888c8;
+}
+[data-theme='dark'][data-accent='rouge'] {
+  --color-accent: #d49a9a;
+}
+[data-theme='dark'][data-accent='bleu'] {
+  --color-accent: #7ea4cc;
+}
+[data-theme='dark'][data-accent='gris'] {
+  --color-accent: #b8b8b8;
+}
+[data-theme='dark'][data-accent='vert'] {
+  --color-accent: #8ec4a4;
+}
+
+/* Reset minimal */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-serif);
+  /* Transition douce sur le changement de thème — uniquement les
+     couleurs, pas tout (pour éviter de transitionner les layouts). */
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Helpers utilitaires repris du prototype */
+.sans {
+  font-family: var(--font-sans);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.accent {
+  color: var(--color-accent);
+}
