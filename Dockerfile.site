@@ -1,4 +1,4 @@
-# Astro SSR (Node standalone) pour le site public Carnet.
+# Astro SSR (Node standalone) pour le site public Tituba.
 #
 # Le site n'est pas servi en statique : Astro tourne en mode server
 # (output: 'server' + adapter @astrojs/node mode standalone), ce qui

@@ -1,4 +1,4 @@
-# Dev Setup VS Code extension config pour Carnet.
+# Dev Setup VS Code extension config pour Tituba.
 #
 # Fetches secrets from Infisical and
 # writes them to the repo-root `.env` when the workspace opens (or
@@ -25,14 +25,14 @@ secrets:
   project: infra-perso-x-lwh
   batches:
     # Env Infisical "dev" — valeurs locales (Postgres docker, Mailpit, etc.).
-    # Depuis la migration Infisical Cloud, tout est sous /services/carnet
+    # Depuis la migration Infisical Cloud, tout est sous /services/tituba
     # dans le projet partagé "infra-perso-x-lwh".
     # En prod, ce fichier est ignoré : deploy.sh fetche directement l'env
     # "prod" via les credentials VPS-level Universal Auth.
     # Ordre = priorité sur les doublons (first wins) → sous-dossiers
     # avant la racine, pour que les valeurs spécifiques gagnent.
-    - dev/services/carnet/payload
-    - dev/services/carnet/postgres
-    - dev/services/carnet/smtp
-    - dev/services/carnet/web
-    - dev/services/carnet
+    - dev/services/tituba/payload
+    - dev/services/tituba/postgres
+    - dev/services/tituba/smtp
+    - dev/services/tituba/web
+    - dev/services/tituba

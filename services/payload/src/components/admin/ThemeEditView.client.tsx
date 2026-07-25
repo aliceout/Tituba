@@ -4,7 +4,7 @@
 // taxonomie. Layout :
 //
 //   CarnetTopbar : crumbs Carnet / Thèmes / [slug] + Supprimer + Sauvegarder
-//   .carnet-editview__hero : h1 « Thème » + « clé : <slug> » mono
+//   .tituba-editview__hero : h1 « Thème » + « clé : <slug> » mono
 //   Champs : Nom, Slug, Description éditoriale (textarea)
 //   used-in : billets qui ont ce thème dans Post.themes
 //
@@ -182,19 +182,19 @@ export default function ThemeEditViewClient({
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           {data.id != null && (
             <button
               type="button"
-              className="carnet-btn carnet-btn--ghost"
+              className="tituba-btn tituba-btn--ghost"
               onClick={() => {
                 setDeleteOpen(true);
                 setDeleteError(null);
@@ -207,7 +207,7 @@ export default function ThemeEditViewClient({
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={() => void save()}
             disabled={!dirty || saving || loading}
             title="Sauvegarder (⌘S)"
@@ -218,29 +218,29 @@ export default function ThemeEditViewClient({
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <div className="carnet-editview__hero">
-            <h1 className="carnet-h1">Thème</h1>
+          <div className="tituba-editview__hero">
+            <h1 className="tituba-h1">Thème</h1>
             {data.slug && (
-              <p className="carnet-editview__hero-key">
+              <p className="tituba-editview__hero-key">
                 clé : <span className="mono">{data.slug}</span>
               </p>
             )}
           </div>
 
-          <section className="carnet-editview__section">
-            <label className="carnet-editview__field">
+          <section className="tituba-editview__section">
+            <label className="tituba-editview__field">
               <span className="lbl">Nom</span>
               <input
                 type="text"
@@ -254,7 +254,7 @@ export default function ThemeEditViewClient({
               </span>
             </label>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Slug</span>
               <input
                 type="text"
@@ -268,7 +268,7 @@ export default function ThemeEditViewClient({
               </span>
             </label>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Description éditoriale</span>
               <textarea
                 rows={3}
@@ -283,7 +283,7 @@ export default function ThemeEditViewClient({
           </section>
 
           {data.id != null && (
-            <div className="carnet-biblio-usedin">
+            <div className="tituba-biblio-usedin">
               {usedIn.length === 0 ? (
                 <span>Ce thème n’est utilisé dans aucun billet pour l’instant.</span>
               ) : (
@@ -306,7 +306,7 @@ export default function ThemeEditViewClient({
 
       {deleteOpen && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteSubmitting) {
               setDeleteOpen(false);
@@ -314,12 +314,12 @@ export default function ThemeEditViewClient({
             }
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer ce thème&nbsp;?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => {
                   if (deleteSubmitting) return;
                   setDeleteOpen(false);
@@ -332,10 +332,10 @@ export default function ThemeEditViewClient({
             </header>
 
             {deleteError && (
-              <div className="carnet-modal__error">Erreur&nbsp;: {deleteError}</div>
+              <div className="tituba-modal__error">Erreur&nbsp;: {deleteError}</div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
                 «&nbsp;{data.name || data.slug || data.id}&nbsp;» sera
                 définitivement supprimé. Les billets rattachés à ce thème
@@ -343,10 +343,10 @@ export default function ThemeEditViewClient({
               </p>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => {
                   setDeleteOpen(false);
                   setDeleteError(null);
@@ -357,7 +357,7 @@ export default function ThemeEditViewClient({
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void confirmDelete()}
                 disabled={deleteSubmitting}
               >

@@ -166,7 +166,7 @@ export interface Post {
    */
   tags?: (number | Tag)[] | null;
   /**
-   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Carnet), choisir « Externe » et saisir le nom + rattachement.
+   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
    */
   authors?:
     | {
@@ -909,13 +909,13 @@ export interface Site {
      */
     accentColor?: ('#5a3a7a' | '#8a3a3a' | '#1f3a5a' | '#3a3a3a' | '#2d5a3d') | null;
     /**
-     * Teinte de fond du Carnet — appliquée au body et aux zones neutres (header, footer, fond des billets, fond admin).
+     * Teinte de fond de Tituba — appliquée au body et aux zones neutres (header, footer, fond des billets, fond admin).
      */
     backgroundColor?: ('#f6f5f1' | '#fdfcf8' | '#ffffff' | '#f1efe8' | '#eee9dd' | '#e9eaec') | null;
   };
   reading?: {
     /**
-     * Le mode classique empile les notes en bas du billet (style académique). Le mode en marge les place dans une colonne à droite, alignée sur le paragraphe qui les appelle (style « Tufte »). S'applique uniformément à tous les billets du Carnet. Cf issue #6.
+     * Le mode classique empile les notes en bas du billet (style académique). Le mode en marge les place dans une colonne à droite, alignée sur le paragraphe qui les appelle (style « Tufte »). S'applique uniformément à tous les publications de Tituba. Cf issue #6.
      */
     notesMode?: ('classic' | 'sidenotes') | null;
   };
@@ -1028,7 +1028,7 @@ export interface Identity {
    */
   siteName?: string | null;
   /**
-   * Nom du laboratoire de recherche, de la personne, du collectif… selon l'utilisation du carnet. Affiché en signature dans la baseline du footer et la description meta.
+   * Nom du laboratoire de recherche, de la personne, du collectif… selon l'utilisation du site. Affiché en signature dans la baseline du footer et la description meta.
    */
   authorName?: string | null;
   /**

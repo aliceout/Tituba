@@ -95,13 +95,13 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
   const totalScheduled = scheduledRes.totalDocs;
 
   return (
-    <div className="carnet-dashboard">
-      <header className="carnet-dashboard__header">
-        <div className="carnet-dashboard__kicker-row">
+    <div className="tituba-dashboard">
+      <header className="tituba-dashboard__header">
+        <div className="tituba-dashboard__kicker-row">
           <NavBurger />
-          <div className="carnet-kicker">Carnet · admin</div>
+          <div className="tituba-kicker">Tituba · admin</div>
         </div>
-        <h1 className="carnet-h1 carnet-dashboard__hello">
+        <h1 className="tituba-h1 tituba-dashboard__hello">
           {userName ? (
             <>
               Bonjour <em>{userName}</em>.
@@ -110,7 +110,7 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
             <>Bonjour.</>
           )}
         </h1>
-        <p className="carnet-dashboard__lede">
+        <p className="tituba-dashboard__lede">
           {totalDrafts > 0 && (
             <>
               {totalDrafts} brouillon{totalDrafts > 1 ? 's' : ''} en cours
@@ -129,37 +129,37 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
         </p>
       </header>
 
-      <section className="carnet-dashboard__stats" aria-label="Statistiques">
-        <div className="carnet-dashboard__stat">
+      <section className="tituba-dashboard__stats" aria-label="Statistiques">
+        <div className="tituba-dashboard__stat">
           <span className="n">{analyses}</span>
           <span className="lbl">analyse{analyses > 1 ? 's' : ''} publiée{analyses > 1 ? 's' : ''}</span>
         </div>
-        <div className="carnet-dashboard__stat">
+        <div className="tituba-dashboard__stat">
           <span className="n">{notes}</span>
           <span className="lbl">note{notes > 1 ? 's' : ''} de lecture</span>
         </div>
-        <div className="carnet-dashboard__stat">
+        <div className="tituba-dashboard__stat">
           <span className="n">{fiches}</span>
           <span className="lbl">fiche{fiches > 1 ? 's' : ''} thématique{fiches > 1 ? 's' : ''}</span>
         </div>
-        <div className="carnet-dashboard__stat">
+        <div className="tituba-dashboard__stat">
           <span className="n">{themes}</span>
           <span className="lbl">thème{themes > 1 ? 's' : ''}</span>
         </div>
       </section>
 
-      <div className="carnet-dashboard__cols">
-        <section className="carnet-dashboard__col">
-          <h2 className="carnet-dashboard__col-h">Brouillons en cours</h2>
+      <div className="tituba-dashboard__cols">
+        <section className="tituba-dashboard__col">
+          <h2 className="tituba-dashboard__col-h">Brouillons en cours</h2>
           {drafts.length === 0 ? (
-            <p className="carnet-dashboard__empty">Aucun brouillon.</p>
+            <p className="tituba-dashboard__empty">Aucun brouillon.</p>
           ) : (
-            <ul className="carnet-dashboard__list">
+            <ul className="tituba-dashboard__list">
               {drafts.map((d) => (
                 <li key={d.id}>
                   <a href={`/cms/admin/collections/posts/${d.id}`}>
                     {d.numero !== undefined && (
-                      <span className="carnet-mono">n° {String(d.numero).padStart(3, '0')}</span>
+                      <span className="tituba-mono">n° {String(d.numero).padStart(3, '0')}</span>
                     )}
                     <span className="t">{d.title}</span>
                   </a>
@@ -169,17 +169,17 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
           )}
         </section>
 
-        <section className="carnet-dashboard__col">
-          <h2 className="carnet-dashboard__col-h">Planifié à publier</h2>
+        <section className="tituba-dashboard__col">
+          <h2 className="tituba-dashboard__col-h">Planifié à publier</h2>
           {scheduled.length === 0 ? (
-            <p className="carnet-dashboard__empty">Aucun billet planifié.</p>
+            <p className="tituba-dashboard__empty">Aucun billet planifié.</p>
           ) : (
-            <ul className="carnet-dashboard__list">
+            <ul className="tituba-dashboard__list">
               {scheduled.map((s) => (
                 <li key={s.id}>
                   <a href={`/cms/admin/collections/posts/${s.id}`}>
                     {s.numero !== undefined && (
-                      <span className="carnet-mono">n° {String(s.numero).padStart(3, '0')}</span>
+                      <span className="tituba-mono">n° {String(s.numero).padStart(3, '0')}</span>
                     )}
                     <span className="t">{s.title}</span>
                   </a>
@@ -190,19 +190,19 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
         </section>
       </div>
 
-      <section className="carnet-dashboard__shortcuts" aria-label="Raccourcis">
-        <h2 className="carnet-dashboard__col-h">Raccourcis</h2>
-        <div className="carnet-dashboard__shortcuts-grid">
-          <a className="carnet-dashboard__shortcut" href="/cms/admin/collections/posts/create">
-            <span className="lbl carnet-mono">⌘N</span>
+      <section className="tituba-dashboard__shortcuts" aria-label="Raccourcis">
+        <h2 className="tituba-dashboard__col-h">Raccourcis</h2>
+        <div className="tituba-dashboard__shortcuts-grid">
+          <a className="tituba-dashboard__shortcut" href="/cms/admin/collections/posts/create">
+            <span className="lbl tituba-mono">⌘N</span>
             <span className="t">Nouveau billet</span>
           </a>
-          <a className="carnet-dashboard__shortcut" href="/cms/admin/collections/posts/create">
-            <span className="lbl carnet-mono">#note</span>
+          <a className="tituba-dashboard__shortcut" href="/cms/admin/collections/posts/create">
+            <span className="lbl tituba-mono">#note</span>
             <span className="t">Nouvelle note de lecture</span>
           </a>
-          <a className="carnet-dashboard__shortcut" href="/cms/admin/collections/posts/create">
-            <span className="lbl carnet-mono">#fiche</span>
+          <a className="tituba-dashboard__shortcut" href="/cms/admin/collections/posts/create">
+            <span className="lbl tituba-mono">#fiche</span>
             <span className="t">Nouvelle fiche thématique</span>
           </a>
         </div>

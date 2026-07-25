@@ -3,7 +3,7 @@
  * Page Abonnement — /abonnement/
  *
  * Atterrissage humain pour le bouton « Abonnement » du header. Regroupe
- * les canaux par lesquels le carnet peut être suivi :
+ * les canaux par lesquels Tituba peut être suivi :
  *  1. Réseaux sociaux (Mastodon, Bluesky, ORCID, HAL) — affichés
  *     uniquement si au moins une URL est renseignée dans le global
  *     Subscriptions. Si tout est vide, la section disparaît.
@@ -75,7 +75,7 @@ const feedUrl = new URL('/rss.xml', Astro.site).toString();
 
 <Layout
   title="Abonnement"
-  description="Comment s'abonner au carnet : réseaux sociaux et flux RSS."
+  description="Comment suivre Tituba : réseaux sociaux et flux RSS."
 >
   <Hero
     kicker="Abonnement"

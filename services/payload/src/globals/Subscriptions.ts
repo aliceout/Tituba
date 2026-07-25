@@ -3,7 +3,7 @@ import type { GlobalConfig } from 'payload';
 import { isAdminOrRoot } from '../access/roles';
 
 /**
- * Abonnements — moyens pour le public de suivre le carnet sans visiter
+ * Abonnements — moyens pour le public de suivre Tituba sans visiter
  * la home régulièrement.
  *
  * Trois axes :

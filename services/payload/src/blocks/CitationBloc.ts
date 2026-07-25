@@ -3,7 +3,7 @@ import type { Block } from 'payload';
 /**
  * Citation longue typographiée — blockquote avec source optionnelle.
  *
- * Ref design : design_handoff_carnet/Carnet B.html → .body-grid blockquote
+ * Ref design : design_handoff_tituba/Tituba B.html → .body-grid blockquote
  * (border-left 2px accent, font-size 22px, line-height 1.5, italique optionnel).
  */
 export const CitationBloc: Block = {

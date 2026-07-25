@@ -1,7 +1,7 @@
 'use client';
 
 // PostEditView (client) — vue Édition custom d'un Post qui matche le
-// handoff admin (cf Design/design_handoff_admin/carnet-admin.html →
+// handoff admin (cf Design/design_handoff_admin/tituba-admin.html →
 // ScreenDoc). Layout :
 //
 //   header.top : crumbs + chip statut + actions Sauvegarder / Publier
@@ -733,8 +733,8 @@ export default function PostEditViewClient({
         { label: <>n°&nbsp;{pad3(post.numero ?? null)}</> },
       ]}
       topbarStatus={
-        <span className={`carnet-status carnet-status--${status}`}>
-          <span className="carnet-status__dot" aria-hidden="true" />
+        <span className={`tituba-status tituba-status--${status}`}>
+          <span className="tituba-status__dot" aria-hidden="true" />
           {STATUS_LABEL[status]}
         </span>
       }
@@ -742,18 +742,18 @@ export default function PostEditViewClient({
       topbarActions={
         <>
           {savedLabel && !dirty && (
-            <span className="carnet-postedit__saved" aria-live="polite">
+            <span className="tituba-postedit__saved" aria-live="polite">
               {savedLabel}
             </span>
           )}
           {dirty && (
-            <span className="carnet-postedit__dirty" aria-live="polite">
+            <span className="tituba-postedit__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {post.slug && post.id != null && (
             <a
-              className="carnet-btn carnet-btn--ghost"
+              className="tituba-btn tituba-btn--ghost"
               href={`/billets/${post.slug}/`}
               target="_blank"
               rel="noreferrer"
@@ -763,7 +763,7 @@ export default function PostEditViewClient({
           )}
           <button
             type="button"
-            className="carnet-btn"
+            className="tituba-btn"
             onClick={() => void save()}
             disabled={!dirty || saving || loading}
             title="Sauvegarder"
@@ -773,7 +773,7 @@ export default function PostEditViewClient({
           </button>
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={() => void save({ publish: true })}
             disabled={saving || loading}
             suppressHydrationWarning
@@ -783,13 +783,13 @@ export default function PostEditViewClient({
         </>
       }
     >
-      {error && <div className="carnet-postedit__error">Erreur : {error}</div>}
+      {error && <div className="tituba-postedit__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-postedit__loading">Chargement…</div>
+        <div className="tituba-postedit__loading">Chargement…</div>
       ) : (
-        <div className="carnet-postedit__doc">
-          <div className="carnet-postedit__center">
+        <div className="tituba-postedit__doc">
+          <div className="tituba-postedit__center">
             <div className="ed-card">
               <div className="ed-num">
                 <span className="ed-num__id">
@@ -1029,7 +1029,7 @@ export default function PostEditViewClient({
             </div>
           </div>
 
-          <aside className="carnet-postedit__meta">
+          <aside className="tituba-postedit__meta">
             <h3>Métadonnées</h3>
             <div className="row">
               <div className="field">
@@ -1278,7 +1278,7 @@ export default function PostEditViewClient({
                 <div className="field">
                   <button
                     type="button"
-                    className="carnet-postedit__delete"
+                    className="tituba-postedit__delete"
                     onClick={() => {
                       setDeleteOpen(true);
                       setDeleteError(null);
@@ -1295,7 +1295,7 @@ export default function PostEditViewClient({
 
       {deleteOpen && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteSubmitting) {
               setDeleteOpen(false);
@@ -1303,12 +1303,12 @@ export default function PostEditViewClient({
             }
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer ce billet ?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => {
                   if (deleteSubmitting) return;
                   setDeleteOpen(false);
@@ -1321,19 +1321,19 @@ export default function PostEditViewClient({
             </header>
 
             {deleteError && (
-              <div className="carnet-modal__error">Erreur : {deleteError}</div>
+              <div className="tituba-modal__error">Erreur : {deleteError}</div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
                 «&nbsp;{post.title || 'Sans titre'}&nbsp;» sera définitivement supprimé. Cette action est irréversible.
               </p>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => {
                   setDeleteOpen(false);
                   setDeleteError(null);
@@ -1344,7 +1344,7 @@ export default function PostEditViewClient({
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void deletePost()}
                 disabled={deleteSubmitting}
               >

@@ -1,7 +1,7 @@
 'use client';
 
 // PostListView (client) — vue Liste custom Posts qui matche le handoff
-// admin (cf Design/design_handoff_admin/carnet-admin.html → ScreenList).
+// admin (cf Design/design_handoff_admin/tituba-admin.html → ScreenList).
 //
 // Layout :
 //   - Header : crumbs « Carnet / Billets », actions à droite (Exporter,
@@ -250,22 +250,22 @@ export default function PostListViewClient(): React.ReactElement {
         <>
           <button
             type="button"
-            className="carnet-btn carnet-btn--ghost"
+            className="tituba-btn tituba-btn--ghost"
             onClick={() => alert('Export à venir (issue v2)')}
           >
             Exporter
           </button>
           <Link
             href="/cms/admin/collections/posts/create"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
           >
             Nouveau billet
           </Link>
         </>
       }
     >
-      <div className="carnet-listview__toolbar">
-        <div className="carnet-listview__search">
+      <div className="tituba-listview__toolbar">
+        <div className="tituba-listview__search">
           <span className="ic" aria-hidden="true">
             ⌕
           </span>
@@ -277,7 +277,7 @@ export default function PostListViewClient(): React.ReactElement {
           />
         </div>
 
-        <label className="carnet-listview__filter">
+        <label className="tituba-listview__filter">
           <span className="lbl">Type :</span>
           <select value={type} onChange={(e) => setType(e.target.value as FilterType)}>
             <option value="all">tous</option>
@@ -287,7 +287,7 @@ export default function PostListViewClient(): React.ReactElement {
           </select>
         </label>
 
-        <label className="carnet-listview__filter">
+        <label className="tituba-listview__filter">
           <span className="lbl">Thème :</span>
           <select value={pole} onChange={(e) => setPole(e.target.value)}>
             {themeOptions.map((t) => (
@@ -298,7 +298,7 @@ export default function PostListViewClient(): React.ReactElement {
           </select>
         </label>
 
-        <label className="carnet-listview__filter">
+        <label className="tituba-listview__filter">
           <span className="lbl">Statut :</span>
           <select value={statut} onChange={(e) => setStatut(e.target.value as FilterStatut)}>
             <option value="all">tous</option>
@@ -309,7 +309,7 @@ export default function PostListViewClient(): React.ReactElement {
           </select>
         </label>
 
-        <label className="carnet-listview__filter">
+        <label className="tituba-listview__filter">
           <span className="lbl">Périmètre :</span>
           <select
             value={scope}
@@ -325,13 +325,13 @@ export default function PostListViewClient(): React.ReactElement {
       </div>
 
       {error && (
-        <div className="carnet-listview__error">Erreur : {error}</div>
+        <div className="tituba-listview__error">Erreur : {error}</div>
       )}
 
-      <div className="carnet-listview__table" role="table">
+      <div className="tituba-listview__table" role="table">
         <div
-          className={`carnet-listview__row carnet-listview__row--head${
-            scope === 'all' ? ' carnet-listview__row--with-authors' : ''
+          className={`tituba-listview__row tituba-listview__row--head${
+            scope === 'all' ? ' tituba-listview__row--with-authors' : ''
           }`}
           role="row"
         >
@@ -345,9 +345,9 @@ export default function PostListViewClient(): React.ReactElement {
         </div>
 
         {loading && posts.length === 0 ? (
-          <div className="carnet-listview__loading">Chargement…</div>
+          <div className="tituba-listview__loading">Chargement…</div>
         ) : posts.length === 0 ? (
-          <div className="carnet-listview__empty">Aucun billet ne correspond aux filtres.</div>
+          <div className="tituba-listview__empty">Aucun billet ne correspond aux filtres.</div>
         ) : (
           posts.map((p) => {
             const status = inferStatus(p);
@@ -356,8 +356,8 @@ export default function PostListViewClient(): React.ReactElement {
               <Link
                 key={p.id}
                 href={`/cms/admin/collections/posts/${p.id}`}
-                className={`carnet-listview__row${
-                  scope === 'all' ? ' carnet-listview__row--with-authors' : ''
+                className={`tituba-listview__row${
+                  scope === 'all' ? ' tituba-listview__row--with-authors' : ''
                 }`}
                 role="row"
               >
@@ -379,7 +379,7 @@ export default function PostListViewClient(): React.ReactElement {
                   <span className="date__value">{isoDate(p.publishedAt)}</span>
                   {p.hasDraftZones && (
                     <span
-                      className="carnet-chip-draft"
+                      className="tituba-chip-draft"
                       title="Ce billet contient au moins une zone brouillon non finalisée"
                     >
                       Brouillon
@@ -387,8 +387,8 @@ export default function PostListViewClient(): React.ReactElement {
                   )}
                 </div>
                 <div role="cell" className="status">
-                  <span className={`carnet-status carnet-status--${status}`}>
-                    <span className="carnet-status__dot" aria-hidden="true" />
+                  <span className={`tituba-status tituba-status--${status}`}>
+                    <span className="tituba-status__dot" aria-hidden="true" />
                     {STATUS_LABEL[status]}
                   </span>
                 </div>
@@ -413,14 +413,14 @@ export default function PostListViewClient(): React.ReactElement {
         )}
       </div>
 
-      <div className="carnet-listview__pagination">
-        <span className="carnet-listview__pagination-info">
+      <div className="tituba-listview__pagination">
+        <span className="tituba-listview__pagination-info">
           {totalDocs === 0
             ? 'Aucun résultat'
             : `Affichage ${startIdx}–${endIdx} sur ${totalDocs} · ${PER_PAGE} par page`}
         </span>
         {totalPages > 1 && (
-          <div className="carnet-listview__pagination-pages">
+          <div className="tituba-listview__pagination-pages">
             <button
               type="button"
               disabled={page <= 1}
@@ -453,7 +453,7 @@ export default function PostListViewClient(): React.ReactElement {
 
       {deleteTarget && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteSubmitting) {
               setDeleteTarget(null);
@@ -461,12 +461,12 @@ export default function PostListViewClient(): React.ReactElement {
             }
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer ce billet ?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => {
                   if (deleteSubmitting) return;
                   setDeleteTarget(null);
@@ -479,19 +479,19 @@ export default function PostListViewClient(): React.ReactElement {
             </header>
 
             {deleteError && (
-              <div className="carnet-modal__error">Erreur : {deleteError}</div>
+              <div className="tituba-modal__error">Erreur : {deleteError}</div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
                 «&nbsp;{deleteTarget.title}&nbsp;» sera définitivement supprimé. Cette action est irréversible.
               </p>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => {
                   setDeleteTarget(null);
                   setDeleteError(null);
@@ -502,7 +502,7 @@ export default function PostListViewClient(): React.ReactElement {
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void confirmDelete()}
                 disabled={deleteSubmitting}
               >

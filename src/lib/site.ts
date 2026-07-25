@@ -4,7 +4,7 @@
  * et à mesure que le design est porté.
  */
 
-/** Mois français pleins (pas d'abréviations dans le carnet). */
+/** Mois français pleins (pas d'abréviations sur le site). */
 const MOIS_FR = [
   'janvier',
   'février',
@@ -104,7 +104,7 @@ export function formatHeroLede(s: string): string {
 
 /**
  * Liste d'auteur·ices d'un billet (cf issue #2). Chaque entrée est soit
- * un user du Carnet (kind=user, user populé avec displayName), soit
+ * un user du site (kind=user, user populé avec displayName), soit
  * une personne externe (kind=external, name + affiliation libres).
  */
 export type PostAuthorEntry = {

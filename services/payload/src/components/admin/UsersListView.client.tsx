@@ -161,7 +161,7 @@ export default function UsersListViewClient(): React.ReactElement {
       topbarActions={
         <button
           type="button"
-          className="carnet-btn carnet-btn--accent"
+          className="tituba-btn tituba-btn--accent"
           onClick={openInvite}
         >
           Inviter un·e utilisateur·ice
@@ -170,17 +170,17 @@ export default function UsersListViewClient(): React.ReactElement {
     >
       {inviteOpen && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !inviteSubmitting) setInviteOpen(false);
           }}
         >
-          <form className="carnet-modal" onSubmit={submitInvite}>
-            <header className="carnet-modal__header">
+          <form className="tituba-modal" onSubmit={submitInvite}>
+            <header className="tituba-modal__header">
               <h2>Inviter un·e utilisateur·ice</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => !inviteSubmitting && setInviteOpen(false)}
                 aria-label="Fermer"
               >
@@ -189,11 +189,11 @@ export default function UsersListViewClient(): React.ReactElement {
             </header>
 
             {inviteError && (
-              <div className="carnet-modal__error">Erreur : {inviteError}</div>
+              <div className="tituba-modal__error">Erreur : {inviteError}</div>
             )}
 
-            <div className="carnet-modal__body">
-              <label className="carnet-editview__field">
+            <div className="tituba-modal__body">
+              <label className="tituba-editview__field">
                 <span className="lbl">Email</span>
                 <input
                   type="email"
@@ -203,7 +203,7 @@ export default function UsersListViewClient(): React.ReactElement {
                   autoFocus
                 />
               </label>
-              <label className="carnet-editview__field">
+              <label className="tituba-editview__field">
                 <span className="lbl">Nom affiché (optionnel)</span>
                 <input
                   type="text"
@@ -211,7 +211,7 @@ export default function UsersListViewClient(): React.ReactElement {
                   onChange={(e) => setInviteName(e.target.value)}
                 />
               </label>
-              <label className="carnet-editview__field">
+              <label className="tituba-editview__field">
                 <span className="lbl">Rôle</span>
                 <select
                   value={inviteRole}
@@ -226,10 +226,10 @@ export default function UsersListViewClient(): React.ReactElement {
               </label>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => setInviteOpen(false)}
                 disabled={inviteSubmitting}
               >
@@ -237,7 +237,7 @@ export default function UsersListViewClient(): React.ReactElement {
               </button>
               <button
                 type="submit"
-                className="carnet-btn carnet-btn--accent"
+                className="tituba-btn tituba-btn--accent"
                 disabled={inviteSubmitting}
               >
                 {inviteSubmitting ? 'Envoi…' : 'Envoyer l’invitation'}
@@ -247,8 +247,8 @@ export default function UsersListViewClient(): React.ReactElement {
         </div>
       )}
 
-      <div className="carnet-listview__toolbar">
-        <div className="carnet-listview__search">
+      <div className="tituba-listview__toolbar">
+        <div className="tituba-listview__search">
           <span className="ic" aria-hidden="true">
             ⌕
           </span>
@@ -259,7 +259,7 @@ export default function UsersListViewClient(): React.ReactElement {
             placeholder={`Rechercher dans ${totalDocs} utilisateur·ice${totalDocs > 1 ? 's' : ''}…`}
           />
         </div>
-        <label className="carnet-listview__filter">
+        <label className="tituba-listview__filter">
           <span className="lbl">Rôle :</span>
           <select value={role} onChange={(e) => setRole(e.target.value as FilterRole)}>
             <option value="all">tous</option>
@@ -270,10 +270,10 @@ export default function UsersListViewClient(): React.ReactElement {
         </label>
       </div>
 
-      {error && <div className="carnet-listview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-listview__error">Erreur : {error}</div>}
 
-      <div className="carnet-listview__table" role="table">
-        <div className="carnet-listview__row carnet-listview__row--head" role="row">
+      <div className="tituba-listview__table" role="table">
+        <div className="tituba-listview__row tituba-listview__row--head" role="row">
           <div role="columnheader">Nom affiché</div>
           <div role="columnheader">Email</div>
           <div role="columnheader">Rôle</div>
@@ -282,15 +282,15 @@ export default function UsersListViewClient(): React.ReactElement {
         </div>
 
         {loading && users.length === 0 ? (
-          <div className="carnet-listview__loading">Chargement…</div>
+          <div className="tituba-listview__loading">Chargement…</div>
         ) : users.length === 0 ? (
-          <div className="carnet-listview__empty">Aucun utilisateur·ice.</div>
+          <div className="tituba-listview__empty">Aucun utilisateur·ice.</div>
         ) : (
           users.map((u) => (
             <Link
               key={u.id}
               href={`/cms/admin/collections/users/${u.id}`}
-              className="carnet-listview__row"
+              className="tituba-listview__row"
               role="row"
             >
               <div role="cell" className="name">
@@ -300,13 +300,13 @@ export default function UsersListViewClient(): React.ReactElement {
                 {u.email}
               </div>
               <div role="cell" className="role">
-                <span className={`carnet-role carnet-role--${u.role}`}>
+                <span className={`tituba-role tituba-role--${u.role}`}>
                   {ROLE_LABEL[u.role]}
                 </span>
               </div>
               <div role="cell" className="status-cell">
-                <span className={`carnet-status carnet-status--${u.status}`}>
-                  <span className="carnet-status__dot" aria-hidden="true" />
+                <span className={`tituba-status tituba-status--${u.status}`}>
+                  <span className="tituba-status__dot" aria-hidden="true" />
                   {STATUS_LABEL[u.status]}
                 </span>
               </div>
@@ -318,14 +318,14 @@ export default function UsersListViewClient(): React.ReactElement {
         )}
       </div>
 
-      <div className="carnet-listview__pagination">
-        <span className="carnet-listview__pagination-info">
+      <div className="tituba-listview__pagination">
+        <span className="tituba-listview__pagination-info">
           {totalDocs === 0
             ? 'Aucun résultat'
             : `Affichage ${startIdx}–${endIdx} sur ${totalDocs} · ${PER_PAGE} par page`}
         </span>
         {totalPages > 1 && (
-          <div className="carnet-listview__pagination-pages">
+          <div className="tituba-listview__pagination-pages">
             <button
               type="button"
               disabled={page <= 1}

@@ -1,7 +1,7 @@
 // Nav latérale custom — remplace la nav native Payload (qui empile
 // les collections à plat) par la structure éditoriale du handoff :
 //
-//   Carnet.                          (brand Source Serif 22px)
+//   Tituba.                          (brand Source Serif 22px)
 //
 //   CONTENU
 //     Billets        (47)

@@ -1,6 +1,6 @@
 /**
  * Endpoint Astro — sert un fichier BibTeX (.bib) téléchargeable pour
- * un billet du Carnet.
+ * un billet de Tituba.
  *
  *   GET /billets/<slug>.bib
  *

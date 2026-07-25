@@ -89,7 +89,7 @@ export const IndexPages: GlobalConfig = {
           type: 'textarea',
           required: false,
           label: 'Titre du hero',
-          defaultValue: 'Tous les billets, par année.',
+          defaultValue: 'Toutes les publications, par année.',
           admin: {
             description:
               'H1 de la page /archives/. Entourer une portion de "*" pour la mettre en italique.',
@@ -101,7 +101,7 @@ export const IndexPages: GlobalConfig = {
           required: false,
           label: 'Texte de présentation (lede)',
           defaultValue:
-            'Le carnet est versionné : chaque billet a un numéro, une date de publication et, le cas échéant, une date de mise à jour. Les fiches thématiques sont régulièrement révisées.',
+            'Chaque publication porte un numéro, une date de publication et, le cas échéant, une date de mise à jour.',
           admin: {
             description: 'Paragraphe sous le titre de /archives/.',
           },
@@ -127,7 +127,7 @@ export const IndexPages: GlobalConfig = {
           type: 'textarea',
           required: false,
           label: 'Titre du hero',
-          defaultValue: 'Les *thèmes* du carnet.',
+          defaultValue: 'Nos *thématiques*.',
           admin: {
             description:
               'H1 de la page /themes/. Entourer une portion de "*" pour la mettre en italique (ex. *thèmes*).',
@@ -139,7 +139,7 @@ export const IndexPages: GlobalConfig = {
           required: false,
           label: 'Texte de présentation (lede)',
           defaultValue:
-            'Chaque billet est rattaché à un ou plusieurs thèmes. La taxonomie est libre et évolue avec le carnet.',
+            'Chaque publication est rattachée à une ou plusieurs thématiques. La taxonomie est libre et évolue avec nos travaux.',
           admin: {
             description: 'Paragraphe sous le titre de /themes/.',
           },

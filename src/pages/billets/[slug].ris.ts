@@ -1,6 +1,6 @@
 /**
  * Endpoint Astro — sert un fichier RIS (.ris) téléchargeable pour un
- * billet du Carnet.
+ * billet de Tituba.
  *
  *   GET /billets/<slug>.ris
  *

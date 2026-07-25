@@ -25,28 +25,28 @@
 # Cf issue #19 — rendre Infisical optionnel pour les forkeurs.
 #
 # DEPLOY_DIR est résolu depuis l'emplacement du script — le hook l'invoque
-# via /var/www/carnet/scripts/deploy.sh, ça résout à /var/www/carnet.
+# via /var/www/tituba/scripts/deploy.sh, ça résout à /var/www/tituba.
 # En dev local, ça résout à la racine du repo.
 #
-# CREDS_FILE par défaut : $HOME/.config/infisical/carnet.env (écrit par
+# CREDS_FILE par défaut : $HOME/.config/infisical/tituba.env (écrit par
 # l'install.sh côté vps-install). Override via env si besoin.
 #
 # Depuis la migration Infisical Cloud (mai 2026), INFISICAL_API_URL dans
 # CREDS_FILE pointe sur l'instance Cloud partagée (app.infisical.com ou
 # l'instance custom du framework), et INFISICAL_PROJECT_ID est l'UUID du
 # projet *unique* qui contient tous les services. L'arborescence est
-# `/services/<nom-du-projet>/<sous-dossier>` — pour Carnet :
-#   /services/carnet           → clés communes (DOMAIN, ADDRESS, DNS_*, …)
-#   /services/carnet/payload   → PAYLOAD_SECRET, etc.
-#   /services/carnet/postgres  → POSTGRES_*
-#   /services/carnet/smtp      → SMTP_*
-#   /services/carnet/web       → ADDRESS, PORT_*
+# `/services/<nom-du-projet>/<sous-dossier>` — pour Tituba :
+#   /services/tituba           → clés communes (DOMAIN, ADDRESS, DNS_*, …)
+#   /services/tituba/payload   → PAYLOAD_SECRET, etc.
+#   /services/tituba/postgres  → POSTGRES_*
+#   /services/tituba/smtp      → SMTP_*
+#   /services/tituba/web       → ADDRESS, PORT_*
 # Les noms de vars n'ont pas changé, seuls les paths Infisical bougent.
 
 set -euo pipefail
 
 DEPLOY_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-CREDS_FILE="${CREDS_FILE:-$HOME/.config/infisical/carnet.env}"
+CREDS_FILE="${CREDS_FILE:-$HOME/.config/infisical/tituba.env}"
 ENV_FILE="$DEPLOY_DIR/.env"
 
 # Détection du mode. On bascule en mode manuel dès qu'un des prérequis
@@ -86,8 +86,8 @@ if [ "$USE_INFISICAL" = "true" ]; then
   # 3. Export tous les secrets app vers .env racine. Chmod AVANT d'écrire pour
   #    qu'aucun process tiers ne puisse lire le fichier en 644 même brièvement.
   #
-  #    Avec Infisical Cloud, l'arbo est `/services/carnet/<sous-dossier>` :
-  #    on fetch d'abord la racine `/services/carnet` (clés communes au
+  #    Avec Infisical Cloud, l'arbo est `/services/tituba/<sous-dossier>` :
+  #    on fetch d'abord la racine `/services/tituba` (clés communes au
   #    projet — DOMAIN, ADDRESS, DNS_*, etc.), puis chaque sous-dossier.
   #    L'ordre compte : un sous-dossier qui redéfinit une clé de la racine
   #    DOIT gagner. En .env, c'est la dernière occurrence d'une clé qui
@@ -104,7 +104,7 @@ if [ "$USE_INFISICAL" = "true" ]; then
   chmod 600 "$ENV_FILE"
 
   for subpath in "" payload postgres smtp web; do
-    path="/services/carnet${subpath:+/$subpath}"
+    path="/services/tituba${subpath:+/$subpath}"
     echo "[deploy] fetching $path"
     infisical export \
       --domain="$INFISICAL_API_URL" \
@@ -140,7 +140,7 @@ grep -q '^PAYLOAD_SECRET=' "$ENV_FILE" || {
 
 # 2. Bind mounts data (Postgres + médias Payload). DATA_DIR est exporté
 #    pour que `docker compose` puisse l'interpoler dans compose.yml.
-export DATA_DIR="${DATA_DIR:-$HOME/data/carnet}"
+export DATA_DIR="${DATA_DIR:-$HOME/data/tituba}"
 mkdir -p "$DATA_DIR/postgres" "$DATA_DIR/payload-media"
 
 # 3. Pull les images GHCR + restart propre.
@@ -157,7 +157,7 @@ docker compose up -d
 
 # 4. Attente healthy — chaque container a son healthcheck défini dans
 #    compose.yml, on les sonde via `docker inspect`. Timeout 90s.
-expected="carnet-db carnet-payload carnet-site"
+expected="tituba-db tituba-payload tituba-site"
 deadline=$(( $(date +%s) + 90 ))
 echo "Waiting for services to become healthy..."
 while [ "$(date +%s)" -lt "$deadline" ]; do
@@ -170,13 +170,13 @@ while [ "$(date +%s)" -lt "$deadline" ]; do
     fi
   done
   if [ "$all_healthy" = true ]; then
-    echo "[carnet-deploy] OK ($(date -Iseconds))"
+    echo "[tituba-deploy] OK ($(date -Iseconds))"
     docker compose ps
     exit 0
   fi
   sleep 3
 done
 
-echo "[carnet-deploy] timeout — services pas healthy à temps :" >&2
+echo "[tituba-deploy] timeout — services pas healthy à temps :" >&2
 docker compose ps >&2
 exit 1

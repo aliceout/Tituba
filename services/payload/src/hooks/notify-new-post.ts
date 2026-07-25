@@ -170,7 +170,7 @@ async function dispatchPostNotifications(payload: Payload, post: PostDoc): Promi
   }
 
   // Paginate-friendly : on récupère par batch de 500 active subs. Pour
-  // un Carnet typique on ne devrait pas dépasser quelques centaines de
+  // un Tituba typique on ne devrait pas dépasser quelques centaines de
   // subs. Si on dépasse, ajouter une boucle de pagination ici.
   const found = await payload.find({
     collection: 'subscribers',

@@ -139,14 +139,14 @@ export default function BibliographyListViewClient(): React.ReactElement {
       topbarActions={
         <Link
           href="/cms/admin/collections/bibliography/create"
-          className="carnet-btn carnet-btn--accent"
+          className="tituba-btn tituba-btn--accent"
         >
           Nouvelle référence
         </Link>
       }
     >
-      <div className="carnet-listview__toolbar">
-        <div className="carnet-listview__search">
+      <div className="tituba-listview__toolbar">
+        <div className="tituba-listview__search">
           <span className="ic" aria-hidden="true">
             ⌕
           </span>
@@ -157,7 +157,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
             placeholder={`Rechercher par auteur dans ${totalDocs} référence${totalDocs > 1 ? 's' : ''}…`}
           />
         </div>
-        <label className="carnet-listview__filter">
+        <label className="tituba-listview__filter">
           <span className="lbl">Type :</span>
           <select value={type} onChange={(e) => setType(e.target.value as FilterType)}>
             <option value="all">tous</option>
@@ -169,7 +169,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
             <option value="other">Autre</option>
           </select>
         </label>
-        <label className="carnet-listview__filter">
+        <label className="tituba-listview__filter">
           <span className="lbl">Provenance :</span>
           <select value={source} onChange={(e) => setSource(e.target.value as FilterSource)}>
             <option value="all">toutes</option>
@@ -179,10 +179,10 @@ export default function BibliographyListViewClient(): React.ReactElement {
         </label>
       </div>
 
-      {error && <div className="carnet-listview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-listview__error">Erreur : {error}</div>}
 
-      <div className="carnet-listview__table" role="table">
-        <div className="carnet-listview__row carnet-listview__row--head" role="row">
+      <div className="tituba-listview__table" role="table">
+        <div className="tituba-listview__row tituba-listview__row--head" role="row">
           <div role="columnheader">Prénom</div>
           <div role="columnheader">Nom</div>
           <div role="columnheader">Année</div>
@@ -193,9 +193,9 @@ export default function BibliographyListViewClient(): React.ReactElement {
         </div>
 
         {loading && entries.length === 0 ? (
-          <div className="carnet-listview__loading">Chargement…</div>
+          <div className="tituba-listview__loading">Chargement…</div>
         ) : entries.length === 0 ? (
-          <div className="carnet-listview__empty">Aucune référence.</div>
+          <div className="tituba-listview__empty">Aucune référence.</div>
         ) : (
           entries.map((b) => {
             const first = b.authors?.[0];
@@ -204,7 +204,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
               <Link
                 key={b.id}
                 href={`/cms/admin/collections/bibliography/${b.id}`}
-                className="carnet-listview__row"
+                className="tituba-listview__row"
                 role="row"
               >
                 <div role="cell" className="firstname">
@@ -247,14 +247,14 @@ export default function BibliographyListViewClient(): React.ReactElement {
         )}
       </div>
 
-      <div className="carnet-listview__pagination">
-        <span className="carnet-listview__pagination-info">
+      <div className="tituba-listview__pagination">
+        <span className="tituba-listview__pagination-info">
           {totalDocs === 0
             ? 'Aucun résultat'
             : `Affichage ${startIdx}–${endIdx} sur ${totalDocs} · ${PER_PAGE} par page`}
         </span>
         {totalPages > 1 && (
-          <div className="carnet-listview__pagination-pages">
+          <div className="tituba-listview__pagination-pages">
             <button
               type="button"
               disabled={page <= 1}
@@ -287,17 +287,17 @@ export default function BibliographyListViewClient(): React.ReactElement {
 
       {deleteTarget && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget) closeDelete();
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer cette référence ?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={closeDelete}
                 aria-label="Fermer"
               >
@@ -306,10 +306,10 @@ export default function BibliographyListViewClient(): React.ReactElement {
             </header>
 
             {deleteError && (
-              <div className="carnet-modal__error">Erreur : {deleteError}</div>
+              <div className="tituba-modal__error">Erreur : {deleteError}</div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
                 «&nbsp;{deleteTarget.title}&nbsp;» sera supprimée du Carnet.
                 {deleteTarget.source === 'zotero' && (
@@ -321,10 +321,10 @@ export default function BibliographyListViewClient(): React.ReactElement {
               </p>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={closeDelete}
                 disabled={deleteSubmitting}
               >
@@ -332,7 +332,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void confirmDelete()}
                 disabled={deleteSubmitting}
               >

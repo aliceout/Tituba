@@ -93,14 +93,14 @@ export default function MediaListViewClient(): React.ReactElement {
       topbarActions={
         <Link
           href="/cms/admin/collections/media/create"
-          className="carnet-btn carnet-btn--accent"
+          className="tituba-btn tituba-btn--accent"
         >
           Nouveau média
         </Link>
       }
     >
-      <div className="carnet-listview__toolbar">
-        <div className="carnet-listview__search">
+      <div className="tituba-listview__toolbar">
+        <div className="tituba-listview__search">
           <span className="ic" aria-hidden="true">
             ⌕
           </span>
@@ -113,10 +113,10 @@ export default function MediaListViewClient(): React.ReactElement {
         </div>
       </div>
 
-      {error && <div className="carnet-listview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-listview__error">Erreur : {error}</div>}
 
-      <div className="carnet-listview__table" role="table">
-        <div className="carnet-listview__row carnet-listview__row--head" role="row">
+      <div className="tituba-listview__table" role="table">
+        <div className="tituba-listview__row tituba-listview__row--head" role="row">
           <div role="columnheader">Aperçu</div>
           <div role="columnheader">Fichier</div>
           <div role="columnheader">Type</div>
@@ -125,9 +125,9 @@ export default function MediaListViewClient(): React.ReactElement {
         </div>
 
         {loading && media.length === 0 ? (
-          <div className="carnet-listview__loading">Chargement…</div>
+          <div className="tituba-listview__loading">Chargement…</div>
         ) : media.length === 0 ? (
-          <div className="carnet-listview__empty">Aucun média.</div>
+          <div className="tituba-listview__empty">Aucun média.</div>
         ) : (
           media.map((m) => {
             const thumbUrl =
@@ -138,7 +138,7 @@ export default function MediaListViewClient(): React.ReactElement {
               <Link
                 key={m.id}
                 href={`/cms/admin/collections/media/${m.id}`}
-                className="carnet-listview__row"
+                className="tituba-listview__row"
                 role="row"
               >
                 <div role="cell" className="thumb">
@@ -168,14 +168,14 @@ export default function MediaListViewClient(): React.ReactElement {
         )}
       </div>
 
-      <div className="carnet-listview__pagination">
-        <span className="carnet-listview__pagination-info">
+      <div className="tituba-listview__pagination">
+        <span className="tituba-listview__pagination-info">
           {totalDocs === 0
             ? 'Aucun résultat'
             : `Affichage ${startIdx}–${endIdx} sur ${totalDocs} · ${PER_PAGE} par page`}
         </span>
         {totalPages > 1 && (
-          <div className="carnet-listview__pagination-pages">
+          <div className="tituba-listview__pagination-pages">
             <button
               type="button"
               disabled={page <= 1}

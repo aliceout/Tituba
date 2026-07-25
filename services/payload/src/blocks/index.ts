@@ -1,4 +1,4 @@
-// Index des blocks Carnet — exporte deux ensembles selon le contexte
+// Index des blocks Tituba — exporte deux ensembles selon le contexte
 // d'usage :
 //
 //   pageBlocks   — blocs empilables dans Pages.sections (champ `blocks`

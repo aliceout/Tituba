@@ -100,14 +100,14 @@ export default function ThemeListViewClient(): React.ReactElement {
       topbarActions={
         <Link
           href="/cms/admin/collections/themes/create"
-          className="carnet-btn carnet-btn--accent"
+          className="tituba-btn tituba-btn--accent"
         >
           Nouveau thème
         </Link>
       }
     >
-      <div className="carnet-listview__toolbar">
-        <div className="carnet-listview__search">
+      <div className="tituba-listview__toolbar">
+        <div className="tituba-listview__search">
           <span className="ic" aria-hidden="true">
             ⌕
           </span>
@@ -120,25 +120,25 @@ export default function ThemeListViewClient(): React.ReactElement {
         </div>
       </div>
 
-      {error && <div className="carnet-listview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-listview__error">Erreur : {error}</div>}
 
-      <div className="carnet-listview__table" role="table">
-        <div className="carnet-listview__row carnet-listview__row--head" role="row">
+      <div className="tituba-listview__table" role="table">
+        <div className="tituba-listview__row tituba-listview__row--head" role="row">
           <div role="columnheader">Nom</div>
           <div role="columnheader">Description</div>
           <div role="columnheader">Billets</div>
         </div>
 
         {loading && themes.length === 0 ? (
-          <div className="carnet-listview__loading">Chargement…</div>
+          <div className="tituba-listview__loading">Chargement…</div>
         ) : themes.length === 0 ? (
-          <div className="carnet-listview__empty">Aucun thème.</div>
+          <div className="tituba-listview__empty">Aucun thème.</div>
         ) : (
           themes.map((t) => (
             <Link
               key={t.id}
               href={`/cms/admin/collections/themes/${t.id}`}
-              className="carnet-listview__row"
+              className="tituba-listview__row"
               role="row"
             >
               <div role="cell" className="title">
@@ -155,14 +155,14 @@ export default function ThemeListViewClient(): React.ReactElement {
         )}
       </div>
 
-      <div className="carnet-listview__pagination">
-        <span className="carnet-listview__pagination-info">
+      <div className="tituba-listview__pagination">
+        <span className="tituba-listview__pagination-info">
           {totalDocs === 0
             ? 'Aucun résultat'
             : `Affichage ${startIdx}–${endIdx} sur ${totalDocs} · ${PER_PAGE} par page`}
         </span>
         {totalPages > 1 && (
-          <div className="carnet-listview__pagination-pages">
+          <div className="tituba-listview__pagination-pages">
             <button
               type="button"
               disabled={page <= 1}

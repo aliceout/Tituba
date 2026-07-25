@@ -6,7 +6,7 @@
 //
 // Fetch /cms/api/users/me au mount pour afficher le footer user
 // (displayName + rôle muted) cf maquette
-// Design/design_handoff_admin/carnet-admin.html → footer sidebar.
+// Design/design_handoff_admin/tituba-admin.html → footer sidebar.
 //
 // C'est aussi ici qu'on pose data-theme et data-accent sur <html> au
 // mount, pour piloter le theming admin (cf custom.scss). data-theme
@@ -93,8 +93,8 @@ export default function NavClient({ activePath: serverActive, counts, version, i
     function onToggle() {
       setNavOpen((v) => !v);
     }
-    window.addEventListener('carnet-nav-toggle', onToggle);
-    return () => window.removeEventListener('carnet-nav-toggle', onToggle);
+    window.addEventListener('tituba-nav-toggle', onToggle);
+    return () => window.removeEventListener('tituba-nav-toggle', onToggle);
   }, []);
 
   // Ferme la nav automatiquement à chaque navigation (sinon elle reste
@@ -250,30 +250,30 @@ export default function NavClient({ activePath: serverActive, counts, version, i
           plutôt que flotter par-dessus. */}
       {navOpen && (
         <div
-          className="carnet-nav-backdrop"
+          className="tituba-nav-backdrop"
           aria-hidden="true"
           onClick={() => setNavOpen(false)}
         />
       )}
 
       <nav
-        className={navOpen ? 'carnet-nav is-open' : 'carnet-nav'}
+        className={navOpen ? 'tituba-nav is-open' : 'tituba-nav'}
         aria-label="Navigation principale"
       >
       {/* Auto-sync Zotero invisible : se déclenche au login et toutes
           les 30 min de navigation. Cf ZoteroAutoSync.client.tsx. */}
       <ZoteroAutoSync />
 
-      <Link href={ADMIN} className="carnet-nav__brand">
+      <Link href={ADMIN} className="tituba-nav__brand">
         Carnet<span className="dot">.</span>
       </Link>
       {/* Top row : « Voir le site » à gauche + actions icônes à
           droite (theme toggle + logout). Compacte tout en haut, libère
           le footer pour ne montrer que user/rôle. */}
-      <div className="carnet-nav__top-row">
+      <div className="tituba-nav__top-row">
         <a
           href={siteUrl}
-          className="carnet-nav__view-site"
+          className="tituba-nav__view-site"
           target="_blank"
           rel="noreferrer"
           suppressHydrationWarning
@@ -281,10 +281,10 @@ export default function NavClient({ activePath: serverActive, counts, version, i
           Voir le site
           <span aria-hidden="true" className="arrow">↗</span>
         </a>
-        <div className="carnet-nav__top-actions">
+        <div className="tituba-nav__top-actions">
           <button
             type="button"
-            className="carnet-nav__theme-toggle"
+            className="tituba-nav__theme-toggle"
             aria-label={
               theme === 'dark'
                 ? 'Passer en thème clair'
@@ -313,7 +313,7 @@ export default function NavClient({ activePath: serverActive, counts, version, i
           </button>
           <a
             href={`${ADMIN}/logout`}
-            className="carnet-nav__logout-icon"
+            className="tituba-nav__logout-icon"
             aria-label="Se déconnecter"
             title="Se déconnecter"
           >
@@ -327,42 +327,42 @@ export default function NavClient({ activePath: serverActive, counts, version, i
       </div>
 
       {sections.map((section) => (
-        <div key={section.label} className="carnet-nav__section">
-          <div className="carnet-nav__section-label">{section.label}</div>
+        <div key={section.label} className="tituba-nav__section">
+          <div className="tituba-nav__section-label">{section.label}</div>
           {section.items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={
                 isActive(item.href)
-                  ? 'carnet-nav__link carnet-nav__link--active'
-                  : 'carnet-nav__link'
+                  ? 'tituba-nav__link tituba-nav__link--active'
+                  : 'tituba-nav__link'
               }
             >
-              <span className="carnet-nav__link-label">{item.label}</span>
+              <span className="tituba-nav__link-label">{item.label}</span>
               {typeof item.count === 'number' && (
-                <span className="carnet-nav__link-count">{item.count}</span>
+                <span className="tituba-nav__link-count">{item.count}</span>
               )}
             </Link>
           ))}
         </div>
       ))}
 
-      <div className="carnet-nav__spacer" />
+      <div className="tituba-nav__spacer" />
 
       {me && (
-        <div className="carnet-nav__footer">
-          <div className="carnet-nav__user">
-            <div className="carnet-nav__user-name">{userName}</div>
+        <div className="tituba-nav__footer">
+          <div className="tituba-nav__user">
+            <div className="tituba-nav__user-name">{userName}</div>
             {userRole && (
-              <div className="carnet-nav__user-role">
-                <span className="carnet-nav__user-role-prefix">Rôle :</span> {userRole}
+              <div className="tituba-nav__user-role">
+                <span className="tituba-nav__user-role-prefix">Rôle :</span> {userRole}
               </div>
             )}
           </div>
           {version && (
             <div
-              className="carnet-nav__version"
+              className="tituba-nav__version"
               title={`Version : ${version.tag} · commit ${version.commit}`}
             >
               {version.tag} · {version.commit}

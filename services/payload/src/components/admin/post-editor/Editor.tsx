@@ -80,7 +80,7 @@ export type { BibEntry } from './context';
 
 // ─── Theme ────────────────────────────────────────────────────────
 // Classes CSS appliquées par Lexical aux nodes natifs. Toutes scoped
-// sous .ed-body — cf custom.scss (.carnet-postedit .ed-body …).
+// sous .ed-body — cf custom.scss (.tituba-postedit .ed-body …).
 
 const carnetTheme = {
   paragraph: 'ed-p',
@@ -551,7 +551,7 @@ function SlashMenuPlugin({ biblioOptions }: { biblioOptions: BibEntry[] }) {
   });
 
   // Rendu via portal dans <body> pour échapper aux parents positionnés
-  // (.ed-body / .ed-card / .carnet-postedit__center qui ont des
+  // (.ed-body / .ed-card / .tituba-postedit__center qui ont des
   // overflow et des transforms qui clipperaient le menu). Avec
   // position: absolute + coords document, le menu reste accroché au
   // point où on a tapé `/` et suit le scroll comme le texte.

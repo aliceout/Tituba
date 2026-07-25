@@ -1,4 +1,4 @@
-# Instructions de collaboration — Carnet
+# Instructions de collaboration — Tituba
 
 ## Règle absolue : pas de push sans demande explicite
 

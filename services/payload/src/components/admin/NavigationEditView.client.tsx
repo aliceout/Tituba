@@ -355,18 +355,18 @@ export default function NavigationEditViewClient(): React.ReactElement {
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={save}
             disabled={!dirty || saving || loading}
           >
@@ -375,21 +375,21 @@ export default function NavigationEditViewClient(): React.ReactElement {
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Header</h2>
-            <p className="carnet-editview__section-help">
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Header</h2>
+            <p className="tituba-editview__section-help">
               Onglets du header, dans l&apos;ordre d&apos;affichage. Le lien
               « Billets » reste toujours en première position et n&apos;apparaît
               pas ici. Un onglet pointe soit vers une page d&apos;index
@@ -398,17 +398,17 @@ export default function NavigationEditViewClient(): React.ReactElement {
               ne peut être référencée qu&apos;une fois.
             </p>
 
-            <div className="carnet-editview__rows">
+            <div className="tituba-editview__rows">
               {headerLen === 0 && (
-                <div className="carnet-editview__empty">
+                <div className="tituba-editview__empty">
                   Aucun onglet — le header n&apos;affichera que « Billets ».
                 </div>
               )}
               {(data.navHeader ?? []).map((item, idx) => {
                 const currentKey = encodeKey(item);
                 return (
-                  <div key={idx} className="carnet-editview__rowitem">
-                    <label className="carnet-editview__field carnet-editview__field--inline">
+                  <div key={idx} className="tituba-editview__rowitem">
+                    <label className="tituba-editview__field tituba-editview__field--inline">
                       <span className="lbl">Page</span>
                       <select
                         value={currentKey}
@@ -441,7 +441,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                         </optgroup>
                       </select>
                     </label>
-                    <label className="carnet-editview__field carnet-editview__field--inline">
+                    <label className="tituba-editview__field tituba-editview__field--inline">
                       <span className="lbl">Libellé (optionnel)</span>
                       <input
                         type="text"
@@ -450,10 +450,10 @@ export default function NavigationEditViewClient(): React.ReactElement {
                         placeholder="Sinon : libellé natif de la page"
                       />
                     </label>
-                    <div className="carnet-editview__rowitem-actions">
+                    <div className="tituba-editview__rowitem-actions">
                       <button
                         type="button"
-                        className="carnet-btn carnet-btn--ghost"
+                        className="tituba-btn tituba-btn--ghost"
                         onClick={() => moveItem(idx, -1)}
                         disabled={idx === 0}
                         aria-label="Monter"
@@ -462,7 +462,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                       </button>
                       <button
                         type="button"
-                        className="carnet-btn carnet-btn--ghost"
+                        className="tituba-btn tituba-btn--ghost"
                         onClick={() => moveItem(idx, 1)}
                         disabled={idx === headerLen - 1}
                         aria-label="Descendre"
@@ -471,7 +471,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                       </button>
                       <button
                         type="button"
-                        className="carnet-btn carnet-btn--ghost"
+                        className="tituba-btn tituba-btn--ghost"
                         onClick={() => removeItem(idx)}
                         aria-label="Supprimer"
                       >
@@ -483,27 +483,27 @@ export default function NavigationEditViewClient(): React.ReactElement {
               })}
             </div>
 
-            <div className="carnet-editview__rows-actions">
-              <button type="button" className="carnet-btn carnet-btn--ghost" onClick={addItem}>
+            <div className="tituba-editview__rows-actions">
+              <button type="button" className="tituba-btn tituba-btn--ghost" onClick={addItem}>
                 + Ajouter un onglet
               </button>
             </div>
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Footer</h2>
-            <p className="carnet-editview__section-help">
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Footer</h2>
+            <p className="tituba-editview__section-help">
               Liens affichés dans la colonne « Naviguer » du footer du site.
               L&apos;ordre ici détermine l&apos;ordre d&apos;affichage.
             </p>
 
-            <div className="carnet-editview__rows">
+            <div className="tituba-editview__rows">
               {footerLen === 0 && (
-                <div className="carnet-editview__empty">Aucun lien.</div>
+                <div className="tituba-editview__empty">Aucun lien.</div>
               )}
               {(data.navFooter ?? []).map((row, idx) => (
-                <div key={idx} className="carnet-editview__rowitem">
-                  <label className="carnet-editview__field carnet-editview__field--inline">
+                <div key={idx} className="tituba-editview__rowitem">
+                  <label className="tituba-editview__field tituba-editview__field--inline">
                     <span className="lbl">Label</span>
                     <input
                       type="text"
@@ -511,7 +511,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                       onChange={(e) => updateFooter(idx, { label: e.target.value })}
                     />
                   </label>
-                  <label className="carnet-editview__field carnet-editview__field--inline">
+                  <label className="tituba-editview__field tituba-editview__field--inline">
                     <span className="lbl">Href</span>
                     <input
                       type="text"
@@ -519,7 +519,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                       onChange={(e) => updateFooter(idx, { href: e.target.value })}
                     />
                   </label>
-                  <label className="carnet-editview__field carnet-editview__field--inline carnet-editview__field--check">
+                  <label className="tituba-editview__field tituba-editview__field--inline tituba-editview__field--check">
                     <input
                       type="checkbox"
                       checked={Boolean(row.external)}
@@ -527,10 +527,10 @@ export default function NavigationEditViewClient(): React.ReactElement {
                     />
                     <span className="lbl">Externe</span>
                   </label>
-                  <div className="carnet-editview__rowitem-actions">
+                  <div className="tituba-editview__rowitem-actions">
                     <button
                       type="button"
-                      className="carnet-btn carnet-btn--ghost"
+                      className="tituba-btn tituba-btn--ghost"
                       onClick={() => moveFooter(idx, -1)}
                       disabled={idx === 0}
                       aria-label="Monter"
@@ -539,7 +539,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                     </button>
                     <button
                       type="button"
-                      className="carnet-btn carnet-btn--ghost"
+                      className="tituba-btn tituba-btn--ghost"
                       onClick={() => moveFooter(idx, 1)}
                       disabled={idx === footerLen - 1}
                       aria-label="Descendre"
@@ -548,7 +548,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                     </button>
                     <button
                       type="button"
-                      className="carnet-btn carnet-btn--ghost"
+                      className="tituba-btn tituba-btn--ghost"
                       onClick={() => removeFooter(idx)}
                       aria-label="Supprimer"
                     >
@@ -559,10 +559,10 @@ export default function NavigationEditViewClient(): React.ReactElement {
               ))}
             </div>
 
-            <div className="carnet-editview__rows-actions">
+            <div className="tituba-editview__rows-actions">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={addFooter}
               >
                 + Ajouter un lien

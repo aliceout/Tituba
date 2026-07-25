@@ -6,7 +6,7 @@
 // le user est authentifié donc le navigateur peut taper /cms/api/posts
 // avec ses cookies de session.
 //
-// Réf : Design/design_handoff_admin/carnet-admin.html → ScreenList.
+// Réf : Design/design_handoff_admin/tituba-admin.html → ScreenList.
 
 import React from 'react';
 

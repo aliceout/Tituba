@@ -3,7 +3,7 @@ import type { GlobalConfig } from 'payload';
 import { isAdminOrRoot } from '../access/roles';
 
 /**
- * Options du carnet — branding visuel + réglages de lecture.
+ * Options de Tituba — branding visuel + réglages de lecture.
  *
  * L'identité (siteName, authorName, baseline, copyright) vit dans le
  * global `Identity`, les profils sociaux dans `Social`, la nav dans
@@ -71,7 +71,7 @@ export const Site: GlobalConfig = {
           ],
           admin: {
             description:
-              'Teinte de fond du Carnet — appliquée au body et aux zones neutres (header, footer, fond des billets, fond admin).',
+              'Teinte de fond de Tituba — appliquée au body et aux zones neutres (header, footer, fond des billets, fond admin).',
           },
         },
       ],
@@ -93,7 +93,7 @@ export const Site: GlobalConfig = {
           ],
           admin: {
             description:
-              'Le mode classique empile les notes en bas du billet (style académique). Le mode en marge les place dans une colonne à droite, alignée sur le paragraphe qui les appelle (style « Tufte »). S\'applique uniformément à tous les billets du Carnet. Cf issue #6.',
+              'Le mode classique empile les notes en bas du billet (style académique). Le mode en marge les place dans une colonne à droite, alignée sur le paragraphe qui les appelle (style « Tufte »). S\'applique uniformément à tous les publications de Tituba. Cf issue #6.',
           },
         },
       ],

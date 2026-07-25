@@ -8,7 +8,7 @@ import type { Block } from 'payload';
  * en base — pour permettre les ré-arrangements du corps sans casser
  * la numérotation.
  *
- * Ref design : design_handoff_carnet/Carnet B.html → .footnotes-classic.
+ * Ref design : design_handoff_tituba/Tituba B.html → .footnotes-classic.
  */
 export const Footnote: Block = {
   slug: 'footnote',

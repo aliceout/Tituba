@@ -182,18 +182,18 @@ export default function IndexPagesEditViewClient(): React.ReactElement {
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={save}
             disabled={!dirty || saving || loading}
           >
@@ -202,13 +202,13 @@ export default function IndexPagesEditViewClient(): React.ReactElement {
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
@@ -219,12 +219,12 @@ export default function IndexPagesEditViewClient(): React.ReactElement {
             const block = data[k] ?? {};
             const enabled = !meta.toggleable || block.enabled !== false;
             return (
-              <section key={k} className="carnet-editview__section">
-                <h2 className="carnet-editview__section-title">{meta.title}</h2>
-                <p className="carnet-editview__section-help">{meta.help}</p>
+              <section key={k} className="tituba-editview__section">
+                <h2 className="tituba-editview__section-title">{meta.title}</h2>
+                <p className="tituba-editview__section-help">{meta.help}</p>
 
                 {meta.toggleable && (
-                  <div className="carnet-editview__field carnet-editview__field--toggle">
+                  <div className="tituba-editview__field tituba-editview__field--toggle">
                     <span className="lbl">Page {enabled ? 'activée' : 'désactivée'}</span>
                     <button
                       type="button"
@@ -233,12 +233,12 @@ export default function IndexPagesEditViewClient(): React.ReactElement {
                       aria-label={`Activer ou désactiver ${meta.title}`}
                       className={
                         enabled
-                          ? 'carnet-toggle carnet-toggle--on'
-                          : 'carnet-toggle'
+                          ? 'tituba-toggle tituba-toggle--on'
+                          : 'tituba-toggle'
                       }
                       onClick={() => updateField(k, 'enabled', !enabled)}
                     >
-                      <span className="carnet-toggle__thumb" aria-hidden="true" />
+                      <span className="tituba-toggle__thumb" aria-hidden="true" />
                     </button>
                     <span className="hint">
                       {enabled ? `Accessible à ${meta.route}.` : meta.disabledHint}
@@ -246,7 +246,7 @@ export default function IndexPagesEditViewClient(): React.ReactElement {
                   </div>
                 )}
 
-                <label className="carnet-editview__field">
+                <label className="tituba-editview__field">
                   <span className="lbl">Titre du hero</span>
                   <textarea
                     rows={3}
@@ -256,7 +256,7 @@ export default function IndexPagesEditViewClient(): React.ReactElement {
                   />
                 </label>
 
-                <label className="carnet-editview__field">
+                <label className="tituba-editview__field">
                   <span className="lbl">Texte de présentation (lede)</span>
                   <textarea
                     rows={4}

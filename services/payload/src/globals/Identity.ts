@@ -3,7 +3,7 @@ import type { GlobalConfig } from 'payload';
 import { isAdminOrRoot } from '../access/roles';
 
 /**
- * Identité du carnet — source de vérité unique pour le wordmark + le
+ * Identité de Tituba — source de vérité unique pour le wordmark + le
  * nom de l'auteur·ice + les lignes affichées dans le footer (baseline
  * + copyright).
  *
@@ -40,7 +40,7 @@ export const Identity: GlobalConfig = {
       type: 'text',
       required: false,
       label: 'Nom du site (wordmark)',
-      defaultValue: 'Carnet',
+      defaultValue: 'Tituba',
       admin: {
         description:
           'Nom court qui apparaît dans le header (logo), le footer, le suffixe des onglets navigateur (« … — Nom »), les mails d\'invitation et le flux RSS. Court de préférence (1 à 2 mots).',
@@ -54,7 +54,7 @@ export const Identity: GlobalConfig = {
       defaultValue: '',
       admin: {
         description:
-          'Nom du laboratoire de recherche, de la personne, du collectif… selon l\'utilisation du carnet. Affiché en signature dans la baseline du footer et la description meta.',
+          'Nom du laboratoire de recherche, de la personne, du collectif… selon l\'utilisation du site. Affiché en signature dans la baseline du footer et la description meta.',
       },
     },
     {
@@ -62,7 +62,7 @@ export const Identity: GlobalConfig = {
       type: 'textarea',
       required: false,
       label: 'Baseline',
-      defaultValue: 'Carnet de recherche. Auto-hébergé.',
+      defaultValue: 'Collectif féministe intersectionnel. Auto-hébergé.',
       admin: { description: 'Affichée dans le footer (col 1).' },
     },
     {

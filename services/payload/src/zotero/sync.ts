@@ -81,7 +81,7 @@ async function loadCreds(
  * Cherche une ref Bibliography déjà importée pour ce user et cette
  * clé Zotero. Renvoie `null` si elle n'existe pas (à créer), ou
  * `{ id, zoteroVersion }` si elle existe (la version stockée sert à
- * skip les refs déjà à jour côté Carnet).
+ * skip les refs déjà à jour côté Tituba).
  */
 async function findExistingRef(
   payload: Payload,
@@ -107,10 +107,10 @@ async function findExistingRef(
  * Sync principal. Appelé par l'endpoint POST `/users/me/zotero-sync`.
  *
  * Note : on ne fait PAS de diff incrémental via `since=<lastSyncVersion>`
- * — ça raterait les refs supprimées localement au Carnet (Zotero ne
+ * — ça raterait les refs supprimées localement au Tituba (Zotero ne
  * sait pas qu'on les a viées, donc elles n'apparaissent pas dans son
  * diff). À la place, on scanne toute la biblio à chaque sync. L'upsert
- * gère les 3 cas naturellement : ref absente du Carnet → create ; ref
+ * gère les 3 cas naturellement : ref absente de Tituba → create ; ref
  * existante avec version Zotero plus récente → update ; ref à jour →
  * skip silencieux. Coût : un scan complet par sync, OK jusqu'à
  * quelques milliers de refs.
@@ -213,7 +213,7 @@ export async function syncZoteroForUser(opts: {
 
   // ─── Détection des suppressions Zotero ──────────────────────────
   // Les refs présentes en DB pour ce user mais absentes du scan ont été
-  // supprimées côté Zotero. On les efface du Carnet — sauf si elles
+  // supprimées côté Zotero. On les efface de Tituba — sauf si elles
   // sont encore citées dans un billet, auquel cas on les garde et on
   // signale à l'autrice de retirer la citation d'abord.
   const dbRefs = await payload.find({
@@ -273,7 +273,7 @@ export async function syncZoteroForUser(opts: {
       continue;
     }
 
-    // Pas citée → suppression côté Carnet.
+    // Pas citée → suppression côté Tituba.
     try {
       await payload.delete({
         collection: 'bibliography',

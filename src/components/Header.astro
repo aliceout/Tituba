@@ -16,7 +16,7 @@
  * set par défaut (Archives, Thèmes, Abonnement) — équivalent au
  * comportement historique avant que le header soit configurable.
  *
- * Réf : design_handoff_carnet/Carnet B.html → header.site.
+ * Réf : design_handoff_tituba/Tituba B.html → header.site.
  */
 import { fetchIdentity, fetchIndexPages, fetchNavigation } from '../lib/payload';
 
@@ -64,7 +64,7 @@ type IndexPagesGlobal = {
   subscribe?: { enabled?: boolean };
 };
 
-let siteName = 'Carnet';
+let siteName = 'Tituba';
 let items: NavItem[] = DEFAULT_NAV_ITEMS;
 let indexEnabled: Record<IndexTarget, boolean> = {
   archives: true,
@@ -175,7 +175,7 @@ const homeActive = pathname === '/' || pathname.startsWith('/billets');
       <a
         href="/recherche/"
         class:list={['nav-icon', 'search-link', { active: searchActive }]}
-        aria-label="Rechercher dans le carnet"
+        aria-label="Rechercher sur Tituba"
         title="Rechercher"
         aria-current={searchActive ? 'page' : undefined}
       >
@@ -360,7 +360,7 @@ const homeActive = pathname === '/' || pathname.startsWith('/billets');
       flex-wrap: wrap;
     }
     /* Sur mobile, le toggle sort du flux nav et se colle en haut à droite
-       du header, sur la même ligne visuelle que "Carnet.". */
+       du header, sur la même ligne visuelle que "Tituba.". */
     header.site nav .theme-toggle {
       position: absolute;
       right: 24px;

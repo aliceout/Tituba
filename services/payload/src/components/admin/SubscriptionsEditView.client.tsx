@@ -126,18 +126,18 @@ export default function SubscriptionsEditViewClient(): React.ReactElement {
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={save}
             disabled={!dirty || saving || loading}
           >
@@ -146,27 +146,27 @@ export default function SubscriptionsEditViewClient(): React.ReactElement {
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Flux RSS</h2>
-            <p className="carnet-editview__section-help">
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Flux RSS</h2>
+            <p className="tituba-editview__section-help">
               Si désactivé : <code>/rss.xml</code> renvoie 404, le lien
               « Flux RSS » du footer disparaît, et la section RSS de la
               page <code>/abonnement/</code> disparaît.
             </p>
 
-            <div className="carnet-editview__field carnet-editview__field--toggle">
+            <div className="tituba-editview__field tituba-editview__field--toggle">
               <span className="lbl">
                 Flux RSS {data.rssEnabled !== false ? 'activé' : 'désactivé'}
               </span>
@@ -177,12 +177,12 @@ export default function SubscriptionsEditViewClient(): React.ReactElement {
                 aria-label="Activer ou désactiver le flux RSS"
                 className={
                   data.rssEnabled !== false
-                    ? 'carnet-toggle carnet-toggle--on'
-                    : 'carnet-toggle'
+                    ? 'tituba-toggle tituba-toggle--on'
+                    : 'tituba-toggle'
                 }
                 onClick={toggleRss}
               >
-                <span className="carnet-toggle__thumb" aria-hidden="true" />
+                <span className="tituba-toggle__thumb" aria-hidden="true" />
               </button>
               <span className="hint">
                 {data.rssEnabled !== false
@@ -192,9 +192,9 @@ export default function SubscriptionsEditViewClient(): React.ReactElement {
             </div>
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Alertes mail</h2>
-            <p className="carnet-editview__section-help">
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Alertes mail</h2>
+            <p className="tituba-editview__section-help">
               Si désactivé : le formulaire d&apos;inscription disparaît de
               <code>/abonnement/</code> et aucun mail n&apos;est envoyé
               à la publication des nouveaux billets.
@@ -204,7 +204,7 @@ export default function SubscriptionsEditViewClient(): React.ReactElement {
               se réinscrire.
             </p>
 
-            <div className="carnet-editview__field carnet-editview__field--toggle">
+            <div className="tituba-editview__field tituba-editview__field--toggle">
               <span className="lbl">
                 Alertes mail {data.emailEnabled !== false ? 'activées' : 'désactivées'}
               </span>
@@ -215,12 +215,12 @@ export default function SubscriptionsEditViewClient(): React.ReactElement {
                 aria-label="Activer ou désactiver les alertes mail"
                 className={
                   data.emailEnabled !== false
-                    ? 'carnet-toggle carnet-toggle--on'
-                    : 'carnet-toggle'
+                    ? 'tituba-toggle tituba-toggle--on'
+                    : 'tituba-toggle'
                 }
                 onClick={toggleEmail}
               >
-                <span className="carnet-toggle__thumb" aria-hidden="true" />
+                <span className="tituba-toggle__thumb" aria-hidden="true" />
               </button>
               <span className="hint">
                 {data.emailEnabled !== false
@@ -230,15 +230,15 @@ export default function SubscriptionsEditViewClient(): React.ReactElement {
             </div>
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Réseaux sociaux</h2>
-            <p className="carnet-editview__section-help">
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Réseaux sociaux</h2>
+            <p className="tituba-editview__section-help">
               URLs complètes des profils — laisser vide pour masquer.
               Affichés dans le footer (col 3) et sur la page /abonnement/.
             </p>
 
             {SOCIAL_KEYS.map((k) => (
-              <label key={k} className="carnet-editview__field">
+              <label key={k} className="tituba-editview__field">
                 <span className="lbl">{LABELS[k]}</span>
                 <input
                   type="url"

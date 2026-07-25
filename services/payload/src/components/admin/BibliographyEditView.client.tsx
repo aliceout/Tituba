@@ -5,7 +5,7 @@
 //
 //   CarnetTopbar : crumbs Carnet / Bibliographie / [slug] + Supprimer
 //                  + Sauvegarder
-//   .carnet-editview__hero : h1 « Référence bibliographique » +
+//   .tituba-editview__hero : h1 « Référence bibliographique » +
 //                            « clé : <slug> » mono
 //   section Identification : Type / Auteur·ice(s) / Année · Titre
 //   section Publication    : Éditeur ou Revue · Lieu · Volume ·
@@ -322,19 +322,19 @@ export default function BibliographyEditViewClient({
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           {data.id != null && (
             <button
               type="button"
-              className="carnet-btn carnet-btn--ghost"
+              className="tituba-btn tituba-btn--ghost"
               onClick={() => {
                 setDeleteOpen(true);
                 setDeleteError(null);
@@ -348,7 +348,7 @@ export default function BibliographyEditViewClient({
           {!isZoteroRef && (
             <button
               type="button"
-              className="carnet-btn carnet-btn--accent"
+              className="tituba-btn tituba-btn--accent"
               onClick={() => void save()}
               disabled={!dirty || saving || loading}
               title="Sauvegarder"
@@ -360,29 +360,29 @@ export default function BibliographyEditViewClient({
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <div className="carnet-editview__hero">
-            <h1 className="carnet-h1">Référence bibliographique</h1>
+          <div className="tituba-editview__hero">
+            <h1 className="tituba-h1">Référence bibliographique</h1>
             {data.slug && (
-              <p className="carnet-editview__hero-key">
+              <p className="tituba-editview__hero-key">
                 clé : <span className="mono">{data.slug}</span>
               </p>
             )}
           </div>
 
           {isZoteroRef && (
-            <div className="carnet-zotero-banner">
+            <div className="tituba-zotero-banner">
               Cette référence est importée depuis Zotero. Pour la modifier,
               éditez-la dans Zotero puis lancez un nouveau sync depuis votre
               page Compte. La suppression reste disponible si vous voulez la
@@ -390,12 +390,12 @@ export default function BibliographyEditViewClient({
             </div>
           )}
 
-          <fieldset className="carnet-editview__fieldset" disabled={isZoteroRef}>
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Identification</h2>
+          <fieldset className="tituba-editview__fieldset" disabled={isZoteroRef}>
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Identification</h2>
 
-            <div className="carnet-editview__row carnet-editview__row--2">
-              <label className="carnet-editview__field">
+            <div className="tituba-editview__row tituba-editview__row--2">
+              <label className="tituba-editview__field">
                 <span className="lbl">Type</span>
                 <select
                   value={data.type}
@@ -408,7 +408,7 @@ export default function BibliographyEditViewClient({
                   ))}
                 </select>
               </label>
-              <label className="carnet-editview__field">
+              <label className="tituba-editview__field">
                 <span className="lbl">Année</span>
                 <input
                   type="number"
@@ -422,8 +422,8 @@ export default function BibliographyEditViewClient({
               </label>
             </div>
 
-            <div className="carnet-editview__authors">
-              <div className="carnet-editview__authors-head">
+            <div className="tituba-editview__authors">
+              <div className="tituba-editview__authors-head">
                 <span className="lbl">Auteur·ice·s</span>
                 <span className="hint">
                   La 1<sup>ère</sup> ligne = auteur·ice principal·e (utilisé pour la
@@ -432,7 +432,7 @@ export default function BibliographyEditViewClient({
                 </span>
               </div>
               {data.authors.map((a, idx) => (
-                <div key={idx} className="carnet-editview__authors-row">
+                <div key={idx} className="tituba-editview__authors-row">
                   <input
                     type="text"
                     className="lastname"
@@ -461,7 +461,7 @@ export default function BibliographyEditViewClient({
                   <div className="actions">
                     <button
                       type="button"
-                      className="carnet-editview__authors-act"
+                      className="tituba-editview__authors-act"
                       onClick={() => moveAuthor(idx, -1)}
                       disabled={idx === 0}
                       aria-label="Monter"
@@ -471,7 +471,7 @@ export default function BibliographyEditViewClient({
                     </button>
                     <button
                       type="button"
-                      className="carnet-editview__authors-act"
+                      className="tituba-editview__authors-act"
                       onClick={() => moveAuthor(idx, 1)}
                       disabled={idx === data.authors.length - 1}
                       aria-label="Descendre"
@@ -481,7 +481,7 @@ export default function BibliographyEditViewClient({
                     </button>
                     <button
                       type="button"
-                      className="carnet-editview__authors-act carnet-editview__authors-act--del"
+                      className="tituba-editview__authors-act tituba-editview__authors-act--del"
                       onClick={() => removeAuthor(idx)}
                       disabled={data.authors.length <= 1 && !a.lastName && !a.firstName}
                       aria-label="Retirer cette personne"
@@ -494,14 +494,14 @@ export default function BibliographyEditViewClient({
               ))}
               <button
                 type="button"
-                className="carnet-editview__authors-add"
+                className="tituba-editview__authors-add"
                 onClick={addAuthor}
               >
                 + Ajouter une personne
               </button>
             </div>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Titre</span>
               <input
                 type="text"
@@ -510,7 +510,7 @@ export default function BibliographyEditViewClient({
               />
             </label>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Slug</span>
               <input
                 type="text"
@@ -524,11 +524,11 @@ export default function BibliographyEditViewClient({
             </label>
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Publication</h2>
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Publication</h2>
 
-            <div className="carnet-editview__row carnet-editview__row--2">
-              <label className="carnet-editview__field">
+            <div className="tituba-editview__row tituba-editview__row--2">
+              <label className="tituba-editview__field">
                 <span className="lbl">Éditeur / Revue</span>
                 <input
                   type="text"
@@ -536,7 +536,7 @@ export default function BibliographyEditViewClient({
                   onChange={(e) => patch('publisher', e.target.value)}
                 />
               </label>
-              <label className="carnet-editview__field">
+              <label className="tituba-editview__field">
                 <span className="lbl">Lieu</span>
                 <input
                   type="text"
@@ -546,8 +546,8 @@ export default function BibliographyEditViewClient({
               </label>
             </div>
 
-            <div className="carnet-editview__row carnet-editview__row--3">
-              <label className="carnet-editview__field">
+            <div className="tituba-editview__row tituba-editview__row--3">
+              <label className="tituba-editview__field">
                 <span className="lbl">Volume</span>
                 <input
                   type="text"
@@ -555,7 +555,7 @@ export default function BibliographyEditViewClient({
                   onChange={(e) => patch('volume', e.target.value)}
                 />
               </label>
-              <label className="carnet-editview__field">
+              <label className="tituba-editview__field">
                 <span className="lbl">{middleFieldLabel}</span>
                 <input
                   type="text"
@@ -563,7 +563,7 @@ export default function BibliographyEditViewClient({
                   onChange={(e) => patch('journal', e.target.value)}
                 />
               </label>
-              <label className="carnet-editview__field">
+              <label className="tituba-editview__field">
                 <span className="lbl">Pages</span>
                 <input
                   type="text"
@@ -574,8 +574,8 @@ export default function BibliographyEditViewClient({
               </label>
             </div>
 
-            <div className="carnet-editview__row carnet-editview__row--2">
-              <label className="carnet-editview__field">
+            <div className="tituba-editview__row tituba-editview__row--2">
+              <label className="tituba-editview__field">
                 <span className="lbl">URL</span>
                 <input
                   type="url"
@@ -583,7 +583,7 @@ export default function BibliographyEditViewClient({
                   onChange={(e) => patch('url', e.target.value)}
                 />
               </label>
-              <label className="carnet-editview__field">
+              <label className="tituba-editview__field">
                 <span className="lbl">DOI</span>
                 <input
                   type="text"
@@ -594,10 +594,10 @@ export default function BibliographyEditViewClient({
             </div>
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Notes</h2>
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Notes</h2>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Annotation personnelle</span>
               <textarea
                 rows={4}
@@ -611,14 +611,14 @@ export default function BibliographyEditViewClient({
             </label>
           </section>
 
-          <div className="carnet-biblio-preview">
-            <div className="carnet-biblio-preview__lbl">Aperçu (style biblio)</div>
-            <div className="carnet-biblio-preview__body">{formatChicago(data)}</div>
+          <div className="tituba-biblio-preview">
+            <div className="tituba-biblio-preview__lbl">Aperçu (style biblio)</div>
+            <div className="tituba-biblio-preview__body">{formatChicago(data)}</div>
           </div>
           </fieldset>
 
           {data.id != null && (
-            <div className="carnet-biblio-usedin">
+            <div className="tituba-biblio-usedin">
               {usedIn.length === 0 ? (
                 <span>Cette référence n’est utilisée dans aucun billet pour l’instant.</span>
               ) : (
@@ -641,7 +641,7 @@ export default function BibliographyEditViewClient({
 
       {deleteOpen && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteSubmitting) {
               setDeleteOpen(false);
@@ -649,12 +649,12 @@ export default function BibliographyEditViewClient({
             }
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer cette référence&nbsp;?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => {
                   if (deleteSubmitting) return;
                   setDeleteOpen(false);
@@ -667,10 +667,10 @@ export default function BibliographyEditViewClient({
             </header>
 
             {deleteError && (
-              <div className="carnet-modal__error">Erreur&nbsp;: {deleteError}</div>
+              <div className="tituba-modal__error">Erreur&nbsp;: {deleteError}</div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
                 «&nbsp;{data.slug || data.title || data.id}&nbsp;» sera
                 définitivement supprimée. Les billets qui la citent perdront
@@ -678,10 +678,10 @@ export default function BibliographyEditViewClient({
               </p>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => {
                   setDeleteOpen(false);
                   setDeleteError(null);
@@ -692,7 +692,7 @@ export default function BibliographyEditViewClient({
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void confirmDelete()}
                 disabled={deleteSubmitting}
               >

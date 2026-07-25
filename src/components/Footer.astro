@@ -8,7 +8,7 @@
  * n'est pas joignable au SSR, on retombe sur des defaults (le footer
  * reste affichable sans dépendre de la DB).
  *
- * Réf : design_handoff_carnet/Carnet B.html → footer.site.
+ * Réf : design_handoff_tituba/Tituba B.html → footer.site.
  */
 import { fetchIdentity, fetchNavigation, fetchSubscriptions } from '../lib/payload';
 
@@ -41,7 +41,7 @@ type SubscriptionsGlobal = SocialLinks & { rssEnabled?: boolean };
 // si les globals n'ont pas encore été remplis côté admin. Le contenu
 // réel (avec le nom de l'auteur·ice, le domaine prod) vient toujours
 // de Payload → ces strings ne devraient jamais s'afficher en prod.
-const DEFAULT_BASELINE = 'Carnet de recherche. Auto-hébergé.';
+const DEFAULT_BASELINE = 'Collectif féministe intersectionnel. Auto-hébergé.';
 const DEFAULT_COPYRIGHT = 'CC BY-NC-SA 4.0';
 const DEFAULT_NAV: NavFooterLink[] = [
   { label: 'Thèmes', href: '/themes/' },
@@ -68,7 +68,7 @@ try {
   console.warn('[footer] fetchSubscriptions failed, using defaults:', (err as Error).message);
 }
 
-const siteName = identity.siteName?.trim() || 'Carnet';
+const siteName = identity.siteName?.trim() || 'Tituba';
 const baseline = identity.baseline || DEFAULT_BASELINE;
 // Tag git injecté au build du container (process.env.GIT_TAG).
 // Fallback 'dev' si non défini (build local ou CI sans build-args).

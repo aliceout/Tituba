@@ -140,18 +140,18 @@ export default function SiteEditViewClient(): React.ReactElement {
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={save}
             disabled={!dirty || saving || loading}
           >
@@ -160,31 +160,31 @@ export default function SiteEditViewClient(): React.ReactElement {
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Branding</h2>
-            <p className="carnet-editview__section-help">
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Branding</h2>
+            <p className="tituba-editview__section-help">
               Couleurs appliquées à tout le site — accent (point de la marque,
               item nav actif, kickers, liens des billets, boutons actifs…) et
               fond (body, header, footer, fond des billets).
             </p>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Couleur d&apos;accentuation</span>
-              <div className="carnet-accent-picker">
+              <div className="tituba-accent-picker">
                 <span
-                  className="carnet-accent-picker__swatch"
+                  className="tituba-accent-picker__swatch"
                   style={{ background: data.branding?.accentColor || DEFAULT_ACCENT }}
                   aria-hidden="true"
                 />
@@ -201,11 +201,11 @@ export default function SiteEditViewClient(): React.ReactElement {
               </div>
             </label>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Couleur de fond</span>
-              <div className="carnet-accent-picker">
+              <div className="tituba-accent-picker">
                 <span
-                  className="carnet-accent-picker__swatch"
+                  className="tituba-accent-picker__swatch"
                   style={{ background: data.branding?.backgroundColor || DEFAULT_BG }}
                   aria-hidden="true"
                 />
@@ -223,14 +223,14 @@ export default function SiteEditViewClient(): React.ReactElement {
             </label>
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Lecture des billets</h2>
-            <p className="carnet-editview__section-help">
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Lecture des billets</h2>
+            <p className="tituba-editview__section-help">
               Choix typographique pour les notes de bas de page. S&apos;applique à
               tous les billets du Carnet.
             </p>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Affichage des notes</span>
               <select
                 value={data.reading?.notesMode ?? 'classic'}

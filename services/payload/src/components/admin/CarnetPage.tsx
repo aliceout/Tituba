@@ -2,12 +2,12 @@
 
 // Wrapper de page admin partagé — UN seul pattern utilisé par toutes
 // les vues custom (listview, editview, postedit). Garantit que :
-//   - le container racine (.carnet-{variant}) n'a PAS de padding
+//   - le container racine (.tituba-{variant}) n'a PAS de padding
 //     horizontal, donc la topbar enfant est full-bleed naturellement,
 //     sans marge négative
 //   - la topbar est rendue à l'intérieur via <CarnetTopbar/>
-//   - le contenu est enveloppé dans .carnet-page__body qui porte le
-//     padding latéral (--carnet-pad-x)
+//   - le contenu est enveloppé dans .tituba-page__body qui porte le
+//     padding latéral (--tituba-pad-x)
 //
 // Variante fullWidth : pas de padding sur le body — utile pour la vue
 // PostEdit dont le grid __doc / __center / __meta gère son propre
@@ -21,7 +21,7 @@ export type CarnetPageVariant = 'listview' | 'editview' | 'postedit';
 
 export interface CarnetPageProps {
   variant: CarnetPageVariant;
-  // Modificateur appliqué au container : carnet-{variant}--{modifier}
+  // Modificateur appliqué au container : tituba-{variant}--{modifier}
   // (ex. 'posts', 'themes', 'theme', 'account', 'media').
   modifier?: string;
   crumbs: Crumb[];
@@ -53,11 +53,11 @@ export default function CarnetPage({
   children,
 }: CarnetPageProps): React.ReactElement {
   const containerClass = modifier
-    ? `carnet-${variant} carnet-${variant}--${modifier}`
-    : `carnet-${variant}`;
+    ? `tituba-${variant} tituba-${variant}--${modifier}`
+    : `tituba-${variant}`;
   const bodyClass = fullWidth
-    ? 'carnet-page__body carnet-page__body--full'
-    : 'carnet-page__body';
+    ? 'tituba-page__body tituba-page__body--full'
+    : 'tituba-page__body';
 
   return (
     <div className={containerClass}>

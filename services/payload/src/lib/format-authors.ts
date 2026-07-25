@@ -1,6 +1,6 @@
 /**
  * Helpers de formatage des auteur·ice·s d'une référence bibliographique
- * (style Chicago author-date — celui retenu pour le Carnet).
+ * (style Chicago author-date — celui retenu pour le Tituba).
  *
  * Source de vérité : un array `authors[]` avec `lastName` + `firstName?`
  * + `role` (author / editor / translator).
@@ -39,7 +39,7 @@ export function formatAuthorsShort(authors: BibAuthor[] | null | undefined): str
  *   2 auteurs  : « Butler, Judith, and Gayatri Spivak »
  *   3 auteurs  : « Butler, Judith, Joan Scott, and Gayatri Spivak »
  *   4+ auteurs : on garde la liste complète (Chicago accepte jusqu'à 10
- *                avant le « et al. » en biblio ; pour le Carnet on liste
+ *                avant le « et al. » en biblio ; pour le Tituba on liste
  *                tout, c'est plus honnête).
  *
  * Si seul·e·s des éditeur·ice·s (role=editor) sont présent·e·s, le label

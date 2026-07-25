@@ -1,5 +1,5 @@
 // Overrides CSS de l'admin Payload — applique la palette + typographie
-// Carnet par-dessus le thème natif Payload.
+// Tituba par-dessus le thème natif Payload.
 //
 // Réf : Design/design_handoff_admin/README.md (handoff).
 //
@@ -7,26 +7,26 @@
 // Branding) — le mapping est piloté par data-accent sur <html>, posé
 // par Nav.client.tsx au mount. Idem pour le dark mode (data-theme).
 
-// ─── Tokens Carnet en :root ──────────────────────────────────────
+// ─── Tokens Tituba en :root ──────────────────────────────────────
 // On utilise un sélecteur :root,html pour bien override les vars
 // Payload qui sont aussi en :root.
 
 :root,
 html {
-  // Largeur de la nav latérale Carnet (220px). Payload v3 utilise
+  // Largeur de la nav latérale Tituba (220px). Payload v3 utilise
   // cette var pour calculer la colonne réservée dans le grid de
   // .template-default (`grid-template-columns: var(--nav-width) auto`).
   // Sans override, Payload utilise sa valeur par défaut (~256px) qui
-  // crée un gap entre la fin de notre .carnet-nav (220px) et le bord
+  // crée un gap entre la fin de notre .tituba-nav (220px) et le bord
   // gauche du content.
   --nav-width: 220px;
 
   // Padding horizontal des pages admin (listview + editview + topbar).
   // Source de vérité unique : changer ici recale tout le layout sans
   // toucher aux enfants. Conséquence : éviter de hardcoder `24px` à
-  // gauche/droite dans .carnet-listview / .carnet-editview / .carnet-topbar
+  // gauche/droite dans .tituba-listview / .tituba-editview / .tituba-topbar
   // et leurs descendants — laisser le container gérer.
-  --carnet-pad-x: 24px;
+  --tituba-pad-x: 24px;
 
   --b-ink: #1a1d28;
   --b-bg: #fdfcf8;
@@ -123,7 +123,7 @@ html {
 
 // ─── Override des CSS vars Payload ───────────────────────────────
 // Payload expose un système de couleurs via `--theme-*` et
-// `--theme-elevation-*`. On les remappe sur la palette Carnet.
+// `--theme-elevation-*`. On les remappe sur la palette Tituba.
 
 :root,
 html {
@@ -201,18 +201,18 @@ samp {
 
 // Tagger les éléments mono explicitement (utilisé dans les composants
 // custom : numéros de billet, slugs, dates ISO, clés biblio).
-.carnet-mono {
+.tituba-mono {
   font-family: var(--font-mono);
 }
 
-.carnet-serif {
+.tituba-serif {
   font-family: var(--font-serif);
 }
 
 // ─── Nav latérale Payload ────────────────────────────────────────
 // Sélecteurs Payload v3 BEM-like : `.nav`, `.nav__link`, `.nav-group`,
 // etc. On affine sans tout réécrire (la structure reste celle de
-// Payload, juste avec la palette + typo Carnet).
+// Payload, juste avec la palette + typo Tituba).
 
 .nav {
   background: var(--b-bg);
@@ -329,16 +329,16 @@ textarea.field-type__input {
 
 // ─── Headings éditoriaux dans les vues custom ───────────────────
 // Pour les composants custom (LoginView, future dashboard) on tagge
-// les h1 avec une classe `.carnet-h1` qui applique Source Serif 4.
+// les h1 avec une classe `.tituba-h1` qui applique Source Serif 4.
 
-.carnet-h1 {
+.tituba-h1 {
   font-family: var(--font-serif);
   font-weight: 600;
   letter-spacing: -0.5px;
   color: var(--b-ink);
 }
 
-.carnet-h1--brand {
+.tituba-h1--brand {
   font-size: 64px;
   line-height: 1;
 
@@ -347,7 +347,7 @@ textarea.field-type__input {
   }
 }
 
-.carnet-kicker {
+.tituba-kicker {
   font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.14em;
@@ -361,7 +361,7 @@ textarea.field-type__input {
 // Remplace la nav native Payload par la structure éditoriale
 // Contenu / Pages / Réglages avec counts mono à droite.
 
-.carnet-nav {
+.tituba-nav {
   display: flex;
   flex-direction: column;
   width: 220px;
@@ -588,7 +588,7 @@ textarea.field-type__input {
   // Toggle dark/light dans le footer de la sidebar (à droite du user
   // info, opposé à l'avatar). Discret : pas de bordure, pas de fond
   // par défaut, pastille au hover.
-  // Le theme toggle vit maintenant dans .carnet-nav__top-actions
+  // Le theme toggle vit maintenant dans .tituba-nav__top-actions
   // (top-row, à côté du lien Voir le site et du logout icon). Style
   // aligné sur __logout-icon pour cohérence visuelle.
   &__theme-toggle {
@@ -705,7 +705,7 @@ header svg.icon--logo {
 }
 
 // Heading h1 natif sur les pages list (Pages, Media, Users) :
-// styles cohérents avec notre carnet-listview__h1 (mais on n'enlève
+// styles cohérents avec notre tituba-listview__h1 (mais on n'enlève
 // pas le h1 ici car il est la seule indication du contexte de page —
 // pas de breadcrumb natif visible)
 .collection-list h1,
@@ -718,7 +718,7 @@ header svg.icon--logo {
 }
 
 // Boutons "Create New" / "Save" / "Publish" natifs Payload :
-// forcer la palette accent Carnet (au lieu du gris-béton par défaut).
+// forcer la palette accent Tituba (au lieu du gris-béton par défaut).
 // !important nécessaire pour passer le @layer payload-default.
 //
 // Cibles MASSIVES car Payload v3 utilise plein de variantes de classes
@@ -833,7 +833,7 @@ button.btn--style-primary,
 // Composant React custom branché via admin.components.views.dashboard.
 // Remplace le rendu CollectionCards natif par un hero éditorial.
 
-.carnet-dashboard {
+.tituba-dashboard {
   max-width: 980px;
   margin: 0 auto;
   padding: 56px 32px 80px;
@@ -843,7 +843,7 @@ button.btn--style-primary,
     margin-bottom: 48px;
   }
 
-  // Burger mobile + kicker « Carnet · admin » alignés sur la même ligne
+  // Burger mobile + kicker « Tituba · admin » alignés sur la même ligne
   // (≤1440 — sur desktop, le burger est display: none donc le kicker
   // se retrouve seul, naturellement). gap modeste pour rapprocher
   // visuellement les deux.
@@ -973,7 +973,7 @@ button.btn--style-primary,
       }
     }
 
-    .carnet-mono {
+    .tituba-mono {
       font-size: 11px;
       color: var(--b-muted);
     }
@@ -1044,11 +1044,11 @@ button.btn--style-primary,
 
 // ─── Toggle switch (utilisé dans les vues custom) ──────────────
 // Switch carré CSS pur, cohérent avec le langage visuel du reste de
-// l'admin Carnet (bords nets, pas de radius arrondi). Bouton
+// l'admin Tituba (bords nets, pas de radius arrondi). Bouton
 // `role="switch"` + `aria-checked`, track muted → accent quand `--on`,
 // pastille qui slide.
 
-.carnet-toggle {
+.tituba-toggle {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -1077,7 +1077,7 @@ button.btn--style-primary,
     border-color: var(--b-accent);
     background: var(--b-accent-tint);
 
-    .carnet-toggle__thumb {
+    .tituba-toggle__thumb {
       background: var(--b-accent);
       transform: translateX(18px);
     }
@@ -1099,9 +1099,9 @@ button.btn--style-primary,
   }
 }
 
-// ─── Boutons Carnet (utilisés dans les vues custom) ─────────────
+// ─── Boutons Tituba (utilisés dans les vues custom) ─────────────
 
-.carnet-btn {
+.tituba-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1169,19 +1169,19 @@ button.btn--style-primary,
 }
 
 // ─── Page admin partagée : body avec padding horizontal ─────────
-// Wrapper rendu par <CarnetPage> entre la topbar et le contenu de la
+// Wrapper rendu par <TitubaPage> entre la topbar et le contenu de la
 // page. Source de vérité unique pour le padding horizontal du contenu
 // admin — listview, editview, postedit l'utilisent tous via le composant
-// React partagé. Le container parent (.carnet-{variant}) n'a aucun
+// React partagé. Le container parent (.tituba-{variant}) n'a aucun
 // padding horizontal pour que la topbar soit full-bleed naturellement.
 //
 // Variante --full : pas de padding (postedit l'utilise pour son
 // __doc grid qui doit prendre toute la largeur — son __center interne
 // gère son propre padding pour la zone d'édition).
-.carnet-page__body {
-  padding-inline: var(--carnet-pad-x);
+.tituba-page__body {
+  padding-inline: var(--tituba-pad-x);
 }
-.carnet-page__body--full {
+.tituba-page__body--full {
   padding-inline: 0;
 }
 
@@ -1189,11 +1189,11 @@ button.btn--style-primary,
 // Composant React custom branché via Posts.admin.components.views.list.
 // Remplace la liste native Payload par le tableau éditorial du handoff.
 
-.carnet-listview {
+.tituba-listview {
   // Container = flex column SANS padding horizontal — la topbar (enfant
   // direct) est full-bleed naturellement, pas de hack de margin-inline
   // négative. Le padding latéral du contenu est porté par le wrapper
-  // .carnet-page__body qui l'enveloppe (cf <CarnetPage>).
+  // .tituba-page__body qui l'enveloppe (cf <TitubaPage>).
   display: flex;
   flex-direction: column;
   padding-bottom: 64px;
@@ -1216,7 +1216,7 @@ button.btn--style-primary,
     align-items: center;
     gap: 10px;
     padding: 12px 0;
-    // Pas de border-top : le .carnet-topbar au-dessus a déjà un
+    // Pas de border-top : le .tituba-topbar au-dessus a déjà un
     // border-bottom — éviter la double ligne.
     margin-bottom: 0;
   }
@@ -1372,7 +1372,7 @@ button.btn--style-primary,
       border-bottom: 0;
     }
 
-    &:not(.carnet-listview__row--head):hover {
+    &:not(.tituba-listview__row--head):hover {
       background: var(--b-accent-tint);
 
       .title {
@@ -1517,7 +1517,7 @@ button.btn--style-primary,
   }
 
   @include mobile {
-    // Padding horizontal piloté par .carnet-page__body (--carnet-pad-x).
+    // Padding horizontal piloté par .tituba-page__body (--tituba-pad-x).
     // On n'ajoute rien ici sinon ça doublerait le retrait au-dessus du
     // contenu ET de la topbar.
     padding-bottom: 48px;
@@ -1593,7 +1593,7 @@ button.btn--style-primary,
     grid-template-columns: 1fr 200px 80px 40px;
     cursor: default;
   }
-  &--tags &__row:not(.carnet-listview__row--head):hover {
+  &--tags &__row:not(.tituba-listview__row--head):hover {
     background: transparent;
 
     .title {
@@ -1851,7 +1851,7 @@ button.btn--style-primary,
   @include mobile {
     &--users &__row {
       grid-template-columns: 1fr 80px;
-      // Override align-items: baseline pour que le chip .carnet-role
+      // Override align-items: baseline pour que le chip .tituba-role
       // soit centré verticalement avec le nom potentiellement multi-
       // lignes, et que la row head (« RÔLE ») s'aligne pareil.
       align-items: center;
@@ -2174,7 +2174,7 @@ button.btn--style-primary,
 
 // ─── Auteur·ices d'un billet (sidebar PostEditView) ────────────
 // Liste de blocs empilés, chaque bloc = une signature (membre du
-// Carnet ou externe). Cf issue #2.
+// Tituba ou externe). Cf issue #2.
 .authors-list {
   display: flex;
   flex-direction: column;
@@ -2274,7 +2274,7 @@ button.btn--style-primary,
 }
 
 // ─── Modal réutilisable (invitation user, confirmations, etc.) ───
-.carnet-modal-backdrop {
+.tituba-modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.32);
@@ -2285,7 +2285,7 @@ button.btn--style-primary,
   padding: 20px;
 }
 
-.carnet-modal {
+.tituba-modal {
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
@@ -2357,7 +2357,7 @@ button.btn--style-primary,
 // Drop-zone à la création (pas de fichier encore), puis aperçu + meta
 // en édition.
 
-.carnet-media-drop {
+.tituba-media-drop {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2402,7 +2402,7 @@ button.btn--style-primary,
   }
 }
 
-.carnet-media-preview {
+.tituba-media-preview {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 24px;
@@ -2430,14 +2430,14 @@ button.btn--style-primary,
 
   // Colonne droite : champs éditables (Titre + Alt) en haut, puis
   // meta read-only (Type / Taille / Dims) sous une fine règle.
-  // Les .carnet-editview__field qui vivent ici perdent leur max-width
+  // Les .tituba-editview__field qui vivent ici perdent leur max-width
   // 640 (la colonne fait 320).
   &__side {
     display: flex;
     flex-direction: column;
     gap: 22px;
 
-    .carnet-editview__field {
+    .tituba-editview__field {
       max-width: none;
       margin-bottom: 0;
       gap: 8px;
@@ -2504,13 +2504,13 @@ button.btn--style-primary,
 
 // ─── Bibliography edit view : aperçu + used-in ────────────────────
 // Réutilisés dans BibliographyEditView (vue Édition custom). Le
-// .carnet-biblio-preview affiche la citation Chicago author-date
-// formatée live ; .carnet-biblio-usedin liste les billets qui
+// .tituba-biblio-preview affiche la citation Chicago author-date
+// formatée live ; .tituba-biblio-usedin liste les billets qui
 // référencent l'entrée.
 
-.carnet-biblio-preview {
-  // Rendu à l'intérieur de .carnet-editview qui fournit déjà le padding
-  // horizontal (--carnet-pad-x) — on ne remet pas de marge sur les côtés.
+.tituba-biblio-preview {
+  // Rendu à l'intérieur de .tituba-editview qui fournit déjà le padding
+  // horizontal (--tituba-pad-x) — on ne remet pas de marge sur les côtés.
   margin: 24px 0 0;
   background: var(--b-bg);
   border-left: 2px solid var(--b-accent);
@@ -2534,8 +2534,8 @@ button.btn--style-primary,
   }
 }
 
-.carnet-biblio-usedin {
-  // Idem : .carnet-editview gère déjà le padding horizontal.
+.tituba-biblio-usedin {
+  // Idem : .tituba-editview gère déjà le padding horizontal.
   margin: 14px 0 0;
   font-family: var(--font-sans);
   font-size: 12px;
@@ -2557,7 +2557,7 @@ button.btn--style-primary,
 // beforeDocumentControls. Affiche la fil d'ariane et le chip statut
 // au-dessus de la barre d'actions native Payload.
 
-.carnet-doc-header {
+.tituba-doc-header {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -2596,10 +2596,10 @@ button.btn--style-primary,
 }
 
 // Chips statut : reproduction fidèle du style de la maquette
-// (carnet-admin.html § "Statut chip"). Border discrète --b-rule par
+// (tituba-admin.html § "Statut chip"). Border discrète --b-rule par
 // défaut (sauf published qui prend la border accent), point coloré
 // par variante.
-.carnet-status {
+.tituba-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2617,11 +2617,11 @@ button.btn--style-primary,
     background: var(--b-muted);
   }
 
-  &--draft .carnet-status__dot {
+  &--draft .tituba-status__dot {
     background: #b8842a;
   }
 
-  &--scheduled .carnet-status__dot {
+  &--scheduled .tituba-status__dot {
     background: #3a6a8a;
   }
 
@@ -2629,24 +2629,24 @@ button.btn--style-primary,
     color: var(--b-accent);
     border-color: var(--b-accent);
 
-    .carnet-status__dot {
+    .tituba-status__dot {
       background: var(--b-accent);
     }
   }
 
   // Variantes pour les status user (pending / active / disabled)
-  &--pending .carnet-status__dot {
+  &--pending .tituba-status__dot {
     background: #b8842a;
   }
   &--active {
     color: var(--b-accent);
     border-color: var(--b-accent);
 
-    .carnet-status__dot {
+    .tituba-status__dot {
       background: var(--b-accent);
     }
   }
-  &--disabled .carnet-status__dot {
+  &--disabled .tituba-status__dot {
     background: var(--b-muted);
   }
 }
@@ -2654,7 +2654,7 @@ button.btn--style-primary,
 // Petit marqueur sobre sous la date dans la liste des billets, pour
 // signaler qu'un billet contient encore au moins une zone brouillon
 // non finalisée. Cf issue #1.
-.carnet-chip-draft {
+.tituba-chip-draft {
   display: block;
   margin-top: 2px;
   font-family: var(--font-sans);
@@ -2666,7 +2666,7 @@ button.btn--style-primary,
 }
 
 // Chip de rôle pour les utilisateurs (root / admin / editor)
-.carnet-role {
+.tituba-role {
   display: inline-block;
   padding: 2px 8px;
   font-family: var(--font-sans);
@@ -2690,8 +2690,8 @@ button.btn--style-primary,
   }
 }
 
-// Méta-ligne mono « Billet n° 042 · carnet:2026-042 » en haut du form
-.carnet-doc-metaline {
+// Méta-ligne mono « Billet n° 042 · tituba:2026-042 » en haut du form
+.tituba-doc-metaline {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--b-muted);
@@ -2706,7 +2706,7 @@ button.btn--style-primary,
 
 // ─── Document edit view (Posts, etc.) ───────────────────────────
 // Pass 1 : overrides CSS sur la vue native Payload pour appliquer la
-// palette + typographie + structure éditoriale du handoff carnet-admin.
+// palette + typographie + structure éditoriale du handoff tituba-admin.
 // La mécanique reste celle de Payload (form, validation, autosave).
 //
 // Pass 2 (à faire si besoin) : composant React custom complet avec
@@ -2874,9 +2874,9 @@ button.btn--style-primary,
   margin-bottom: 4px;
 }
 
-// Champs auto-calculés (readingTime, idCarnet) : encadré dashed bg
+// Champs auto-calculés (readingTime, idTituba) : encadré dashed bg
 .field-type--name-readingTime input,
-.field-type--name-idCarnet input,
+.field-type--name-idTituba input,
 .field-type[data-readonly='true'] input {
   background: var(--b-bg);
   border: 1px dashed var(--b-rule);
@@ -2917,14 +2917,14 @@ button.btn--style-primary,
 // ─── Edit views custom (Site global + Mon compte) ───────────────
 // Vue d'édition custom — remplace entièrement le rendu natif Payload
 // pour /cms/admin/globals/site et /cms/admin/account. Suit le même
-// langage visuel que .carnet-listview (header sticky, crumbs +
+// langage visuel que .tituba-listview (header sticky, crumbs +
 // actions, sections séparées par des filets, chips de statut
 // réutilisés). Branchements : Site.admin.components.views.edit.root
 // et payload.config admin.components.views.account.
 
-.carnet-editview {
-  // Voir .carnet-listview pour la justification : flex column sans
-  // padding horizontal, padding latéral porté par .carnet-page__body.
+.tituba-editview {
+  // Voir .tituba-listview pour la justification : flex column sans
+  // padding horizontal, padding latéral porté par .tituba-page__body.
   display: flex;
   flex-direction: column;
   padding-bottom: 64px;
@@ -2997,7 +2997,7 @@ button.btn--style-primary,
   &__hero {
     margin: 28px 0 24px;
 
-    .carnet-h1 {
+    .tituba-h1 {
       font-family: var(--font-serif);
       font-size: 36px;
       line-height: 1.1;
@@ -3053,7 +3053,7 @@ button.btn--style-primary,
     // Quand un &__field est dans une row, plus de margin-bottom (le
     // gap de la grille s'en charge) et la max-width n'est plus
     // pertinente — chaque cellule prend sa colonne.
-    .carnet-editview__field {
+    .tituba-editview__field {
       margin-bottom: 0;
       max-width: none;
     }
@@ -3320,7 +3320,7 @@ button.btn--style-primary,
     }
   }
 
-  // Message d'erreur affiché sous un .carnet-editview__field--invalid.
+  // Message d'erreur affiché sous un .tituba-editview__field--invalid.
   // Margin-top négatif pour grignoter le gap du field et coller le
   // message à l'input.
   &__field-error {
@@ -3466,7 +3466,7 @@ button.btn--style-primary,
       color: var(--b-ink);
     }
 
-    .carnet-mono {
+    .tituba-mono {
       color: var(--b-muted);
       font-size: 11px;
     }
@@ -3483,14 +3483,14 @@ button.btn--style-primary,
     border-top: 0;
     padding-top: 8px;
 
-    .carnet-postedit__delete {
+    .tituba-postedit__delete {
       max-width: 320px;
     }
   }
 
   // /admin/account a une grille readonly plus dense (3 chips alignés)
   &--account {
-    .carnet-editview__readonly-grid {
+    .tituba-editview__readonly-grid {
       grid-template-columns: repeat(3, minmax(0, max-content));
       gap: 16px 32px;
     }
@@ -3632,7 +3632,7 @@ button.btn--style-primary,
     flex-direction: column;
     gap: 12px;
 
-    .carnet-editview__field {
+    .tituba-editview__field {
       margin-bottom: 0;
       max-width: none;
     }
@@ -3650,7 +3650,7 @@ button.btn--style-primary,
 
 // ─── PageProseEditor (Lexical minimal pour blocs Prose) ─────────
 // Toolbar haut sobre + zone d'édition .ed-body (theme partagé avec
-// PostBodyEditor — voir .carnet-postedit .ed-body pour la structure).
+// PostBodyEditor — voir .tituba-postedit .ed-body pour la structure).
 // On duplique seulement le minimum vital (typo, marges) pour que ça
 // rende correctement hors de la PostEditView.
 
@@ -3778,7 +3778,7 @@ button.btn--style-primary,
 // ─── Picker de couleur d'accent (Site global) ───────────────────
 // Swatch + <select> côte à côte. Utilisé dans SiteEditView. Le swatch
 // reflète la couleur actuellement choisie en temps réel.
-.carnet-accent-picker {
+.tituba-accent-picker {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -3805,13 +3805,13 @@ button.btn--style-primary,
 // rich-text Lexical interne (.ed-body) a son propre theme sans aucune
 // chrome Payload.
 
-.carnet-postedit {
+.tituba-postedit {
   display: flex;
   flex-direction: column;
   font-family: var(--font-sans);
   background: var(--b-bg);
   min-height: 100vh;
-  // Topbar (.carnet-topbar) maintenant rendue par <CarnetTopbar/>.
+  // Topbar (.tituba-topbar) maintenant rendue par <TitubaTopbar/>.
 
   &__saved,
   &__dirty {
@@ -3857,7 +3857,7 @@ button.btn--style-primary,
   // Bouton « Supprimer ce billet » en bas de la sidebar Métadonnées.
   // Sobre par défaut (texte muted, sans bordure) ; rouge au hover pour
   // matérialiser l'action irréversible. Le clic ouvre une modale de
-  // confirmation (cf .carnet-modal*).
+  // confirmation (cf .tituba-modal*).
   &__delete {
     display: block;
     width: 100%;
@@ -5560,10 +5560,10 @@ button.btn--style-primary,
   // l'œil voit deux blocs décalés.
   @include mobile {
     &__center {
-      padding-inline: var(--carnet-pad-x);
+      padding-inline: var(--tituba-pad-x);
     }
     &__meta {
-      padding-inline: var(--carnet-pad-x);
+      padding-inline: var(--tituba-pad-x);
       position: static;
       top: auto;
       max-height: none;
@@ -5583,21 +5583,21 @@ button.btn--style-primary,
   }
 }
 
-// ─── Topbar normalisée (CarnetTopbar) ─────────────────────────────
-// Seule barre supérieure utilisée dans tout l'admin Carnet — list
+// ─── Topbar normalisée (TitubaTopbar) ─────────────────────────────
+// Seule barre supérieure utilisée dans tout l'admin Tituba — list
 // views, edit views, vue Édition Posts. Définie au top-level pour
 // que toutes les pages partagent EXACTEMENT le même style. Cf
-// services/payload/src/components/admin/CarnetTopbar.tsx.
-.carnet-topbar {
+// services/payload/src/components/admin/TitubaTopbar.tsx.
+.tituba-topbar {
   display: flex;
   align-items: center;
   gap: 16px;
-  // Padding horizontal piloté par --carnet-pad-x : crumbs alignés avec
+  // Padding horizontal piloté par --tituba-pad-x : crumbs alignés avec
   // le contenu en dessous à gauche, actions décollées du bord à droite.
   // La topbar est full-bleed naturellement parce que ses containers
-  // (.carnet-listview / .carnet-editview / .carnet-postedit) ne portent
+  // (.tituba-listview / .tituba-editview / .tituba-postedit) ne portent
   // PAS de padding horizontal. Pas de hack de margin-inline.
-  padding: 0 var(--carnet-pad-x);
+  padding: 0 var(--tituba-pad-x);
   height: 56px;
   border-bottom: 1px solid var(--b-rule);
   background: var(--b-bg);
@@ -5652,7 +5652,7 @@ button.btn--style-primary,
 
 // ─── Slash menu (au top-level car rendu via portal dans <body>) ──
 // Le slash menu de l'éditeur Lexical est portalé hors de la
-// hiérarchie .carnet-postedit pour échapper aux parents avec
+// hiérarchie .tituba-postedit pour échapper aux parents avec
 // overflow/transform qui le clipperaient. Donc CSS au top-level.
 .ed-slash {
   width: 320px;
@@ -5729,26 +5729,26 @@ button.btn--style-primary,
 
 // Cache le bouton de pliage de la nav (NavToggler de Payload). Notre
 // nav custom ne respecte pas l'état "collapsed" : cliquer le bouton
-// décalait le panneau central sous la nav. Le design Carnet n'a pas
+// décalait le panneau central sous la nav. Le design Tituba n'a pas
 // de mécanisme de pliage de toute façon.
 .nav-toggler,
 [class*='mobile-nav-toggler'] {
   display: none !important;
 }
 
-// Burger mobile — rendu dans CarnetTopbar, masqué ≥ 901px.
+// Burger mobile — rendu dans TitubaTopbar, masqué ≥ 901px.
 // Backdrop : masqué par défaut, visible quand la nav est ouverte.
-.carnet-nav-burger {
+.tituba-nav-burger {
   display: none;
 }
-.carnet-nav-backdrop {
+.tituba-nav-backdrop {
   display: none;
 }
 
 // Sur écrans étroits (≤ 900px) :
 //   - .template-default sort de sa grille pour que le contenu prenne
 //     toute la largeur (display: block).
-//   - .carnet-nav est masquée par défaut, et apparaît en overlay quand
+//   - .tituba-nav est masquée par défaut, et apparaît en overlay quand
 //     .is-open est posé (par le bouton burger).
 //   - Le burger s'affiche dans la topbar (à droite des actions), pas
 //     en overlay : pas de chevauchement avec les boutons d'action.
@@ -5763,11 +5763,11 @@ button.btn--style-primary,
 
   // Crumbs masqués sur mobile : bouffent trop de place dans la topbar.
   // Le burger + le titre H1 de chaque vue suffisent à se repérer.
-  .carnet-topbar__crumbs {
+  .tituba-topbar__crumbs {
     display: none !important;
   }
 
-  // Padding horizontal piloté entièrement par --carnet-pad-x : pas de
+  // Padding horizontal piloté entièrement par --tituba-pad-x : pas de
   // règle ad-hoc qui le strippe ici. Cohérent topbar / listview /
   // editview, modifiable d'un seul endroit (cf :root).
 
@@ -5776,16 +5776,16 @@ button.btn--style-primary,
   // `minmax(0, 1fr)` au lieu de `1fr` pour autoriser les cellules à
   // shrink en dessous de leur min-content (sinon les filtres avec
   // long label « Périmètre : » débordent du viewport).
-  .carnet-listview__toolbar {
+  .tituba-listview__toolbar {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 8px !important;
   }
-  .carnet-listview__search {
+  .tituba-listview__search {
     grid-column: 1 / -1;
     max-width: none;
   }
-  .carnet-listview__filter {
+  .tituba-listview__filter {
     width: 100%;
     max-width: none;
     box-sizing: border-box;
@@ -5793,11 +5793,11 @@ button.btn--style-primary,
   // Le label "Type :" ne doit pas wrap caractère par caractère quand
   // le select prend toute la largeur. flex-shrink: 0 + nowrap, et le
   // select prend le reste via flex: 1.
-  .carnet-listview__filter .lbl {
+  .tituba-listview__filter .lbl {
     flex-shrink: 0;
     white-space: nowrap;
   }
-  .carnet-listview__filter select {
+  .tituba-listview__filter select {
     flex: 1;
     min-width: 0;
   }
@@ -5811,21 +5811,21 @@ button.btn--style-primary,
   //
   // Sous 900px (vrai mobile) le bloc @include mobile en dessous force
   // le retour à 2 colonnes et cache aussi Type.
-  .carnet-listview--posts .carnet-listview__row {
+  .tituba-listview--posts .tituba-listview__row {
     grid-template-columns: 1fr 110px 65px !important;
     gap: 12px !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
   }
-  .carnet-listview--posts .carnet-listview__row > *:not(:first-child):not(:nth-last-child(5)):not(:nth-last-child(2)) {
+  .tituba-listview--posts .tituba-listview__row > *:not(:first-child):not(:nth-last-child(5)):not(:nth-last-child(2)) {
     display: none !important;
   }
 
   // Table Themes ≤ 1440 : on conserve les 3 colonnes par défaut
   // (Nom + Description + Billets) — la description tient encore en
   // tablette. Hide / réduction à 2 colonnes uniquement en vrai mobile
-  // (cf. @include mobile dans .carnet-listview).
-  .carnet-nav {
+  // (cf. @include mobile dans .tituba-listview).
+  .tituba-nav {
     display: flex !important;
     flex-direction: column;
     position: fixed;
@@ -5839,18 +5839,18 @@ button.btn--style-primary,
     z-index: 200;
     overflow-y: auto;
   }
-  .carnet-nav.is-open {
+  .tituba-nav.is-open {
     transform: translateX(0);
     box-shadow: 4px 0 16px rgba(0, 0, 0, 0.15);
   }
 
-  // Aligné pixel-près sur .carnet-btn (padding 5px 14px, font 12.5px,
+  // Aligné pixel-près sur .tituba-btn (padding 5px 14px, font 12.5px,
   // border 1px) pour être à la même hauteur. Padding horizontal réduit
   // à 9px pour un aspect carré-ish ; le span aria-hidden est sizé en
   // font-size de l'élément (12.5px) — c'est petit mais cohérent.
   // Marge à droite (pas à gauche) puisque le burger est désormais en
   // début de topbar.
-  .carnet-nav-burger {
+  .tituba-nav-burger {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -5874,19 +5874,19 @@ button.btn--style-primary,
       line-height: 1;
     }
   }
-  .carnet-nav-burger:hover {
+  .tituba-nav-burger:hover {
     border-color: var(--b-ink);
   }
 
   // Variante standalone — utilisée par Dashboard qui n'a pas de
-  // CarnetTopbar. Le burger est placé inline avec le kicker
-  // « Carnet · admin » (cf .carnet-dashboard__kicker-row) : pas de
+  // TitubaTopbar. Le burger est placé inline avec le kicker
+  // « Tituba · admin » (cf .tituba-dashboard__kicker-row) : pas de
   // margin-right ni margin-bottom, le gap du flex parent gère l'espace.
-  .carnet-nav-burger--standalone {
+  .tituba-nav-burger--standalone {
     margin-right: 0;
   }
 
-  .carnet-nav-backdrop {
+  .tituba-nav-backdrop {
     display: block;
     position: fixed;
     inset: 0;
@@ -5899,11 +5899,11 @@ button.btn--style-primary,
 // (Titre + Statut). On cache aussi la colonne Type qui était visible
 // dans la zone 901-1440. Cf. règles ≤1440 plus haut.
 @include mobile {
-  .carnet-listview--posts .carnet-listview__row {
+  .tituba-listview--posts .tituba-listview__row {
     grid-template-columns: 1fr 65px !important;
   }
-  .carnet-listview--posts .carnet-listview__row > .type,
-  .carnet-listview--posts .carnet-listview__row--head > *:nth-last-child(5) {
+  .tituba-listview--posts .tituba-listview__row > .type,
+  .tituba-listview--posts .tituba-listview__row--head > *:nth-last-child(5) {
     display: none !important;
   }
 }
@@ -5914,13 +5914,13 @@ button.btn--style-primary,
 // Pas de marqueur visuel sur les refs Zotero dans la liste biblio :
 // avec un import majoritaire depuis Zotero, un badge ligne par ligne
 // devenait du bruit. Le filtre « Provenance » dans la toolbar et la
-// banner à l'intérieur de l'édition (`.carnet-zotero-banner`) suffisent
+// banner à l'intérieur de l'édition (`.tituba-zotero-banner`) suffisent
 // à signaler / filtrer / expliquer la lecture seule.
 
 // Banner d'avertissement affiché en haut de l'édition d'une ref Zotero,
 // pour expliquer pourquoi tout est verrouillé.
-.carnet-zotero-banner {
-  // Rendue dans .carnet-editview qui gère le padding horizontal.
+.tituba-zotero-banner {
+  // Rendue dans .tituba-editview qui gère le padding horizontal.
   margin: 16px 0 24px;
   padding: 14px 16px;
   background: var(--b-accent-tint);
@@ -5933,11 +5933,11 @@ button.btn--style-primary,
 // Sécurité du compte (2FA + appareils de confiance) — embed dans
 // AccountView et UserEditView, sans accordéon. Deux groupes empilés
 // avec un titre lbl-style et un corps en texte serif.
-.carnet-account-security {
+.tituba-account-security {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  // Aligne le bord droit sur les autres .carnet-editview__field qui
+  // Aligne le bord droit sur les autres .tituba-editview__field qui
   // ont déjà un cap à 640px — sinon les paragraphes 2FA et la liste
   // d'appareils s'étendent plus loin que le bloc Verrouillage juste
   // au-dessus.
@@ -6020,7 +6020,7 @@ button.btn--style-primary,
 // Section Zotero de la page Compte. Reprend le style des autres sections
 // editview (gap, typo) avec quelques spécificités : barre de statut
 // (✓/✕), groupe d'actions horizontal, ligne de feedback (info/error).
-.carnet-zotero {
+.tituba-zotero {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -6174,8 +6174,8 @@ button.btn--style-primary,
   }
 }
 
-// Lien neutre dans une hint (carnet-zotero ou carnet-editview__field).
-.carnet-link {
+// Lien neutre dans une hint (tituba-zotero ou tituba-editview__field).
+.tituba-link {
   color: var(--b-accent);
   text-decoration: underline;
 

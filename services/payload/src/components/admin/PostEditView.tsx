@@ -3,7 +3,7 @@
 //
 // Remplace entièrement le rendu natif Payload (form stacked + sidebar
 // fields) par le layout éditorial du handoff (header + ed-card center
-// + meta sidebar 300px). Cf Design/design_handoff_admin/carnet-admin.html
+// + meta sidebar 300px). Cf Design/design_handoff_admin/tituba-admin.html
 // → ScreenDoc.
 
 import React from 'react';

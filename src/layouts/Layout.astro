@@ -1,7 +1,7 @@
 ---
 /**
  * Layout de base — chrome partagé : <head>, Header, slot, Footer.
- * Réf design : design_handoff_carnet/Carnet B.html (header.site, footer.site).
+ * Réf design : design_handoff_tituba/Tituba B.html (header.site, footer.site).
  */
 import '../styles/global.css';
 
@@ -34,7 +34,7 @@ interface Props {
 
 const {
   title,
-  description = 'Carnet de recherche. Auto-hébergé.',
+  description = 'Collectif féministe intersectionnel. Auto-hébergé.',
   noindex = false,
   progressBar = false,
   bodyClass = '',
@@ -70,7 +70,7 @@ const BG_WHITELIST = new Set([
 let accentOverride: string | null = null;
 let accentSlug: string | null = null;
 let bgOverride: string | null = null;
-let siteName = 'Carnet';
+let siteName = 'Tituba';
 try {
   const site = await fetchSite<SiteBranding>();
   const a = site.branding?.accentColor;

@@ -1,7 +1,7 @@
 'use client';
 
 // AccountView (client) — page Mon compte custom qui matche le langage
-// visuel de l'admin Carnet (cf .carnet-listview / .carnet-btn).
+// visuel de l'admin Carnet (cf .tituba-listview / .tituba-btn).
 //
 // Layout :
 //   - Header : crumbs « Carnet / Mon compte », actions Save accent
@@ -127,18 +127,18 @@ export default function AccountViewClient(): React.ReactElement {
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={save}
             disabled={!dirty || saving || loading}
           >
@@ -147,22 +147,22 @@ export default function AccountViewClient(): React.ReactElement {
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading || !me ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Profil</h2>
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Profil</h2>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Nom affiché</span>
               <input
                 type="text"
@@ -172,7 +172,7 @@ export default function AccountViewClient(): React.ReactElement {
               <span className="hint">Affiché dans la nav et les en-têtes admin.</span>
             </label>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Format citation (Chicago)</span>
               <input
                 type="text"
@@ -187,7 +187,7 @@ export default function AccountViewClient(): React.ReactElement {
               </span>
             </label>
 
-            <label className="carnet-editview__field carnet-editview__field--readonly">
+            <label className="tituba-editview__field tituba-editview__field--readonly">
               <span className="lbl">Email</span>
               <input type="email" value={me.email} readOnly disabled />
               <span className="hint">
@@ -195,36 +195,36 @@ export default function AccountViewClient(): React.ReactElement {
               </span>
             </label>
 
-            <div className="carnet-editview__readonly-grid">
-              <div className="carnet-editview__readonly">
+            <div className="tituba-editview__readonly-grid">
+              <div className="tituba-editview__readonly">
                 <span className="lbl">Rôle</span>
-                <span className={`carnet-role carnet-role--${me.role}`}>
+                <span className={`tituba-role tituba-role--${me.role}`}>
                   {ROLE_LABEL[me.role]}
                 </span>
               </div>
-              <div className="carnet-editview__readonly">
+              <div className="tituba-editview__readonly">
                 <span className="lbl">Statut</span>
-                <span className={`carnet-status carnet-status--${me.status}`}>
-                  <span className="carnet-status__dot" aria-hidden="true" />
+                <span className={`tituba-status tituba-status--${me.status}`}>
+                  <span className="tituba-status__dot" aria-hidden="true" />
                   {STATUS_LABEL[me.status]}
                 </span>
               </div>
-              <div className="carnet-editview__readonly">
+              <div className="tituba-editview__readonly">
                 <span className="lbl">Dernière connexion</span>
-                <span className="carnet-editview__readonly-value mono">
+                <span className="tituba-editview__readonly-value mono">
                   {isoDateTime(me.lastLoginAt)}
                 </span>
               </div>
             </div>
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Bibliothèque Zotero</h2>
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Bibliothèque Zotero</h2>
             <ZoteroSection />
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Sécurité</h2>
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Sécurité</h2>
             <AccountSecurity />
           </section>
         </form>
@@ -458,12 +458,12 @@ function ZoteroSection(): React.ReactElement {
   }
 
   if (!loaded) {
-    return <div className="carnet-zotero__loading">Chargement…</div>;
+    return <div className="tituba-zotero__loading">Chargement…</div>;
   }
 
   return (
-    <div className="carnet-zotero">
-      <p className="carnet-zotero__intro">
+    <div className="tituba-zotero">
+      <p className="tituba-zotero__intro">
         Connectez votre bibliothèque Zotero pour qu’elle alimente
         automatiquement la liste de références disponibles dans le slash
         menu et le picker biblio des billets. Les modifications faites dans
@@ -471,13 +471,13 @@ function ZoteroSection(): React.ReactElement {
         en lecture seule côté Carnet.
       </p>
 
-      <div className={`carnet-zotero__status carnet-zotero__status--${hasKey ? 'on' : 'off'}`}>
+      <div className={`tituba-zotero__status tituba-zotero__status--${hasKey ? 'on' : 'off'}`}>
         <span className="dot" aria-hidden="true" />
         {hasKey ? 'Connecté à Zotero' : 'Non connecté'}
       </div>
 
-      <div className="carnet-editview__row carnet-editview__row--2">
-        <label className="carnet-editview__field">
+      <div className="tituba-editview__row tituba-editview__row--2">
+        <label className="tituba-editview__field">
           <span className="lbl">Clé API</span>
           <input
             type="password"
@@ -498,7 +498,7 @@ function ZoteroSection(): React.ReactElement {
               href="https://www.zotero.org/settings/keys"
               target="_blank"
               rel="noopener noreferrer"
-              className="carnet-link"
+              className="tituba-link"
             >
               zotero.org/settings/keys
             </a>
@@ -506,7 +506,7 @@ function ZoteroSection(): React.ReactElement {
           </span>
         </label>
 
-        <label className="carnet-editview__field">
+        <label className="tituba-editview__field">
           <span className="lbl">ID utilisateur Zotero</span>
           <input
             type="text"
@@ -520,7 +520,7 @@ function ZoteroSection(): React.ReactElement {
               href="https://www.zotero.org/settings/keys"
               target="_blank"
               rel="noopener noreferrer"
-              className="carnet-link"
+              className="tituba-link"
             >
               zotero.org/settings/keys
             </a>
@@ -529,10 +529,10 @@ function ZoteroSection(): React.ReactElement {
         </label>
       </div>
 
-      <div className="carnet-zotero__actions">
+      <div className="tituba-zotero__actions">
         <button
           type="button"
-          className="carnet-btn carnet-btn--accent"
+          className="tituba-btn tituba-btn--accent"
           onClick={save}
           disabled={busy !== null || !dirty}
         >
@@ -540,7 +540,7 @@ function ZoteroSection(): React.ReactElement {
         </button>
         <button
           type="button"
-          className="carnet-btn carnet-btn--ghost"
+          className="tituba-btn tituba-btn--ghost"
           onClick={test}
           disabled={busy !== null}
           title="Tester la connexion Zotero (utilise les credentials enregistrés)."
@@ -549,7 +549,7 @@ function ZoteroSection(): React.ReactElement {
         </button>
         <button
           type="button"
-          className="carnet-btn carnet-btn--accent"
+          className="tituba-btn tituba-btn--accent"
           onClick={sync}
           disabled={busy !== null}
           title="Synchroniser depuis Zotero (utilise les credentials enregistrés)."
@@ -559,7 +559,7 @@ function ZoteroSection(): React.ReactElement {
         {hasKey && (
           <button
             type="button"
-            className="carnet-btn carnet-btn--ghost"
+            className="tituba-btn tituba-btn--ghost"
             onClick={() => setDisconnectOpen(true)}
             disabled={busy !== null}
           >
@@ -568,11 +568,11 @@ function ZoteroSection(): React.ReactElement {
         )}
       </div>
 
-      {error && <div className="carnet-zotero__error">Erreur : {error}</div>}
-      {info && <div className="carnet-zotero__info">{info}</div>}
+      {error && <div className="tituba-zotero__error">Erreur : {error}</div>}
+      {info && <div className="tituba-zotero__info">{info}</div>}
 
       {syncKeptCited.length > 0 && (
-        <details className="carnet-zotero__skipped">
+        <details className="tituba-zotero__skipped">
           <summary>
             {syncKeptCited.length} ref{syncKeptCited.length > 1 ? 's' : ''}{' '}
             supprimée{syncKeptCited.length > 1 ? 's' : ''} côté Zotero mais
@@ -608,7 +608,7 @@ function ZoteroSection(): React.ReactElement {
       )}
 
       {syncErrors.length > 0 && (
-        <details className="carnet-zotero__skipped">
+        <details className="tituba-zotero__skipped">
           <summary>
             {syncErrors.length} item{syncErrors.length > 1 ? 's' : ''} ignoré
             {syncErrors.length > 1 ? 's' : ''} — voir le détail
@@ -652,7 +652,7 @@ function ZoteroSection(): React.ReactElement {
       )}
 
       {hasKey && status?.lastSyncAt && (
-        <div className="carnet-zotero__last">
+        <div className="tituba-zotero__last">
           <span className="lbl">Dernier sync :</span>{' '}
           <span className="mono">{isoDateTime(status.lastSyncAt)}</span>
           {(status.lastSyncAdded || status.lastSyncUpdated) && (
@@ -674,19 +674,19 @@ function ZoteroSection(): React.ReactElement {
 
       {disconnectOpen && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && busy !== 'disconnect') {
               setDisconnectOpen(false);
             }
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Déconnecter Zotero&nbsp;?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => {
                   if (busy === 'disconnect') return;
                   setDisconnectOpen(false);
@@ -697,7 +697,7 @@ function ZoteroSection(): React.ReactElement {
               </button>
             </header>
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
                 La clé API sera effacée du Carnet. Les références déjà
                 importées dans la bibliographie ne seront pas supprimées,
@@ -706,10 +706,10 @@ function ZoteroSection(): React.ReactElement {
               </p>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => setDisconnectOpen(false)}
                 disabled={busy === 'disconnect'}
               >
@@ -717,7 +717,7 @@ function ZoteroSection(): React.ReactElement {
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void confirmDisconnect()}
                 disabled={busy === 'disconnect'}
               >

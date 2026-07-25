@@ -2,8 +2,8 @@
 #
 # Topologie :
 #   db      (postgres:16-alpine)            non exposé, accessible uniquement par `payload`
-#   payload (ghcr.io/aliceout/carnet/payload) 127.0.0.1:${PORT_PAYLOAD}  → /cms/admin + /cms/api
-#   site    (ghcr.io/aliceout/carnet/web)      127.0.0.1:${PORT_SITE}     → / (Astro SSR)
+#   payload (ghcr.io/aliceout/tituba/payload) 127.0.0.1:${PORT_PAYLOAD}  → /cms/admin + /cms/api
+#   site    (ghcr.io/aliceout/tituba/web)      127.0.0.1:${PORT_SITE}     → / (Astro SSR)
 #
 # Le reverse proxy nginx du VPS (hors compose) termine TLS et route :
 #   domaine.com/cms/* → 127.0.0.1:${PORT_PAYLOAD}
@@ -13,13 +13,13 @@
 # le site. Modifiable via Infisical, mais doit rester aligné avec la config
 # nginx du VPS (proxy_pass).
 #
-# Data persistante = bind mounts sous $DATA_DIR (= $HOME/data/carnet,
+# Data persistante = bind mounts sous $DATA_DIR (= $HOME/data/tituba,
 # injecté par scripts/deploy.sh) :
 #   $DATA_DIR/postgres/      → /var/lib/postgresql/data
 #   $DATA_DIR/payload-media/ → /app/media
 #
 # Secrets = .env racine, généré à chaque deploy par scripts/deploy.sh
-# depuis Infisical Cloud (arbo `/services/carnet/<sub>`). Jamais commité.
+# depuis Infisical Cloud (arbo `/services/tituba/<sub>`). Jamais commité.
 #
 # Pas de service mail séparé : Payload envoie ses mails (auth, 2FA,
 # invitations) via @payloadcms/email-nodemailer directement sur le SMTP
@@ -29,7 +29,7 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: carnet-db
+    container_name: tituba-db
     restart: unless-stopped
     # ${VAR:?...} pour les vars obligatoires (compose s'arrête avant de
     # créer le container si la var manque dans .env), ${VAR:-} pour les
@@ -56,8 +56,8 @@ services:
         max-file: '3'
 
   payload:
-    image: ghcr.io/aliceout/carnet/payload:latest
-    container_name: carnet-payload
+    image: ghcr.io/aliceout/tituba/payload:latest
+    container_name: tituba-payload
     restart: unless-stopped
     pull_policy: always
     environment:
@@ -107,8 +107,8 @@ services:
         max-file: '3'
 
   site:
-    image: ghcr.io/aliceout/carnet/web:latest
-    container_name: carnet-site
+    image: ghcr.io/aliceout/tituba/web:latest
+    container_name: tituba-site
     restart: unless-stopped
     pull_policy: always
     environment:

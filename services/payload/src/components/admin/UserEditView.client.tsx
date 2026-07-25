@@ -2,7 +2,7 @@
 
 // UserEditView (client) — vue Édition custom d'un compte user, alignée
 // sur le langage visuel du reste de l'admin Carnet (CarnetTopbar +
-// .carnet-editview).
+// .tituba-editview).
 //
 // Layout :
 //   CarnetTopbar : crumbs Carnet / Utilisateurs / [email] + Sauvegarder
@@ -262,7 +262,7 @@ export default function UserEditViewClient({
     <CarnetPage
       variant="editview"
       modifier="user"
-      // Layout 2-colonnes via .carnet-postedit__doc à l'intérieur :
+      // Layout 2-colonnes via .tituba-postedit__doc à l'intérieur :
       // pas de padding latéral sur le body pour que le grid prenne
       // toute la largeur (le __center interne a son propre padding).
       fullWidth
@@ -275,18 +275,18 @@ export default function UserEditViewClient({
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={() => void save()}
             disabled={!dirty || saving || loading}
             title="Sauvegarder"
@@ -297,32 +297,32 @@ export default function UserEditViewClient({
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading || !user ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
-        <div className="carnet-postedit__doc">
+        <div className="tituba-postedit__doc">
           <form
-            className="carnet-postedit__center carnet-editview__form"
+            className="tituba-postedit__center tituba-editview__form"
             onSubmit={(e) => {
               e.preventDefault();
               void save();
             }}
           >
-            <div className="carnet-editview__hero">
-              <h1 className="carnet-h1">Utilisateur·ice</h1>
-              <p className="carnet-editview__hero-key">
-                <span className={`carnet-role carnet-role--${user.role}`}>
+            <div className="tituba-editview__hero">
+              <h1 className="tituba-h1">Utilisateur·ice</h1>
+              <p className="tituba-editview__hero-key">
+                <span className={`tituba-role tituba-role--${user.role}`}>
                   {ROLE_LABEL[user.role]}
                 </span>
               </p>
             </div>
 
-            <section className="carnet-editview__section">
-              <h2 className="carnet-editview__section-title">Identification</h2>
+            <section className="tituba-editview__section">
+              <h2 className="tituba-editview__section-title">Identification</h2>
 
-              <label className="carnet-editview__field carnet-editview__field--readonly">
+              <label className="tituba-editview__field tituba-editview__field--readonly">
                 <span className="lbl">Email</span>
                 <input type="email" value={user.email} readOnly disabled />
                 <span className="hint">
@@ -330,7 +330,7 @@ export default function UserEditViewClient({
                 </span>
               </label>
 
-              <label className="carnet-editview__field">
+              <label className="tituba-editview__field">
                 <span className="lbl">Nom affiché</span>
                 <input
                   type="text"
@@ -341,10 +341,10 @@ export default function UserEditViewClient({
               </label>
             </section>
 
-            <section className="carnet-editview__section">
-              <h2 className="carnet-editview__section-title">Rôle</h2>
+            <section className="tituba-editview__section">
+              <h2 className="tituba-editview__section-title">Rôle</h2>
 
-              <label className="carnet-editview__field">
+              <label className="tituba-editview__field">
                 <span className="lbl">Rôle</span>
                 <select
                   value={role}
@@ -370,13 +370,13 @@ export default function UserEditViewClient({
             </section>
 
             {(isAdmin || isSelf) && (
-              <section className="carnet-editview__section">
-                <h2 className="carnet-editview__section-title">Sécurité</h2>
+              <section className="tituba-editview__section">
+                <h2 className="tituba-editview__section-title">Sécurité</h2>
 
                 {isAdmin && (
-                  <div className="carnet-editview__field">
+                  <div className="tituba-editview__field">
                     <span className="lbl">Verrouillage de connexion</span>
-                    <div className="carnet-editview__inline-action">
+                    <div className="tituba-editview__inline-action">
                       <span className="hint">
                         {isLocked
                           ? `Compte verrouillé (échec de connexion répété, jusqu'à ${isoDateTime(
@@ -386,7 +386,7 @@ export default function UserEditViewClient({
                       </span>
                       <button
                         type="button"
-                        className="carnet-btn carnet-btn--ghost"
+                        className="tituba-btn tituba-btn--ghost"
                         onClick={() => void forceUnlock()}
                         disabled={unlocking}
                       >
@@ -394,7 +394,7 @@ export default function UserEditViewClient({
                       </button>
                     </div>
                     {unlockMsg && (
-                      <span className="carnet-editview__inline-feedback">{unlockMsg}</span>
+                      <span className="tituba-editview__inline-feedback">{unlockMsg}</span>
                     )}
                   </div>
                 )}
@@ -402,7 +402,7 @@ export default function UserEditViewClient({
                 {isSelf && <AccountSecurity />}
 
                 {!isSelf && !isAdmin && (
-                  <p className="carnet-editview__section-help">
+                  <p className="tituba-editview__section-help">
                     Aucune action de sécurité disponible sur ce profil.
                   </p>
                 )}
@@ -410,10 +410,10 @@ export default function UserEditViewClient({
             )}
 
             {canDelete && (
-              <section className="carnet-editview__section carnet-editview__section--danger">
+              <section className="tituba-editview__section tituba-editview__section--danger">
                 <button
                   type="button"
-                  className="carnet-postedit__delete"
+                  className="tituba-postedit__delete"
                   onClick={() => {
                     setDeleteOpen(true);
                     setDeleteError(null);
@@ -425,13 +425,13 @@ export default function UserEditViewClient({
             )}
           </form>
 
-          <aside className="carnet-postedit__meta">
+          <aside className="tituba-postedit__meta">
             <h3>Métadonnées</h3>
 
             <div className="field">
               <label>Statut</label>
-              <span className={`carnet-status carnet-status--${user.status}`}>
-                <span className="carnet-status__dot" aria-hidden="true" />
+              <span className={`tituba-status tituba-status--${user.status}`}>
+                <span className="tituba-status__dot" aria-hidden="true" />
                 {STATUS_LABEL[user.status]}
               </span>
               <div className="help">
@@ -475,7 +475,7 @@ export default function UserEditViewClient({
 
       {deleteOpen && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteSubmitting) {
               setDeleteOpen(false);
@@ -483,12 +483,12 @@ export default function UserEditViewClient({
             }
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer ce compte&nbsp;?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => {
                   if (deleteSubmitting) return;
                   setDeleteOpen(false);
@@ -501,10 +501,10 @@ export default function UserEditViewClient({
             </header>
 
             {deleteError && (
-              <div className="carnet-modal__error">Erreur&nbsp;: {deleteError}</div>
+              <div className="tituba-modal__error">Erreur&nbsp;: {deleteError}</div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
                 Le compte «&nbsp;{user?.email}&nbsp;» sera définitivement supprimé.
                 Les billets dont il/elle est auteur·ice seront conservés mais
@@ -512,10 +512,10 @@ export default function UserEditViewClient({
               </p>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => {
                   setDeleteOpen(false);
                   setDeleteError(null);
@@ -526,7 +526,7 @@ export default function UserEditViewClient({
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void deleteUser()}
                 disabled={deleteSubmitting}
               >

@@ -2,14 +2,14 @@
 
 // Topbar normalisée — seule barre supérieure utilisée dans tout l'admin
 // Carnet (list views, edit views, vue Édition Posts). Hauteur fixe 56px,
-// sticky top, border-bottom — cf .carnet-topbar dans custom.scss.
+// sticky top, border-bottom — cf .tituba-topbar dans custom.scss.
 //
 // Props :
 //   crumbs   : tableau d'items { label, href? }. Sans href = item courant
 //              (rendu en gras .cur). Le séparateur `/` est inséré
 //              automatiquement entre les items.
 //   status   : optionnel — élément JSX libre placé juste après les
-//              crumbs (typiquement <span className="carnet-status …">
+//              crumbs (typiquement <span className="tituba-status …">
 //              dans les vues edit).
 //   children : zone actions à droite (boutons Sauvegarder / Publier /
 //              Nouveau X / Exporter / etc., plus indicateurs « dirty »
@@ -38,24 +38,24 @@ export default function CarnetTopbar({
   suppressHydrationWarningOnActions?: boolean;
 }): React.ReactElement {
   return (
-    <header className="carnet-topbar">
+    <header className="tituba-topbar">
       {/* Burger mobile — visible uniquement ≤ 900px (CSS). Dispatch un
           event window que Nav.client.tsx écoute pour toggle l'overlay.
           Placé en début de topbar (à gauche) puisque la nav slide
           depuis la gauche, convention UX habituelle. */}
       <button
         type="button"
-        className="carnet-nav-burger"
+        className="tituba-nav-burger"
         aria-label="Ouvrir la navigation"
         onClick={() => {
           if (typeof window !== 'undefined') {
-            window.dispatchEvent(new Event('carnet-nav-toggle'));
+            window.dispatchEvent(new Event('tituba-nav-toggle'));
           }
         }}
       >
         <span aria-hidden="true">☰</span>
       </button>
-      <div className="carnet-topbar__crumbs">
+      <div className="tituba-topbar__crumbs">
         {crumbs.map((c, i) => (
           <React.Fragment key={i}>
             {i > 0 && (
@@ -72,10 +72,10 @@ export default function CarnetTopbar({
         ))}
       </div>
       {status}
-      <div className="carnet-topbar__spacer" />
+      <div className="tituba-topbar__spacer" />
       {children && (
         <div
-          className="carnet-topbar__actions"
+          className="tituba-topbar__actions"
           suppressHydrationWarning={suppressHydrationWarningOnActions}
         >
           {children}
