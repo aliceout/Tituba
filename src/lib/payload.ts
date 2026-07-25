@@ -132,7 +132,9 @@ export type WhereCondition = {
     | 'in'
     | 'not_in'
     | 'greater_than'
+    | 'greater_than_equal'
     | 'less_than'
+    | 'less_than_equal'
     | 'like'
     | 'contains'
     | 'exists';
@@ -140,11 +142,19 @@ export type WhereCondition = {
 };
 
 /**
- * Récupère tous les documents d'une collection (sans pagination,
- * en supposant que les collections du carnet restent < 500 entrées).
+ * Récupère les documents d'une collection (sans pagination).
  *
  * `where` accepte un tableau de conditions qui sont serialisées au format
  * `where[<field>][<operator>]=<value>` attendu par l'API REST Payload.
+ *
+ * `select` limite les champs renvoyés (`?select[<champ>]=true`). À
+ * utiliser dès qu'on affiche des cartes ou des listes : sans lui, chaque
+ * document embarque son corps Lexical complet (20-60 Ko de JSON pour un
+ * article), ce qui se paie à **chaque rendu SSR**. Une liste de 40
+ * publications passe d'environ 1 Mo à quelques dizaines de Ko.
+ *
+ * Attention : `select` et `depth` interagissent — un champ relationnel
+ * doit être listé dans `select` pour être peuplé, même avec depth > 0.
  */
 export async function fetchCollection<T = unknown>(
   collection: string,
@@ -153,9 +163,10 @@ export async function fetchCollection<T = unknown>(
     limit?: number;
     sort?: string;
     where?: WhereCondition[];
+    select?: string[];
   } = {},
 ): Promise<T[]> {
-  const { depth = 2, limit = 500, sort, where } = options;
+  const { depth = 2, limit = 500, sort, where, select } = options;
   const parts: string[] = [];
   parts.push(`depth=${depth}`);
   parts.push(`limit=${limit}`);
@@ -168,10 +179,35 @@ export async function fetchCollection<T = unknown>(
       );
     }
   }
+  if (select && select.length > 0) {
+    for (const field of select) {
+      parts.push(`select[${encodeURIComponent(field)}]=true`);
+    }
+  }
   const data = await fetchPayload<FindResult<T>>(
     `/${collection}?${parts.join('&')}`,
   );
   return data.docs;
+}
+
+/**
+ * Conditions `where` restreignant une collection aux documents réellement
+ * publics : ni brouillon, ni daté dans le futur.
+ *
+ * À préférer à `filterPublished` (qui filtre *après* coup, donc laisse
+ * les brouillons consommer le `limit` et rétrécir silencieusement la
+ * liste visible). Surtout : le filtre de date n'existait nulle part
+ * côté front, si bien qu'une publication programmée était **visible
+ * publiquement** dès sa saisie, en home comme dans le flux RSS.
+ *
+ * Neutralisé par SHOW_DRAFTS=1 en dev, comme `filterPublished`.
+ */
+export function publishedOnly(): WhereCondition[] {
+  if (process.env.SHOW_DRAFTS === '1') return [];
+  return [
+    { field: 'draft', operator: 'not_equals', value: true },
+    { field: 'publishedAt', operator: 'less_than_equal', value: new Date().toISOString() },
+  ];
 }
 
 /** Récupère le global Site (paramètres). */

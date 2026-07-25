@@ -16,12 +16,19 @@
  * Le hook re-fetch le billet avec depth=1 pour avoir les relations
  * (thèmes, tags, auteur·ices internes) résolues en objets — leurs
  * noms entrent dans le tsvector poids D.
+ *
+ * L'UPDATE passe par `txDrizzle(req)` et non par `req.payload.db.drizzle` :
+ * ce dernier est le pool, pas la transaction du save. À la création, la
+ * ligne n'est pas encore visible depuis le pool, donc l'UPDATE matchait
+ * zéro ligne et le billet restait non indexé jusqu'au save suivant.
+ * Cf. db/tx.ts.
  */
 
 import type { CollectionAfterChangeHook } from 'payload';
 import { sql } from '@payloadcms/db-postgres/drizzle';
 
 import { buildPostSearchVectorSQL } from '../lib/post-search-vector';
+import { txDrizzle } from '../db/tx';
 
 type ResolvedRelation = { name?: string | null } | { displayName?: string | null; email?: string | null };
 
@@ -91,9 +98,11 @@ export const updatePostSearchVector: CollectionAfterChangeHook = async ({
       authorNames,
     });
 
-    // UPDATE direct sur posts. Pas de transaction explicite : le hook
-    // tourne déjà dans la transaction du save Payload.
-    await req.payload.db.drizzle.execute(
+    // UPDATE direct sur posts, via l'instance Drizzle **de la
+    // transaction en cours** (cf. db/tx.ts). Passer par le pool ici
+    // serait un bug silencieux : à la création, la ligne n'est pas
+    // encore visible hors transaction et l'UPDATE matcherait zéro ligne.
+    await txDrizzle(req).execute(
       sql`UPDATE posts SET search_vector = ${vectorSQL} WHERE id = ${doc.id}`,
     );
   } catch (err) {

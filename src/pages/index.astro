@@ -2,7 +2,7 @@
 /**
  * Page d'accueil — hero + barre de filtres + flux d'items.
  *
- * Trois sections empilées (cf design_handoff_carnet/Carnet B.html → Home) :
+ * Trois sections empilées (cf design_handoff_tituba/Tituba B.html → Home) :
  *  1. Hero : kicker meta + h1 + lede (titre/lede éditables via global Site)
  *  2. Filtres : chips Type & Thème + compteur. Filtrage côté client en JS
  *     progressif via data-attrs ; persistance en URL hash. Lecture sans JS
@@ -14,7 +14,7 @@
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
 import PostCard from '../components/PostCard.astro';
-import { fetchCollection, fetchIndexPages, filterPublished } from '../lib/payload';
+import { fetchCollection, fetchIndexPages, filterPublished, publishedOnly } from '../lib/payload';
 import { formatHeroLede, formatHeroTitle } from '../lib/site';
 
 type Theme = { id: number | string; slug: string; name: string };
@@ -47,10 +47,27 @@ const DEFAULT_HERO_LEDE =
 let posts: Post[] = [];
 let indexPages: IndexPagesGlobal = {};
 try {
+  // `select` : sans lui chaque billet embarque son corps Lexical complet
+  // (20-60 Ko de JSON), soit ~1 Mo de payload par rendu SSR pour une
+  // page qui n'affiche que des cartes. On garde `limit` haut parce que
+  // le total, l'histogramme de thèmes et le « depuis <mois> » plus bas
+  // se calculent sur l'ensemble des billets, pas sur la page affichée.
   const raw = await fetchCollection<Post>('posts', {
     sort: '-publishedAt',
     limit: 500,
     depth: 2,
+    where: publishedOnly(),
+    select: [
+      'numero',
+      'slug',
+      'title',
+      'type',
+      'themes',
+      'publishedAt',
+      'lede',
+      'readingTime',
+      'draft',
+    ],
   });
   posts = filterPublished(raw);
 } catch (err) {
@@ -113,7 +130,7 @@ const monthLabel = (() => {
 
 <Layout bodyClass="justify">
   <Hero
-    kicker={`Carnet · ${total} billet${total > 1 ? 's' : ''}${monthLabel ? ` · depuis ${monthLabel}` : ''}`}
+    kicker={`Tituba · ${total} billet${total > 1 ? 's' : ''}${monthLabel ? ` · depuis ${monthLabel}` : ''}`}
     title={heroTitleHtml}
     lede={heroLedeHtml}
   />

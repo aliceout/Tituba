@@ -4,13 +4,41 @@ import { authenticated } from '../access/authenticated';
 import { pageBlocks } from '../blocks';
 
 /**
+ * Slugs que le routeur Astro sert déjà avec une route dédiée. Une page
+ * éditoriale portant l'un d'eux serait créée, sauvée… et définitivement
+ * inatteignable : `src/pages/<slug>/` gagne toujours sur le catch-all
+ * `src/pages/[slug].astro`, sans erreur nulle part. On refuse à la
+ * saisie plutôt que de laisser l'éditeur·ice découvrir un 404 permanent.
+ *
+ * À tenir à jour si on ajoute une racine d'URL côté Astro.
+ */
+const RESERVED_SLUGS = new Set([
+  'articles',
+  'analyses',
+  'actus',
+  'podcasts',
+  'outils',
+  'theme',
+  'themes',
+  'tag',
+  'tags',
+  'archives',
+  'recherche',
+  'abonnement',
+  'rss.xml',
+  'cms',
+  'api',
+  '404',
+]);
+
+/**
  * Pages éditoriales libres — À propos, Colophon, Mentions légales,
  * Accessibilité, RGPD, Index. Composées en empilant des blocs (cf.
  * `pageBlocks` → Prose, Figure, CitationBloc).
  *
- * Schéma proche de 2mains/Pages mais simplifié pour le carnet (pas de
+ * Schéma proche de 2mains/Pages mais simplifié pour Tituba (pas de
  * variant de hero, pas de CTAs — la page À propos est typographique
- * avec sections empilées simples, cf design_handoff_carnet/README §
+ * avec sections empilées simples, cf design_handoff_tituba/README §
  * page-about.hbs).
  */
 export const Pages: CollectionConfig = {
@@ -55,6 +83,14 @@ export const Pages: CollectionConfig = {
       admin: {
         description:
           "URL-safe, ex : 'about', 'colophon', 'mentions-legales'. Sert de match de route Astro.",
+      },
+      validate: (value: unknown) => {
+        if (typeof value !== 'string') return true;
+        const normalized = value.trim().toLowerCase();
+        if (RESERVED_SLUGS.has(normalized)) {
+          return `« ${normalized} » est une adresse réservée du site : une page portant ce slug ne serait jamais affichée. Merci d'en choisir un autre.`;
+        }
+        return true;
       },
     },
     {

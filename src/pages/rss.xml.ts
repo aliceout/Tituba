@@ -1,5 +1,5 @@
 /**
- * Flux RSS du Carnet — /rss.xml
+ * Flux RSS de Tituba — /rss.xml
  *
  * Liste des billets non-draft, triés par date décroissante. Limite : 50.
  * Description = lede du billet (chapô). Catégories = thèmes (slugs).
@@ -7,7 +7,13 @@
 import rss from '@astrojs/rss';
 import type { APIRoute } from 'astro';
 
-import { fetchCollection, fetchIdentity, fetchSubscriptions, filterPublished } from '../lib/payload';
+import {
+  fetchCollection,
+  fetchIdentity,
+  fetchSubscriptions,
+  filterPublished,
+  publishedOnly,
+} from '../lib/payload';
 
 type IdentityGlobal = { siteName?: string };
 type SubscriptionsGlobal = { rssEnabled?: boolean };
@@ -38,12 +44,14 @@ export const GET: APIRoute = async (context) => {
   }
 
   let posts: Post[] = [];
-  let siteName = 'Carnet';
+  let siteName = 'Tituba';
   try {
     const raw = await fetchCollection<Post>('posts', {
       sort: '-publishedAt',
       limit: 50,
       depth: 1,
+      where: publishedOnly(),
+      select: ['numero', 'slug', 'title', 'themes', 'publishedAt', 'lede', 'draft'],
     });
     posts = filterPublished(raw);
   } catch (err) {
@@ -63,7 +71,7 @@ export const GET: APIRoute = async (context) => {
   }
   return rss({
     title: `${siteName} — notes de recherche`,
-    description: `${siteName} — carnet de recherche. Auto-hébergé. Sans pisteur.`,
+    description: `${siteName} — tituba de recherche. Auto-hébergé. Sans pisteur.`,
     site: context.site,
     items: posts.map((p) => {
       const themes = (p.themes ?? []).filter(

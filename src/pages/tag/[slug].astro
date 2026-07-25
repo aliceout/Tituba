@@ -10,7 +10,12 @@
 import Layout from '../../layouts/Layout.astro';
 import Hero from '../../components/Hero.astro';
 import PostCard from '../../components/PostCard.astro';
-import { fetchBySlug, fetchCollection, filterPublished } from '../../lib/payload';
+import {
+  fetchBySlug,
+  fetchCollection,
+  filterPublished,
+  publishedOnly,
+} from '../../lib/payload';
 
 type Tag = {
   id: number | string;
@@ -44,10 +49,24 @@ if (!tag) {
 let posts: Post[] = [];
 try {
   const raw = await fetchCollection<Post>('posts', {
-    where: [{ field: 'tags.slug', operator: 'equals', value: slug }],
+    where: [
+      { field: 'tags.slug', operator: 'equals', value: slug },
+      ...publishedOnly(),
+    ],
     sort: '-publishedAt',
     limit: 500,
     depth: 2,
+    select: [
+      'numero',
+      'slug',
+      'title',
+      'type',
+      'themes',
+      'publishedAt',
+      'lede',
+      'readingTime',
+      'draft',
+    ],
   });
   posts = filterPublished(raw);
 } catch (err) {
@@ -59,7 +78,7 @@ const total = posts.length;
 
 <Layout
   title={`#${tag.slug}`}
-  description={`Billets du Carnet taggés #${tag.slug}.`}
+  description={`Billets de Tituba taggés #${tag.slug}.`}
 >
   <Hero
     kicker={`Tag · #${tag.slug}`}

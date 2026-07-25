@@ -2,9 +2,9 @@
 /**
  * Page article — /billets/<slug>/
  *
- * Structure (cf design_handoff_carnet/Carnet B.html → Article) :
+ * Structure (cf design_handoff_tituba/Tituba B.html → Article) :
  *  1. Barre de progression sticky 2 px (via Layout progressBar)
- *  2. Crumbs (Carnet / thème / n° XXX)
+ *  2. Crumbs (Tituba / thème / n° XXX)
  *  3. Kicker (type · thèmes)
  *  4. h1 + deck (lede)
  *  5. Meta-strip (Publié | Lecture | Pôle | ID)
@@ -19,7 +19,13 @@
  * IntersectionObserver pour highlight de l'item actif.
  */
 import Layout from '../../layouts/Layout.astro';
-import { fetchBySlug, fetchCollection, fetchIdentity, fetchSite } from '../../lib/payload';
+import {
+  fetchBySlug,
+  fetchCollection,
+  fetchIdentity,
+  fetchSite,
+  publishedOnly,
+} from '../../lib/payload';
 import {
   extractToc,
   renderLexicalSidenotes,
@@ -126,7 +132,7 @@ try {
 }
 const notesMode: 'classic' | 'sidenotes' =
   site.reading?.notesMode === 'sidenotes' ? 'sidenotes' : 'classic';
-const siteName = identity.siteName?.trim() || 'Carnet';
+const siteName = identity.siteName?.trim() || 'Tituba';
 
 // Body HTML rendu côté serveur depuis Lexical. En mode classique, on
 // récupère bodyHtml + footnotesHtml (notes empilées en pied). En mode
@@ -150,10 +156,14 @@ let related: Array<{ slug: string; title: string; publishedAt: string }> = [];
 if (primaryTheme) {
   try {
     const relatedRaw = await fetchCollection<Post>('posts', {
-      where: [{ field: 'themes.slug', operator: 'equals', value: primaryTheme.slug }],
+      where: [
+        { field: 'themes.slug', operator: 'equals', value: primaryTheme.slug },
+        ...publishedOnly(),
+      ],
       limit: 10,
       sort: '-publishedAt',
       depth: 0,
+      select: ['slug', 'title', 'publishedAt', 'draft'],
     });
     related = relatedRaw
       .filter((p) => p.slug !== post.slug && !p.draft)
@@ -182,7 +192,7 @@ const postCitation = formatPostCitationChicago(postAuthors);
 // dans formatPostCitationChicago.
 const authorCitation = postCitation || 'Auteur·ice';
 
-// Citation bibliographique du billet (Chicago author-date façon Carnet)
+// Citation bibliographique du billet (Chicago author-date façon Tituba)
 const articleUrl = new URL(Astro.url.pathname, Astro.site).toString();
 const citationText = `${authorCitation}. « ${post.title} », ${siteName}, ${numLabel.replace('n° ', 'n° ')}, ${publishedFr}, ${articleUrl}.`;
 
@@ -240,7 +250,7 @@ const citationMeta = highwireMeta(
 
   <article class:list={['post', 'container', { 'no-toc': tocEntries.length === 0 }]}>
     <div class="crumbs">
-      <a href="/">Carnet</a> &nbsp;/&nbsp;
+      <a href="/">Tituba</a> &nbsp;/&nbsp;
       {TYPE_LABEL[post.type]}
       &nbsp;/&nbsp; {numLabel}
     </div>
@@ -332,7 +342,7 @@ const citationMeta = highwireMeta(
         <section class="citation" id="cite">
           <div class="lbl">Pour citer cet article</div>
           <div class="body">
-            {authorCitation}. « {post.title} », <em>Carnet</em>, {numLabel}, {publishedFr},
+            {authorCitation}. « {post.title} », <em>Tituba</em>, {numLabel}, {publishedFr},
             <span class="url">{' '}{articleUrl}</span>.
           </div>
           <div class="acts">

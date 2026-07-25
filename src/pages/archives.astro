@@ -7,11 +7,11 @@
  *  - lignes `120px 100px 1fr 160px` (date ISO, type uppercase accent,
  *    titre, pôle aligné à droite)
  *
- * Réf : design_handoff_carnet/Carnet B.html → Archives.
+ * Réf : design_handoff_tituba/Tituba B.html → Archives.
  */
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
-import { fetchCollection, fetchIndexPages, filterPublished } from '../lib/payload';
+import { fetchCollection, fetchIndexPages, filterPublished, publishedOnly } from '../lib/payload';
 import { formatDateIso, formatHeroLede, formatHeroTitle } from '../lib/site';
 
 type Theme = { id: number | string; slug: string; name: string };
@@ -39,7 +39,7 @@ const TYPE_LABEL: Record<Post['type'], string> = {
 
 const DEFAULT_TITLE = 'Tous les billets, par année.';
 const DEFAULT_LEDE =
-  'Le carnet est versionné : chaque billet a un numéro, une date de publication et, le cas échéant, une date de mise à jour. Les fiches thématiques sont régulièrement révisées.';
+  'Le tituba est versionné : chaque billet a un numéro, une date de publication et, le cas échéant, une date de mise à jour. Les fiches thématiques sont régulièrement révisées.';
 
 let posts: Post[] = [];
 let indexPages: IndexPagesGlobal = {};
@@ -48,6 +48,8 @@ try {
     sort: '-publishedAt',
     limit: 1000,
     depth: 1,
+    where: publishedOnly(),
+    select: ['numero', 'slug', 'title', 'type', 'themes', 'publishedAt', 'draft'],
   });
   posts = filterPublished(raw);
 } catch (err) {
@@ -84,7 +86,7 @@ const heroLedeHtml = formatHeroLede(
 
 <Layout
   title="Archives"
-  description="Tous les billets du Carnet, par année."
+  description="Toutes les publications de Tituba, par année."
 >
   <Hero
     kicker={`Archives · ${total} billet${total > 1 ? 's' : ''}`}

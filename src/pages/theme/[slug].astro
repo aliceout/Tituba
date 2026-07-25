@@ -7,12 +7,18 @@
  * d'ensemble), puis le même flux d'items que l'accueil filtré
  * sur ce thème.
  *
- * Réf : design_handoff_carnet/Carnet B.html → PolePage (single).
+ * Réf : design_handoff_tituba/Tituba B.html → PolePage (single).
  */
 import Layout from '../../layouts/Layout.astro';
 import Hero from '../../components/Hero.astro';
 import PostCard from '../../components/PostCard.astro';
-import { fetchBySlug, fetchCollection, fetchIndexPages, filterPublished } from '../../lib/payload';
+import {
+  fetchBySlug,
+  fetchCollection,
+  fetchIndexPages,
+  filterPublished,
+  publishedOnly,
+} from '../../lib/payload';
 
 type IndexPagesGlobal = { themes?: { enabled?: boolean } };
 
@@ -61,10 +67,24 @@ if (!theme) {
 let posts: Post[] = [];
 try {
   const raw = await fetchCollection<Post>('posts', {
-    where: [{ field: 'themes.slug', operator: 'equals', value: slug }],
+    where: [
+      { field: 'themes.slug', operator: 'equals', value: slug },
+      ...publishedOnly(),
+    ],
     sort: '-publishedAt',
     limit: 500,
     depth: 2,
+    select: [
+      'numero',
+      'slug',
+      'title',
+      'type',
+      'themes',
+      'publishedAt',
+      'lede',
+      'readingTime',
+      'draft',
+    ],
   });
   posts = filterPublished(raw);
 } catch (err) {
@@ -76,7 +96,7 @@ const total = posts.length;
 
 <Layout
   title={theme.name}
-  description={theme.description ?? `Tous les billets du Carnet sur le thème ${theme.name}.`}
+  description={theme.description ?? `Toutes les publications de Tituba sur la thématique ${theme.name}.`}
 >
   <Hero
     kicker={`Thème · #${theme.slug}`}

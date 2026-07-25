@@ -7,7 +7,7 @@
  */
 import Layout from '../../layouts/Layout.astro';
 import Hero from '../../components/Hero.astro';
-import { fetchCollection, filterPublished } from '../../lib/payload';
+import { fetchCollection, filterPublished, publishedOnly } from '../../lib/payload';
 
 type Tag = {
   id: number | string;
@@ -30,7 +30,13 @@ try {
     depth: 0,
   });
   const posts = filterPublished(
-    await fetchCollection<PostLite>('posts', { limit: 1000, depth: 0 }),
+    // Cf. themes/index.astro : comptage seul, donc `select` minimal.
+    await fetchCollection<PostLite>('posts', {
+      limit: 1000,
+      depth: 0,
+      where: publishedOnly(),
+      select: ['tags', 'draft'],
+    }),
   );
   // post.tags en depth 0 est un array d'IDs ; on compte par tag.id
   const idToSlug = new Map<number | string, string>(tags.map((t) => [t.id, t.slug]));
@@ -54,11 +60,11 @@ const total = sorted.length;
 
 <Layout
   title="Tags"
-  description="Tous les mots-clés utilisés dans le Carnet — index alphabétique."
+  description="Tous les mots-clés utilisés dans le Tituba — index alphabétique."
 >
   <Hero
     kicker={`Index · ${total} tag${total > 1 ? 's' : ''}`}
-    title="Les <em>tags</em> du carnet."
+    title="Les <em>tags</em> de Tituba."
     lede="Mots-clés libres ajoutés au fil des billets. Cliquer sur un tag mène à la liste des billets qui l'utilisent."
   />
 

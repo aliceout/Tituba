@@ -6,11 +6,16 @@
  * Chaque carte = `#slug` mono accent, nom du thème 24 px, compteur
  * à droite.
  *
- * Réf : design_handoff_carnet/Carnet B.html → PolePage (overview).
+ * Réf : design_handoff_tituba/Tituba B.html → PolePage (overview).
  */
 import Layout from '../../layouts/Layout.astro';
 import Hero from '../../components/Hero.astro';
-import { fetchCollection, fetchIndexPages, filterPublished } from '../../lib/payload';
+import {
+  fetchCollection,
+  fetchIndexPages,
+  filterPublished,
+  publishedOnly,
+} from '../../lib/payload';
 import { formatHeroLede, formatHeroTitle } from '../../lib/site';
 
 type Theme = {
@@ -30,9 +35,9 @@ type IndexPagesGlobal = {
   themes?: { enabled?: boolean; heroTitle?: string; heroLede?: string };
 };
 
-const DEFAULT_TITLE = 'Les *thèmes* du carnet.';
+const DEFAULT_TITLE = 'Nos *thématiques*.';
 const DEFAULT_LEDE =
-  'Chaque billet est rattaché à un ou plusieurs thèmes. La taxonomie est libre et évolue avec le carnet.';
+  'Chaque publication est rattachée à une ou plusieurs thématiques. La taxonomie est libre et évolue avec nos travaux.';
 
 let themes: Theme[] = [];
 let counts: Map<string, number> = new Map();
@@ -44,7 +49,16 @@ try {
     depth: 0,
   });
   const posts = filterPublished(
-    await fetchCollection<PostLite>('posts', { limit: 1000, depth: 0 }),
+    // Ces billets ne servent qu'à compter les usages par thème : on ne
+    // récupère que `themes` (+ `draft` pour le filtre). Sans `select`,
+    // c'était 1000 corps Lexical complets chargés pour afficher des
+    // compteurs. Remplacé en Phase 3 par /cms/api/publications/counts.
+    await fetchCollection<PostLite>('posts', {
+      limit: 1000,
+      depth: 0,
+      where: publishedOnly(),
+      select: ['themes', 'draft'],
+    }),
   );
   // post.themes en depth 0 est un array d'IDs ; on compte par theme.id
   const idToSlug = new Map<number | string, string>(themes.map((t) => [t.id, t.slug]));
@@ -92,7 +106,7 @@ const heroLedeHtml = formatHeroLede(
 
 <Layout
   title="Thèmes"
-  description="Les sujets de recherche du Carnet — taxonomie multivaluée et libre."
+  description="Les sujets de recherche de Tituba — taxonomie multivaluée et libre."
 >
   <Hero
     kicker={`Thèmes thématiques · ${total} thème${total > 1 ? 's' : ''}`}
