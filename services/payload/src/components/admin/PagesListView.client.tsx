@@ -71,7 +71,7 @@ export default function PagesListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="pages"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Pages éditoriales' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Pages éditoriales' }]}
       topbarActions={
         <Link
           href="/cms/admin/collections/pages/create"

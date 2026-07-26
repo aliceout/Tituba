@@ -351,7 +351,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
   return (
     <CarnetPage
       variant="editview"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Navigation' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Navigation' }]}
       topbarActions={
         <>
           {dirty && (

@@ -273,12 +273,12 @@ export function deleteBiblioInlinesByEntry(
 // ─── Slash menu ───────────────────────────────────────────────────
 // Trigger : touche `/` en début de paragraphe ou après un espace.
 // Affiché en popover sous le curseur. Items : structure (H2/H3/quote)
-// + blocks Carnet (Note de bas de page, Citation longue, Biblio inline,
+// + blocks Tituba (Note de bas de page, Citation longue, Biblio inline,
 // Figure).
 
 type SlashItem = {
   id: string;
-  group: 'Blocs Carnet' | 'Mise en forme';
+  group: 'Blocs Tituba' | 'Mise en forme';
   ic: string;
   label: string;
   desc?: string;
@@ -293,7 +293,7 @@ type SlashItem = {
 const SLASH_ITEMS: SlashItem[] = [
   {
     id: 'fn',
-    group: 'Blocs Carnet',
+    group: 'Blocs Tituba',
     ic: 'fn',
     label: 'Note de bas de page',
     desc: 'Note numérotée, retour automatique',
@@ -309,7 +309,7 @@ const SLASH_ITEMS: SlashItem[] = [
   },
   {
     id: 'bi',
-    group: 'Blocs Carnet',
+    group: 'Blocs Tituba',
     ic: '@',
     label: 'Bibliographie inline',
     desc: 'Insère une référence par sa clé',
@@ -325,7 +325,7 @@ const SLASH_ITEMS: SlashItem[] = [
   },
   {
     id: 'fig',
-    group: 'Blocs Carnet',
+    group: 'Blocs Tituba',
     ic: '▢',
     label: 'Figure',
     desc: 'Image + légende',
@@ -341,7 +341,7 @@ const SLASH_ITEMS: SlashItem[] = [
   },
   {
     id: 'draft',
-    group: 'Blocs Carnet',
+    group: 'Blocs Tituba',
     ic: '⚠',
     label: 'Zone brouillon',
     desc: 'Marque une zone du billet comme inachevée',
@@ -666,7 +666,7 @@ function EditorRefPlugin({ onMount }: { onMount: (editor: LexicalEditor) => void
 
 // ─── Plugin : validation d'une zone brouillon ────────────────────
 // Le bouton « ✓ valider » rendu par DraftContainerNode.createDOM
-// dispatch un CustomEvent `carnet:validate-draft` qui bubble jusqu'au
+// dispatch un CustomEvent `site:validate-draft` qui bubble jusqu'au
 // document. Ce plugin l'écoute et lance l'unwrap dans editor.update().
 // Pourquoi pas un click direct dans createDOM : createDOM n'a pas
 // accès à l'editor, et le click sortirait du contexte Lexical.
@@ -685,8 +685,8 @@ function DraftValidatePlugin() {
         }
       });
     }
-    document.addEventListener('carnet:validate-draft', handler as EventListener);
-    return () => document.removeEventListener('carnet:validate-draft', handler as EventListener);
+    document.addEventListener('site:validate-draft', handler as EventListener);
+    return () => document.removeEventListener('site:validate-draft', handler as EventListener);
   }, [editor]);
   return null;
 }

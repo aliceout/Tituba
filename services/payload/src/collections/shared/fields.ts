@@ -38,7 +38,7 @@ export function numeroField(): Field {
     admin: {
       position: 'sidebar',
       description:
-        'Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.',
+        'Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.',
     },
   };
 }
@@ -68,7 +68,7 @@ export function slugField(): Field {
 
 /**
  * Sous-genre optionnel à l'intérieur d'un format. Ne sert plus qu'à la
- * collection `posts` héritée du Carnet ; les collections Tituba n'en
+ * collection `posts` héritée du Tituba ; les collections Tituba n'en
  * déclarent pas, le format étant porté par la collection elle-même.
  */
 export function subtypeField(options: { label: string; value: string }[], defaultValue: string): Field {
@@ -282,7 +282,7 @@ export function readingTimeField(): Field {
 
 /**
  * Identifiant citable stable, dérivé de l'année de publication et du
- * numéro de série (ex. `carnet:2026-042`). Repris tel quel dans les
+ * numéro de série (ex. `site:2026-042`). Repris tel quel dans les
  * exports BibTeX (`note`) et RIS (`AN`), et indexé en poids B dans le
  * vecteur de recherche.
  */
@@ -291,7 +291,7 @@ export function idField(prefix: string): Field {
     name: 'idCarnet',
     type: 'text',
     required: false,
-    label: 'ID Carnet',
+    label: 'Identifiant citable',
     admin: {
       position: 'sidebar',
       readOnly: true,

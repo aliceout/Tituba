@@ -96,7 +96,7 @@ export default function ThemeListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="themes"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Thèmes' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Thèmes' }]}
       topbarActions={
         <Link
           href="/cms/admin/collections/themes/create"

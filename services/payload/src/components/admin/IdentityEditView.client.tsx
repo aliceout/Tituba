@@ -21,7 +21,7 @@ type IdentityData = {
 };
 
 const EMPTY: IdentityData = {
-  siteName: 'Carnet',
+  siteName: 'Tituba',
   authorName: '',
   baseline: '',
   copyrightLine: '',
@@ -29,7 +29,7 @@ const EMPTY: IdentityData = {
 
 function normalize(doc: IdentityData): IdentityData {
   return {
-    siteName: doc.siteName ?? 'Carnet',
+    siteName: doc.siteName ?? 'Tituba',
     authorName: doc.authorName ?? '',
     baseline: doc.baseline ?? '',
     copyrightLine: doc.copyrightLine ?? '',
@@ -100,7 +100,7 @@ export default function IdentityEditViewClient(): React.ReactElement {
   return (
     <CarnetPage
       variant="editview"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Identité' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Identité' }]}
       topbarActions={
         <>
           {dirty && (
@@ -155,7 +155,7 @@ export default function IdentityEditViewClient(): React.ReactElement {
                 type="text"
                 value={data.siteName ?? ''}
                 onChange={(e) => update('siteName', e.target.value)}
-                placeholder="Carnet"
+                placeholder="Tituba"
               />
               <span className="hint">
                 Court de préférence (1 à 2 mots). S&apos;applique partout où le
@@ -173,7 +173,7 @@ export default function IdentityEditViewClient(): React.ReactElement {
               />
               <span className="hint">
                 Nom du laboratoire de recherche, de la personne, du
-                collectif… selon l&apos;utilisation du carnet.
+                collectif… selon l&apos;utilisation du site.
               </span>
             </label>
 

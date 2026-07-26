@@ -48,7 +48,7 @@ export type BuildPublicationArgs = {
   idPrefix: string;
   /**
    * Sous-genre optionnel, rendu en select dans la sidebar. Hérité du
-   * Carnet ; les collections Tituba n'en déclarent pas, le format étant
+   * Tituba ; les collections Tituba n'en déclarent pas, le format étant
    * porté par la collection elle-même.
    */
   subtypes?: { options: { label: string; value: string }[]; defaultValue: string };

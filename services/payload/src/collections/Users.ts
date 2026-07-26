@@ -53,7 +53,7 @@ export const Users: CollectionConfig = {
         },
         // Vue d'édition entièrement custom — remplace le rendu natif
         // Payload (form stacked + Change Password modal) par le layout
-        // Carnet (CarnetTopbar + sections + sidebar + modale danger).
+        // Tituba (CarnetTopbar + sections + sidebar + modale danger).
         // Cf UserEditView.client.tsx.
         edit: {
           root: {
@@ -61,7 +61,7 @@ export const Users: CollectionConfig = {
           },
         },
       },
-      // Header custom (crumbs Carnet / Mon compte) au-dessus de la
+      // Header custom (crumbs Tituba / Mon compte) au-dessus de la
       // barre d'actions native pour /cms/admin/account. Sur
       // /cms/admin/collections/users/[id] on a maintenant la vue
       // entièrement custom (cf views.edit.root) — beforeDocumentControls

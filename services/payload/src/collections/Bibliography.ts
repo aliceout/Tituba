@@ -23,7 +23,7 @@ export const Bibliography: CollectionConfig = {
     delete: authenticated,
   },
   hooks: {
-    // Verrouillage des refs Zotero : le Carnet est lecteur seul pour
+    // Verrouillage des refs Zotero : le Tituba est lecteur seul pour
     // tout ce qui vient du sync. Les modifs doivent passer par Zotero
     // puis un nouveau sync. Le endpoint `/users/me/zotero-sync` met
     // `req.context.zoteroSync = true` pour bypass cette protection.
@@ -34,7 +34,7 @@ export const Bibliography: CollectionConfig = {
         const fromSync = (req?.context as { zoteroSync?: boolean } | undefined)?.zoteroSync === true;
         if (fromSync) return data;
         throw new Error(
-          'Cette référence vient de Zotero et ne peut pas être modifiée depuis le Carnet. Modifiez-la dans Zotero puis lancez un nouveau sync.',
+          'Cette référence vient de Zotero et ne peut pas être modifiée depuis le Tituba. Modifiez-la dans Zotero puis lancez un nouveau sync.',
         );
       },
     ],
@@ -226,8 +226,8 @@ export const Bibliography: CollectionConfig = {
     },
 
     // ─── Provenance & sync Zotero ────────────────────────────────────
-    // `source` distingue les refs saisies à la main au Carnet de celles
-    // importées depuis Zotero. Pour les Zotero, le Carnet est lecture
+    // `source` distingue les refs saisies à la main au Tituba de celles
+    // importées depuis Zotero. Pour les Zotero, le Tituba est lecture
     // seule : les modifs se font dans Zotero, puis un nouveau sync les
     // remonte. Cette règle est appliquée par le hook beforeChange en
     // fin de fichier (refuse les updates sauf si req.context.zoteroSync).
@@ -244,7 +244,7 @@ export const Bibliography: CollectionConfig = {
       admin: {
         position: 'sidebar',
         readOnly: true,
-        description: "Posée à la création — détermine si la ref est éditable au Carnet ou pilotée par Zotero.",
+        description: "Posée à la création — détermine si la ref est éditable au Tituba ou pilotée par Zotero.",
       },
     },
     {

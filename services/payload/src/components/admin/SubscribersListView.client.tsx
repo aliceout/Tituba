@@ -3,7 +3,7 @@
 // Vue Liste custom pour la collection Subscribers — abonné·es aux
 // alertes mail des nouveaux billets.
 //
-// Layout standard Carnet : crumbs, toolbar (search + filtre statut),
+// Layout standard Tituba : crumbs, toolbar (search + filtre statut),
 // table 4 colonnes (email · statut · inscription · confirmation),
 // pagination. Le clic sur une ligne ouvre la vue Édition native
 // Payload (où admin/root peut supprimer manuellement). Pas de bouton
@@ -116,7 +116,7 @@ export default function SubscribersListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="subscribers"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Abonné·es' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Abonné·es' }]}
       topbarActions={
         activeCount !== null ? (
           <span className="tituba-listview__count">

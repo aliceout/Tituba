@@ -3,7 +3,7 @@
 // BibliographyEditView (client) — vue Édition custom d'une référence
 // bibliographique. Layout :
 //
-//   CarnetTopbar : crumbs Carnet / Bibliographie / [slug] + Supprimer
+//   CarnetTopbar : crumbs Tituba / Bibliographie / [slug] + Supprimer
 //                  + Sauvegarder
 //   .tituba-editview__hero : h1 « Référence bibliographique » +
 //                            « clé : <slug> » mono
@@ -303,10 +303,10 @@ export default function BibliographyEditViewClient({
   const isJournalLike = data.type === 'article' || data.type === 'paper';
   const middleFieldLabel = isJournalLike ? 'Numéro' : 'Collection';
 
-  // Refs venues du sync Zotero — verrouillées en édition côté Carnet
+  // Refs venues du sync Zotero — verrouillées en édition côté Tituba
   // (les modifs se font dans Zotero puis un nouveau sync les remonte).
   // La suppression reste possible : l'autrice peut décider de retirer
-  // une ref du Carnet sans toucher Zotero.
+  // une ref du Tituba sans toucher Zotero.
   const isZoteroRef = data.source === 'zotero';
 
   return (
@@ -314,7 +314,7 @@ export default function BibliographyEditViewClient({
       variant="editview"
       modifier="biblio"
       crumbs={[
-        { href: '/cms/admin', label: 'Carnet' },
+        { href: '/cms/admin', label: 'Tituba' },
         { href: '/cms/admin/collections/bibliography', label: 'Bibliographie' },
         { label: data.slug || (docId ? '—' : 'nouvelle') },
       ]}
@@ -386,7 +386,7 @@ export default function BibliographyEditViewClient({
               Cette référence est importée depuis Zotero. Pour la modifier,
               éditez-la dans Zotero puis lancez un nouveau sync depuis votre
               page Compte. La suppression reste disponible si vous voulez la
-              retirer du Carnet sans toucher à Zotero.
+              retirer du Tituba sans toucher à Zotero.
             </div>
           )}
 

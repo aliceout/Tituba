@@ -136,7 +136,7 @@ export default function SiteEditViewClient(): React.ReactElement {
   return (
     <CarnetPage
       variant="editview"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Options' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Options' }]}
       topbarActions={
         <>
           {dirty && (
@@ -227,7 +227,7 @@ export default function SiteEditViewClient(): React.ReactElement {
             <h2 className="tituba-editview__section-title">Lecture des billets</h2>
             <p className="tituba-editview__section-help">
               Choix typographique pour les notes de bas de page. S&apos;applique à
-              tous les billets du Carnet.
+              tous les billets du Tituba.
             </p>
 
             <label className="tituba-editview__field">

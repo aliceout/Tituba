@@ -157,7 +157,7 @@ export default function UsersListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="users"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Utilisateurs' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Utilisateurs' }]}
       topbarActions={
         <button
           type="button"

@@ -3,7 +3,7 @@
 // ThemeEditView (client) — vue Édition custom d'un thème de la
 // taxonomie. Layout :
 //
-//   CarnetTopbar : crumbs Carnet / Thèmes / [slug] + Supprimer + Sauvegarder
+//   CarnetTopbar : crumbs Tituba / Thèmes / [slug] + Supprimer + Sauvegarder
 //   .tituba-editview__hero : h1 « Thème » + « clé : <slug> » mono
 //   Champs : Nom, Slug, Description éditoriale (textarea)
 //   used-in : billets qui ont ce thème dans Post.themes
@@ -174,7 +174,7 @@ export default function ThemeEditViewClient({
       variant="editview"
       modifier="theme"
       crumbs={[
-        { href: '/cms/admin', label: 'Carnet' },
+        { href: '/cms/admin', label: 'Tituba' },
         { href: '/cms/admin/collections/themes', label: 'Thèmes' },
         { label: data.slug || (docId ? '—' : 'nouveau') },
       ]}

@@ -4,7 +4,7 @@
 // admin (cf Design/design_handoff_admin/tituba-admin.html → ScreenList).
 //
 // Layout :
-//   - Header : crumbs « Carnet / Billets », actions à droite (Exporter,
+//   - Header : crumbs « Tituba / Billets », actions à droite (Exporter,
 //     Nouveau billet ⌘N en accent)
 //   - Titre h1 « Billets »
 //   - Toolbar : recherche + 4 filtres dropdowns (Type / Pôle / Statut / Tri)
@@ -252,7 +252,7 @@ export default function PublicationListViewClient({
     <CarnetPage
       variant="listview"
       modifier="publication"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Billets' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Billets' }]}
       topbarActions={
         <>
           <button

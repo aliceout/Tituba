@@ -1,11 +1,11 @@
 'use client';
 
 // UserEditView (client) — vue Édition custom d'un compte user, alignée
-// sur le langage visuel du reste de l'admin Carnet (CarnetTopbar +
+// sur le langage visuel du reste de l'admin Tituba (CarnetTopbar +
 // .tituba-editview).
 //
 // Layout :
-//   CarnetTopbar : crumbs Carnet / Utilisateurs / [email] + Sauvegarder
+//   CarnetTopbar : crumbs Tituba / Utilisateurs / [email] + Sauvegarder
 //   hero         : h1 « Utilisateur·ice »
 //   section Identification : Email (readonly) · Nom affiché
 //   section Rôle : select root / admin / éditeur·ice — disabled selon
@@ -267,7 +267,7 @@ export default function UserEditViewClient({
       // toute la largeur (le __center interne a son propre padding).
       fullWidth
       crumbs={[
-        { href: '/cms/admin', label: 'Carnet' },
+        { href: '/cms/admin', label: 'Tituba' },
         { href: '/cms/admin/collections/users', label: 'Utilisateurs' },
         { label: user?.email ?? (docId ? '—' : 'nouveau') },
       ]}

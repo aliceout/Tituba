@@ -257,7 +257,7 @@ export default function PublicationEditViewClient({
       .then((r) => r.json())
       .then((data: { docs: MediaEntry[] }) => setMediaOptions(data.docs ?? []))
       .catch(() => setMediaOptions([]));
-    // Liste des user·rices actifs du Carnet pour le picker auteur·ices.
+    // Liste des user·rices actifs du Tituba pour le picker auteur·ices.
     // status='active' uniquement — on n'expose pas les pending/disabled.
     const usersP = fetch(
       '/cms/api/users?limit=200&depth=0&sort=displayName&where[status][equals]=active',
@@ -334,7 +334,7 @@ export default function PublicationEditViewClient({
     if (!post.numero || !post.publishedAt) return null;
     const y = new Date(post.publishedAt).getFullYear();
     if (Number.isNaN(y)) return null;
-    return `carnet:${y}-${pad3(post.numero)}`;
+    return `site:${y}-${pad3(post.numero)}`;
   }, [post.numero, post.publishedAt]);
 
   function patch<K extends keyof Post>(key: K, value: Post[K]) {
@@ -776,7 +776,7 @@ export default function PublicationEditViewClient({
       variant="postedit"
       fullWidth
       crumbs={[
-        { href: '/cms/admin', label: 'Carnet' },
+        { href: '/cms/admin', label: 'Tituba' },
         { href: spec.adminBase, label: spec.labelPlural },
         { label: <>n°&nbsp;{pad3(post.numero ?? null)}</> },
       ]}
@@ -1216,7 +1216,7 @@ export default function PublicationEditViewClient({
                   })}
                 </div>
               </details>
-              {/* Tags rappelés à droite du bandeau « Billet n° 042 · carnet:2026-042 ».
+              {/* Tags rappelés à droite du bandeau « Billet n° 042 · site:2026-042 ».
                   Retrait d'un thème = ouvrir le multi-select et décocher. */}
             </div>
 
@@ -1357,7 +1357,7 @@ export default function PublicationEditViewClient({
             <hr />
             <h3>Auto-calculé</h3>
             <div className="field">
-              <label>ID Carnet</label>
+              <label>ID Tituba</label>
               <div className="auto">{idCarnet ?? '—'}</div>
             </div>
             <div className="field">

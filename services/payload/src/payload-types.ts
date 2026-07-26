@@ -156,7 +156,7 @@ export interface UserAuthOperations {
 export interface Article {
   id: number;
   /**
-   * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.
    */
   numero: number;
   title: string;
@@ -397,7 +397,7 @@ export interface Bibliography {
    */
   annotation?: string | null;
   /**
-   * Posée à la création — détermine si la ref est éditable au Carnet ou pilotée par Zotero.
+   * Posée à la création — détermine si la ref est éditable au Tituba ou pilotée par Zotero.
    */
   source: 'manual' | 'zotero';
   /**
@@ -424,7 +424,7 @@ export interface Bibliography {
 export interface Analysis {
   id: number;
   /**
-   * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.
    */
   numero: number;
   title: string;
@@ -512,7 +512,7 @@ export interface Analysis {
 export interface Actus {
   id: number;
   /**
-   * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.
    */
   numero: number;
   title: string;
@@ -600,7 +600,7 @@ export interface Actus {
 export interface Podcast {
   id: number;
   /**
-   * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.
    */
   numero: number;
   title: string;
@@ -700,7 +700,7 @@ export interface Podcast {
 export interface Outil {
   id: number;
   /**
-   * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.
    */
   numero: number;
   title: string;

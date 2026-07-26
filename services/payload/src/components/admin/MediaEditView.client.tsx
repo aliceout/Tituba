@@ -2,7 +2,7 @@
 
 // MediaEditView (client) — vue Édition custom d'un média. Layout :
 //
-//   CarnetTopbar : crumbs Carnet / Médias / [filename] + Supprimer +
+//   CarnetTopbar : crumbs Tituba / Médias / [filename] + Supprimer +
 //                  Sauvegarder
 //   Hero         : h1 « Média » + « fichier : <filename> » mono
 //   Création (pas d'id) :
@@ -251,7 +251,7 @@ export default function MediaEditViewClient({
       variant="editview"
       modifier="media"
       crumbs={[
-        { href: '/cms/admin', label: 'Carnet' },
+        { href: '/cms/admin', label: 'Tituba' },
         { href: '/cms/admin/collections/media', label: 'Médias' },
         { label: data.filename || (docId ? '—' : 'nouveau') },
       ]}

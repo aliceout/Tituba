@@ -4,7 +4,7 @@
 // (Pages éditoriales : À propos, Colophon, Mentions légales…). Layout
 // aligné sur BibliographyEditView :
 //
-//   CarnetTopbar : crumbs Carnet / Pages éditoriales / [slug] +
+//   CarnetTopbar : crumbs Tituba / Pages éditoriales / [slug] +
 //                  Supprimer + Sauvegarder
 //   tituba-editview__hero : h1 « Page éditoriale » + « clé : <slug> »
 //   section Identification : Titre · Slug
@@ -345,7 +345,7 @@ export default function PageEditViewClient({
       variant="editview"
       modifier="page"
       crumbs={[
-        { href: '/cms/admin', label: 'Carnet' },
+        { href: '/cms/admin', label: 'Tituba' },
         { href: '/cms/admin/collections/pages', label: 'Pages éditoriales' },
         { label: data.slug || (docId ? '—' : 'nouvelle') },
       ]}

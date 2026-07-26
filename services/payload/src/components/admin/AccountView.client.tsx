@@ -1,10 +1,10 @@
 'use client';
 
 // AccountView (client) — page Mon compte custom qui matche le langage
-// visuel de l'admin Carnet (cf .tituba-listview / .tituba-btn).
+// visuel de l'admin Tituba (cf .tituba-listview / .tituba-btn).
 //
 // Layout :
-//   - Header : crumbs « Carnet / Mon compte », actions Save accent
+//   - Header : crumbs « Tituba / Mon compte », actions Save accent
 //   - Section Profil : displayName (éditable), email (read-only),
 //     rôle (chip), statut (chip), dernière connexion (read-only)
 //   - Section Sécurité : embed AccountSecurity (2FA, trusted devices)
@@ -123,7 +123,7 @@ export default function AccountViewClient(): React.ReactElement {
     <CarnetPage
       variant="editview"
       modifier="account"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Mon compte' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Mon compte' }]}
       topbarActions={
         <>
           {dirty && (
@@ -292,7 +292,7 @@ function ZoteroSection(): React.ReactElement {
   const [syncErrors, setSyncErrors] = useState<
     Array<{ key: string; title: string | null; reason: string }>
   >([]);
-  // Refs supprimées côté Zotero mais conservées au Carnet parce qu'elles
+  // Refs supprimées côté Zotero mais conservées au Tituba parce qu'elles
   // sont encore citées dans des billets — affichées avec le numéro des
   // billets concernés pour permettre à l'autrice de retirer la citation
   // ou de garder la ref.
@@ -332,7 +332,7 @@ function ZoteroSection(): React.ReactElement {
     setInfo(null);
     try {
       // libraryType: toujours 'user' (les bibliothèques de groupe sont
-      // hors scope du Carnet — la biblio Zotero est intrinsèquement perso).
+      // hors scope du Tituba — la biblio Zotero est intrinsèquement perso).
       const body: Record<string, unknown> = {
         libraryId: libraryIdInput.trim(),
         libraryType: 'user',
@@ -468,7 +468,7 @@ function ZoteroSection(): React.ReactElement {
         automatiquement la liste de références disponibles dans le slash
         menu et le picker biblio des billets. Les modifications faites dans
         Zotero descendent au prochain sync ; les références importées sont
-        en lecture seule côté Carnet.
+        en lecture seule côté Tituba.
       </p>
 
       <div className={`tituba-zotero__status tituba-zotero__status--${hasKey ? 'on' : 'off'}`}>
@@ -576,7 +576,7 @@ function ZoteroSection(): React.ReactElement {
           <summary>
             {syncKeptCited.length} ref{syncKeptCited.length > 1 ? 's' : ''}{' '}
             supprimée{syncKeptCited.length > 1 ? 's' : ''} côté Zotero mais
-            conservée{syncKeptCited.length > 1 ? 's' : ''} au Carnet — voir le détail
+            conservée{syncKeptCited.length > 1 ? 's' : ''} au Tituba — voir le détail
           </summary>
           <p className="hint">
             Ces références ont été supprimées dans Zotero mais sont encore
@@ -699,7 +699,7 @@ function ZoteroSection(): React.ReactElement {
 
             <div className="tituba-modal__body">
               <p>
-                La clé API sera effacée du Carnet. Les références déjà
+                La clé API sera effacée du Tituba. Les références déjà
                 importées dans la bibliographie ne seront pas supprimées,
                 mais elles ne pourront plus être mises à jour automatiquement
                 tant que vous n'aurez pas reconnecté Zotero.

@@ -55,7 +55,7 @@ function joinNonEmpty(parts: Array<string | null | undefined>): string {
 export function buildPostSearchVectorSQL(src: PostSearchSource): SQL {
   // A : titre seul.
   const a = (src.title ?? '').toString().trim();
-  // B : chapô + idCarnet (souvent cherché tel quel : « carnet:2026-042 »).
+  // B : chapô + idCarnet (souvent cherché tel quel : « site:2026-042 »).
   const b = joinNonEmpty([src.lede, src.idCarnet]);
   // C : corps + tous les blocks (footnotes, citations, légendes).
   //     On inclut les blocks custom pour que la recherche matche aussi

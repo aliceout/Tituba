@@ -122,7 +122,7 @@ export default function SubscriptionsEditViewClient(): React.ReactElement {
   return (
     <CarnetPage
       variant="editview"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Abonnements' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Abonnements' }]}
       topbarActions={
         <>
           {dirty && (

@@ -281,7 +281,7 @@ export default function NavClient({ activePath: serverActive, counts, version, i
       <ZoteroAutoSync />
 
       <Link href={ADMIN} className="tituba-nav__brand">
-        Carnet<span className="dot">.</span>
+        Tituba<span className="dot">.</span>
       </Link>
       {/* Top row : « Voir le site » à gauche + actions icônes à
           droite (theme toggle + logout). Compacte tout en haut, libère

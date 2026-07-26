@@ -89,7 +89,7 @@ export default function MediaListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="media"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Médias' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Médias' }]}
       topbarActions={
         <Link
           href="/cms/admin/collections/media/create"

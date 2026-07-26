@@ -178,7 +178,7 @@ export default function IndexPagesEditViewClient(): React.ReactElement {
   return (
     <CarnetPage
       variant="editview"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Pages principales' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Pages principales' }]}
       topbarActions={
         <>
           {dirty && (

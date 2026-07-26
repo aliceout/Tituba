@@ -1,7 +1,7 @@
 'use client';
 
 // Topbar normalisée — seule barre supérieure utilisée dans tout l'admin
-// Carnet (list views, edit views, vue Édition Posts). Hauteur fixe 56px,
+// Tituba (list views, edit views, vue Édition Posts). Hauteur fixe 56px,
 // sticky top, border-bottom — cf .tituba-topbar dans custom.scss.
 //
 // Props :

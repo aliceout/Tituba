@@ -4,7 +4,7 @@
 // recherche par auteur, filtre par type + provenance, bouton × par
 // ligne pour supprimer (avec modale de confirmation). Les refs Zotero
 // supprimées reviennent au prochain sync — l'autrice peut donc nettoyer
-// sans crainte côté Carnet.
+// sans crainte côté Tituba.
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -135,7 +135,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="biblio"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Bibliographie' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Bibliographie' }]}
       topbarActions={
         <Link
           href="/cms/admin/collections/bibliography/create"
@@ -311,7 +311,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
 
             <div className="tituba-modal__body">
               <p>
-                «&nbsp;{deleteTarget.title}&nbsp;» sera supprimée du Carnet.
+                «&nbsp;{deleteTarget.title}&nbsp;» sera supprimée du Tituba.
                 {deleteTarget.source === 'zotero' && (
                   <>
                     {' '}Cette référence vient de Zotero — elle sera

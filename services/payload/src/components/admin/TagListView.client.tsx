@@ -173,7 +173,7 @@ export default function TagListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="tags"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Tags' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Tags' }]}
     >
       <div className="tituba-listview__toolbar">
         <div className="tituba-listview__search">

@@ -1,6 +1,6 @@
 'use client';
 
-// Decorator nodes Lexical pour les 4 blocks Carnet :
+// Decorator nodes Lexical pour les 4 blocks Tituba :
 //   - footnote        (inline) : note de bas de page
 //   - biblio_inline   (inline) : référence biblio « (Auteur, an) »
 //   - citation_bloc   (block)  : citation longue avec source
@@ -889,7 +889,7 @@ export class DraftContainerNode extends ElementNode {
       e.preventDefault();
       e.stopPropagation();
       btn.dispatchEvent(
-        new CustomEvent('carnet:validate-draft', {
+        new CustomEvent('site:validate-draft', {
           detail: { nodeKey },
           bubbles: true,
         }),
