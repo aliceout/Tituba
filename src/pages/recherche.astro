@@ -20,7 +20,8 @@
 
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
-import { searchPosts, type SearchPost } from '../lib/payload';
+import { searchPublications, type SearchPost } from '../lib/payload';
+import { publicationHref } from '../lib/publications';
 import { formatDateIso, formatHeroLede, formatHeroTitle } from '../lib/site';
 
 const url = new URL(Astro.request.url);
@@ -35,7 +36,7 @@ let fetchError: string | null = null;
 
 if (q) {
   try {
-    const r = await searchPosts(q, { page, limit: 20 });
+    const r = await searchPublications(q, { page, limit: 20 });
     docs = r.docs;
     totalDocs = r.totalDocs;
     totalPages = r.totalPages;
@@ -118,12 +119,12 @@ function pageHref(p: number): string {
       <ol class="results">
         {docs.map((d) => (
           <li class="result">
-            <a href={`/billets/${d.slug ?? ''}/`} class="result__title">
+            <a href={publicationHref(d.collection, d.slug ?? '')} class="result__title">
               {d.title}
             </a>
             <div class="result__meta">
               {d.publishedAt && <span class="d">{formatDateIso(d.publishedAt)}</span>}
-              {d.idCarnet && <span class="id mono">{d.idCarnet}</span>}
+              {d.idTituba && <span class="id mono">{d.idTituba}</span>}
             </div>
             {d.excerpt && (
               <p class="result__excerpt" set:html={d.excerpt}></p>

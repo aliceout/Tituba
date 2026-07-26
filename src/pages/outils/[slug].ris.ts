@@ -2,7 +2,7 @@
  * Endpoint Astro — sert un fichier RIS (.ris) téléchargeable pour un
  * billet de Tituba.
  *
- *   GET /billets/<slug>.ris
+ *   GET /outils/<slug>.ris
  *
  * Utilisé par les boutons « RIS » et « Zotero » du bloc « Pour citer
  * cet article ». Zotero importe RIS nativement via son translator
@@ -29,12 +29,12 @@ export const GET: APIRoute = async ({ params, url }) => {
   if (!slug) {
     return new Response('Not found', { status: 404 });
   }
-  const post = await fetchBySlug<Post>('posts', slug);
+  const post = await fetchBySlug<Post>('outils', slug);
   if (!post || post.draft) {
     return new Response('Not found', { status: 404 });
   }
 
-  const articleUrl = new URL(`/billets/${post.slug}/`, url).toString();
+  const articleUrl = new URL(`/outils/${post.slug}/`, url).toString();
   const accessedAt = new Date().toISOString().slice(0, 10);
   let siteName: string | undefined;
   try {
@@ -43,7 +43,7 @@ export const GET: APIRoute = async ({ params, url }) => {
   } catch {
     /* fallback côté toRIS */
   }
-  const body = toRIS(post, { articleUrl, accessedAt, siteName });
+  const body = toRIS(post, { articleUrl, accessedAt, siteName, collection: 'outils' });
 
   return new Response(body, {
     status: 200,

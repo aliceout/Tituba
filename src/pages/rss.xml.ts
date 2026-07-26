@@ -7,29 +7,15 @@
 import rss from '@astrojs/rss';
 import type { APIRoute } from 'astro';
 
-import {
-  fetchCollection,
-  fetchIdentity,
-  fetchSubscriptions,
-  filterPublished,
-  publishedOnly,
-} from '../lib/payload';
+import { fetchIdentity, fetchSubscriptions, type FeedDoc } from '../lib/payload';
+import { fetchFeed, publicationHref } from '../lib/publications';
 
 type IdentityGlobal = { siteName?: string };
 type SubscriptionsGlobal = { rssEnabled?: boolean };
 
 type Theme = { id: number | string; slug: string; name: string };
 
-type Post = {
-  id: number | string;
-  numero: number;
-  slug: string;
-  title: string;
-  themes?: Theme[] | null;
-  publishedAt: string;
-  lede: string;
-  draft?: boolean;
-};
+type Post = FeedDoc;
 
 export const GET: APIRoute = async (context) => {
   // Flux RSS pilotable depuis Payload (Abonnements → Flux RSS activé).
@@ -46,14 +32,8 @@ export const GET: APIRoute = async (context) => {
   let posts: Post[] = [];
   let siteName = 'Tituba';
   try {
-    const raw = await fetchCollection<Post>('posts', {
-      sort: '-publishedAt',
-      limit: 50,
-      depth: 1,
-      where: publishedOnly(),
-      select: ['numero', 'slug', 'title', 'themes', 'publishedAt', 'lede', 'draft'],
-    });
-    posts = filterPublished(raw);
+    const feed = await fetchFeed({ limit: 50 });
+    posts = feed.docs;
   } catch (err) {
     console.warn('[rss] fetch failed:', (err as Error).message);
   }
@@ -70,19 +50,16 @@ export const GET: APIRoute = async (context) => {
     );
   }
   return rss({
-    title: `${siteName} — notes de recherche`,
-    description: `${siteName} — tituba de recherche. Auto-hébergé. Sans pisteur.`,
+    title: `${siteName} `,
+    description: `${siteName} — publications de l’association. Auto-hébergé. Sans pisteur.`,
     site: context.site,
     items: posts.map((p) => {
-      const themes = (p.themes ?? []).filter(
-        (t): t is Theme => typeof t === 'object' && t !== null && 'slug' in t,
-      );
       return {
-        title: p.title,
-        link: `/billets/${p.slug}/`,
-        pubDate: new Date(p.publishedAt),
-        description: p.lede,
-        categories: themes.map((t) => t.slug),
+        title: p.title ?? '',
+        link: publicationHref(p.collection, p.slug ?? ''),
+        pubDate: p.publishedAt ? new Date(p.publishedAt) : new Date(),
+        description: p.lede ?? '',
+        categories: p.themeSlugs ?? [],
       };
     }),
     customData: '<language>fr-FR</language>',

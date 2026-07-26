@@ -1,11 +1,11 @@
 /**
  * Endpoint Astro — sert un fichier BibTeX (.bib) téléchargeable pour
- * un billet de Tituba.
+ * une publication du format « analyses ».
  *
- *   GET /billets/<slug>.bib
+ *   GET /analyses/<slug>.bib
  *
  * Le bouton « BibTeX » du bloc « Pour citer cet article » pointe ici
- * via un `<a href="/billets/<slug>.bib" download>`. Content-Disposition
+ * via un `<a href="/analyses/<slug>.bib" download>`. Content-Disposition
  * = attachment force le téléchargement (au lieu d'afficher le contenu
  * dans le navigateur).
  *
@@ -31,12 +31,12 @@ export const GET: APIRoute = async ({ params, url }) => {
   if (!slug) {
     return new Response('Not found', { status: 404 });
   }
-  const post = await fetchBySlug<Post>('posts', slug);
+  const post = await fetchBySlug<Post>('analyses', slug);
   if (!post || post.draft) {
     return new Response('Not found', { status: 404 });
   }
 
-  const articleUrl = new URL(`/billets/${post.slug}/`, url).toString();
+  const articleUrl = new URL(`/analyses/${post.slug}/`, url).toString();
   const accessedAt = new Date().toISOString().slice(0, 10);
   let siteName: string | undefined;
   try {
@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ params, url }) => {
   } catch {
     /* fallback côté toBibTeX */
   }
-  const body = toBibTeX(post, { articleUrl, accessedAt, siteName });
+  const body = toBibTeX(post, { articleUrl, accessedAt, siteName, collection: 'analyses' });
 
   return new Response(body, {
     status: 200,

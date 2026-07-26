@@ -247,23 +247,30 @@ export function filterPublished<T extends { draft?: boolean }>(docs: T[]): T[] {
   return docs.filter((d) => !d.draft);
 }
 
-// ─── Recherche fulltext ─────────────────────────────────────────
-// Tape l'endpoint custom Payload /cms/api/posts/search qui exécute
-// websearch_to_tsquery + ts_rank côté Postgres (cf. services/payload/
-// src/endpoints/posts-search.ts). Le filtre `draft = false` est posé
-// côté serveur, donc ici on n'a pas besoin de filterPublished.
+// ─── API unifiée des publications ───────────────────────────────
+// Trois endpoints SQL montés à la racine de Payload, qui portent sur
+// les cinq collections à la fois (cf. services/payload/src/endpoints/).
+// Ils existent parce que l'API REST de Payload interroge une collection
+// par requête : fusionner, paginer ou compter côté client imposerait
+// cinq appels et un tri en mémoire.
+
+/** Slug d'une collection de publication. */
+export type PublicationCollection = 'articles' | 'analyses' | 'actus' | 'podcasts' | 'outils';
 
 export type SearchPost = {
+  collection: PublicationCollection;
   id: number | string;
   numero: number | null;
   slug: string | null;
   title: string | null;
   lede: string | null;
   publishedAt: string | null;
-  idCarnet: string | null;
-  /** Extrait court avec mots matchés enveloppés dans <mark>…</mark>.
-   *  Vient de ts_headline. À injecter via set:html après check de la
-   *  source (Postgres, donc ok). */
+  idTituba: string | null;
+  /**
+   * Extrait avec les termes trouvés enveloppés dans <mark>…</mark>,
+   * produit par ts_headline. Injecté via set:html — la source est
+   * Postgres, pas une saisie utilisateur.
+   */
   excerpt: string | null;
   rank: number;
 };
@@ -276,7 +283,8 @@ export type SearchResult = {
   q: string;
 };
 
-export async function searchPosts(
+/** Recherche plein texte sur les cinq formats. */
+export async function searchPublications(
   q: string,
   opts: { page?: number; limit?: number } = {},
 ): Promise<SearchResult> {
@@ -284,5 +292,55 @@ export async function searchPosts(
   params.set('q', q);
   if (opts.page) params.set('page', String(opts.page));
   if (opts.limit) params.set('limit', String(opts.limit));
-  return fetchPayload<SearchResult>(`/posts/search?${params.toString()}`);
+  return fetchPayload<SearchResult>(`/search?${params.toString()}`);
+}
+
+export type FeedDoc = {
+  collection: PublicationCollection;
+  id: number | string;
+  numero: number | null;
+  slug: string | null;
+  title: string | null;
+  lede: string | null;
+  publishedAt: string | null;
+  idTituba: string | null;
+  readingTime: number | null;
+  /** Slugs des thematiques, pour le filtrage client de la page d accueil. */
+  themeSlugs: string[];
+};
+
+export type FeedResult = {
+  docs: FeedDoc[];
+  totalDocs: number;
+  totalPages: number;
+  page: number;
+};
+
+/**
+ * Flux fusionné des cinq collections, trié par date décroissante et
+ * paginé côté SQL. Filtrable par thématique ou par tag.
+ */
+export async function fetchPublicationsFeed(
+  opts: { page?: number; limit?: number; theme?: string; tag?: string } = {},
+): Promise<FeedResult> {
+  const params = new URLSearchParams();
+  if (opts.page) params.set('page', String(opts.page));
+  if (opts.limit) params.set('limit', String(opts.limit));
+  if (opts.theme) params.set('theme', opts.theme);
+  if (opts.tag) params.set('tag', opts.tag);
+  const qs = params.toString();
+  return fetchPayload<FeedResult>(`/publications${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * Nombre de publications par thématique ou par tag, toutes collections
+ * confondues, en une seule requête SQL.
+ */
+export async function fetchPublicationCounts(
+  groupBy: 'theme' | 'tag' = 'theme',
+): Promise<Record<string, number>> {
+  const res = await fetchPayload<{ counts: Record<string, number> }>(
+    `/publications/counts?groupBy=${groupBy}`,
+  );
+  return res.counts ?? {};
 }

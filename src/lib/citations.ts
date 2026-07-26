@@ -1,9 +1,9 @@
 /**
- * Formatteurs de citation d'un billet du Carnet vers les formats
+ * Formatteurs de citation d'un billet de Tituba vers les formats
  * d'export académiques standards (BibTeX et RIS).
  *
  * Utilisés par :
- *  - les routes Astro `/billets/[slug].bib` et `[slug].ris` pour
+ *  - les routes Astro `/<format>/[slug].bib` et `[slug].ris` pour
  *    servir un fichier téléchargeable
  *  - éventuellement les balises Highwire `<meta>` dans <head> pour
  *    que l'extension Zotero détecte automatiquement la citation
@@ -15,9 +15,9 @@
  * Référence des formats :
  *  - BibTeX : https://en.wikipedia.org/wiki/BibTeX (entrée @misc pour
  *    une publication en ligne sans éditeur formel ; @article pour
- *    journal, mais Carnet n'est pas un journal au sens strict)
+ *    journal, mais Tituba n’est pas une revue au sens strict)
  *  - RIS    : https://en.wikipedia.org/wiki/RIS_(file_format) (TY=GEN
- *    pour generic, ce qui est le bon usage pour un billet de carnet
+ *    pour generic, ce qui est le bon usage pour un billet
  *    de recherche)
  */
 
@@ -30,19 +30,24 @@ export type CitationPost = {
   numero: number | string;
   title: string;
   publishedAt: string;
-  idCarnet?: string | null;
+  idTituba?: string | null;
   authors?: PostAuthorEntry[] | null;
   themes?: Array<{ slug?: string; name?: string }> | null;
   doi?: string | null;
 };
 
 export type CitationContext = {
-  /** URL canonique de l'article — `https://example.com/billets/<slug>/`. */
+  /**
+   * Collection d'origine — pilote le type d'entrée BibTeX/RIS et les
+   * balises Highwire. Absente, on retombe sur un type générique.
+   */
+  collection?: string;
+  /** URL canonique de l'article — `https://example.com/<format>/<slug>/`. */
   articleUrl: string;
   /** Date de génération du fichier d'export (ISO court yyyy-mm-dd). Sert de
    *  date d'accès dans les formats qui le portent (BibTeX urldate, RIS Y2). */
   accessedAt?: string;
-  /** Nom du carnet (depuis Site global → identity.siteName). Sert pour les
+  /** Nom du site (depuis Site global → identity.siteName). Sert pour les
    *  champs « publisher »/« howpublished »/« journal_title » des exports. */
   siteName?: string;
 };
@@ -103,10 +108,10 @@ function toYear(s: string): string {
 }
 
 /** Slug + numero pour un identifiant BibTeX stable et lisible.
- *  Ex. : `carnet-042-spivak-agency`. */
+ *  Ex. : `tituba-042-spivak-agency`. */
 function bibKey(post: CitationPost): string {
   const num = String(post.numero ?? '').padStart(3, '0');
-  return `carnet-${num}-${post.slug}`.replace(/[^a-z0-9-]/gi, '-').replace(/-+/g, '-');
+  return `tituba-${num}-${post.slug}`.replace(/[^a-z0-9-]/gi, '-').replace(/-+/g, '-');
 }
 
 // ─── BibTeX ───────────────────────────────────────────────────────
@@ -136,14 +141,36 @@ function bibTexAuthors(authors: Array<{ family: string; given: string }>): strin
 }
 
 /**
- * Génère une entrée BibTeX `@misc{…}` pour un billet du Carnet.
+ * Génère une entrée BibTeX `@misc{…}` pour un billet de Tituba.
  *
- * Pourquoi @misc et non @article : Carnet n'est pas un journal
+ * Pourquoi @misc et non @article : Tituba n’est pas une revue
  * peer-reviewed au sens académique strict. @misc avec howpublished
- * = « Carnet — notes de recherche » est l'usage standard pour les
+ * = le nom du site est l'usage standard pour les
  * blogs académiques. Les outils de citation (Zotero, Mendeley)
  * comprennent @misc et le mappent correctement.
  */
+/**
+ * Type d'entrée BibTeX par format. Un podcast annoncé comme article de
+ * revue serait importé comme tel dans Zotero : le type compte autant
+ * que les champs.
+ */
+const BIBTEX_TYPE: Record<string, string> = {
+  articles: 'article',
+  analyses: 'misc',
+  actus: 'misc',
+  podcasts: 'misc',
+  outils: 'misc',
+};
+
+/** Type d'entrée RIS par format. */
+const RIS_TYPE: Record<string, string> = {
+  articles: 'JOUR',
+  analyses: 'BLOG',
+  actus: 'BLOG',
+  podcasts: 'SOUND',
+  outils: 'GEN',
+};
+
 export function toBibTeX(post: CitationPost, ctx: CitationContext): string {
   const authors = extractCitationAuthors(post.authors);
   const lines: string[] = [];
@@ -151,16 +178,19 @@ export function toBibTeX(post: CitationPost, ctx: CitationContext): string {
     if (value) lines.push(`  ${key} = {${bibTexEscape(value)}},`);
   };
 
-  const siteName = ctx.siteName?.trim() || 'Carnet';
-  lines.push(`@misc{${bibKey(post)},`);
+  const siteName = ctx.siteName?.trim() || 'Tituba';
+  // @article seulement si la publication porte un DOI : sans lui,
+  // l'entree n'aurait pas les champs qu'un @article est cense fournir.
+  const entryType = post.doi ? 'article' : (BIBTEX_TYPE[ctx.collection ?? ''] ?? 'misc');
+  lines.push(`@${entryType}{${bibKey(post)},`);
   if (authors.length > 0) push('author', bibTexAuthors(authors));
   push('title', post.title);
-  push('howpublished', `${siteName} — notes de recherche`);
+  push('howpublished', siteName);
   push('year', toYear(post.publishedAt));
   push('month', new Date(post.publishedAt).toLocaleString('en-US', { month: 'short' }).toLowerCase());
   push('url', ctx.articleUrl);
   push('urldate', ctx.accessedAt ?? toIsoDate(new Date().toISOString()));
-  if (post.idCarnet) push('note', post.idCarnet);
+  if (post.idTituba) push('note', post.idTituba);
   if (post.doi) push('doi', post.doi);
   // Trailing comma déjà sur la dernière ligne — BibTeX moderne l'accepte ;
   // certains parsers stricts non. On enlève la virgule du dernier item.
@@ -185,11 +215,11 @@ function risEscape(s: string): string {
  *   PY  - 2026
  *   DA  - 2026/05/10           (RIS attend yyyy/mm/dd)
  *   UR  - https://…
- *   PB  - Carnet
+ *   PB  - Tituba
  *   ER  -
  *
  * TY=GEN (generic) plutôt que JOUR (journal) pour la même raison
- * que BibTeX @misc : Carnet n'est pas un journal peer-reviewed strict.
+ * que BibTeX @misc : Tituba n’est pas une revue peer-reviewed strict.
  *
  * Zotero importe RIS nativement via son translator « RIS » — c'est
  * pour ça que le bouton « Zotero » du bloc citation pointe sur le
@@ -197,7 +227,7 @@ function risEscape(s: string): string {
  */
 export function toRIS(post: CitationPost, ctx: CitationContext): string {
   const authors = extractCitationAuthors(post.authors);
-  const lines: string[] = ['TY  - GEN'];
+  const lines: string[] = [`TY  - ${RIS_TYPE[ctx.collection ?? ''] ?? 'GEN'}`];
   const push = (tag: string, value: string) => {
     if (value) lines.push(`${tag.padEnd(2)}  - ${risEscape(value)}`);
   };
@@ -209,10 +239,10 @@ export function toRIS(post: CitationPost, ctx: CitationContext): string {
   push('PY', toYear(post.publishedAt));
   // RIS DA = yyyy/mm/dd
   push('DA', toIsoDate(post.publishedAt).replace(/-/g, '/'));
-  push('PB', ctx.siteName?.trim() || 'Carnet');
+  push('PB', ctx.siteName?.trim() || 'Tituba');
   push('UR', ctx.articleUrl);
   if (ctx.accessedAt) push('Y2', ctx.accessedAt.replace(/-/g, '/'));
-  if (post.idCarnet) push('AN', post.idCarnet);
+  if (post.idTituba) push('AN', post.idTituba);
   if (post.doi) push('DO', post.doi);
   lines.push('ER  - ');
   // RIS attend des fins de ligne CRLF pour la portabilité Windows.
@@ -244,7 +274,7 @@ export function highwireMeta(post: CitationPost, ctx: CitationContext): Array<{ 
     push('citation_author', a.given ? `${a.family}, ${a.given}` : a.family);
   }
   push('citation_publication_date', toIsoDate(post.publishedAt).replace(/-/g, '/'));
-  push('citation_journal_title', ctx.siteName?.trim() || 'Carnet');
+  push('citation_journal_title', ctx.siteName?.trim() || 'Tituba');
   push('citation_public_url', ctx.articleUrl);
   if (post.doi) push('citation_doi', post.doi);
   return tags;

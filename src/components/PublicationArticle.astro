@@ -1,6 +1,13 @@
 ---
 /**
- * Page article — /billets/<slug>/
+ * Page de détail d'une publication, partagée par les cinq formats.
+ *
+ * Les routes /articles/<slug>/, /analyses/<slug>/, /actus/<slug>/,
+ * /podcasts/<slug>/ et /outils/<slug>/ sont des enveloppes minces qui
+ * délèguent ici en passant leur collection. Ce qui varie d'un format à
+ * l'autre — racine d'URL, pastille, libellé de durée, type de citation,
+ * lecteur audio ou lien de téléchargement — est résolu depuis la table
+ * des formats.
  *
  * Structure (cf design_handoff_tituba/Tituba B.html → Article) :
  *  1. Barre de progression sticky 2 px (via Layout progressBar)
@@ -18,28 +25,34 @@
  * width: 200px), masqué <1300 px de viewport. Scroll spy via
  * IntersectionObserver pour highlight de l'item actif.
  */
-import Layout from '../../layouts/Layout.astro';
+import Layout from '../layouts/Layout.astro';
+import {
+  PUBLICATIONS,
+  publicationHref,
+  readingLabelFor,
+  type PublicationCollection,
+} from '../lib/publications';
 import {
   fetchBySlug,
   fetchCollection,
   fetchIdentity,
   fetchSite,
   publishedOnly,
-} from '../../lib/payload';
+} from '../lib/payload';
 import {
   extractToc,
   renderLexicalSidenotes,
   renderLexicalWithFootnotes,
-} from '../../lib/lexical';
+} from '../lib/lexical';
 import {
   formatDateFr,
   formatNumero,
   formatPostByline,
   formatPostCitationChicago,
   type PostAuthorEntry,
-} from '../../lib/site';
-import { formatAuthorsChicago, formatTranslators } from '../../lib/format-authors';
-import { highwireMeta } from '../../lib/citations';
+} from '../lib/site';
+import { formatAuthorsChicago, formatTranslators } from '../lib/format-authors';
+import { highwireMeta } from '../lib/citations';
 
 type Theme = { id: number | string; slug: string; name: string };
 type Tag = { id: number | string; slug: string; name: string };
@@ -80,22 +93,28 @@ type Post = {
   body?: unknown;
   bibliography?: BiblioEntry[] | null;
   readingTime?: number | null;
+  /** Durée d’écoute, pour les podcasts. */
+  durationSeconds?: number | null;
   draft?: boolean;
 };
 
-const { slug } = Astro.params;
-if (!slug) return Astro.redirect('/');
+export interface Props {
+  collection: PublicationCollection;
+  slug: string;
+}
 
-const post = await fetchBySlug<Post>('posts', slug);
+const { collection, slug } = Astro.props as Props;
+const spec = PUBLICATIONS[collection];
+
+const post = await fetchBySlug<Post>(collection, slug);
 if (!post || post.draft) {
   return Astro.rewrite('/404');
 }
-
-const TYPE_LABEL: Record<Post['type'], string> = {
-  analyse: 'Analyse',
-  note: 'Note de lecture',
-  fiche: 'Fiche',
-};
+// Une publication datée dans le futur ne doit pas être lisible avant
+// l'heure, même par URL directe.
+if (post.publishedAt && new Date(post.publishedAt).getTime() > Date.now()) {
+  return Astro.rewrite('/404');
+}
 
 const themes = (post.themes ?? []).filter(
   (t): t is Theme => typeof t === 'object' && t !== null && 'slug' in t,
@@ -105,11 +124,11 @@ const primaryTheme = themes[0];
 // Date FR + ISO
 const publishedFr = formatDateFr(post.publishedAt);
 const publishedIso = new Date(post.publishedAt).toISOString().slice(0, 10);
-const readingLabel = post.readingTime
-  ? post.type === 'fiche'
-    ? 'fiche'
-    : `≈ ${post.readingTime} min`
-  : null;
+const readingLabel =
+  readingLabelFor(collection, {
+    readingTime: post.readingTime,
+    durationSeconds: post.durationSeconds,
+  }) || null;
 
 // Site global → mode d'affichage des notes (classique en pied /
 // sidenotes en marge). Identity global → wordmark utilisé dans la
@@ -155,7 +174,7 @@ const biblio = (post.bibliography ?? []).filter(
 let related: Array<{ slug: string; title: string; publishedAt: string }> = [];
 if (primaryTheme) {
   try {
-    const relatedRaw = await fetchCollection<Post>('posts', {
+    const relatedRaw = await fetchCollection<Post>(collection, {
       where: [
         { field: 'themes.slug', operator: 'equals', value: primaryTheme.slug },
         ...publishedOnly(),
@@ -242,7 +261,7 @@ const citationMeta = highwireMeta(
       ))}
       {footnotesHtml && <a href="#notes" data-toc="notes">Notes</a>}
       {biblio.length > 0 && <a href="#biblio" data-toc="biblio">Bibliographie</a>}
-      {post.type === 'analyse' && (
+      {spec.citationType === 'article' && (
         <a href="#cite" data-toc="cite">Pour citer</a>
       )}
     </aside>
@@ -251,7 +270,7 @@ const citationMeta = highwireMeta(
   <article class:list={['post', 'container', { 'no-toc': tocEntries.length === 0 }]}>
     <div class="crumbs">
       <a href="/">Tituba</a> &nbsp;/&nbsp;
-      {TYPE_LABEL[post.type]}
+      {spec.labelSingular}
       &nbsp;/&nbsp; {numLabel}
     </div>
 
@@ -265,12 +284,12 @@ const citationMeta = highwireMeta(
         <time datetime={publishedIso}>{publishedFr}</time>
       </div>
       <div>
-        <div class="lbl">Lecture</div>
+        <div class="lbl">Durée</div>
         {readingLabel ?? '—'}
       </div>
       <div>
-        <div class="lbl">Type</div>
-        {TYPE_LABEL[post.type]}
+        <div class="lbl">Format</div>
+        {spec.badge}
       </div>
       <div>
         <div class="lbl">Thème</div>
@@ -338,7 +357,7 @@ const citationMeta = highwireMeta(
         </section>
       )}
 
-      {post.type === 'analyse' && (
+      {spec.citationType === 'article' && (
         <section class="citation" id="cite">
           <div class="lbl">Pour citer cet article</div>
           <div class="body">
@@ -355,7 +374,7 @@ const citationMeta = highwireMeta(
               Copier
             </button>
             {/* Liens de téléchargement — formats académiques standards.
-                Les routes correspondantes vivent dans src/pages/billets/
+                Les routes correspondantes vivent sous src/pages/<format>/
                 [slug].bib.ts et [slug].ris.ts. Zotero importe RIS
                 nativement, on pointe donc sur le même fichier ; et la
                 détection auto via Highwire <meta> en <head> rend même
@@ -363,7 +382,7 @@ const citationMeta = highwireMeta(
                 l'extension installée. */}
             <a
               class="download-btn"
-              href={`/billets/${post.slug}.bib`}
+              href={`${spec.routePrefix}/${post.slug}.bib`}
               download={`${post.slug}.bib`}
               aria-label="Télécharger la citation au format BibTeX"
             >
@@ -371,7 +390,7 @@ const citationMeta = highwireMeta(
             </a>
             <a
               class="download-btn"
-              href={`/billets/${post.slug}.ris`}
+              href={`${spec.routePrefix}/${post.slug}.ris`}
               download={`${post.slug}.ris`}
               aria-label="Télécharger la citation au format RIS"
             >
@@ -379,7 +398,7 @@ const citationMeta = highwireMeta(
             </a>
             <a
               class="download-btn"
-              href={`/billets/${post.slug}.ris`}
+              href={`${spec.routePrefix}/${post.slug}.ris`}
               download={`${post.slug}.ris`}
               aria-label="Importer la citation dans Zotero (format RIS)"
               title="Zotero importe RIS nativement"
@@ -395,7 +414,7 @@ const citationMeta = highwireMeta(
           <h3>Dans le même thème</h3>
           <div class="grid">
             {related.map((r) => (
-              <a href={`/billets/${r.slug}/`}>
+              <a href={publicationHref(collection, r.slug)}>
                 <div class="d">{formatDateFr(r.publishedAt)}</div>
                 <div class="t">{r.title}</div>
               </a>

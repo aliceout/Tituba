@@ -13,24 +13,14 @@
  */
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
-import PostCard from '../components/PostCard.astro';
-import { fetchCollection, fetchIndexPages, filterPublished, publishedOnly } from '../lib/payload';
+import PublicationCard from '../components/PublicationCard.astro';
+import { fetchCollection, fetchIndexPages, fetchPublicationCounts, type FeedDoc } from '../lib/payload';
+import { PUBLICATIONS, PUBLICATION_ORDER, fetchFeed } from '../lib/publications';
 import { formatHeroLede, formatHeroTitle } from '../lib/site';
 
 type Theme = { id: number | string; slug: string; name: string };
 
-type Post = {
-  id: number | string;
-  numero: number;
-  slug: string;
-  title: string;
-  type: 'analyse' | 'note' | 'fiche';
-  themes?: Theme[] | null;
-  publishedAt: string;
-  lede: string;
-  readingTime?: number | null;
-  draft?: boolean;
-};
+type Post = FeedDoc;
 
 type IndexPagesGlobal = {
   home?: {
@@ -45,31 +35,24 @@ const DEFAULT_HERO_LEDE =
   'Analyses longues, notes de lecture et fiches thématiques sur le genre, la géopolitique et les droits LGBTQI+ dans les rapports internationaux. Principalement en français.';
 
 let posts: Post[] = [];
+let total = 0;
+let themeCounts: Record<string, number> = {};
+let allThemes: Theme[] = [];
 let indexPages: IndexPagesGlobal = {};
 try {
-  // `select` : sans lui chaque billet embarque son corps Lexical complet
-  // (20-60 Ko de JSON), soit ~1 Mo de payload par rendu SSR pour une
-  // page qui n'affiche que des cartes. On garde `limit` haut parce que
-  // le total, l'histogramme de thèmes et le « depuis <mois> » plus bas
-  // se calculent sur l'ensemble des billets, pas sur la page affichée.
-  const raw = await fetchCollection<Post>('posts', {
-    sort: '-publishedAt',
-    limit: 500,
-    depth: 2,
-    where: publishedOnly(),
-    select: [
-      'numero',
-      'slug',
-      'title',
-      'type',
-      'themes',
-      'publishedAt',
-      'lede',
-      'readingTime',
-      'draft',
-    ],
-  });
-  posts = filterPublished(raw);
+  // Flux fusionné des cinq formats, servi par l'endpoint SQL : trier
+  // et paginer un mélange de cinq collections côté client demanderait
+  // de sur-récupérer massivement. Le filtre brouillon/date est posé
+  // côté serveur, d'où l'absence de filterPublished ici.
+  const [feed, counts, themes] = await Promise.all([
+    fetchFeed({ limit: 200 }),
+    fetchPublicationCounts('theme'),
+    fetchCollection<Theme>('themes', { limit: 100, depth: 0, select: ['slug', 'name'] }),
+  ]);
+  posts = feed.docs as Post[];
+  total = feed.totalDocs;
+  themeCounts = counts;
+  allThemes = themes;
 } catch (err) {
   console.warn('[home] fetch failed, rendering empty:', (err as Error).message);
 }
@@ -79,7 +62,7 @@ try {
   console.warn('[home] fetchIndexPages failed, using defaults:', (err as Error).message);
 }
 
-const total = posts.length;
+
 
 const heroTitleHtml = formatHeroTitle(
   indexPages.home?.heroTitle?.trim() || DEFAULT_HERO_TITLE,
@@ -89,27 +72,19 @@ const heroLedeHtml = formatHeroLede(
 );
 
 // Top thèmes utilisés (pour la barre de filtres) — max 6 chips après "Tous"
-const themeUsage = new Map<string, { theme: Theme; count: number }>();
-for (const post of posts) {
-  for (const t of post.themes ?? []) {
-    if (typeof t !== 'object' || t === null) continue;
-    const cur = themeUsage.get(t.slug) ?? { theme: t, count: 0 };
-    cur.count++;
-    themeUsage.set(t.slug, cur);
-  }
-}
-const topThemes = [...themeUsage.values()]
-  .sort((a, b) => b.count - a.count)
-  .slice(0, 6)
-  .map((x) => x.theme);
+const topThemes = allThemes
+  .filter((t) => (themeCounts[t.slug] ?? 0) > 0)
+  .sort((a, b) => (themeCounts[b.slug] ?? 0) - (themeCounts[a.slug] ?? 0))
+  .slice(0, 6);
 
 // Mois/année du plus ancien post — affiché dans le kicker meta « depuis … ».
 const monthLabel = (() => {
   if (!posts.length) return '';
-  const oldest = posts.reduce((acc, p) =>
-    new Date(p.publishedAt) < new Date(acc.publishedAt) ? p : acc,
-  );
-  const d = new Date(oldest.publishedAt);
+  const dates = posts
+    .map((p) => (p.publishedAt ? new Date(p.publishedAt).getTime() : NaN))
+    .filter((t) => Number.isFinite(t));
+  if (dates.length === 0) return '';
+  const d = new Date(Math.min(...dates));
   const months = [
     'janvier',
     'février',
@@ -158,14 +133,16 @@ const monthLabel = (() => {
       )}
       <div class="row">
         <div class="grp" role="group" aria-label="Filtrer par type">
-          <span class="lbl">Type</span>
+          <span class="lbl">Format</span>
           <button class="chip on" type="button" data-filter-type="all">Tous</button>
-          <button class="chip" type="button" data-filter-type="analyse">Articles</button>
-          <button class="chip" type="button" data-filter-type="note">Notes</button>
-          <button class="chip" type="button" data-filter-type="fiche">Fiches</button>
+          {PUBLICATION_ORDER.map((c) => (
+            <button class="chip" type="button" data-filter-type={c}>
+              {PUBLICATIONS[c].labelPlural}
+            </button>
+          ))}
         </div>
         <div class="count" id="filter-count">
-          {total} billet{total > 1 ? 's' : ''} · tri : récent
+          {total} publication{total > 1 ? 's' : ''} · tri : récent
         </div>
       </div>
     </div>
@@ -174,15 +151,15 @@ const monthLabel = (() => {
   <!-- Flux -->
   <section class="container feed">
     {posts.length === 0 ? (
-      <p class="empty">Aucun billet publié pour l'instant.</p>
+      <p class="empty">Aucune publication pour l'instant.</p>
     ) : (
       posts.map((p) => (
-        <PostCard
+        <PublicationCard
+          collection={p.collection}
           numero={p.numero}
           slug={p.slug}
           title={p.title}
-          type={p.type}
-          themes={p.themes}
+          themeSlugs={p.themeSlugs}
           publishedAt={p.publishedAt}
           lede={p.lede}
           readingTime={p.readingTime}

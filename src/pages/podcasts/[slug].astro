@@ -1,0 +1,14 @@
+---
+/**
+ * Détail d'une publication du format « podcasts » — /podcasts/<slug>/
+ *
+ * Enveloppe mince : tout le rendu vit dans PublicationArticle, partagé
+ * par les cinq formats. Seule la collection change.
+ */
+import PublicationArticle from '../../components/PublicationArticle.astro';
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/');
+---
+
+<PublicationArticle collection="podcasts" slug={slug} />

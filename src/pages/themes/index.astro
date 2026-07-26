@@ -13,8 +13,7 @@ import Hero from '../../components/Hero.astro';
 import {
   fetchCollection,
   fetchIndexPages,
-  filterPublished,
-  publishedOnly,
+    fetchPublicationCounts,
 } from '../../lib/payload';
 import { formatHeroLede, formatHeroTitle } from '../../lib/site';
 
@@ -23,12 +22,6 @@ type Theme = {
   slug: string;
   name: string;
   description?: string | null;
-};
-
-type PostLite = {
-  id: number | string;
-  draft?: boolean;
-  themes?: Array<{ id: number | string; slug: string } | number | string> | null;
 };
 
 type IndexPagesGlobal = {
@@ -48,28 +41,10 @@ try {
     limit: 100,
     depth: 0,
   });
-  const posts = filterPublished(
-    // Ces billets ne servent qu'à compter les usages par thème : on ne
-    // récupère que `themes` (+ `draft` pour le filtre). Sans `select`,
-    // c'était 1000 corps Lexical complets chargés pour afficher des
-    // compteurs. Remplacé en Phase 3 par /cms/api/publications/counts.
-    await fetchCollection<PostLite>('posts', {
-      limit: 1000,
-      depth: 0,
-      where: publishedOnly(),
-      select: ['themes', 'draft'],
-    }),
-  );
-  // post.themes en depth 0 est un array d'IDs ; on compte par theme.id
-  const idToSlug = new Map<number | string, string>(themes.map((t) => [t.id, t.slug]));
-  for (const post of posts) {
-    for (const tref of post.themes ?? []) {
-      const tid = typeof tref === 'object' && tref !== null ? tref.id : tref;
-      const slug = idToSlug.get(tid as number | string);
-      if (!slug) continue;
-      counts.set(slug, (counts.get(slug) ?? 0) + 1);
-    }
-  }
+  // Une requête SQL renvoie tous les compteurs, toutes collections
+  // confondues. Auparavant on chargeait mille documents rien que pour
+  // les compter — et avec cinq collections ce serait cinq fois pire.
+  counts = new Map(Object.entries(await fetchPublicationCounts('theme')));
 } catch (err) {
   console.warn('[themes] fetch failed:', (err as Error).message);
 }
@@ -129,7 +104,7 @@ const heroLedeHtml = formatHeroLede(
                 {t.description && <p class="desc">{t.description}</p>}
               </div>
               <div class="right">
-                {count} billet{count > 1 ? 's' : ''}
+                {count} publication{count > 1 ? 's' : ''}
               </div>
             </a>
           );

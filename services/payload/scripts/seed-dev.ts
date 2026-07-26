@@ -485,7 +485,7 @@ const ABOUT_SECTIONS_PARAGRAPHS: Record<string, BodyNode[]> = {
 
 const ABOUT_PAGE = {
   slug: 'about',
-  title: 'Michel Rose',
+  title: 'TITUBA',
   description:
     "Coordinateur·ice humanitaire en reconversion vers la recherche en études de genre — Carnet de notes de travail.",
   eyebrow: 'À propos',
@@ -505,11 +505,11 @@ const ABOUT_PAGE = {
 // de démo plutôt que de chercher à reconstruire l'ancien SITE_GLOBAL.
 
 const IDENTITY_GLOBAL = {
-  siteName: 'Carnet',
-  authorName: 'Michel Rose',
+  siteName: 'Tituba',
+  authorName: 'Association TITUBA',
   baseline:
-    'Carnet de recherche de Michel Rose. Genre, géopolitique, droits LGBTQI+, humanitaire, migrations. Auto-hébergé. Sans pisteur.',
-  copyrightLine: 'carnet.example.com · CC BY-NC-SA 4.0',
+    "Association féministe intersectionnelle. Publications sur le genre : articles de recherche, analyses, actus, podcasts et outils. Auto-hébergé. Sans pisteur.",
+  copyrightLine: 'CC BY-NC-SA 4.0',
 };
 
 const NAVIGATION_GLOBAL = {

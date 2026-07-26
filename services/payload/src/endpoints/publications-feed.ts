@@ -36,6 +36,7 @@ type FeedRow = {
   published_at: string | null;
   id_carnet: string | null;
   reading_time: number | null;
+  theme_slugs: string | null;
   total: number;
 };
 
@@ -84,7 +85,17 @@ export const publicationsFeedEndpoint: Endpoint = {
       return sql`
         SELECT ${sql.raw(`'${t}'`)}::text AS collection,
                p.id, p.numero, p.slug, p.title, p.lede,
-               p.published_at, p.id_carnet, p.reading_time
+               p.published_at, p.id_carnet, p.reading_time,
+               -- Slugs des thématiques, agrégés en une chaîne. Le flux
+               -- alimente les filtres de la page d'accueil, qui filtrent
+               -- côté client sur un attribut data-themes : sans cette
+               -- colonne il faudrait une requête par publication.
+               (
+                 SELECT coalesce(string_agg(th.slug, ' ' ORDER BY th.slug), '')
+                 FROM ${sql.raw(`"${t}_rels"`)} rr
+                 JOIN themes th ON th.id = rr.themes_id
+                 WHERE rr.parent_id = p.id
+               ) AS theme_slugs
         FROM ${sql.raw(`"${t}"`)} p
         WHERE ${sql.join(preds, sql` AND `)}`;
     });
@@ -110,6 +121,7 @@ export const publicationsFeedEndpoint: Endpoint = {
       publishedAt: r.published_at,
       idTituba: r.id_carnet,
       readingTime: r.reading_time,
+      themeSlugs: (r.theme_slugs ?? '').split(' ').filter(Boolean),
     }));
     const totalDocs = Number(rows[0]?.total ?? 0);
 

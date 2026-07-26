@@ -7,18 +7,13 @@
  */
 import Layout from '../../layouts/Layout.astro';
 import Hero from '../../components/Hero.astro';
-import { fetchCollection, filterPublished, publishedOnly } from '../../lib/payload';
+import { fetchCollection,   fetchPublicationCounts,
+} from '../../lib/payload';
 
 type Tag = {
   id: number | string;
   slug: string;
   name: string;
-};
-
-type PostLite = {
-  id: number | string;
-  draft?: boolean;
-  tags?: Array<{ id: number | string; slug: string } | number | string> | null;
 };
 
 let tags: Tag[] = [];
@@ -29,25 +24,11 @@ try {
     limit: 1000,
     depth: 0,
   });
-  const posts = filterPublished(
-    // Cf. themes/index.astro : comptage seul, donc `select` minimal.
-    await fetchCollection<PostLite>('posts', {
-      limit: 1000,
-      depth: 0,
-      where: publishedOnly(),
-      select: ['tags', 'draft'],
-    }),
-  );
+  // Une requête SQL renvoie tous les compteurs, toutes collections
+  // confondues. Auparavant on chargeait mille documents rien que pour
+  // les compter — et avec cinq collections ce serait cinq fois pire.
+  counts = new Map(Object.entries(await fetchPublicationCounts('tag')));
   // post.tags en depth 0 est un array d'IDs ; on compte par tag.id
-  const idToSlug = new Map<number | string, string>(tags.map((t) => [t.id, t.slug]));
-  for (const post of posts) {
-    for (const tref of post.tags ?? []) {
-      const tid = typeof tref === 'object' && tref !== null ? tref.id : tref;
-      const slug = idToSlug.get(tid as number | string);
-      if (!slug) continue;
-      counts.set(slug, (counts.get(slug) ?? 0) + 1);
-    }
-  }
 } catch (err) {
   console.warn('[tags] fetch failed:', (err as Error).message);
 }
@@ -81,7 +62,7 @@ const total = sorted.length;
                 <span class="slug">#{t.slug}</span>
                 <span class="name">{t.name}</span>
                 <span class="count">
-                  {count} billet{count > 1 ? 's' : ''}
+                  {count} publication{count > 1 ? 's' : ''}
                 </span>
               </a>
             </li>
