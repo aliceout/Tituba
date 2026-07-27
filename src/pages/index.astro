@@ -3,7 +3,7 @@
  * Page d'accueil — hero + barre de filtres + flux d'items.
  *
  * Trois sections empilées (cf design_handoff_tituba/Tituba B.html → Home) :
- *  1. Hero : kicker meta + h1 + lede (titre/lede éditables via global Site)
+ *  1. Hero : h1 + lede (titre/lede éditables via le global Pages principales)
  *  2. Filtres : chips Type & Thème + compteur. Filtrage côté client en JS
  *     progressif via data-attrs ; persistance en URL hash. Lecture sans JS
  *     possible (la liste complète reste rendue).
@@ -30,13 +30,11 @@ type IndexPagesGlobal = {
   };
 };
 
-const DEFAULT_HERO_TITLE =
-  'Notes de recherche en *études de genre* et en relations internationales.';
+const DEFAULT_HERO_TITLE = 'Le genre, *partout* où il se joue.';
 const DEFAULT_HERO_LEDE =
-  'Analyses longues, notes de lecture et fiches thématiques sur le genre, la géopolitique et les droits LGBTQI+ dans les rapports internationaux. Principalement en français.';
+  "Association féministe intersectionnelle, inclusive et décoloniale. Nous publions des recherches, des analyses et des outils pour comprendre les inégalités structurelles — et tenter de les défaire.";
 
 let posts: Post[] = [];
-let total = 0;
 let themeCounts: Record<string, number> = {};
 let allThemes: Theme[] = [];
 let indexPages: IndexPagesGlobal = {};
@@ -51,7 +49,6 @@ try {
     fetchCollection<Theme>('themes', { limit: 100, depth: 0, select: ['slug', 'name'] }),
   ]);
   posts = feed.docs as Post[];
-  total = feed.totalDocs;
   themeCounts = counts;
   allThemes = themes;
 } catch (err) {
@@ -77,84 +74,61 @@ const heroLedeHtml = formatHeroLede(
 // par usage puis par ordre alphabétique. Pas de troncature : les dix
 // axes de l'association sont structurants, en cacher une partie
 // reviendrait à masquer un pan du travail.
-// Les dix axes de l'association, tous affichés — y compris ceux qui
-// n'ont pas encore de publication : ils disent ce sur quoi Tituba
-// travaille, pas seulement ce qui est déjà paru. Ceux qui sont vides
-// portent la classe `empty`, qui les atténue visuellement.
-const topThemes = allThemes.slice().sort((a, b) => {
-  const d = (themeCounts[b.slug] ?? 0) - (themeCounts[a.slug] ?? 0);
-  return d !== 0 ? d : a.name.localeCompare(b.name, 'fr');
-});
-
-// Mois/année du plus ancien post — affiché dans le kicker meta « depuis … ».
-const monthLabel = (() => {
-  if (!posts.length) return '';
-  const dates = posts
-    .map((p) => (p.publishedAt ? new Date(p.publishedAt).getTime() : NaN))
-    .filter((t) => Number.isFinite(t));
-  if (dates.length === 0) return '';
-  const d = new Date(Math.min(...dates));
-  const months = [
-    'janvier',
-    'février',
-    'mars',
-    'avril',
-    'mai',
-    'juin',
-    'juillet',
-    'août',
-    'septembre',
-    'octobre',
-    'novembre',
-    'décembre',
-  ];
-  return `${months[d.getMonth()]} ${d.getFullYear()}`;
-})();
+// Seules les thématiques qui portent au moins une publication. Une
+// puce de filtre est une promesse : cliquer doit mener quelque part.
+// Les dix axes de l'association restent listés sur /themes/, qui est
+// leur place — la barre de filtres, elle, décrit ce qui est publié.
+const topThemes = allThemes
+  .filter((t) => (themeCounts[t.slug] ?? 0) > 0)
+  .sort((a, b) => {
+    const d = (themeCounts[b.slug] ?? 0) - (themeCounts[a.slug] ?? 0);
+    return d !== 0 ? d : a.name.localeCompare(b.name, 'fr');
+  });
 ---
 
 <Layout bodyClass="justify">
   <Hero
-    kicker={`Tituba · ${total} publication${total > 1 ? 's' : ''}${monthLabel ? ` · depuis ${monthLabel}` : ''}`}
     title={heroTitleHtml}
     lede={heroLedeHtml}
   />
 
   <!-- Filtres -->
-  <section class="filters" id="filters" data-total={total}>
+  <section class="filters" id="filters">
     <div class="container">
-      {topThemes.length > 0 && (
-        <div class="row">
-          <div class="grp" role="group" aria-label="Filtrer par thème">
-            <span class="lbl">Thème</span>
-            <button class="chip on" type="button" data-filter-theme="all">Tous</button>
-            {topThemes.map((t) => (
-              <button
-                class:list={['chip', { empty: (themeCounts[t.slug] ?? 0) === 0 }]}
-                type="button"
-                data-filter-theme={t.slug}
-                title={`${t.name} — ${themeCounts[t.slug] ?? 0} publication${(themeCounts[t.slug] ?? 0) > 1 ? 's' : ''}`}
-              >
-                {t.name}
+      <div class="row">
+        <div class="grp" role="group" aria-label="Filtrer par format">
+          <span class="lbl">Format</span>
+          <div class="chips">
+            <button class="chip on" type="button" data-filter-type="all">Tous</button>
+            {PUBLICATION_ORDER.map((c) => (
+              <button class="chip" type="button" data-filter-type={c}>
+                <FormatIcon collection={c} />
+                {PUBLICATIONS[c].labelPlural}
               </button>
             ))}
           </div>
         </div>
-      )}
-      <div class="row">
-        <div class="grp" role="group" aria-label="Filtrer par type">
-          <span class="lbl">Format</span>
-          <button class="chip on" type="button" data-filter-type="all">Tous</button>
-          {PUBLICATION_ORDER.map((c) => (
-            <button class="chip" type="button" data-filter-type={c}>
-              <FormatIcon collection={c} />
-              {PUBLICATIONS[c].labelPlural}
-            </button>
-          ))}
-        </div>
-        <div class="count" id="filter-count">
-          {total} publication{total > 1 ? 's' : ''} · tri : récent
-        </div>
       </div>
+      {topThemes.length > 0 && (
+        <div class="row">
+          <div class="grp" role="group" aria-label="Filtrer par thématique">
+            <span class="lbl">Thématique</span>
+            <div class="chips">
+              <button class="chip on" type="button" data-filter-theme="all">Tous</button>
+              {topThemes.map((t) => (
+                <button
+                  class="chip"
+                  type="button"
+                  data-filter-theme={t.slug}
+                  title={`${t.name} — ${themeCounts[t.slug] ?? 0} publication${(themeCounts[t.slug] ?? 0) > 1 ? 's' : ''}`}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   </section>
 
@@ -216,16 +190,30 @@ const monthLabel = (() => {
   .filters .grp {
     display: flex;
     gap: 6px;
+    align-items: baseline;
+    /* Occupe toute la largeur de la ligne. Sans ça le groupe se
+       dimensionne sur son contenu et la boîte de puces hérite d'une
+       largeur plus étroite que l'espace réellement disponible : une
+       puce partait à la ligne alors qu'il restait de la place. */
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  /* Les puces vivent dans leur propre boîte : le libellé reste hors du
+     flux d'enroulement, donc une puce reportée à la ligne suivante
+     s'aligne sous « Tous » plutôt que sous le libellé. */
+  .filters .chips {
+    display: flex;
+    gap: 6px;
     align-items: center;
     flex-wrap: wrap;
   }
   .filters .lbl {
     color: var(--color-muted);
     padding-right: 8px;
-    /* Largeur fixe pour aligner les boutons « Tous » entre les deux
-       lignes de filtres (Type et Thème ont des largeurs différentes
-       sans cette contrainte). */
-    min-width: 60px;
+    /* Largeur réservée au libellé, pour que les boutons « Tous » des
+       deux lignes s'alignent sur la même verticale. Calibrée sur le plus
+       long — « Thématique » — sans quoi sa ligne décale vers la droite. */
+    flex: 0 0 96px;
   }
   .chip {
     padding: 6px 12px;
@@ -241,11 +229,6 @@ const monthLabel = (() => {
     background: var(--color-accent);
     color: var(--color-bg);
     border-color: var(--color-accent);
-  }
-  /* Thématique déclarée mais sans publication : lisible, sans attirer
-     l'œil autant que celles qui mènent quelque part. */
-  .chip.empty:not(.on) {
-    opacity: 0.55;
   }
   .chip:hover:not(.on) {
     border-color: var(--color-accent);
@@ -297,18 +280,15 @@ const monthLabel = (() => {
   // Format compact : si 'all' partout, hash retiré.
   (function () {
     // Le narrow `if (!x) return` n'est pas conservé dans les closures
-    // imbriquées (applyFilters, syncChipsFromState). On rebinde après la
-    // garde pour donner un type non-nullable aux fonctions internes.
+    // imbriquées. On rebinde après la garde pour donner un type
+    // non-nullable aux fonctions internes.
     const filtersRaw = document.getElementById('filters');
-    const countElRaw = document.getElementById('filter-count');
     const items = Array.from(document.querySelectorAll<HTMLElement>('.item'));
-    if (!filtersRaw || !countElRaw || !items.length) return;
+    if (!filtersRaw || !items.length) return;
     const filters: HTMLElement = filtersRaw;
-    const countEl: HTMLElement = countElRaw;
 
     type State = { type: string; theme: string };
     const state: State = { type: 'all', theme: 'all' };
-    const total = Number(filters.getAttribute('data-total') || items.length);
 
     function readHash(): State {
       const hash = window.location.hash.replace(/^#/, '');
@@ -342,8 +322,6 @@ const monthLabel = (() => {
         item.style.display = show ? '' : 'none';
         if (show) visible++;
       }
-      countEl.textContent =
-        `${visible} publication${visible > 1 ? 's' : ''} sur ${total} · tri : récent`;
     }
 
     function syncChipsFromState() {

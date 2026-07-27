@@ -1,0 +1,157 @@
+---
+/**
+ * Page d'index d'un format — /articles/, /podcasts/, etc.
+ *
+ * Partagée par les cinq formats : les routes ne sont que des enveloppes
+ * qui passent leur collection. Contrairement à l'accueil, on interroge
+ * ici une seule collection, donc pas besoin du flux fusionné — un
+ * `fetchCollection` direct suffit et évite un aller-retour SQL.
+ */
+import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero.astro';
+import PublicationCard from './PublicationCard.astro';
+import FormatIcon from './FormatIcon.astro';
+import CardFilterBar from './CardFilterBar.astro';
+import { fetchCollection, publishedOnly } from '../lib/payload';
+import { PUBLICATIONS, type PublicationCollection } from '../lib/publications';
+
+export interface Props {
+  collection: PublicationCollection;
+}
+
+type ThemeRef = { id: number | string; slug: string; name: string };
+
+type Doc = {
+  id: number | string;
+  numero: number | null;
+  slug: string | null;
+  title: string | null;
+  themes?: ThemeRef[] | null;
+  publishedAt: string | null;
+  lede: string | null;
+  readingTime?: number | null;
+  durationSeconds?: number | null;
+  draft?: boolean;
+};
+
+const { collection } = Astro.props as Props;
+const spec = PUBLICATIONS[collection];
+
+let docs: Doc[] = [];
+try {
+  docs = await fetchCollection<Doc>(collection, {
+    where: publishedOnly(),
+    sort: '-publishedAt',
+    limit: 200,
+    depth: 1,
+    select: [
+      'numero',
+      'slug',
+      'title',
+      'themes',
+      'publishedAt',
+      'lede',
+      'readingTime',
+      'durationSeconds',
+      'draft',
+    ],
+  });
+} catch (err) {
+  console.warn(`[${collection}] fetch failed:`, (err as Error).message);
+}
+
+const total = docs.length;
+
+// Thématiques réellement présentes dans ce format, avec leur compte.
+// On les dérive des documents chargés plutôt que de lister les dix axes :
+// proposer un filtre qui ne renverrait rien serait trompeur.
+const themeCounts = new Map<string, { label: string; count: number }>();
+for (const d of docs) {
+  for (const t of d.themes ?? []) {
+    if (typeof t !== 'object' || t === null) continue;
+    const cur = themeCounts.get(t.slug) ?? { label: t.name, count: 0 };
+    cur.count++;
+    themeCounts.set(t.slug, cur);
+  }
+}
+const themeOptions = [...themeCounts.entries()]
+  .map(([value, v]) => ({ value, label: v.label, count: v.count }))
+  .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'fr'));
+
+// Lede par format : ce que le lecteur trouvera ici, en une phrase.
+const LEDES: Record<PublicationCollection, string> = {
+  articles:
+    'Travaux de fond, avec notes et bibliographie. Citables et exportables aux formats BibTeX et RIS.',
+  analyses:
+    "Textes qui prennent le temps d'argumenter, sans l'appareil formel d'un article de recherche.",
+  actus: "Rebonds courts sur l'actualité, publiés pendant qu'elle est encore vive.",
+  podcasts: 'Épisodes audio — entretiens, tables rondes et lectures.',
+  outils:
+    "Ressources pratiques à réutiliser : guides, kits d'animation, supports de formation.",
+};
+---
+
+<Layout
+  title={spec.labelPlural}
+  description={`${spec.labelPlural} de Tituba. ${LEDES[collection]}`}
+>
+  <Hero
+    kicker={`${spec.labelPlural} · ${total} publication${total > 1 ? 's' : ''}`}
+    title={spec.labelPlural}
+    lede={LEDES[collection]}
+  />
+
+  <CardFilterBar
+    dimension="themes"
+    label="Thématique"
+    options={themeOptions}
+    total={total}
+  />
+
+  <section class="container feed">
+    {docs.length === 0 ? (
+      <p class="empty">
+        <FormatIcon collection={collection} />
+        Aucune publication dans ce format pour l'instant.
+      </p>
+    ) : (
+      docs.map((d) => (
+        <PublicationCard
+          collection={collection}
+          numero={d.numero}
+          slug={d.slug}
+          title={d.title}
+          themes={d.themes}
+          publishedAt={d.publishedAt}
+          lede={d.lede}
+          readingTime={d.readingTime}
+          durationSeconds={d.durationSeconds}
+        />
+      ))
+    )}
+  </section>
+</Layout>
+
+<style>
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 80px;
+  }
+  .feed {
+    padding-top: 24px;
+    padding-bottom: 40px;
+  }
+  .feed .empty {
+    padding: 64px 0;
+    color: var(--color-muted);
+    text-align: center;
+    font-family: var(--font-sans);
+  }
+
+  @media (max-width: 900px) {
+    .container {
+      padding: 0 24px;
+    }
+  }
+</style>

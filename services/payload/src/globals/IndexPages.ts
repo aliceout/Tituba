@@ -51,7 +51,7 @@ export const IndexPages: GlobalConfig = {
           type: 'textarea',
           required: false,
           label: 'Titre du hero',
-          defaultValue: 'Notes de recherche',
+          defaultValue: 'Le genre, *partout* où il se joue.',
           admin: {
             description:
               'H1 de la page d\'accueil. Entourer une portion de "*" pour la mettre en italique.',
@@ -63,7 +63,7 @@ export const IndexPages: GlobalConfig = {
           required: false,
           label: 'Texte de présentation (lede)',
           defaultValue:
-            'Analyses longues, notes de lecture et fiches thématiques.',
+            "Association féministe intersectionnelle, inclusive et décoloniale. Nous publions des recherches, des analyses et des outils pour comprendre les inégalités structurelles — et tenter de les défaire.",
           admin: {
             description: "Paragraphe sous le titre de la page d'accueil.",
           },

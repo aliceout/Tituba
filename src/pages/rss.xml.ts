@@ -13,7 +13,6 @@ import { fetchFeed, publicationHref } from '../lib/publications';
 type IdentityGlobal = { siteName?: string };
 type SubscriptionsGlobal = { rssEnabled?: boolean };
 
-type Theme = { id: number | string; slug: string; name: string };
 
 type Post = FeedDoc;
 

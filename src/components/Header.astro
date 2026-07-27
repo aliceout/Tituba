@@ -18,7 +18,9 @@
  *
  * Réf : design_handoff_tituba/Tituba B.html → header.site.
  */
-import { fetchIdentity, fetchIndexPages, fetchNavigation } from '../lib/payload';
+import { fetchCollection, fetchIdentity, fetchIndexPages, fetchNavigation } from '../lib/payload';
+import { PUBLICATIONS, PUBLICATION_ORDER } from '../lib/publications';
+import FormatIcon from './FormatIcon.astro';
 
 const pathname = Astro.url.pathname;
 
@@ -64,6 +66,22 @@ type IndexPagesGlobal = {
   subscribe?: { enabled?: boolean };
 };
 
+// Thématiques du menu déroulant. Chargées depuis Payload pour que la
+// liste suive l'admin sans redéploiement ; en cas d'échec le menu
+// disparaît simplement, le reste du header continue de fonctionner.
+type ThemeLink = { slug: string; name: string };
+let navThemes: ThemeLink[] = [];
+try {
+  navThemes = await fetchCollection<ThemeLink>('themes', {
+    limit: 100,
+    depth: 0,
+    sort: 'name',
+    select: ['slug', 'name'],
+  });
+} catch (err) {
+  console.warn('[header] fetchCollection(themes) failed:', (err as Error).message);
+}
+
 let siteName = 'Tituba';
 let items: NavItem[] = DEFAULT_NAV_ITEMS;
 let indexEnabled: Record<IndexTarget, boolean> = {
@@ -97,6 +115,11 @@ try {
       if (e.kind === 'index') {
         const target = e.indexTarget;
         if (!target || !INDEX_TARGETS[target]) return [];
+        // Le menu déroulant « Thématiques » couvre déjà /themes/ et
+        // chaque thématique : garder l'onglet ferait doublon. On le
+        // filtre ici plutôt que de compter sur la config Payload, pour
+        // qu'il ne puisse pas réapparaître au prochain réglage de nav.
+        if (target === 'themes') return [];
         // Si la page d'index est désactivée (toggle off dans IndexPages),
         // on saute silencieusement.
         if (!indexEnabled[target]) return [];
@@ -124,6 +147,7 @@ try {
   } else {
     // Pas de config → defaults filtrés par les enabled.
     items = DEFAULT_NAV_ITEMS.filter((it) => {
+      if (it === INDEX_TARGETS.themes) return false;
       const target = (Object.keys(INDEX_TARGETS) as IndexTarget[]).find(
         (t) => INDEX_TARGETS[t] === it,
       );
@@ -144,9 +168,18 @@ function isActive(item: NavItem): boolean {
   return item.matchPaths.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
 
-// L'onglet « Billets » (home) reste toujours en première position,
-// hardcodé : c'est la racine du site, on ne le pilote pas depuis l'admin.
-const homeActive = pathname === '/' || pathname.startsWith('/billets');
+// L'onglet d'accueil reste toujours en première position, hardcodé :
+// c'est la racine du site, on ne le pilote pas depuis l'admin.
+const homeActive = pathname === '/';
+
+// Le menu « Formats » est actif dès qu'on lit une publication, quelle
+// que soit sa collection.
+const formatsActive = PUBLICATION_ORDER.some(
+  (c) => pathname === PUBLICATIONS[c].routePrefix || pathname.startsWith(PUBLICATIONS[c].routePrefix + '/'),
+);
+// Le menu « Thématiques » couvre la vue d'ensemble et les pages
+// individuelles.
+const themesActive = pathname.startsWith('/theme');
 ---
 
 <header class="site" id="site-header">
@@ -158,8 +191,58 @@ const homeActive = pathname === '/' || pathname.startsWith('/billets');
         class:list={[{ active: homeActive }]}
         aria-current={homeActive ? 'page' : undefined}
       >
-        Billets
+        Accueil
       </a>
+
+      {/* Deux menus déroulants : les formats (liste figée, connue à la
+          compilation) et les thématiques (pilotées depuis Payload).
+          Bouton + panneau plutôt que <details> pour maîtriser la
+          fermeture au clic extérieur et à Échap, que <details> ne gère
+          pas. Sans JavaScript, le bouton reste inerte — d'où le lien
+          « Voir tout » en pied de chaque panneau, qui garantit un accès
+          au contenu dans tous les cas. */}
+      <div class="nav-menu" data-nav-menu>
+        <button
+          type="button"
+          class:list={['nav-menu__btn', { active: formatsActive }]}
+          aria-expanded="false"
+          aria-controls="menu-formats"
+          data-nav-menu-btn
+        >
+          Formats
+          <svg class="chev" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6l4.5 4.5L12.5 6"/></svg>
+        </button>
+        <div class="nav-menu__panel" id="menu-formats" hidden data-nav-menu-panel>
+          {PUBLICATION_ORDER.map((c) => (
+            <a href={`${PUBLICATIONS[c].routePrefix}/`}>
+              <FormatIcon collection={c} />
+              {PUBLICATIONS[c].labelPlural}
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {navThemes.length > 0 && (
+        <div class="nav-menu" data-nav-menu>
+          <button
+            type="button"
+            class:list={['nav-menu__btn', { active: themesActive }]}
+            aria-expanded="false"
+            aria-controls="menu-themes"
+            data-nav-menu-btn
+          >
+            Thématiques
+            <svg class="chev" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6l4.5 4.5L12.5 6"/></svg>
+          </button>
+          <div class="nav-menu__panel" id="menu-themes" hidden data-nav-menu-panel>
+            {navThemes.map((t) => (
+              <a href={`/theme/${t.slug}/`}>{t.name}</a>
+            ))}
+            <a class="nav-menu__all" href="/themes/">Voir toutes les thématiques →</a>
+          </div>
+        </div>
+      )}
+
       {items.map((item) => (
         <a
           href={item.href}
@@ -270,6 +353,83 @@ const homeActive = pathname === '/' || pathname.startsWith('/billets');
     font-weight: 600;
     border-bottom: 1.5px solid var(--color-accent);
   }
+  /* ─── Menus déroulants ─────────────────────────────────────────
+     Le conteneur est en position: relative pour ancrer le panneau,
+     qui sort du flux et se superpose au contenu. */
+  header.site .nav-menu {
+    position: relative;
+    display: inline-flex;
+  }
+  header.site .nav-menu__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 0;
+    padding: 0 0 4px;
+    font: inherit;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: color 0.12s;
+  }
+  header.site .nav-menu__btn:hover {
+    color: var(--color-ink);
+  }
+  header.site .nav-menu__btn.active {
+    color: var(--color-ink);
+    font-weight: 600;
+    border-bottom: 1.5px solid var(--color-accent);
+  }
+  header.site .nav-menu__btn .chev {
+    transition: transform 0.15s;
+  }
+  /* Le chevron pivote quand le panneau est ouvert : l'état est déjà
+     porté par aria-expanded, on s'y accroche plutôt que d'ajouter une
+     classe — une seule source de vérité. */
+  header.site .nav-menu__btn[aria-expanded='true'] .chev {
+    transform: rotate(180deg);
+  }
+  header.site .nav-menu__panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    z-index: 60;
+    min-width: 220px;
+    max-height: min(70vh, 460px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-rule);
+    border-radius: 8px;
+    box-shadow: 0 8px 28px rgb(0 0 0 / 12%);
+  }
+  header.site .nav-menu__panel[hidden] {
+    display: none;
+  }
+  header.site .nav-menu__panel a {
+    display: flex;
+    align-items: center;
+    padding: 7px 10px;
+    border-radius: 5px;
+    color: var(--color-ink);
+    white-space: nowrap;
+    transition: background 0.12s, color 0.12s;
+  }
+  header.site .nav-menu__panel a:hover,
+  header.site .nav-menu__panel a:focus-visible {
+    background: var(--color-rule);
+    color: var(--color-accent);
+  }
+  header.site .nav-menu__all {
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-rule);
+    color: var(--color-accent) !important;
+    font-size: 12px;
+  }
+
   header.site nav a.mono {
     font-family: var(--font-mono);
     font-size: 12px;
@@ -370,6 +530,72 @@ const homeActive = pathname === '/' || pathname.startsWith('/billets');
 </style>
 
 <script is:inline>
+  // Menus déroulants du header : ouverture au clic, fermeture au clic
+  // extérieur, à Échap et à l'ouverture d'un autre menu. L'état vit
+  // dans aria-expanded et l'attribut hidden — pas de classe parallèle,
+  // donc l'accessibilité et le visuel ne peuvent pas diverger.
+  (function () {
+    const menus = Array.from(document.querySelectorAll('[data-nav-menu]'));
+    if (!menus.length) return;
+
+    function panelOf(menu) {
+      return menu.querySelector('[data-nav-menu-panel]');
+    }
+    function btnOf(menu) {
+      return menu.querySelector('[data-nav-menu-btn]');
+    }
+    function close(menu) {
+      const p = panelOf(menu);
+      const b = btnOf(menu);
+      if (!p || !b) return;
+      p.hidden = true;
+      b.setAttribute('aria-expanded', 'false');
+    }
+    function closeAll(except) {
+      for (const m of menus) if (m !== except) close(m);
+    }
+    function open(menu) {
+      const p = panelOf(menu);
+      const b = btnOf(menu);
+      if (!p || !b) return;
+      closeAll(menu);
+      p.hidden = false;
+      b.setAttribute('aria-expanded', 'true');
+    }
+
+    for (const menu of menus) {
+      const b = btnOf(menu);
+      if (!b) continue;
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = b.getAttribute('aria-expanded') === 'true';
+        if (isOpen) close(menu);
+        else open(menu);
+      });
+      // Le focus qui sort du menu le referme : indispensable au clavier,
+      // sinon on tabule dans un panneau invisible plus bas dans la page.
+      menu.addEventListener('focusout', (e) => {
+        if (!menu.contains(e.relatedTarget)) close(menu);
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!menus.some((m) => m.contains(e.target))) closeAll(null);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const openMenu = menus.find(
+        (m) => btnOf(m) && btnOf(m).getAttribute('aria-expanded') === 'true',
+      );
+      if (!openMenu) return;
+      close(openMenu);
+      // On rend le focus au bouton : sans ça, Échap laisse le focus dans
+      // le vide et la navigation clavier repart du début du document.
+      const b = btnOf(openMenu);
+      if (b) b.focus();
+    });
+  })();
+
   // Compact sticky : la classe `is-scrolled` est posée dès qu'on a quitté
   // le haut de page. Listener passif + rAF pour éviter le jank.
   (function () {

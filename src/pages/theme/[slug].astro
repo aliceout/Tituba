@@ -12,6 +12,8 @@
 import Layout from '../../layouts/Layout.astro';
 import Hero from '../../components/Hero.astro';
 import PublicationCard from '../../components/PublicationCard.astro';
+import CardFilterBar from '../../components/CardFilterBar.astro';
+import { PUBLICATIONS, PUBLICATION_ORDER } from '../../lib/publications';
 import {
   fetchBySlug,
   fetchCollection,
@@ -65,6 +67,16 @@ try {
 }
 
 const total = posts.length;
+
+// Formats réellement représentés sous cette thématique, dans l'ordre
+// éditorial. Un filtre vide n'aurait pas de sens ici non plus.
+const formatCounts = new Map<string, number>();
+for (const p of posts) formatCounts.set(p.collection, (formatCounts.get(p.collection) ?? 0) + 1);
+const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((c) => ({
+  value: c,
+  label: PUBLICATIONS[c].labelPlural,
+  count: formatCounts.get(c) ?? 0,
+}));
 ---
 
 <Layout
@@ -83,6 +95,13 @@ const total = posts.length;
       <a class="back mono" href="/themes/">← tous les thèmes</a>
     </div>
   </Hero>
+
+  <CardFilterBar
+    dimension="type"
+    label="Format"
+    options={formatOptions}
+    total={total}
+  />
 
   <section class="container feed">
     {posts.length === 0 ? (

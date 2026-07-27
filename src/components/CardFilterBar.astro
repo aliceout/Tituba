@@ -1,0 +1,196 @@
+---
+/**
+ * Barre de filtres pour une liste de cartes de publication.
+ *
+ * Filtre côté client sur les attributs que `PublicationCard` pose déjà :
+ * `data-type` (la collection) et `data-themes` (les slugs de
+ * thématiques, séparés par des espaces). Aucune requête n'est refaite —
+ * la liste complète est rendue côté serveur, on ne fait que masquer.
+ *
+ * Conséquence assumée : sans JavaScript, la barre n'apparaît pas et la
+ * liste reste intégralement lisible. C'est le bon compromis pour un
+ * filtre de confort ; un filtre qui conditionnerait l'accès au contenu
+ * devrait, lui, passer par des URLs réelles.
+ *
+ * Le choix est reflété dans le hash de l'URL, donc partageable et
+ * conservé au rechargement.
+ */
+export interface Props {
+  /** Attribut filtré : `type` pour les formats, `themes` pour la taxonomie. */
+  dimension: 'type' | 'themes';
+  label: string;
+  options: Array<{ value: string; label: string; count?: number }>;
+  /** Nombre total de cartes, pour le compteur. */
+  total: number;
+}
+
+const { dimension, label, options, total } = Astro.props as Props;
+---
+
+{options.length > 1 && (
+  <section class="filters" data-card-filters data-dimension={dimension} data-total={total}>
+    <div class="container">
+      <div class="row">
+        <div class="grp" role="group" aria-label={`Filtrer par ${label.toLowerCase()}`}>
+          <span class="lbl">{label}</span>
+          <div class="chips">
+            <button class="chip on" type="button" data-filter-value="all">Tous</button>
+            {options.map((o) => (
+              <button
+                class:list={['chip', { empty: o.count === 0 }]}
+                type="button"
+                data-filter-value={o.value}
+                title={o.count !== undefined ? `${o.label} — ${o.count} publication${o.count > 1 ? 's' : ''}` : o.label}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div class="count" data-filter-count>
+          {total} publication{total > 1 ? 's' : ''}
+        </div>
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 80px;
+  }
+  .filters {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--color-rule);
+    font-family: var(--font-sans);
+    font-size: 13px;
+  }
+  .filters .row {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .filters .grp {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    /* Occupe toute la largeur de la ligne. Sans ça le groupe se
+       dimensionne sur son contenu et la boîte de puces hérite d'une
+       largeur plus étroite que l'espace réellement disponible : une
+       puce partait à la ligne alors qu'il restait de la place. */
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  /* Cf. index.astro : le libellé hors du flux d'enroulement, pour que
+     les puces reportées s'alignent sous « Tous ». */
+  .filters .chips {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .filters .lbl {
+    color: var(--color-muted);
+    padding-right: 8px;
+    /* Même largeur réservée que sur l'accueil : le bord gauche des
+       boutons « Tous » tombe au même endroit d'une page à l'autre. */
+    flex: 0 0 96px;
+  }
+  .chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--color-rule);
+    background: transparent;
+    color: var(--color-muted);
+    cursor: pointer;
+    font: inherit;
+    transition: color 0.12s, border-color 0.12s, background 0.12s;
+  }
+  .chip.on {
+    background: var(--color-accent);
+    color: var(--color-bg);
+    border-color: var(--color-accent);
+  }
+  /* Option déclarée mais sans publication ici : lisible, sans attirer
+     l'œil autant que celles qui mènent quelque part. */
+  .chip.empty:not(.on) {
+    opacity: 0.55;
+  }
+  .chip:hover:not(.on) {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  .filters .count {
+    margin-left: auto;
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 900px) {
+    .container {
+      padding: 0 24px;
+    }
+  }
+</style>
+
+<script>
+  // Filtrage client des cartes. Générique : la dimension filtrée est
+  // portée par `data-dimension`, et `data-themes` est multivalué là où
+  // `data-type` ne l'est pas — d'où la distinction ci-dessous.
+  (function () {
+    const barEl = document.querySelector<HTMLElement>('[data-card-filters]');
+    if (!barEl) return;
+    const bar = barEl;
+    const dimension = bar.dataset.dimension === 'themes' ? 'themes' : 'type';
+    const countRaw = bar.querySelector<HTMLElement>('[data-filter-count]');
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.item'));
+    if (!cards.length || !countRaw) return;
+    const countEl = countRaw;
+    const total = Number(bar.dataset.total || cards.length);
+
+    let current = 'all';
+
+    function matches(card: HTMLElement): boolean {
+      if (current === 'all') return true;
+      if (dimension === 'themes') {
+        const list = (card.getAttribute('data-themes') || '').split(' ').filter(Boolean);
+        return list.includes(current);
+      }
+      return (card.getAttribute('data-type') || '') === current;
+    }
+
+    function apply() {
+      let visible = 0;
+      for (const card of cards) {
+        const ok = matches(card);
+        card.style.display = ok ? '' : 'none';
+        if (ok) visible++;
+      }
+      countEl.textContent =
+        current === 'all'
+          ? `${visible} publication${visible > 1 ? 's' : ''}`
+          : `${visible} publication${visible > 1 ? 's' : ''} sur ${total}`;
+      for (const b of bar.querySelectorAll<HTMLElement>('[data-filter-value]')) {
+        b.classList.toggle('on', b.dataset.filterValue === current);
+      }
+      const hash = current === 'all' ? '' : `#${dimension}=${current}`;
+      if (hash !== window.location.hash) {
+        history.replaceState(null, '', window.location.pathname + hash);
+      }
+    }
+
+    bar.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-filter-value]');
+      if (!btn) return;
+      current = btn.dataset.filterValue || 'all';
+      apply();
+    });
+
+    // Restaure le choix depuis l'URL au chargement.
+    const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get(dimension);
+    if (fromHash) current = fromHash;
+    apply();
+  })();
+</script>

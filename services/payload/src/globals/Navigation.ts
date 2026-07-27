@@ -43,7 +43,10 @@ const NavItemBlock: Block = {
       label: 'Page principale',
       options: [
         { label: 'Archives', value: 'archives' },
-        { label: 'Thèmes', value: 'themes' },
+        // Conservée pour ne pas invalider les configurations existantes,
+        // mais sans effet : le header rend un menu déroulant « Thématiques »
+        // qui couvre déjà /themes/ et chaque thématique.
+        { label: 'Thèmes (remplacé par le menu déroulant)', value: 'themes' },
         { label: 'Abonnement', value: 'subscribe' },
       ],
       admin: { condition: (_, sibling) => sibling?.kind === 'index' },
