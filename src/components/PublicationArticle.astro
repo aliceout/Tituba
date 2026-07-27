@@ -26,6 +26,7 @@
  * IntersectionObserver pour highlight de l'item actif.
  */
 import Layout from '../layouts/Layout.astro';
+import FormatIcon from './FormatIcon.astro';
 import {
   PUBLICATIONS,
   publicationHref,
@@ -289,7 +290,7 @@ const citationMeta = highwireMeta(
       </div>
       <div>
         <div class="lbl">Format</div>
-        {spec.badge}
+        <FormatIcon collection={collection} />{spec.badge}
       </div>
       <div>
         <div class="lbl">Thème</div>

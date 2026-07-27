@@ -14,6 +14,7 @@
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
 import PublicationCard from '../components/PublicationCard.astro';
+import FormatIcon from '../components/FormatIcon.astro';
 import { fetchCollection, fetchIndexPages, fetchPublicationCounts, type FeedDoc } from '../lib/payload';
 import { PUBLICATIONS, PUBLICATION_ORDER, fetchFeed } from '../lib/publications';
 import { formatHeroLede, formatHeroTitle } from '../lib/site';
@@ -71,11 +72,19 @@ const heroLedeHtml = formatHeroLede(
   indexPages.home?.heroLede?.trim() || DEFAULT_HERO_LEDE,
 );
 
-// Top thèmes utilisés (pour la barre de filtres) — max 6 chips après "Tous"
-const topThemes = allThemes
-  .filter((t) => (themeCounts[t.slug] ?? 0) > 0)
-  .sort((a, b) => (themeCounts[b.slug] ?? 0) - (themeCounts[a.slug] ?? 0))
-  .slice(0, 6);
+// Thématiques proposées dans la barre de filtres.
+// Toutes les thématiques qui portent au moins une publication, triées
+// par usage puis par ordre alphabétique. Pas de troncature : les dix
+// axes de l'association sont structurants, en cacher une partie
+// reviendrait à masquer un pan du travail.
+// Les dix axes de l'association, tous affichés — y compris ceux qui
+// n'ont pas encore de publication : ils disent ce sur quoi Tituba
+// travaille, pas seulement ce qui est déjà paru. Ceux qui sont vides
+// portent la classe `empty`, qui les atténue visuellement.
+const topThemes = allThemes.slice().sort((a, b) => {
+  const d = (themeCounts[b.slug] ?? 0) - (themeCounts[a.slug] ?? 0);
+  return d !== 0 ? d : a.name.localeCompare(b.name, 'fr');
+});
 
 // Mois/année du plus ancien post — affiché dans le kicker meta « depuis … ».
 const monthLabel = (() => {
@@ -105,7 +114,7 @@ const monthLabel = (() => {
 
 <Layout bodyClass="justify">
   <Hero
-    kicker={`Tituba · ${total} billet${total > 1 ? 's' : ''}${monthLabel ? ` · depuis ${monthLabel}` : ''}`}
+    kicker={`Tituba · ${total} publication${total > 1 ? 's' : ''}${monthLabel ? ` · depuis ${monthLabel}` : ''}`}
     title={heroTitleHtml}
     lede={heroLedeHtml}
   />
@@ -120,10 +129,10 @@ const monthLabel = (() => {
             <button class="chip on" type="button" data-filter-theme="all">Tous</button>
             {topThemes.map((t) => (
               <button
-                class="chip"
+                class:list={['chip', { empty: (themeCounts[t.slug] ?? 0) === 0 }]}
                 type="button"
                 data-filter-theme={t.slug}
-                title={t.name}
+                title={`${t.name} — ${themeCounts[t.slug] ?? 0} publication${(themeCounts[t.slug] ?? 0) > 1 ? 's' : ''}`}
               >
                 {t.name}
               </button>
@@ -137,6 +146,7 @@ const monthLabel = (() => {
           <button class="chip on" type="button" data-filter-type="all">Tous</button>
           {PUBLICATION_ORDER.map((c) => (
             <button class="chip" type="button" data-filter-type={c}>
+              <FormatIcon collection={c} />
               {PUBLICATIONS[c].labelPlural}
             </button>
           ))}
@@ -231,6 +241,11 @@ const monthLabel = (() => {
     background: var(--color-accent);
     color: var(--color-bg);
     border-color: var(--color-accent);
+  }
+  /* Thématique déclarée mais sans publication : lisible, sans attirer
+     l'œil autant que celles qui mènent quelque part. */
+  .chip.empty:not(.on) {
+    opacity: 0.55;
   }
   .chip:hover:not(.on) {
     border-color: var(--color-accent);
@@ -328,7 +343,7 @@ const monthLabel = (() => {
         if (show) visible++;
       }
       countEl.textContent =
-        `${visible} billet${visible > 1 ? 's' : ''} sur ${total} · tri : récent`;
+        `${visible} publication${visible > 1 ? 's' : ''} sur ${total} · tri : récent`;
     }
 
     function syncChipsFromState() {
