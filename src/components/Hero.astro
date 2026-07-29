@@ -18,6 +18,13 @@
  *                     « #slug »)
  *   - title          (string HTML) titre h1
  *   - lede           (string HTML) paragraphe sous le titre, optionnel
+ *   - variant        ('default' = display 62 px demi-gras, mots en
+ *                     italique accent / 'ouvert' = display 76 px maigre,
+ *                     mots surlignés au marqueur en trois couleurs.
+ *                     'ouvert' n'est employé que sur l'accueil : c'est
+ *                     la seule page qui doit tenir un écran à elle
+ *                     seule, les autres ouvrent sur une liste et un
+ *                     titre plus sage y sert mieux.)
  */
 
 interface Props {
@@ -25,12 +32,13 @@ interface Props {
   kickerVariant?: 'caps' | 'mono';
   title: string;
   lede?: string;
+  variant?: 'default' | 'ouvert';
 }
 
-const { kicker, kickerVariant = 'caps', title, lede } = Astro.props;
+const { kicker, kickerVariant = 'caps', title, lede, variant = 'default' } = Astro.props;
 ---
 
-<section class="hero">
+<section class={`hero${variant === 'ouvert' ? ' hero--ouvert' : ''}`}>
   <div class="container">
     {kicker && (
       <div class={`kicker${kickerVariant === 'mono' ? ' kicker--mono' : ''}`}>
@@ -45,28 +53,32 @@ const { kicker, kickerVariant = 'caps', title, lede } = Astro.props;
 
 <style>
   .container {
-    max-width: 1280px;
+    max-width: var(--page-max);
     margin: 0 auto;
-    padding: 0 80px;
+    padding: 0 var(--page-gutter);
   }
   @media (max-width: 900px) {
     .container {
-      padding: 0 24px;
+      padding: 0 var(--page-gutter-narrow);
     }
   }
 
   .hero {
-    padding: 36px 0 48px;
-    border-bottom: 1px solid var(--color-rule);
+    /* Beaucoup d'air : le titre doit occuper l'écran, pas cohabiter
+       avec le reste. */
+    padding: 88px 0 80px;
   }
 
+  /* Kicker en mono capitales largement interlettré : il signale le
+     registre — appareil documentaire — avant même d'être lu. C'est la
+     même langue typographique que les métadonnées des cartes. */
   .kicker {
-    font-family: var(--font-sans);
+    font-family: var(--font-mono);
     font-size: 11px;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--color-accent);
-    margin-bottom: 18px;
+    color: var(--color-muted);
+    margin-bottom: 32px;
   }
 
   .kicker--mono {
@@ -77,32 +89,125 @@ const { kicker, kickerVariant = 'caps', title, lede } = Astro.props;
     margin-bottom: 14px;
   }
 
+  /* Titre display. clamp() plutôt qu'une valeur fixe assortie de
+     media queries : la taille suit la fenêtre en continu, sans palier
+     visible au redimensionnement. */
   h1 {
-    font-size: 64px;
-    line-height: 1.04;
-    font-weight: 600;
-    letter-spacing: -0.7px;
-    margin: 0 0 20px;
-    max-width: 1080px;
+    font-size: clamp(28px, 4.3vw, 62px);
+    line-height: 1.02;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin: 0 0 40px;
   }
 
+  /* Les mots mis en avant passent en italique *et* en accent. L'italique
+     seul serait trop discret dans un display, la couleur seule trop
+     criarde ; ensemble ils créent une respiration. */
   h1 :global(em) {
-    font-weight: 500;
+    font-style: italic;
+    font-weight: 400;
     color: var(--color-accent);
   }
 
+  /* Lede en sans : il contraste avec le serif du titre plutôt que de
+     le prolonger. */
   .lede {
-    font-family: var(--font-serif);
-    font-size: 20px;
-    line-height: 1.55;
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.65;
     color: var(--color-muted);
-    max-width: 1080px;
     margin: 0;
   }
 
+  /* ── Variante « ouvert » (accueil) ──────────────────────────────
+     Le display passe en maigre et grossit : à cette taille, une graisse
+     500 devient un mur, alors qu'une 300 laisse respirer les contre-
+     formes de Fraunces. Le titre gagne aussi en largeur utile — on
+     cherche deux à trois lignes pleines, pas une colonne. */
+  /* Air divisé par trois par rapport à la maquette, qui réservait au
+     hero la hauteur d'un écran entier — tenable sur un plan fixe de
+     1440 × 2700, mais la une s'en trouvait repoussée hors de vue dans
+     un vrai navigateur.
+
+     Pas de marge basse : c'est le bloc suivant qui porte l'écart, comme
+     tous les autres (cf. --block-gap). */
+  .hero--ouvert {
+    padding: 32px 0 0;
+  }
+  .hero--ouvert .kicker {
+    margin-bottom: 28px;
+  }
+  .hero--ouvert h1 {
+    font-size: clamp(32px, 5.2vw, 76px);
+    font-weight: 300;
+    line-height: 1.08;
+    /* Ni plafond de largeur, ni équilibrage des lignes. La maquette
+       posait `text-wrap: balance`, qui ne limite pourtant rien : il
+       cherche le découpage qui égalise les lignes à nombre de lignes
+       constant, et ramenait donc les deux lignes à 712 px sur les
+       1328 disponibles. L'effet se lisait comme un max-width alors
+       qu'il n'y en avait aucun.
+
+       Sans lui, la première ligne va chercher le bord et la seconde
+       reste courte. C'est le parti pris retenu : le titre doit occuper
+       la gouttière, quitte à finir en décrochage. */
+    margin-bottom: 36px;
+  }
+
+  /* Surlignage au marqueur plutôt qu'italique + couleur : le trait
+     passe *derrière* le mot au lieu de le repeindre, donc le titre reste
+     d'une seule encre et se lit d'un trait. Le dégradé à seuil net
+     (transparent jusqu'à 62 %, couleur ensuite) simule un feutre passé
+     sous la ligne de base sans dépendre d'une hauteur de police.
+
+     Les trois familles se relaient dans l'ordre d'apparition : le
+     premier mot marqué est bleu, le deuxième vert, le troisième jaune,
+     puis on recycle. L'autrice contrôle donc les couleurs par le seul
+     ordre de ses astérisques dans l'admin — rien à configurer. */
+  .hero--ouvert h1 :global(em) {
+    font-style: normal;
+    font-weight: inherit;
+    color: inherit;
+    padding: 0 4px;
+    /* `box-decoration-break` garde le fond sur chaque ligne quand un
+       groupe marqué passe à la ligne, au lieu d'un unique aplat qui
+       déborderait dans la marge. */
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .hero--ouvert h1 :global(em:nth-of-type(3n + 1)) {
+    background: linear-gradient(
+      180deg,
+      transparent 62%,
+      color-mix(in srgb, var(--c-bleu) 33%, transparent) 62%
+    );
+  }
+  .hero--ouvert h1 :global(em:nth-of-type(3n + 2)) {
+    background: linear-gradient(
+      180deg,
+      transparent 62%,
+      color-mix(in srgb, var(--c-vert) 33%, transparent) 62%
+    );
+  }
+  .hero--ouvert h1 :global(em:nth-of-type(3n + 3)) {
+    background: linear-gradient(
+      180deg,
+      transparent 62%,
+      color-mix(in srgb, var(--c-jaune) 33%, transparent) 62%
+    );
+  }
+
+  .hero--ouvert .lede {
+    font-size: 18px;
+    line-height: 1.55;
+  }
+
   @media (max-width: 720px) {
-    h1 {
-      font-size: 40px;
+    .hero {
+      padding: 48px 0 40px;
+    }
+    .hero--ouvert {
+      padding: 19px 0 0;
     }
   }
 </style>

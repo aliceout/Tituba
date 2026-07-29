@@ -15,6 +15,10 @@ import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
 import PublicationCard from '../components/PublicationCard.astro';
 import FormatIcon from '../components/FormatIcon.astro';
+import SommairePanel from '../components/SommairePanel.astro';
+import LettreBand from '../components/LettreBand.astro';
+import FeaturedPublication from '../components/FeaturedPublication.astro';
+import PodcastSquare from '../components/PodcastSquare.astro';
 import { fetchCollection, fetchIndexPages, fetchPublicationCounts, type FeedDoc } from '../lib/payload';
 import { PUBLICATIONS, PUBLICATION_ORDER, fetchFeed } from '../lib/publications';
 import { formatHeroLede, formatHeroTitle } from '../lib/site';
@@ -25,16 +29,19 @@ type Post = FeedDoc;
 
 type IndexPagesGlobal = {
   home?: {
+    layout?: 'flux' | 'une';
     heroTitle?: string;
     heroLede?: string;
   };
 };
 
-const DEFAULT_HERO_TITLE = 'Le genre, *partout* où il se joue.';
+const DEFAULT_HERO_TITLE =
+  'Le genre aux prismes *féministe*, *décoloniaux*, et *intersectionnels* — recherches, analyses, ressources.';
 const DEFAULT_HERO_LEDE =
-  "Association féministe intersectionnelle, inclusive et décoloniale. Nous publions des recherches, des analyses et des outils pour comprendre les inégalités structurelles — et tenter de les défaire.";
+  "Association loi 1901 fondée à Paris en octobre 2024. Nous construisons un espace de ressources en accès libre autour d'une conviction : les inégalités structurelles se nouent ensemble — orientation sexuelle, construction sociale de la race, classe, colonialité — et ne se démêlent pas une à une. Dix thématiques, cinq formats, rien derrière un mur payant.";
 
 let posts: Post[] = [];
+let featured: Post[] = [];
 let themeCounts: Record<string, number> = {};
 let allThemes: Theme[] = [];
 let indexPages: IndexPagesGlobal = {};
@@ -43,12 +50,14 @@ try {
   // et paginer un mélange de cinq collections côté client demanderait
   // de sur-récupérer massivement. Le filtre brouillon/date est posé
   // côté serveur, d'où l'absence de filterPublished ici.
-  const [feed, counts, themes] = await Promise.all([
+  const [feed, une, counts, themes] = await Promise.all([
     fetchFeed({ limit: 200 }),
+    fetchFeed({ featured: true, limit: 1 }),
     fetchPublicationCounts('theme'),
     fetchCollection<Theme>('themes', { limit: 100, depth: 0, select: ['slug', 'name'] }),
   ]);
   posts = feed.docs as Post[];
+  featured = une.docs as Post[];
   themeCounts = counts;
   allThemes = themes;
 } catch (err) {
@@ -61,6 +70,51 @@ try {
 }
 
 
+
+// Disposition de l'accueil, pilotée depuis l'admin.
+const layout = indexPages.home?.layout === 'une' ? 'une' : 'flux';
+
+// Le mode « flux » liste tout ; le mode vitrine n'affiche pas cette
+// liste du tout, elle est remplacée par la une et le sommaire.
+const listed = posts;
+
+// À la une : la publication cochée « Mettre à la une » dans l'admin.
+// À défaut — aucune coche, ou fetch en échec — la plus récente prend la
+// place : le bloc structure le haut de page, le laisser vide creuserait
+// un trou entre le hero et le sommaire.
+const une = featured[0] ?? posts[0] ?? null;
+
+// Dernier épisode, pour le carré posé à droite de la une. `posts` est
+// déjà trié par date décroissante côté SQL, le premier trouvé est donc
+// le plus récent.
+//
+// On écarte celui qui occupe déjà la une : rien n'empêche un épisode
+// d'être mis à la une, et il se retrouverait alors affiché deux fois
+// côte à côte. À défaut d'un autre épisode, pas de carré et la une
+// reprend toute la largeur.
+const dernierPodcast =
+  posts.find((p) => p.collection === 'podcasts' && !(une && p.id === une.id)) ?? null;
+
+// Sommaire : les cinq dernières publications, la une exclue. Sans ce
+// filtre elle apparaîtrait deux fois à trente centimètres d'écart.
+const sommaire = posts.filter((p) => !(une && p.collection === une.collection && p.id === une.id)).slice(0, 5);
+
+/**
+ * Repère éditorial de la une, « printemps 2026 ». Dérivé de la date de
+ * publication plutôt que saisi : c'est une indication de fraîcheur, pas
+ * un champ à tenir à jour dans l'admin.
+ */
+function saison(iso: string | null): string | undefined {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return undefined;
+  const m = d.getMonth();
+  const nom = m >= 2 && m <= 4 ? 'printemps' : m >= 5 && m <= 7 ? 'été' : m >= 8 && m <= 10 ? 'automne' : 'hiver';
+  // L'hiver de janvier-février appartient à la saison ouverte en
+  // décembre de l'année précédente.
+  const annee = nom === 'hiver' && m <= 1 ? d.getFullYear() - 1 : d.getFullYear();
+  return `${nom} ${annee} →`;
+}
 
 const heroTitleHtml = formatHeroTitle(
   indexPages.home?.heroTitle?.trim() || DEFAULT_HERO_TITLE,
@@ -87,84 +141,98 @@ const topThemes = allThemes
 ---
 
 <Layout bodyClass="justify">
-  <Hero
-    title={heroTitleHtml}
-    lede={heroLedeHtml}
-  />
+  {/* Pas de kicker : le titre ouvre la page directement. Le composant
+      Hero le rend optionnel, les autres pages continuent d'en poser un. */}
+  <Hero variant="ouvert" title={heroTitleHtml} lede={heroLedeHtml} />
 
-  <!-- Filtres -->
-  <section class="filters" id="filters">
-    <div class="container">
-      <div class="row">
-        <div class="grp" role="group" aria-label="Filtrer par format">
-          <span class="lbl">Format</span>
-          <div class="chips">
-            <button class="chip on" type="button" data-filter-type="all">Tous</button>
-            {PUBLICATION_ORDER.map((c) => (
-              <button class="chip" type="button" data-filter-type={c}>
-                <FormatIcon collection={c} />
-                {PUBLICATIONS[c].labelPlural}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-      {topThemes.length > 0 && (
-        <div class="row">
-          <div class="grp" role="group" aria-label="Filtrer par thématique">
-            <span class="lbl">Thématique</span>
-            <div class="chips">
-              <button class="chip on" type="button" data-filter-theme="all">Tous</button>
-              {topThemes.map((t) => (
-                <button
-                  class="chip"
-                  type="button"
-                  data-filter-theme={t.slug}
-                  title={`${t.name} — ${themeCounts[t.slug] ?? 0} publication${(themeCounts[t.slug] ?? 0) > 1 ? 's' : ''}`}
-                >
-                  {t.name}
-                </button>
-              ))}
+  {layout === 'une' ? (
+    <>
+      {une && (
+        <FeaturedPublication doc={une} eyebrow={saison(une.publishedAt)}>
+          {dernierPodcast && <PodcastSquare slot="aside" doc={dernierPodcast} />}
+        </FeaturedPublication>
+      )}
+      <SommairePanel docs={sommaire} />
+      <LettreBand />
+    </>
+  ) : (
+    <>
+      <!-- Filtres -->
+      <section class="filters" id="filters">
+        <div class="container">
+          <div class="row">
+            <div class="grp" role="group" aria-label="Filtrer par format">
+              <span class="lbl">Format</span>
+              <div class="chips">
+                <button class="chip on" type="button" data-filter-type="all">Tous</button>
+                {PUBLICATION_ORDER.map((c) => (
+                  <button class="chip" type="button" data-filter-type={c}>
+                    <FormatIcon collection={c} />
+                    {PUBLICATIONS[c].labelPlural}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+          {topThemes.length > 0 && (
+            <div class="row">
+              <div class="grp" role="group" aria-label="Filtrer par thématique">
+                <span class="lbl">Thématique</span>
+                <div class="chips">
+                  <button class="chip on" type="button" data-filter-theme="all">Tous</button>
+                  {topThemes.map((t) => (
+                    <button
+                      class="chip"
+                      type="button"
+                      data-filter-theme={t.slug}
+                      title={`${t.name} — ${themeCounts[t.slug] ?? 0} publication${(themeCounts[t.slug] ?? 0) > 1 ? 's' : ''}`}
+                    >
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  </section>
+      </section>
 
-  <!-- Flux -->
-  <section class="container feed">
-    {posts.length === 0 ? (
-      <p class="empty">Aucune publication pour l'instant.</p>
-    ) : (
-      posts.map((p) => (
-        <PublicationCard
-          collection={p.collection}
-          numero={p.numero}
-          slug={p.slug}
-          title={p.title}
-          themeSlugs={p.themeSlugs}
-          publishedAt={p.publishedAt}
-          lede={p.lede}
-          readingTime={p.readingTime}
-        />
-      ))
-    )}
-    <div class="archives-link">
-      <a href="/archives/" class="btn-link">Voir toutes les archives</a>
-    </div>
-  </section>
+      <!-- Flux -->
+      <section class="container feed">
+        {listed.length === 0 ? (
+          <p class="empty">Aucune publication pour l'instant.</p>
+        ) : (
+          listed.map((p) => (
+            <PublicationCard
+              collection={p.collection}
+              numero={p.numero}
+              slug={p.slug}
+              title={p.title}
+              themeSlugs={p.themeSlugs}
+              publishedAt={p.publishedAt}
+              lede={p.lede}
+              readingTime={p.readingTime}
+            />
+          ))
+        )}
+        <div class="archives-link">
+          <a href="/archives/" class="btn-link">Voir toutes les archives</a>
+        </div>
+      </section>
+    </>
+  )}
+
 </Layout>
 
 <style>
   .container {
-    max-width: 1280px;
+    max-width: var(--page-max);
     margin: 0 auto;
-    padding: 0 80px;
+    padding: 0 var(--page-gutter);
   }
   @media (max-width: 900px) {
     .container {
-      padding: 0 24px;
+      padding: 0 var(--page-gutter-narrow);
     }
   }
 

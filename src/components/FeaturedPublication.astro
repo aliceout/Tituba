@@ -1,0 +1,343 @@
+---
+/**
+ * Publication mise en avant, en tête d'accueil.
+ *
+ * Panneau en jaune dilué, aux angles largement arrondis, avec le violet
+ * du sommaire plus bas et le bleu du carré podcast qui lui répond à droite.
+ * Ce n'est pas le contraste qui désigne la une (la maquette la voulait
+ * en encre pleine, ce qui plombait le haut de page) mais sa position et
+ * la taille de son titre, plus grand que partout ailleurs sauf le hero.
+ * Le chapô reste en italique serif pour prolonger le titre plutôt que
+ * d'ouvrir un second registre — le bloc tient d'une seule voix.
+ */
+import FormatIcon from './FormatIcon.astro';
+import { PUBLICATIONS, publicationHref, readingLabelFor } from '../lib/publications';
+import type { FeedDoc } from '../lib/payload';
+import { formatDateFr, formatNumero } from '../lib/site';
+
+export interface Props {
+  doc: FeedDoc & { durationSeconds?: number | null };
+  /** Libellé de la colonne de droite, ex. « printemps 2026 ». */
+  eyebrow?: string;
+}
+
+const { doc, eyebrow } = Astro.props as Props;
+
+// Le bloc se scinde en trois quarts / un quart dès qu'on lui passe un
+// contenu latéral, et reprend la largeur pleine sinon. La décision est
+// prise ici plutôt que par une prop booléenne : l'appelant n'a qu'un
+// seul geste à faire — fournir le slot, ou pas — et il n'existe pas
+// d'état incohérent où la grille serait scindée sans rien à droite.
+const scinde = Astro.slots.has('aside');
+
+// L'appel à l'action suit le format. « Lire le texte » sous un épisode
+// de podcast ou sous un kit d'animation annonce autre chose que ce qui
+// attend au bout du lien.
+const APPELS: Record<string, string> = {
+  podcasts: "écouter l'épisode →",
+  outils: 'voir la ressource →',
+};
+const appel = APPELS[doc.collection] ?? 'lire le texte →';
+const spec = PUBLICATIONS[doc.collection] ?? PUBLICATIONS.articles;
+const href = publicationHref(doc.collection, doc.slug ?? '');
+const duree = readingLabelFor(doc.collection, doc);
+
+// Métadonnées assemblées en une seule ligne mono, façon ours de revue.
+const meta = [spec.badge.toUpperCase(), doc.numero != null ? formatNumero(doc.numero) : null, duree]
+  .filter(Boolean)
+  .join(' · ');
+
+const auteurs = doc.authors ?? [];
+
+/**
+ * Initiales d'un nom, deux lettres au plus. On prend le premier et le
+ * dernier mot plutôt que les deux premiers : « Marie-Claire Van Damme »
+ * doit donner MV, pas MC.
+ */
+function initiales(nom: string): string {
+  const mots = nom.trim().split(/[\s-]+/).filter(Boolean);
+  if (mots.length === 0) return '';
+  const first = mots[0]![0] ?? '';
+  const last = mots.length > 1 ? (mots[mots.length - 1]![0] ?? '') : '';
+  return (first + last).toUpperCase();
+}
+
+/**
+ * Signature « par X », « par X et Y », « par X et 3 autres ». Au-delà de
+ * deux noms la ligne cesse d'être lisible d'un coup d'œil, et c'est
+ * tout ce qu'on lui demande à cet endroit — la liste complète est sur
+ * la page de la publication.
+ */
+const signature =
+  auteurs.length === 0
+    ? null
+    : auteurs.length === 1
+      ? `par ${auteurs[0]}`
+      : auteurs.length === 2
+        ? `par ${auteurs[0]} et ${auteurs[1]}`
+        : `par ${auteurs[0]} et ${auteurs.length - 1} autres`;
+---
+
+<section class="featured">
+  <div class="container">
+    <div class="head">
+      <span class="label">À la une</span>
+      {eyebrow && <span class="eyebrow">{eyebrow}</span>}
+    </div>
+
+    <div class:list={['bloc', { 'bloc--scinde': scinde }]}>
+    <div class="card">
+      {/* Format à gauche, date à droite — la ligne de tête reprend la
+          composition de l'étiquette de section juste au-dessus. La date
+          quitte le pied, qui ne garde que l'appel à lire. */}
+      <div class="meta">
+        <span class="meta-format">
+          <FormatIcon collection={doc.collection} />
+          {meta}
+        </span>
+        {doc.publishedAt && (
+          <time datetime={new Date(doc.publishedAt).toISOString().slice(0, 10)}>
+            {formatDateFr(doc.publishedAt)}
+          </time>
+        )}
+      </div>
+
+      <h2><a href={href}>{doc.title}</a></h2>
+
+      {doc.lede && <p class="lede">{doc.lede}</p>}
+
+      <div class="foot">
+        {/* La pastille double la signature qui la suit : purement
+            décorative, donc masquée à la synthèse vocale, qui lirait
+            sinon « O D » avant le nom complet. */}
+        {auteurs.length > 0 && (
+          <span class="pastille" aria-hidden="true">{initiales(auteurs[0]!)}</span>
+        )}
+        {signature && <p class="sig">{signature}</p>}
+        {/* Sorti de la signature : il doit pouvoir aller au bord droit
+            indépendamment d'elle, et il n'y est pas rattaché — c'est
+            l'appel du bloc, pas une métadonnée de plus. */}
+        <span class="read">{appel}</span>
+      </div>
+    </div>
+
+      {scinde && <slot name="aside" />}
+    </div>
+  </div>
+</section>
+
+<style>
+  .container {
+    max-width: var(--page-max);
+    margin: 0 auto;
+    padding: 0 var(--page-gutter);
+  }
+  .featured {
+    padding: var(--block-gap) 0 var(--block-gap);
+  }
+
+  /* Ligne de section, hors de la carte : intitulé à gauche, repère
+     éditorial à droite. Elle reste sur le fond de page — c'est
+     l'étiquette du bloc, pas son contenu. */
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .head .label {
+    color: var(--c-une-accent);
+  }
+  .head .eyebrow {
+    color: var(--color-muted);
+    letter-spacing: 0.08em;
+    text-transform: none;
+  }
+
+  /* Trois quarts / un quart, les deux blocs à la même hauteur.
+
+     `stretch` est ce qui égalise : la rangée prend la hauteur de la
+     carte — dimensionnée par son texte — et le bloc de droite la suit.
+
+     Il a fallu renoncer au carré strict pour ça. Les trois contraintes
+     — proportion carrée, hauteurs égales, largeur au quart — ne sont pas
+     satisfiables ensemble : la hauteur vient du texte de la carte, donc
+     la seule façon de garder un carré serait de laisser sa largeur en
+     découler. Essayé, en colonne `auto` : la grille et l'`aspect-ratio`
+     se renvoient la balle sans point fixe, et le bloc a fini à 673 px de
+     côté, soit plus de la moitié de la largeur. */
+  .bloc--scinde {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 24px;
+    align-items: stretch;
+  }
+  @media (max-width: 900px) {
+    .bloc--scinde {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background: var(--c-une-bg);
+    border-radius: var(--radius-panel);
+    /* 36/48 et non 56/64 : la carte comptait 46 % de blanc pour 54 % de
+       contenu, ce qui la faisait tenir un demi-écran à elle seule. */
+    padding: 36px 48px;
+    /* Ancre du lien étendu ci-dessous. */
+    position: relative;
+    transition: filter 0.12s;
+  }
+  /* Même survol que le carré podcast voisin — et surtout, même surface
+     cliquable : le lien du titre s'étend à toute la carte par un
+     pseudo-élément. Sans ça, le survol aurait promis un clic que seuls
+     deux mots du bloc honoraient. */
+  .card:hover {
+    filter: brightness(0.97);
+  }
+  h2 a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Seule ligne colorée du bloc : elle nomme la famille du panneau
+     avant que le titre commence. La valeur vient de --c-une-accent, donc
+     changer la famille de la une suffit à la faire suivre. */
+  .meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--c-une-accent);
+    margin-bottom: 14px;
+  }
+  .meta-format {
+    display: flex;
+    align-items: center;
+  }
+  /* La date échappe aux capitales et à l'interlettrage large : « 14 AVRIL
+     2026 » se lit moins vite que « 14 avril 2026 », et elle reprend ainsi
+     le traitement du repère de saison, à la même hauteur juste au-dessus. */
+  .meta time {
+    text-transform: none;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  h2 {
+    /* Plus grand qu'un titre de carte, plus petit que le hero : la
+       hiérarchie de la page se lit à la taille seule — 76 pour le hero,
+       42 ici, 32 pour les cartes de format, 22 pour le sommaire.
+
+       La maquette posait 56 px, mais elle le faisait sur un titre de
+       quarante signes. Les titres réels de Tituba en font plus de cent :
+       à 56 px ils occupaient quatre lignes pleines et la une écrasait le
+       hero qu'elle est censée suivre. C'est la longueur du texte, pas la
+       maquette, qui commande ici. */
+    font-family: var(--font-serif);
+    font-size: clamp(26px, 3vw, 42px);
+    line-height: 1.12;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0 0 16px;
+  }
+  h2 a {
+    color: var(--c-une-fg);
+  }
+  /* Un mot en italique dans le titre passe en bleu profond : l'italique
+     seul se perdrait dans un display maigre. */
+  h2 :global(em) {
+    font-style: italic;
+    color: var(--c-une-em);
+  }
+
+  /* Chapô en italique serif : il prolonge le titre au lieu d'ouvrir un
+     nouveau registre, ce qui garde le bloc soudé. */
+  .lede {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 20px;
+    line-height: 1.5;
+    color: var(--c-une-soft);
+    /* Pas de plafond : le chapô prend toute la largeur de la carte, comme
+       le titre au-dessus. Il s'arrêtait auparavant bien avant lui, ce qui
+       creusait un décrochage dans le bord droit du bloc. */
+    margin: 0 0 22px;
+  }
+
+  .foot {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* Pastille d'initiales — le seul aplat rond de la page, et le seul
+     endroit où une personne apparaît en tant que telle plutôt que comme
+     un nom dans une ligne de métadonnées. Le serif italique y remplace
+     le mono du reste du pied : c'est une signature, pas une donnée. */
+  .pastille {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--c-jaune);
+    color: var(--c-jaune-on);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+
+  .sig {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--c-une-mute);
+  }
+
+  /* Poussé au bord droit de la carte. Une marge automatique plutôt
+     qu'un `justify-content` sur le pied : la pastille et la signature
+     gardent leur place à gauche même quand l'une des deux manque, ce
+     qu'un `space-between` ne garantirait pas — avec un seul élément
+     restant, il le recollerait à gauche. */
+  .read {
+    margin-left: auto;
+    color: var(--c-une-fg);
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 1px;
+    white-space: nowrap;
+    transition: opacity 0.12s;
+  }
+  .read:hover {
+    opacity: 0.72;
+  }
+
+  @media (max-width: 900px) {
+    .container {
+      padding: 0 var(--page-gutter-narrow);
+    }
+    /* La carte garde son fond mais perd ses marges généreuses : à cette
+       largeur, 64 px de padding ne laisseraient plus de place au texte. */
+    .card {
+      padding: 32px 24px;
+      border-radius: 18px;
+    }
+    .lede {
+      font-size: 18px;
+    }
+  }
+</style>

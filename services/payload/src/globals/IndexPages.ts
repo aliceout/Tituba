@@ -47,11 +47,27 @@ export const IndexPages: GlobalConfig = {
         // Pas de toggle `enabled` ici : la page d'accueil est la racine
         // du site, elle doit toujours exister.
         {
+          name: 'layout',
+          type: 'select',
+          required: false,
+          defaultValue: 'flux',
+          label: "Disposition de l'accueil",
+          options: [
+            { label: 'Flux direct — toutes les publications à la suite', value: 'flux' },
+            { label: 'Avec une à la une — mise en avant puis dernières publications', value: 'une' },
+          ],
+          admin: {
+            description:
+              "« Flux direct » liste toutes les publications sous le hero. « Avec une à la une » met en avant la publication cochée « Mettre à la une », puis affiche les six plus récentes.",
+          },
+        },
+        {
           name: 'heroTitle',
           type: 'textarea',
           required: false,
           label: 'Titre du hero',
-          defaultValue: 'Le genre, *partout* où il se joue.',
+          defaultValue:
+            'Le genre aux prismes *féministe*, *décoloniaux*, et *intersectionnels* — recherches, analyses, ressources.',
           admin: {
             description:
               'H1 de la page d\'accueil. Entourer une portion de "*" pour la mettre en italique.',
@@ -63,7 +79,7 @@ export const IndexPages: GlobalConfig = {
           required: false,
           label: 'Texte de présentation (lede)',
           defaultValue:
-            "Association féministe intersectionnelle, inclusive et décoloniale. Nous publions des recherches, des analyses et des outils pour comprendre les inégalités structurelles — et tenter de les défaire.",
+            "Association loi 1901 fondée à Paris en octobre 2024. Nous construisons un espace de ressources en accès libre autour d'une conviction : les inégalités structurelles se nouent ensemble — orientation sexuelle, construction sociale de la race, classe, colonialité — et ne se démêlent pas une à une. Dix thématiques, cinq formats, rien derrière un mur payant.",
           admin: {
             description: "Paragraphe sous le titre de la page d'accueil.",
           },
