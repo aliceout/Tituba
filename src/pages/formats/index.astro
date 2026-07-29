@@ -1,0 +1,200 @@
+---
+/**
+ * Vue d'ensemble des formats — /formats/
+ *
+ * Pendant de /themes/ : une page d'index par taxonomie. Les thématiques
+ * disent de quoi on parle, les formats comment on en parle.
+ *
+ * Cette page existait en creux depuis longtemps — le header propose un
+ * menu « Formats », mais un menu déroulant n'est pas une destination :
+ * il n'est pas partageable, il n'apparaît pas dans un plan de site, et
+ * sans JavaScript il ne s'ouvre pas. D'où une route réelle.
+ *
+ * Rien n'y est saisi : libellés, descriptions et racines d'URL viennent
+ * de la table PUBLICATIONS, les compteurs d'une requête SQL unique.
+ */
+import Layout from '../../layouts/Layout.astro';
+import Hero from '../../components/Hero.astro';
+import FormatIcon from '../../components/FormatIcon.astro';
+import { fetchFeed, PUBLICATIONS, PUBLICATION_ORDER } from '../../lib/publications';
+
+/** Familles de couleur, distribuées dans l'ordre éditorial. */
+const FAMILLES = ['bleu', 'vert', 'jaune'] as const;
+
+// Compteur par format. L'endpoint de comptage existant groupe par
+// thématique ou par tag, pas par collection : on prend donc le flux et
+// on compte, en une seule requête. La limite de 100 est celle de
+// l'endpoint ; au-delà les compteurs sous-estimeraient, d'où le suffixe
+// « + » quand on la touche.
+let counts: Record<string, number> = {};
+let total = 0;
+let plafonne = false;
+try {
+  const feed = await fetchFeed({ limit: 100 });
+  total = feed.totalDocs;
+  plafonne = feed.docs.length < feed.totalDocs;
+  for (const c of PUBLICATION_ORDER) counts[c] = 0;
+  for (const d of feed.docs) counts[d.collection] = (counts[d.collection] ?? 0) + 1;
+} catch (err) {
+  console.warn('[formats] fetch failed:', (err as Error).message);
+}
+
+/** « 6 textes », « 1 épisode », « aucune ressource »… */
+function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
+  const mot = c === 'podcasts' ? 'épisode' : c === 'outils' ? 'ressource' : 'texte';
+  if (n === 0) return `Aucun${c === 'outils' ? 'e' : ''} ${mot} pour l'instant`;
+  return `${n}${plafonne ? '+' : ''} ${mot}${n > 1 ? 's' : ''}`;
+}
+---
+
+<Layout
+  title="Formats"
+  description="Les cinq formats de publication de Tituba : articles de recherche, billets d'analyse, billets d'actu, podcasts et outils."
+>
+  <Hero
+    kicker={`Formats · ${PUBLICATION_ORDER.length} manières de publier`}
+    title="Cinq *formats*, une même exigence."
+    lede="Un texte long avec son appareil de notes n'appelle pas la même lecture qu'un rebond d'actualité ou qu'un kit d'animation. Chaque format a sa place, ses codes et sa page."
+  />
+
+  <section class="container formats-list">
+    <div class="grid">
+      {PUBLICATION_ORDER.map((c, i) => {
+        const spec = PUBLICATIONS[c];
+        const n = counts[c] ?? 0;
+        return (
+          <a
+            class="format-card"
+            data-famille={FAMILLES[i % FAMILLES.length]}
+            href={`${spec.routePrefix}/`}
+          >
+            <div class="left">
+              <div class="ty mono">
+                <FormatIcon collection={c} />
+                {spec.routePrefix}
+              </div>
+              <div class="t">{spec.labelPlural}</div>
+              <p class="desc">{spec.description}</p>
+            </div>
+            <div class="right">{compteur(c, n)}</div>
+          </a>
+        );
+      })}
+    </div>
+
+    <p class="total">
+      {total} publication{total > 1 ? 's' : ''} en ligne, tous formats confondus.
+      <a href="/archives/">Voir les archives →</a>
+    </p>
+  </section>
+</Layout>
+
+<style>
+  .container {
+    max-width: var(--page-max);
+    margin: 0 auto;
+    padding: 0 var(--page-gutter);
+  }
+
+  .formats-list {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  /* Une colonne, pas deux comme /themes/ : il n'y a que cinq entrées, et
+     chacune porte une description d'une ligne et demie. Sur deux colonnes
+     elles se liraient en zigzag pour gagner deux centimètres de hauteur. */
+  .grid {
+    display: grid;
+    gap: 0;
+  }
+
+  .format-card {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    gap: 24px;
+    padding: 26px 0;
+    border-top: 1px solid var(--color-rule);
+    align-items: baseline;
+    color: inherit;
+    transition: color 0.12s;
+  }
+  .format-card:last-child {
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  /* La famille ne colore que la racine d'URL et le titre au survol. Le
+     texte courant reste d'une seule encre — la couleur signale le
+     format, elle n'a pas à teinter ce qu'on lit. */
+  .format-card[data-famille='bleu'] {
+    --fam: var(--c-bleu-deep);
+  }
+  .format-card[data-famille='vert'] {
+    --fam: var(--c-vert-deep);
+  }
+  .format-card[data-famille='jaune'] {
+    --fam: var(--c-jaune-deep);
+  }
+  .format-card:hover .t {
+    color: var(--fam);
+  }
+
+  .format-card .ty {
+    display: flex;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fam);
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+  }
+  .format-card .t {
+    font-family: var(--font-serif);
+    font-size: 26px;
+    line-height: 1.15;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
+    transition: color 0.12s;
+  }
+  .format-card .desc {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--color-muted);
+    margin: 0;
+    max-width: 60ch;
+  }
+  .format-card .right {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-muted);
+    text-align: right;
+  }
+
+  .total {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-muted);
+    margin: 28px 0 0;
+  }
+  .total a {
+    color: var(--c-bleu-deep);
+    margin-left: 8px;
+  }
+
+  @media (max-width: 900px) {
+    .container {
+      padding: 0 var(--page-gutter-narrow);
+    }
+    /* Le compteur passe sous la description plutôt que de comprimer le
+       titre dans une colonne de 180 px. */
+    .format-card {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .format-card .right {
+      text-align: left;
+    }
+  }
+</style>

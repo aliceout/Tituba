@@ -24,6 +24,12 @@ export type PublicationSpec = {
   /** Libellé court affiché en pastille sur les cartes. */
   badge: string;
   /**
+   * Ce que le format contient, en une phrase. Vit ici et non dans la
+   * page qui l'affiche : c'est une propriété du format, et deux surfaces
+   * la lisent déjà (l'index /formats/ et le pied de page).
+   */
+  description: string;
+  /**
    * Comment annoncer la durée : temps de lecture estimé, durée d'écoute,
    * ou rien du tout pour une ressource téléchargeable.
    */
@@ -42,6 +48,8 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
     labelSingular: 'Article de recherche',
     labelPlural: 'Articles de recherche',
     badge: 'Article',
+    description:
+      'Travaux de fond, avec notes et bibliographie. Citables et exportables aux formats BibTeX et RIS.',
     readingLabel: 'minutes',
     citationType: 'article',
   },
@@ -51,6 +59,8 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
     labelSingular: "Billet d'analyse",
     labelPlural: "Billets d'analyse",
     badge: 'Analyse',
+    description:
+      "Textes qui prennent le temps d'argumenter, sans l'appareil formel d'un article de recherche.",
     readingLabel: 'minutes',
     citationType: 'misc',
   },
@@ -60,6 +70,8 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
     labelSingular: "Billet d'actu",
     labelPlural: "Billets d'actu",
     badge: 'Actu',
+    description:
+      "Rebonds courts sur l'actualité, publiés pendant qu'elle est encore vive.",
     readingLabel: 'minutes',
     citationType: 'misc',
   },
@@ -69,6 +81,8 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
     labelSingular: 'Podcast',
     labelPlural: 'Podcasts',
     badge: 'Podcast',
+    description:
+      'Conversations et lectures, en voix. Avec celles et ceux qui pensent depuis le terrain.',
     readingLabel: 'duration',
     citationType: 'sound',
   },
@@ -78,6 +92,8 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
     labelSingular: 'Outil',
     labelPlural: 'Outils',
     badge: 'Outil',
+    description:
+      "Ressources à réutiliser : guides, kits d'animation, supports de formation. En accès libre.",
     readingLabel: 'none',
     citationType: 'generic',
   },
@@ -136,7 +152,7 @@ export function readingLabelFor(
  * *chaque* source pour afficher la page N.
  */
 export async function fetchFeed(
-  opts: { page?: number; limit?: number; theme?: string; tag?: string } = {},
+  opts: { page?: number; limit?: number; theme?: string; tag?: string; featured?: boolean } = {},
 ) {
   return fetchPublicationsFeed(opts);
 }
