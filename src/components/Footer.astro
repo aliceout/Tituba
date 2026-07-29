@@ -1,23 +1,19 @@
 ---
 /**
- * Footer 3 colonnes — signature + baseline + copyright (col 1),
- * "Naviguer" (col 2), "Suivre" (col 3, social + colophon).
+ * Footer 3 colonnes — signature + baseline + licence (col 1),
+ * « Formats » (col 2), « Naviguer » (col 3).
  *
- * Lit trois globals Payload : Identity (siteName/baseline/copyright),
- * Navigation (navFooter) et Subscriptions (profils sociaux). Si Payload
- * n'est pas joignable au SSR, on retombe sur des defaults (le footer
- * reste affichable sans dépendre de la DB).
+ * La colonne des formats est dérivée de la table PUBLICATIONS plutôt que
+ * saisie : ajouter un sixième format le ferait apparaître ici sans autre
+ * geste, et il ne peut pas y avoir de divergence entre ce que le pied
+ * annonce et ce que le site sert réellement.
  *
- * Réf : design_handoff_tituba/Tituba B.html → footer.site.
+ * Lit deux globals Payload : Identity (siteName/baseline/copyright) et
+ * Navigation (navFooter). Si Payload n'est pas joignable au SSR, on
+ * retombe sur des defaults — le footer reste affichable sans la DB.
  */
-import { fetchIdentity, fetchNavigation, fetchSubscriptions } from '../lib/payload';
-
-type SocialLinks = {
-  mastodon?: string;
-  bluesky?: string;
-  orcid?: string;
-  hal?: string;
-};
+import { fetchIdentity, fetchNavigation } from '../lib/payload';
+import { PUBLICATIONS, PUBLICATION_ORDER } from '../lib/publications';
 
 type NavFooterLink = {
   label: string;
@@ -35,23 +31,23 @@ type NavigationGlobal = {
   navFooter?: NavFooterLink[];
 };
 
-type SubscriptionsGlobal = SocialLinks & { rssEnabled?: boolean };
-
 // Fallbacks génériques — utilisés uniquement si Payload est down ou
-// si les globals n'ont pas encore été remplis côté admin. Le contenu
-// réel (avec le nom de l'auteur·ice, le domaine prod) vient toujours
-// de Payload → ces strings ne devraient jamais s'afficher en prod.
+// si les globals n'ont pas encore été remplis côté admin.
 const DEFAULT_BASELINE = 'Collectif féministe intersectionnel. Auto-hébergé.';
 const DEFAULT_COPYRIGHT = 'CC BY-NC-SA 4.0';
+
+// Reprend les onglets du header, plus l'accès à l'administration.
 const DEFAULT_NAV: NavFooterLink[] = [
-  { label: 'Thèmes', href: '/themes/' },
+  { label: 'Formats', href: '/formats/' },
+  { label: 'Thématiques', href: '/themes/' },
   { label: 'Archives', href: '/archives/' },
+  { label: "L'association", href: '/association/' },
+  { label: 'Nous rejoindre', href: '/nous-rejoindre/' },
   { label: 'Admin', href: '/cms/admin' },
 ];
 
 let identity: IdentityGlobal = {};
 let nav: NavigationGlobal = {};
-let subscriptions: SubscriptionsGlobal = {};
 try {
   identity = await fetchIdentity<IdentityGlobal>();
 } catch (err) {
@@ -62,11 +58,6 @@ try {
 } catch (err) {
   console.warn('[footer] fetchNavigation failed, using defaults:', (err as Error).message);
 }
-try {
-  subscriptions = await fetchSubscriptions<SubscriptionsGlobal>();
-} catch (err) {
-  console.warn('[footer] fetchSubscriptions failed, using defaults:', (err as Error).message);
-}
 
 const siteName = identity.siteName?.trim() || 'Tituba';
 const baseline = identity.baseline || DEFAULT_BASELINE;
@@ -75,22 +66,24 @@ const baseline = identity.baseline || DEFAULT_BASELINE;
 const gitTag = process.env.GIT_TAG || 'dev';
 const copyrightLine = identity.copyrightLine || DEFAULT_COPYRIGHT;
 const navFooter = nav.navFooter && nav.navFooter.length > 0 ? nav.navFooter : DEFAULT_NAV;
-const social = subscriptions ?? {};
-const rssEnabled = subscriptions.rssEnabled !== false;
 
-const socialLinks = [
-  // Footer "Suivre" : Flux RSS pointe directement sur le flux brut
-  // /rss.xml (lecture par les feed readers). La page /abonnement/ regroupe
-  // ces mêmes liens + une intro pour les humains, accessible depuis
-  // la nav du header. Le lien disparaît si le flux est désactivé côté
-  // Abonnements.
-  rssEnabled ? { label: 'Flux RSS', href: '/rss.xml' } : null,
-  social.mastodon ? { label: 'Mastodon', href: social.mastodon, external: true } : null,
-  social.bluesky ? { label: 'Bluesky', href: social.bluesky, external: true } : null,
-  social.orcid ? { label: 'ORCID', href: social.orcid, external: true } : null,
-  social.hal ? { label: 'HAL', href: social.hal, external: true } : null,
-  { label: 'Colophon', href: '/about/#colophon' },
-].filter((x): x is { label: string; href: string; external?: boolean } => x !== null);
+// Un paragraphe par ligne saisie dans l'admin, plutôt qu'un seul bloc
+// laissé à `white-space: pre-line`. Deux raisons : ce sont deux énoncés
+// distincts — ce que fait l'association, puis comment le site est servi
+// — donc deux paragraphes est le balisage juste ; et la variante CSS
+// n'a pas fonctionné ici, la déclaration disparaissant de la feuille
+// compilée alors que le reste de la même règle s'appliquait.
+const baselineLignes = baseline
+  .split(/\r?\n/)
+  .map((l) => l.trim())
+  .filter(Boolean);
+
+// Les cinq formats, dans l'ordre éditorial, lus depuis la table qui fait
+// déjà autorité sur leurs libellés et leurs racines d'URL.
+const formatLinks = PUBLICATION_ORDER.map((c) => ({
+  label: PUBLICATIONS[c].labelPlural,
+  href: `${PUBLICATIONS[c].routePrefix}/`,
+}));
 ---
 
 <footer class="site">
@@ -98,27 +91,22 @@ const socialLinks = [
     <div class="grid">
       <div>
         <div class="brand-foot">{siteName}<span class="dot">.</span></div>
-        <p>{baseline}</p>
+        {baselineLignes.map((l) => <p>{l}</p>)}
         <div class="mono copyright">{copyrightLine}</div>
         <div class="mono version">Version : {gitTag}</div>
+      </div>
+      <div>
+        <h4>Formats</h4>
+        <div class="links">
+          {formatLinks.map((link) => (
+            <a href={link.href}>{link.label}</a>
+          ))}
+        </div>
       </div>
       <div>
         <h4>Naviguer</h4>
         <div class="links">
           {navFooter.map((link) => (
-            <a
-              href={link.href}
-              rel={link.external ? 'noopener' : undefined}
-            >
-              {link.label}
-            </a>
-          ))}
-        </div>
-      </div>
-      <div>
-        <h4>S'abonner</h4>
-        <div class="links">
-          {socialLinks.map((link) => (
             <a
               href={link.href}
               rel={link.external ? 'noopener' : undefined}
@@ -136,13 +124,13 @@ const socialLinks = [
   footer.site {
     background: var(--color-bg);
     border-top: 1px solid var(--color-rule);
-    margin-top: 80px;
+    margin-top: var(--block-gap);
     padding: 64px 0 56px;
   }
   footer.site .container {
-    max-width: 1280px;
+    max-width: var(--page-max);
     margin: 0 auto;
-    padding: 0 80px;
+    padding: 0 var(--page-gutter);
   }
   footer.site .grid {
     display: grid;
@@ -152,13 +140,18 @@ const socialLinks = [
     font-size: 13px;
     color: var(--color-ink);
   }
+  /* Mono largement interlettré, comme « À LA UNE », « AU SOMMAIRE » et
+     « LA LETTRE » plus haut. C'était du sans demi-gras à 0,08em : le
+     footer était le seul endroit du site où une étiquette de section
+     parlait une autre langue typographique. */
   footer.site h4 {
+    font-family: var(--font-mono);
     font-size: 11px;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--color-muted);
-    margin: 0 0 12px;
-    font-weight: 600;
+    margin: 0 0 14px;
+    font-weight: 400;
   }
   footer.site .links {
     display: grid;
@@ -168,17 +161,28 @@ const socialLinks = [
     color: var(--color-ink);
     transition: color 0.12s;
   }
+  /* Bleu de famille, comme le filet de l onglet actif du header.
+     C etait --color-accent, le violet pilotable depuis l admin, qui
+     jure avec la palette de l accueil. */
   footer.site .links a:hover {
-    color: var(--color-accent);
+    color: var(--c-bleu-deep);
   }
+  /* Meme graphie que le wordmark du header : italique bas-de-casse en
+     graisse 400, point droit en jaune profond. Le footer affichait
+     jusqu ici un « Tituba. » capitale droite demi-gras — deux graphies
+     du meme nom sur une seule page. */
   footer.site .brand-foot {
     font-family: var(--font-serif);
+    font-style: italic;
     font-size: 22px;
-    font-weight: 600;
-    margin-bottom: 8px;
+    font-weight: 400;
+    text-transform: lowercase;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
   }
   footer.site .brand-foot .dot {
-    color: var(--color-accent);
+    color: var(--c-jaune-deep);
+    font-style: normal;
   }
   footer.site p {
     font-family: var(--font-serif);
@@ -188,9 +192,14 @@ const socialLinks = [
     margin: 0;
     max-width: 460px;
   }
+  /* Deuxieme ligne de baseline : rapprochee de la premiere, elles
+     forment un seul bloc de sens malgre les deux paragraphes. */
+  footer.site p + p {
+    margin-top: 4px;
+  }
   footer.site .copyright {
     font-size: 11px;
-    color: var(--color-accent);
+    color: var(--color-muted);
     margin-top: 24px;
   }
   footer.site .version {
@@ -201,7 +210,7 @@ const socialLinks = [
 
   @media (max-width: 900px) {
     footer.site .container {
-      padding: 0 24px;
+      padding: 0 var(--page-gutter-narrow);
     }
     footer.site .grid {
       grid-template-columns: 1fr;
