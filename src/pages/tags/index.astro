@@ -75,9 +75,9 @@ const total = sorted.length;
 
 <style>
   .container {
-    max-width: 1280px;
+    max-width: var(--page-max);
     margin: 0 auto;
-    padding: 0 80px;
+    padding: 0 var(--page-gutter);
   }
 
   .tags-list {
@@ -139,7 +139,7 @@ const total = sorted.length;
 
   @media (max-width: 900px) {
     .container {
-      padding: 0 24px;
+      padding: 0 var(--page-gutter-narrow);
     }
   }
 </style>
