@@ -317,6 +317,32 @@ export function idField(prefix: string): Field {
   };
 }
 
+/**
+ * Met la publication à la une de l'accueil.
+ *
+ * Vit sur le document plutôt que dans un réglage global : on la coche
+ * en éditant l'article, au moment où on y pense. Un champ global
+ * « publication mise en avant » se serait périmé sans que personne ne
+ * le remarque.
+ *
+ * Plusieurs peuvent être cochées — l'accueil retient la plus récente.
+ * C'est volontaire : on prépare la une suivante sans décocher l'actuelle.
+ */
+export function featuredField(): Field {
+  return {
+    name: 'featured',
+    type: 'checkbox',
+    defaultValue: false,
+    index: true,
+    label: 'Mettre à la une',
+    admin: {
+      position: 'sidebar',
+      description:
+        "Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.",
+    },
+  };
+}
+
 export function draftField(): Field {
   return {
     name: 'draft',

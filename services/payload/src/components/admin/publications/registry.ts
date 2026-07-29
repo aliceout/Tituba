@@ -34,6 +34,7 @@ export type FieldSpec = {
   | { type: 'text' | 'url' | 'textarea' }
   | { type: 'number'; min?: number; max?: number }
   | { type: 'select'; options: { label: string; value: string }[] }
+  | { type: 'checkbox' }
 );
 
 /** Comment présenter la durée d'une publication. */
@@ -191,7 +192,14 @@ export function getPublicationSpec(slug: string | null | undefined): Publication
 export function emptyExtraValues(spec: PublicationSpec): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const f of spec.extraFields) {
-    out[f.name] = f.type === 'number' ? null : f.type === 'select' ? f.options[0]?.value ?? '' : '';
+    out[f.name] =
+      f.type === 'number'
+        ? null
+        : f.type === 'checkbox'
+        ? false
+        : f.type === 'select'
+        ? f.options[0]?.value ?? ''
+        : '';
   }
   return out;
 }
@@ -208,7 +216,9 @@ export function pickExtraValues(
   const out: Record<string, unknown> = {};
   for (const f of spec.extraFields) {
     const raw = doc[f.name];
-    if (f.type === 'number') {
+    if (f.type === 'checkbox') {
+      out[f.name] = raw === true || raw === 'true';
+    } else if (f.type === 'number') {
       const n = typeof raw === 'string' ? Number.parseInt(raw, 10) : raw;
       out[f.name] = typeof n === 'number' && Number.isFinite(n) ? n : null;
     } else {

@@ -229,6 +229,10 @@ export interface Article {
    * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:article:2026-042).
    */
   idCarnet?: string | null;
+  /**
+   * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
+   */
+  featured?: boolean | null;
   draft?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
@@ -493,6 +497,10 @@ export interface Analysis {
    * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:analyse:2026-042).
    */
   idCarnet?: string | null;
+  /**
+   * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
+   */
+  featured?: boolean | null;
   draft?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
@@ -581,6 +589,10 @@ export interface Actus {
    * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:actu:2026-042).
    */
   idCarnet?: string | null;
+  /**
+   * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
+   */
+  featured?: boolean | null;
   draft?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
@@ -681,6 +693,10 @@ export interface Podcast {
    * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:podcast:2026-042).
    */
   idCarnet?: string | null;
+  /**
+   * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
+   */
+  featured?: boolean | null;
   draft?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
@@ -774,6 +790,10 @@ export interface Outil {
    * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:outil:2026-042).
    */
   idCarnet?: string | null;
+  /**
+   * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
+   */
+  featured?: boolean | null;
   draft?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
@@ -1054,6 +1074,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   doi?: T;
   readingTime?: T;
   idCarnet?: T;
+  featured?: T;
   draft?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
@@ -1085,6 +1106,7 @@ export interface AnalysesSelect<T extends boolean = true> {
   bibliography?: T;
   readingTime?: T;
   idCarnet?: T;
+  featured?: T;
   draft?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
@@ -1116,6 +1138,7 @@ export interface ActusSelect<T extends boolean = true> {
   bibliography?: T;
   readingTime?: T;
   idCarnet?: T;
+  featured?: T;
   draft?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
@@ -1150,6 +1173,7 @@ export interface PodcastsSelect<T extends boolean = true> {
   guests?: T;
   readingTime?: T;
   idCarnet?: T;
+  featured?: T;
   draft?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
@@ -1183,6 +1207,7 @@ export interface OutilsSelect<T extends boolean = true> {
   audience?: T;
   readingTime?: T;
   idCarnet?: T;
+  featured?: T;
   draft?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
@@ -1489,6 +1514,10 @@ export interface IndexPage {
   id: number;
   home?: {
     /**
+     * « Flux direct » liste toutes les publications sous le hero. « Avec une à la une » met en avant la publication cochée « Mettre à la une », puis affiche les six plus récentes.
+     */
+    layout?: ('flux' | 'une') | null;
+    /**
      * H1 de la page d'accueil. Entourer une portion de "*" pour la mettre en italique.
      */
     heroTitle?: string | null;
@@ -1659,6 +1688,7 @@ export interface IndexPagesSelect<T extends boolean = true> {
   home?:
     | T
     | {
+        layout?: T;
         heroTitle?: T;
         heroLede?: T;
       };
