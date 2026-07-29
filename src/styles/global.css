@@ -22,9 +22,9 @@
   --color-body-soft: #3b3f4d;
 
   /* Familles */
-  --font-serif: 'Source Serif 4', Georgia, serif;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-serif: 'Fraunces Variable', Georgia, serif;
+  --font-sans: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
 
   /* Densité du flux d'accueil — multiplicateur sur paddings d'item.
      Valeur figée par le client : 0.7 (serré). */
@@ -37,6 +37,200 @@
    sans casser le rythme. */
 :root {
   --color-citation-bg: #ece9e0;
+}
+
+/* ── Géométrie de page ───────────────────────────────────────────────
+   Seize composants et pages déclaraient chacun la même `.container`.
+   La valeur vit désormais ici, eux ne font plus que la lire : changer
+   la gouttière du site est une seule ligne au lieu de seize, et surtout
+   il n'est plus possible qu'un composant dérive des autres.
+
+   Calé sur la maquette, qui travaille à 56 px de gouttière sur un plan
+   de 1440 — soit 1328 px de contenu, nettement plus large que les
+   1120 px d'avant. C'est le choix éditorial de la maquette : les
+   panneaux de l'accueil sont des pièces posées sur la page, elles ont
+   besoin d'aller chercher le bord pour ne pas flotter. */
+:root {
+  --page-max: 1440px;
+  --page-gutter: 56px;
+  /* Sous 900 px : la gouttière se resserre, le pouce reprend la place. */
+  --page-gutter-narrow: 24px;
+
+  /* Écart vertical entre les grands blocs de l'accueil — une, sommaire,
+     cartes de format, lettre. Un seul endroit, et surtout une seule
+     marge par écart : chaque bloc ne porte que sa marge basse, le
+     suivant n'en porte aucune en haut. Faire porter la marge des deux
+     côtés donnait des écarts qui doublaient selon le voisinage, ce qui
+     s'était déjà vu entre la une et le sommaire. */
+  --block-gap: 64px;
+}
+@media (max-width: 900px) {
+  :root {
+    --block-gap: 40px;
+  }
+}
+
+/* ── Palette de famille (accueil) ────────────────────────────────────
+   Trois couleurs — bleu, vert, jaune — qui rythment la page d'accueil
+   au lieu de l'accent unique. Elles ne remplacent pas --color-accent,
+   qui reste piloté depuis Payload (Site → Branding) et continue de
+   régir les articles, le header et le footer : l'accueil est la seule
+   surface où l'on assume trois voix, parce que c'est la seule où trois
+   registres cohabitent (une mise en avant, un ours, des formats).
+
+   Chaque famille porte six valeurs, parce que six usages distincts :
+     --c-X        trait, numéro, petite capitale sur fond de page
+     --c-X-tint   aplat très dilué, pour un panneau posé sur le fond
+     --c-X-deep   texte lisible sur ce fond ou sur --c-X-tint
+     --c-X-fill   fond d'une carte pleine
+     --c-X-on     texte principal sur --c-X-fill
+     --c-X-on-soft  texte secondaire sur --c-X-fill
+
+   La distinction fill/tint compte : en clair, la carte bleue est un
+   aplat saturé à texte blanc et la carte verte un aplat dilué à texte
+   sombre. En sombre, aucun aplat saturé ne tient — tous passent en
+   surface profonde à texte clair, d'où des valeurs entièrement
+   redéfinies plus bas plutôt qu'un simple ajustement de luminosité.
+   Trois valeurs s'écartent de la maquette, et toujours dans le même
+   sens — assombries jusqu'à franchir 4,5:1 sur leur fond d'usage. Le
+   vert (4,47:1) et le jaune profond (3,50:1) d'origine échouaient sur
+   la teinte du sommaire, et le jaune secondaire (3,21:1) sur la carte
+   pleine. Ce sont des textes de 11 px : c'est précisément la taille où
+   le contraste cesse d'être négociable. L'écart reste invisible à
+   l'œil, la maquette est respectée. */
+:root {
+  --c-bleu: #3d5a8a;
+  --c-bleu-tint: color-mix(in srgb, var(--c-bleu) 14%, var(--color-bg));
+  --c-bleu-deep: #2b436b;
+  --c-bleu-fill: #3d5a8a;
+  --c-bleu-on: #ffffff;
+  --c-bleu-on-soft: #c8d3e6;
+
+  --c-vert: #4a7355;
+  --c-vert-tint: color-mix(in srgb, var(--c-vert) 20%, var(--color-bg));
+  --c-vert-deep: #365a41;
+  --c-vert-fill: #3f6b4d;
+  --c-vert-on: #ffffff;
+  --c-vert-on-soft: #d5e3d9;
+
+  /* Quatrième famille, réservée à la une. Même gamme que les trois
+     autres — H 270 / S 36 / L 35, contre 217/39/39 pour le bleu et
+     136/22/37 pour le vert. C'est la valeur de l'accent historique du
+     site, mais figée ici : --color-accent reste pilotable depuis
+     l'admin, et la une ne doit pas changer de couleur quand on change
+     la charte. */
+  --c-violet: #5a3a7a;
+  --c-violet-tint: color-mix(in srgb, var(--c-violet) 14%, var(--color-bg));
+  --c-violet-deep: #4a2f66;
+
+  --c-jaune: #d9a441;
+  --c-jaune-tint: color-mix(in srgb, var(--c-jaune) 14%, var(--color-bg));
+  --c-jaune-deep: #7d5612;
+  --c-jaune-fill: #d9a441;
+  --c-jaune-on: #4a3305;
+  --c-jaune-on-soft: #543c12;
+
+  /* Carte « À la une » — bleu dilué.
+     La maquette la posait en encre pleine. Un aplat noir dans le tiers
+     supérieur d'une page d'accueil pèse trop : il arrête l'œil au lieu
+     de l'amener plus bas, et il annonce un registre — grave, définitif —
+     qui n'est pas celui du reste de la page.
+
+     En bleu dilué, la une prend simplement sa place dans la série :
+     bleu ici, jaune au sommaire, vert à la lettre. Une famille par
+     panneau, dans l'ordre où le filet du header les présente. Ce n'est
+     plus le contraste qui désigne la une, c'est sa position et la
+     taille de son titre — ce qui suffisait déjà.
+
+     Le fond n'est pas une valeur en dur mais le bleu de famille dilué
+     dans le fond de page — exactement comme le surlignage du hero, qui
+     est ce même bleu à 33 %. Les deux ne peuvent donc plus diverger de
+     teinte : c'est le même pigment, à deux concentrations.
+
+     Les valeurs fixes essayées avant tombaient toutes dans le même
+     piège. Un bleu d'ardoise éclairci au blanc vire au lavande, et posé
+     sur le crème chaud du fond le contraste simultané l'y pousse encore
+     — on lisait un violet pâle. Le diluer dans le crème plutôt que dans
+     du blanc le réchauffe et supprime le problème à la source. Effet de
+     bord utile : si le fond du site change depuis Payload, le panneau
+     suit. */
+  /* Quelle famille habille quel panneau. Ces deux paires existent pour
+     que permuter les couleurs soit une ligne ici, et non une chasse aux
+     var(--c-jaune-*) dans les composants. */
+  --c-une-bg: color-mix(in srgb, var(--c-jaune) 14%, var(--color-bg));
+  --c-une-fg: #1a1d28;
+  --c-une-soft: #4a4640;
+  --c-une-mute: #57534c;
+  --c-une-em: var(--c-jaune-deep);
+  /* Ligne de métadonnées en tête de carte. Le jaune de la maquette y
+     tenait parce que le fond était noir ; sur un bleu clair il tombe
+     sous le seuil de contraste. */
+  --c-une-accent: var(--c-jaune-deep);
+
+  --c-sommaire-bg: var(--c-violet-tint);
+  --c-sommaire-accent: var(--c-violet-deep);
+
+  /* Carré du dernier épisode. Même recette que les deux panneaux
+     voisins — la famille diluée dans le fond de page — pour qu il se
+     tienne dans leur registre au lieu de trancher. Et comme la teinte
+     descend du même --c-bleu que le surlignage du titre, les deux se
+     répondent à 214° sans qu on ait à les accorder à la main. */
+  --c-podcast-bg: color-mix(in srgb, var(--c-bleu) 14%, var(--color-bg));
+  --c-podcast-fg: var(--color-ink);
+  --c-podcast-accent: var(--c-bleu-deep);
+
+  /* Rayon des grands panneaux d'accueil. Généreux — c'est ce qui
+     distingue le registre « pièces posées sur une page » du reste du
+     site, qui travaille au filet. */
+  /* Gris de texte secondaire SUR un panneau teinté, par opposition à
+     --color-muted qui est calibré sur le fond de page. En clair les
+     deux coïncident ; en sombre le panneau est plus clair que la page,
+     donc le gris doit remonter avec lui pour tenir le seuil. */
+  --c-panel-mute: #565b6a;
+
+  --radius-panel: 24px;
+}
+
+[data-theme='dark'] {
+  --c-bleu: #8aa5d6;
+  --c-bleu-tint: color-mix(in srgb, var(--c-bleu) 14%, var(--color-bg));
+  --c-bleu-deep: #a8bde4;
+  --c-bleu-fill: #33456a;
+  --c-bleu-on: #eef1f8;
+  --c-bleu-on-soft: #b6c3dd;
+
+  --c-vert: #8bbd99;
+  --c-vert-tint: #243029;
+  --c-vert-deep: #a3ccae;
+  --c-vert-fill: #2b3a30;
+  --c-vert-on: #cfe4d5;
+  --c-vert-on-soft: #93ac9b;
+
+  --c-violet: #a888c8;
+  --c-violet-tint: color-mix(in srgb, var(--c-violet) 18%, var(--color-bg));
+  --c-violet-deep: #c3a8dc;
+
+  --c-jaune: #e0b96a;
+  --c-jaune-tint: color-mix(in srgb, var(--c-jaune) 16%, var(--color-bg));
+  --c-jaune-deep: #edcf95;
+  --c-jaune-fill: #4d3d1c;
+  --c-jaune-on: #f6e3bd;
+  --c-jaune-on-soft: #c6ab7c;
+
+  /* En sombre, la carte remonte au-dessus de --color-bg au lieu de
+     descendre : c'est la même surface bleutée, mais posée en relief. */
+  --c-une-bg: color-mix(in srgb, var(--c-jaune) 16%, var(--color-bg));
+  --c-une-fg: #e8e6e0;
+  --c-une-soft: #b8c2d4;
+  --c-une-mute: #a8aebb;
+  --c-une-em: var(--c-jaune-deep);
+  --c-une-accent: var(--c-jaune-deep);
+  --c-sommaire-bg: var(--c-violet-tint);
+  --c-sommaire-accent: var(--c-violet-deep);
+  --c-podcast-bg: color-mix(in srgb, var(--c-bleu) 14%, var(--color-bg));
+  --c-podcast-fg: var(--color-ink);
+  --c-podcast-accent: var(--c-bleu-deep);
+  --c-panel-mute: #b0b5c0;
 }
 
 /* Dark mode — appliqué quand <html> porte data-theme="dark" (cf.

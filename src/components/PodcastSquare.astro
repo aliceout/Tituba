@@ -1,0 +1,173 @@
+---
+/**
+ * Carré du dernier épisode, posé à droite de la une.
+ *
+ * Format carré et non carte allongée : il occupe le quart de largeur
+ * que la une lui cède, et un carré est la seule proportion qui ne se
+ * lise pas comme une carte tronquée à cet endroit. Le bleu le distingue
+ * du jaune de la une — deux familles côte à côte, ce qui signale que ce
+ * sont deux objets et non un bloc coupé en deux.
+ *
+ * Le composant ne rend rien s'il n'y a pas d'épisode. C'est
+ * l'appelant qui décide alors de reprendre la largeur pleine (cf.
+ * FeaturedPublication et la grille de la page d'accueil) : un carré
+ * vide ou un « bientôt » serait une promesse que rien ne tient.
+ */
+import { publicationHref } from '../lib/publications';
+import type { FeedDoc } from '../lib/payload';
+import { formatNumero } from '../lib/site';
+
+export interface Props {
+  doc: (FeedDoc & { durationSeconds?: number | null }) | null;
+}
+
+const { doc } = Astro.props as Props;
+
+const href = doc ? publicationHref('podcasts', doc.slug ?? '') : '#';
+
+/** Durée en minutes, ou chaîne vide si la source ne la connaît pas. */
+const duree =
+  doc && typeof doc.durationSeconds === 'number' && doc.durationSeconds > 0
+    ? `${Math.round(doc.durationSeconds / 60)} min`
+    : '';
+
+const numero = doc && doc.numero != null ? formatNumero(doc.numero) : '';
+---
+
+{doc && (
+  <a class="carre" href={href}>
+    <div class="haut">
+      <div class="head">
+        <span class="rubrique">
+          {/* Pictogramme d'onde plutôt que le micro de FormatIcon : à
+              cette taille il tient le rôle d'un logo de rubrique, et
+              l'onde se reconnaît de plus loin qu'un pied de micro. */}
+          <svg
+            class="onde"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" />
+          </svg>
+          Podcast
+        </span>
+        {numero && <span class="numero">{numero}</span>}
+      </div>
+
+      <h3>{doc.title}</h3>
+    </div>
+
+    <div class="foot">
+      {duree && <span class="duree">{duree}</span>}
+      <span class="ecouter">écouter →</span>
+    </div>
+  </a>
+)}
+
+<style>
+  .carre {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 26px;
+    border-radius: var(--radius-panel);
+    background: var(--c-podcast-bg);
+    color: var(--c-podcast-fg);
+    /* La hauteur vient de la rangée de la grille, donc de la carte
+       voisine : c est ce qui aligne les deux bas de bloc. */
+    height: 100%;
+    transition: filter 0.12s;
+  }
+  .carre:hover {
+    filter: brightness(0.97);
+  }
+
+  /* En-tête et titre solidaires, en haut du bloc. Sans ce groupe,
+     la répartition en espace égal porte sur trois enfants et cale le
+     titre au centre vertical — ce qui le détache de la rubrique qu'il
+     prolonge, et laisse un trou au-dessus de lui. */
+  .haut {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Rubrique à gauche, numéro à droite — même composition que la ligne
+     de tête de la une voisine, qui porte le format à gauche et la date
+     à droite. La durée, elle, reste en bas : c'est une information de
+     décision (« ai-je le temps ? »), elle a sa place près de l'appel à
+     écouter, pas près de l'identité de l'épisode. */
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--c-podcast-accent);
+  }
+  .rubrique {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .numero {
+    white-space: nowrap;
+  }
+
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 300;
+    /* clamp() fait rétrécir le titre avec la colonne, sans quoi un
+       titre long déborderait aux largeurs intermédiaires. */
+    font-size: clamp(19px, 1.7vw, 25px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0;
+    /* Au-delà de quatre lignes on coupe : le carré est une invitation,
+       le titre complet est sur la page de l'épisode. */
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .foot {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .duree {
+    color: var(--c-podcast-accent);
+  }
+  /* Marge automatique et non `space-between` : sans durée renseignée,
+     l'appel resterait quand même au bord droit. */
+  .ecouter {
+    margin-left: auto;
+    color: var(--c-podcast-fg);
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 1px;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 900px) {
+    /* Empilé sous la une : plus de hauteur à égaliser, le bloc reprend
+       celle de son contenu. */
+    .carre {
+      height: auto;
+      padding: 22px;
+      border-radius: 18px;
+    }
+  }
+</style>

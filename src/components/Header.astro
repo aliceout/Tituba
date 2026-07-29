@@ -34,7 +34,10 @@ type IndexTarget = 'archives' | 'themes' | 'subscribe';
 const INDEX_TARGETS: Record<IndexTarget, NavItem> = {
   archives: { href: '/archives/', label: 'Archives', matchPaths: ['/archives'] },
   themes: { href: '/themes/', label: 'Thèmes', matchPaths: ['/themes', '/theme'] },
-  subscribe: { href: '/abonnement/', label: 'Abonnement', matchPaths: ['/abonnement', '/rss'] },
+  // Le libellé dit « Nous suivre », l'URL reste /abonnement/ : une
+  // racine publiée ne se renomme pas sans casser les liens déjà
+  // partagés, et le chemin n'apparaît nulle part à l'écran.
+  subscribe: { href: '/abonnement/', label: 'Nous suivre', matchPaths: ['/abonnement', '/rss'] },
 };
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
@@ -184,7 +187,10 @@ const themesActive = pathname.startsWith('/theme');
 
 <header class="site" id="site-header">
   <div class="row">
+    <div class="lead">
     <a class="brand" href="/">{siteName}<span class="dot">.</span></a>
+
+    </div>
     <nav>
       <a
         href="/"
@@ -194,6 +200,20 @@ const themesActive = pathname.startsWith('/theme');
         Accueil
       </a>
 
+      {/* Onglets pilotés depuis Payload (Navigation → navHeader). Ils
+          viennent juste après « Accueil », donc avant les deux menus
+          déroulants : ce sont des destinations, alors que « Formats » et
+          « Thématiques » n'ouvrent qu'une liste. */}
+      {items.map((item) => (
+        <a
+          href={item.href}
+          class:list={[{ active: isActive(item) }]}
+          aria-current={isActive(item) ? 'page' : undefined}
+        >
+          {item.label}
+        </a>
+      ))}
+
       {/* Deux menus déroulants : les formats (liste figée, connue à la
           compilation) et les thématiques (pilotées depuis Payload).
           Bouton + panneau plutôt que <details> pour maîtriser la
@@ -201,27 +221,6 @@ const themesActive = pathname.startsWith('/theme');
           pas. Sans JavaScript, le bouton reste inerte — d'où le lien
           « Voir tout » en pied de chaque panneau, qui garantit un accès
           au contenu dans tous les cas. */}
-      <div class="nav-menu" data-nav-menu>
-        <button
-          type="button"
-          class:list={['nav-menu__btn', { active: formatsActive }]}
-          aria-expanded="false"
-          aria-controls="menu-formats"
-          data-nav-menu-btn
-        >
-          Formats
-          <svg class="chev" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6l4.5 4.5L12.5 6"/></svg>
-        </button>
-        <div class="nav-menu__panel" id="menu-formats" hidden data-nav-menu-panel>
-          {PUBLICATION_ORDER.map((c) => (
-            <a href={`${PUBLICATIONS[c].routePrefix}/`}>
-              <FormatIcon collection={c} />
-              {PUBLICATIONS[c].labelPlural}
-            </a>
-          ))}
-        </div>
-      </div>
-
       {navThemes.length > 0 && (
         <div class="nav-menu" data-nav-menu>
           <button
@@ -243,15 +242,36 @@ const themesActive = pathname.startsWith('/theme');
         </div>
       )}
 
-      {items.map((item) => (
-        <a
-          href={item.href}
-          class:list={[{ active: isActive(item) }]}
-          aria-current={isActive(item) ? 'page' : undefined}
+      <div class="nav-menu" data-nav-menu>
+        <button
+          type="button"
+          class:list={['nav-menu__btn', { active: formatsActive }]}
+          aria-expanded="false"
+          aria-controls="menu-formats"
+          data-nav-menu-btn
         >
-          {item.label}
-        </a>
-      ))}
+          Formats
+          <svg class="chev" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6l4.5 4.5L12.5 6"/></svg>
+        </button>
+        <div class="nav-menu__panel" id="menu-formats" hidden data-nav-menu-panel>
+          {PUBLICATION_ORDER.map((c) => (
+            <a href={`${PUBLICATIONS[c].routePrefix}/`}>
+              <FormatIcon collection={c} />
+              {PUBLICATIONS[c].labelPlural}
+            </a>
+          ))}
+        </div>
+      </div>
+
+    </nav>
+
+    {/* Boutons-icônes sortis du <nav> : ils forment la troisième zone
+        de la grille, à droite. Les garder dans la nav les aurait
+        entraînés dans le centrage des menus. */}
+    <div class="actions">
+      {/* Un seul appel à l'action, en pastille pleine à l'extrême droite
+          — cf. la maquette. Il est rendu plus bas, après les icônes :
+          placé avant, l'aplat couperait la rangée en deux. */}
       {/* Recherche : icône loupe à droite des liens texte. Comportement
           visuel identique au theme-toggle (bouton-icône discret), avec
           un état actif qui souligne en accent quand on est sur la page. */}
@@ -295,7 +315,12 @@ const themesActive = pathname.startsWith('/theme');
           <path d="m19.07 4.93-1.41 1.41"/>
         </svg>
       </button>
-    </nav>
+      {/* « Nous suivre » et non « Nous rejoindre » : s'abonner ne coûte
+          qu'une adresse, adhérer engage. On met en pastille le geste que
+          le plus grand nombre peut faire tout de suite ; l'adhésion vit
+          dans le pied, où l'on arrive après avoir lu. */}
+      <a class="cta-link cta-link--primary" href="/abonnement/">Nous suivre →</a>
+    </div>
   </div>
 </header>
 
@@ -305,53 +330,196 @@ const themesActive = pathname.startsWith('/theme');
     top: 0;
     z-index: 10;
     background: var(--color-bg);
-    border-bottom: 1px solid var(--color-rule);
+  }
+
+  /* Filet traversant en dégradé — bleu, vert, jaune. Il court d'un bord
+     à l'autre de la fenêtre, sans se caler sur la gouttière : c'est ce
+     qui en fait une ligne d'horizon plutôt qu'une bordure de bloc, et
+     ce qui installe les trois familles de couleur avant même que la
+     page commence.
+
+     Les points d'arrêt sont asymétriques — vert à 45 %, jaune à 80 % —
+     de sorte que le bleu occupe la première moitié et que le jaune ne
+     tienne que la fin. Répartis à intervalles égaux, les trois teintes
+     se seraient lues comme un drapeau. */
+  header.site::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: linear-gradient(
+      90deg,
+      var(--c-bleu),
+      var(--c-vert) 45%,
+      var(--c-jaune) 80%
+    );
+    transition: height 0.18s ease;
+  }
+
+  /* Le filet maigrit avec le reste du bandeau. Sans ça il resterait le
+     seul élément à pleine épaisseur au-dessus d'un header comprimé, et
+     c'est lui qu'on verrait grossir.
+
+     3 → 2 px, en nombres entiers : à 1,5 px le trait tomberait entre
+     deux pixels physiques sur un écran sans densité, et le dégradé y
+     perdrait en netteté ce qu'il gagnerait en finesse. */
+  header.site.is-scrolled::after {
+    height: 2px;
   }
   header.site .row {
-    display: flex;
+    /* Trois zones : logo, menus, boutons. Les colonnes latérales sont
+       en 1fr, donc les menus tombent au centre *de la page* et n'y
+       bougent plus quand le logo ou les boutons changent de largeur —
+       ce qu'un simple space-between ne garantit pas. */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
-    padding: 24px 80px 18px;
-    max-width: 1280px;
+    /* Même gabarit que le contenu : le wordmark s'aligne à la verticale
+       du titre du hero et du bord des panneaux. La rangée débordait
+       auparavant du gabarit (gouttière de 32 px contre 80), ce qui se
+       voyait dès qu'on suivait le bord gauche de la page. */
+    max-width: var(--page-max);
     margin: 0 auto;
+    padding: 24px var(--page-gutter);
     transition: padding 0.18s ease;
   }
-  /* Compact sticky : on retire ~25 % de padding vertical une fois scrollé. */
+  /* Compact sticky : dès qu'on quitte le haut de page, la rangée se
+     resserre en même temps que le wordmark. Les deux doivent bouger
+     ensemble — réduire le seul logo laisse un bandeau d'air inchangé
+     autour d'un mot devenu plus petit, ce qui se lit comme un défaut
+     d'alignement plutôt que comme une compression.
+
+     24 → 12 px : la rangée perd 24 px de haut, soit à peu près le tiers
+     de sa hauteur. En deçà le geste ne se voit pas, au-delà le saut
+     devient brutal puisque le contenu remonte d'autant. */
   header.site.is-scrolled .row {
-    padding-top: 18px;
-    padding-bottom: 13px;
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
+
+  @media (max-width: 900px) {
+    header.site .row {
+      padding: 16px var(--page-gutter-narrow);
+    }
+    /* Sur étroit la rangée est déjà compacte : la resserrer encore
+       tasserait le wordmark contre le filet. */
+    header.site.is-scrolled .row {
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+  }
+
+  /* Wordmark en Fraunces italique bas-de-casse. La bas-de-casse est
+     posée en CSS et non dans le contenu : le nom reste « Tituba » pour
+     un lecteur d'écran, pour l'onglet et pour les métadonnées de
+     partage — seule sa mise en forme change. Graisse 400 : à l'italique
+     de Fraunces, c'est déjà un caractère fort, un demi-gras le
+     durcirait. */
   header.site .brand {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.3px;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 24px;
+    font-weight: 400;
+    text-transform: lowercase;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    color: var(--color-ink);
+    /* La taille est transitionnée sur la même durée que le padding de
+       la rangée : sans ça le mot sauterait d'un cran pendant que le
+       bandeau, lui, glisserait. */
+    transition: opacity 0.12s, font-size 0.18s ease;
   }
+  header.site .brand:hover {
+    opacity: 0.7;
+  }
+  /* Le point est le seul élément de marque coloré du header, et le seul
+     caractère droit du mot. Deux écarts sur un signe d'un demi-cadratin :
+     c'est ce qui le fait lire comme une signature et non comme une
+     ponctuation. */
   header.site .brand .dot {
-    color: var(--color-accent);
+    color: var(--c-jaune-deep);
+    font-style: normal;
+  }
+  header.site.is-scrolled .brand {
+    font-size: 20px;
+  }
+  header.site .lead {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    justify-self: start;
+  }
+  header.site .cta-link {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  /* Lien souligné d'un trait épais, et non pastille.
+
+     Toutes les variantes d'aplat butaient sur la même contradiction :
+     saturée, la pastille était le seul objet plein d'un chrome
+     entièrement typographique ; diluée, sa forme s'effaçait dans le
+     fond crème (1,10 à 1,34:1 selon la famille) et il fallait un filet
+     pour la rattraper. Le trait sous le mot règle les deux d'un coup —
+     il se voit franchement, et il reste du texte.
+
+     Rien qu'un mot en demi-gras. Après avoir essayé l'aplat plein,
+     l'aplat dilué, le filet, le trait épais et le surlignage au
+     marqueur, c'est ce qui reste : le seul écart avec les onglets
+     voisins est la graisse, et la flèche qui annonce un départ.
+
+     Ce n'est pas rien — dans une barre où tout est en 500, un 600 se
+     voit. Mais c'est le registre le plus discret possible, et l'appel à
+     l'action ne se distingue plus que par sa position et son poids. */
+  header.site .cta-link--primary {
+    color: var(--color-ink);
+    font-weight: 600;
+    transition: color 0.12s;
+  }
+  header.site .cta-link--primary:hover {
+    color: var(--c-bleu-deep);
+  }
+  header.site .actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    justify-self: end;
   }
   header.site nav {
+    justify-self: center;
     display: flex;
-    gap: 28px;
+    gap: 32px;
     /* Center-aligned plutôt que baseline pour que le bouton-icône
        (sans baseline texte) s'aligne visuellement avec le centre
        optique des liens nav. Avec baseline, le bouton se retrouvait
        2-3 px plus haut. */
     align-items: center;
     font-family: var(--font-sans);
-    font-size: 13px;
+    /* Les onglets passent en pleine encre à 14/500, comme la maquette.
+       Ils cessent d'être un appareil de navigation discret pour devenir
+       une ligne de texte à part entière — c'est le seul texte en sans
+       du haut de page, il peut le porter. */
+    font-size: 14px;
+    font-weight: 500;
   }
   header.site nav a {
-    color: var(--color-muted);
+    color: var(--color-ink);
     padding-bottom: 4px;
-    transition: color 0.12s;
+    transition: opacity 0.12s;
   }
   header.site nav a:hover {
-    color: var(--color-ink);
+    opacity: 0.6;
   }
+  /* L'onglet actif ne peut plus se distinguer par la couleur, puisque
+     tous sont en encre : il ne lui reste que le filet. Il passe donc en
+     bleu de famille — l'accent violet jurerait avec le dégradé qui court
+     trois pixels plus bas. */
   header.site nav a.active {
     color: var(--color-ink);
     font-weight: 600;
-    border-bottom: 1.5px solid var(--color-accent);
+    border-bottom: 1.5px solid var(--c-bleu);
   }
   /* ─── Menus déroulants ─────────────────────────────────────────
      Le conteneur est en position: relative pour ancrer le panneau,
@@ -368,17 +536,17 @@ const themesActive = pathname.startsWith('/theme');
     border: 0;
     padding: 0 0 4px;
     font: inherit;
-    color: var(--color-muted);
+    color: var(--color-ink);
     cursor: pointer;
-    transition: color 0.12s;
+    transition: opacity 0.12s;
   }
   header.site .nav-menu__btn:hover {
-    color: var(--color-ink);
+    opacity: 0.6;
   }
   header.site .nav-menu__btn.active {
     color: var(--color-ink);
     font-weight: 600;
-    border-bottom: 1.5px solid var(--color-accent);
+    border-bottom: 1.5px solid var(--c-bleu);
   }
   header.site .nav-menu__btn .chev {
     transition: transform 0.15s;
@@ -439,7 +607,7 @@ const themesActive = pathname.startsWith('/theme');
      visuellement cohérent. État actif : pastille accent-tint pour
      marquer qu'on est sur /recherche/ (vs un underline qui irait
      bizarrement sur une icône). */
-  header.site nav .search-link {
+  header.site .actions .search-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -451,11 +619,11 @@ const themesActive = pathname.startsWith('/theme');
        l'icône d'un demi-pixel par rapport au theme-toggle voisin. */
     padding-bottom: 4px;
   }
-  header.site nav .search-link:hover {
+  header.site .actions .search-link:hover {
     color: var(--color-ink);
     background: color-mix(in oklch, var(--color-ink), transparent 92%);
   }
-  header.site nav .search-link.active {
+  header.site .actions .search-link.active {
     color: var(--color-accent);
     background: var(--color-accent-tint, color-mix(in oklch, var(--color-accent), transparent 88%));
     /* Override le `border-bottom` accent posé sur `nav a.active` —
@@ -463,13 +631,13 @@ const themesActive = pathname.startsWith('/theme');
     border-bottom: 0;
     font-weight: normal;
   }
-  header.site nav .search-link:focus-visible {
+  header.site .actions .search-link:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
 
   /* Toggle thème — bouton icône discret en fin de nav. */
-  header.site nav .theme-toggle {
+  header.site .actions .theme-toggle {
     background: transparent;
     border: 0;
     padding: 4px;
@@ -482,24 +650,24 @@ const themesActive = pathname.startsWith('/theme');
     border-radius: 999px;
     transition: color 0.12s, background-color 0.12s;
   }
-  header.site nav .theme-toggle:hover {
+  header.site .actions .theme-toggle:hover {
     color: var(--color-ink);
     background: color-mix(in oklch, var(--color-ink), transparent 92%);
   }
-  header.site nav .theme-toggle:focus-visible {
+  header.site .actions .theme-toggle:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
   /* Affichage conditionnel selon data-theme (posé sur <html> par le
      script anti-FOUC du Layout). En light : on montre la lune (clic
      → dark). En dark : on montre le soleil (clic → light). */
-  header.site nav .theme-toggle .icon-sun {
+  header.site .actions .theme-toggle .icon-sun {
     display: none;
   }
-  :global([data-theme='dark']) header.site nav .theme-toggle .icon-moon {
+  :global([data-theme='dark']) header.site .actions .theme-toggle .icon-moon {
     display: none;
   }
-  :global([data-theme='dark']) header.site nav .theme-toggle .icon-sun {
+  :global([data-theme='dark']) header.site .actions .theme-toggle .icon-sun {
     display: inline-block;
   }
 
@@ -511,17 +679,13 @@ const themesActive = pathname.startsWith('/theme');
       align-items: flex-start;
       position: relative;
     }
-    header.site.is-scrolled .row {
-      padding-top: 14px;
-      padding-bottom: 10px;
-    }
     header.site nav {
       gap: 18px;
       flex-wrap: wrap;
     }
     /* Sur mobile, le toggle sort du flux nav et se colle en haut à droite
        du header, sur la même ligne visuelle que "Tituba.". */
-    header.site nav .theme-toggle {
+    header.site .actions .theme-toggle {
       position: absolute;
       right: 24px;
       top: 16px;

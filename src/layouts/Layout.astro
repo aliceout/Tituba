@@ -7,15 +7,17 @@ import '../styles/global.css';
 
 // Polices self-hostées via @fontsource — Vite résout les fichiers WOFF2
 // depuis node_modules au build, pas de fetch externe à l'exécution.
-import '@fontsource/source-serif-4/400.css';
-import '@fontsource/source-serif-4/400-italic.css';
-import '@fontsource/source-serif-4/500.css';
-import '@fontsource/source-serif-4/600.css';
-import '@fontsource/inter/400.css';
-import '@fontsource/inter/500.css';
-import '@fontsource/inter/600.css';
-import '@fontsource/jetbrains-mono/400.css';
-import '@fontsource/jetbrains-mono/500.css';
+// Fraunces et Bricolage Grotesque sont variables : un seul fichier
+// couvre toute la plage de graisses, là où les versions statiques
+// demandaient un fichier par graisse. On prend l'axe `opsz` de
+// Fraunces — la taille optique épaissit les pleins et resserre les
+// déliés dans les petits corps, ce qui compte pour un display employé
+// de 40 à 92 px.
+import '@fontsource-variable/fraunces/opsz.css';
+import '@fontsource-variable/fraunces/opsz-italic.css';
+import '@fontsource-variable/bricolage-grotesque/opsz.css';
+import '@fontsource/dm-mono/400.css';
+import '@fontsource/dm-mono/500.css';
 
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -118,7 +120,18 @@ const fullTitle = pageTitle
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <link rel="canonical" href={canonical} />
+    {/* Icônes. Le favicon reprend la partie illustrée du logo — le
+        lockup complet serait illisible à 32 px. */}
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta property="og:title" content={fullTitle} />
+    {/* Aperçu au partage. Version sur fond blanc : les réseaux sociaux
+        composent sur un fond variable, une PNG transparente y sortirait
+        avec un tracé violet sur fond sombre, illisible. */}
+    <meta property="og:image" content={new URL('/logo-fond-blanc.png', canonical).toString()} />
+    <meta property="og:image:width" content="1600" />
+    <meta property="og:image:height" content="820" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />

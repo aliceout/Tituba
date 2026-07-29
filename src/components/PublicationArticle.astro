@@ -429,9 +429,9 @@ const citationMeta = highwireMeta(
 
 <style>
   .container {
-    max-width: 1280px;
+    max-width: var(--page-max);
     margin: 0 auto;
-    padding: 0 80px;
+    padding: 0 var(--page-gutter);
   }
 
   /* Article */
@@ -975,7 +975,7 @@ const citationMeta = highwireMeta(
       padding: 32px 24px 0;
     }
     .container {
-      padding: 0 24px;
+      padding: 0 var(--page-gutter-narrow);
     }
     article.post h1 {
       font-size: 36px;

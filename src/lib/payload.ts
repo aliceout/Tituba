@@ -305,8 +305,12 @@ export type FeedDoc = {
   publishedAt: string | null;
   idTituba: string | null;
   readingTime: number | null;
+  /** Duree d ecoute, renseignee pour les podcasts uniquement. */
+  durationSeconds: number | null;
   /** Slugs des thematiques, pour le filtrage client de la page d accueil. */
   themeSlugs: string[];
+  /** Noms des auteur·ices, dans l ordre de saisie. */
+  authors: string[];
 };
 
 export type FeedResult = {
@@ -321,13 +325,14 @@ export type FeedResult = {
  * paginé côté SQL. Filtrable par thématique ou par tag.
  */
 export async function fetchPublicationsFeed(
-  opts: { page?: number; limit?: number; theme?: string; tag?: string } = {},
+  opts: { page?: number; limit?: number; theme?: string; tag?: string; featured?: boolean } = {},
 ): Promise<FeedResult> {
   const params = new URLSearchParams();
   if (opts.page) params.set('page', String(opts.page));
   if (opts.limit) params.set('limit', String(opts.limit));
   if (opts.theme) params.set('theme', opts.theme);
   if (opts.tag) params.set('tag', opts.tag);
+  if (opts.featured) params.set('featured', '1');
   const qs = params.toString();
   return fetchPayload<FeedResult>(`/publications${qs ? `?${qs}` : ''}`);
 }

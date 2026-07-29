@@ -36,9 +36,18 @@ type FeedRow = {
   published_at: string | null;
   id_carnet: string | null;
   reading_time: number | null;
+  duration_seconds: number | null;
   theme_slugs: string | null;
+  authors: string | null;
   total: number;
 };
+
+/**
+ * Séparateur des noms d'auteur·ices agrégés. Une barre entourée
+ * d'espaces : aucun patronyme ni rattachement n'en contient, là où une
+ * virgule casserait sur « Dupuis, Olga » ou sur un nom composé.
+ */
+const AUTHOR_SEP = ' | ';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -61,6 +70,9 @@ export const publicationsFeedEndpoint: Endpoint = {
     const offset = (page - 1) * limit;
     const theme = (url.searchParams.get('theme') ?? '').trim();
     const tag = (url.searchParams.get('tag') ?? '').trim();
+    // Restreint aux publications mises à la une. Combiné à limit=1,
+    // c'est ainsi que l'accueil désigne sa une.
+    const featuredOnly = url.searchParams.get('featured') === '1';
 
     // Filtre thématique/tag : les relations vivent dans la table
     // `<collection>_rels`, qui pointe vers themes/tags par id. On passe
@@ -68,6 +80,7 @@ export const publicationsFeedEndpoint: Endpoint = {
     // lignes quand une publication porte plusieurs thématiques.
     const branches = PUBLICATION_TABLES.map((t) => {
       const preds = [sql`p.draft IS NOT TRUE`, sql`p.published_at <= now()`];
+      if (featuredOnly) preds.push(sql`p.featured IS TRUE`);
       if (theme) {
         preds.push(sql`EXISTS (
           SELECT 1 FROM ${sql.raw(`"${t}_rels"`)} r
@@ -86,6 +99,11 @@ export const publicationsFeedEndpoint: Endpoint = {
         SELECT ${sql.raw(`'${t}'`)}::text AS collection,
                p.id, p.numero, p.slug, p.title, p.lede,
                p.published_at, p.id_carnet, p.reading_time,
+               -- Durée d'écoute. Seule la table des podcasts porte la
+               -- colonne ; les quatre autres branches projettent un NULL
+               -- typé, sans quoi l'UNION refuserait des listes de
+               -- colonnes de types différents.
+               ${sql.raw(t === 'podcasts' ? 'p.duration_seconds' : 'NULL::numeric')} AS duration_seconds,
                -- Slugs des thématiques, agrégés en une chaîne. Le flux
                -- alimente les filtres de la page d'accueil, qui filtrent
                -- côté client sur un attribut data-themes : sans cette
@@ -95,7 +113,31 @@ export const publicationsFeedEndpoint: Endpoint = {
                  FROM ${sql.raw(`"${t}_rels"`)} rr
                  JOIN themes th ON th.id = rr.themes_id
                  WHERE rr.parent_id = p.id
-               ) AS theme_slugs
+               ) AS theme_slugs,
+               -- Auteur·ices, dans l'ordre de saisie. Une entrée est
+               -- soit interne (user_id renseigné, nom porté par la
+               -- fiche utilisateur·ice) soit externe (nom saisi à la
+               -- main) : le coalesce couvre les deux d'un seul tenant.
+               -- L'agrégat ignore les NULL, donc une entrée incomplète
+               -- disparaît au lieu de produire un séparateur orphelin.
+               --
+               -- Attention : pas de backtick dans ces commentaires. Ils
+               -- vivent dans un template literal JS, où le backtick
+               -- ferme la chaîne — l'erreur remonte alors en faute de
+               -- syntaxe TypeScript à des lignes de distance.
+               (
+                 -- Séparateur en littéral SQL plutôt qu'en paramètre
+                 -- lié : c'est une constante du code, la lier n'aurait
+                 -- rien protégé et aurait laissé Postgres deviner le
+                 -- type d'un argument d'agrégat.
+                 SELECT string_agg(
+                          coalesce(nullif(a.name, ''), u.display_name),
+                          ${sql.raw(`'${AUTHOR_SEP}'`)} ORDER BY a._order
+                        )
+                 FROM ${sql.raw(`"${t}_authors"`)} a
+                 LEFT JOIN users u ON u.id = a.user_id
+                 WHERE a._parent_id = p.id
+               ) AS authors
         FROM ${sql.raw(`"${t}"`)} p
         WHERE ${sql.join(preds, sql` AND `)}`;
     });
@@ -121,7 +163,9 @@ export const publicationsFeedEndpoint: Endpoint = {
       publishedAt: r.published_at,
       idTituba: r.id_carnet,
       readingTime: r.reading_time,
+      durationSeconds: r.duration_seconds === null ? null : Number(r.duration_seconds),
       themeSlugs: (r.theme_slugs ?? '').split(' ').filter(Boolean),
+      authors: (r.authors ?? '').split(AUTHOR_SEP).filter(Boolean),
     }));
     const totalDocs = Number(rows[0]?.total ?? 0);
 
