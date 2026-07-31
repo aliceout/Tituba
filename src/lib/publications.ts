@@ -67,6 +67,16 @@ export type PublicationPost = {
     | {
         filename?: string;
         alt?: string;
+        /** Zone retenue pour la couverture, en % des dimensions de
+         *  l'image (0–100). Choisie dans l'admin, puisque le hero n'en
+         *  montre qu'un carré. Absente = image entière, cadrée au
+         *  centre par `object-fit: cover`. */
+        crop?: {
+          x?: number | null;
+          y?: number | null;
+          w?: number | null;
+          h?: number | null;
+        } | null;
         unsplash?: {
           photographerName?: string;
           photographerProfileUrl?: string;

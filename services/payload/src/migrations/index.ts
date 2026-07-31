@@ -4,6 +4,7 @@ import * as migration_20260727_135144_une_et_disposition from './20260727_135144
 import * as migration_20260729_131257_auto_20260729_151037 from './20260729_131257_auto_20260729_151037';
 import * as migration_20260730_232929 from './20260730_232929';
 import * as migration_20260731_095514 from './20260731_095514';
+import * as migration_20260731_153800 from './20260731_153800';
 
 export const migrations = [
   {
@@ -34,6 +35,11 @@ export const migrations = [
   {
     up: migration_20260731_095514.up,
     down: migration_20260731_095514.down,
-    name: '20260731_095514'
+    name: '20260731_095514',
+  },
+  {
+    up: migration_20260731_153800.up,
+    down: migration_20260731_153800.down,
+    name: '20260731_153800'
   },
 ];

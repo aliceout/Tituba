@@ -52,7 +52,27 @@ type UnsplashPhoto = {
   urls?: UnsplashUrls;
   links?: UnsplashLinks;
   user?: UnsplashUser;
+  /**
+   * Catalogue Unsplash+ (payant). Ces photos remontent dans les
+   * résultats de recherche au même titre que les autres, mais ne sont
+   * pas sous licence Unsplash : leur usage suppose un abonnement.
+   * Unsplash les marque selon les versions par `plus` ou `premium` —
+   * on lit les deux plutôt que de parier sur l'un.
+   */
+  plus?: boolean;
+  premium?: boolean;
 };
+
+/**
+ * Ne garde que ce qui est réellement réutilisable : tout ce que sert
+ * l'API standard est sous licence Unsplash (libre, usage commercial
+ * compris) *sauf* le catalogue Unsplash+. Filtré côté serveur et non
+ * dans l'admin, pour qu'une photo sous abonnement ne puisse pas être
+ * importée même en tapant son id à la main.
+ */
+function isFreeLicense(p: UnsplashPhoto): boolean {
+  return p.plus !== true && p.premium !== true;
+}
 
 // Un échec côté Unsplash remontait en « HTTP 502 » nu côté admin, ce qui
 // ne dit pas quoi corriger — or la cause de loin la plus fréquente est
@@ -79,7 +99,10 @@ function summarize(p: UnsplashPhoto) {
     width: p.width,
     height: p.height,
     altDescription: p.alt_description || p.description || '',
-    thumbUrl: p.urls?.thumb ?? p.urls?.small ?? '',
+    // `small` (~400px) et non `thumb` (~200px) : la grille de la modale
+    // fait des colonnes de ~280px, une vignette de 200px y serait floue.
+    // Les deux conservent les proportions d'origine.
+    thumbUrl: p.urls?.small ?? p.urls?.thumb ?? '',
     photographerName: p.user?.name ?? '',
     photographerProfileUrl: p.user?.links?.html ?? '',
   };
@@ -102,14 +125,19 @@ const unsplashSearchEndpoint: Endpoint = {
     const page = Math.max(1, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
     if (!query) return jsonResponse({ results: [], totalPages: 0 });
 
+    // per_page=30 (maximum autorisé) plutôt que 20 : le filtrage des
+    // photos Unsplash+ retire des résultats, et la grille en colonnes
+    // a besoin de matière pour ne pas afficher des colonnes bancales.
+    // content_filter=high écarte le contenu potentiellement choquant.
     const upstream = await fetch(
-      `${UNSPLASH_API}/search/photos?query=${encodeURIComponent(query)}&page=${page}&per_page=20`,
+      `${UNSPLASH_API}/search/photos?query=${encodeURIComponent(query)}&page=${page}` +
+        `&per_page=30&content_filter=high`,
       { headers: authHeaders(key) },
     );
     if (!upstream.ok) return upstreamError(upstream.status);
     const body = (await upstream.json()) as { results?: UnsplashPhoto[]; total_pages?: number };
     return jsonResponse({
-      results: (body.results ?? []).map(summarize),
+      results: (body.results ?? []).filter(isFreeLicense).map(summarize),
       totalPages: body.total_pages ?? 0,
     });
   },
@@ -139,6 +167,15 @@ const unsplashImportEndpoint: Endpoint = {
     });
     if (!detailRes.ok) return upstreamError(detailRes.status);
     const photo = (await detailRes.json()) as UnsplashPhoto;
+    // Re-vérifié ici et pas seulement à la recherche : le client
+    // n'envoie qu'un id, rien n'empêcherait d'en poster un obtenu
+    // ailleurs. Une photo Unsplash+ n'est pas sous licence libre.
+    if (!isFreeLicense(photo)) {
+      return errorResponse(
+        "Cette photo relève du catalogue Unsplash+ (abonnement) : elle n'est pas sous licence libre et ne peut pas être importée.",
+        403,
+      );
+    }
     const imageUrl = photo.urls?.regular ?? photo.urls?.full;
     if (!imageUrl) return errorResponse('Aucune URL exploitable pour cette photo.', 502);
 

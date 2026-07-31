@@ -2407,11 +2407,110 @@ button.btn--style-primary,
 // de résultats en dessous. En modale et non dans la colonne du billet,
 // parce qu'une grille de vignettes lisible demande une largeur que ni
 // le sidebar meta (300px) ni la colonne centrale n'offrent.
+// Choix de la zone visible d'une photo non carrée (cf CropModal). Le
+// cadre d'aperçu reproduit exactement le hero du billet : carré,
+// `object-fit: cover`, `object-position` piloté par le point focal — ce
+// qu'on voit ici est ce qui s'affichera sur le site.
+.tituba-modal--crop {
+  max-width: min(620px, 92vw);
+}
+
+.tituba-crop {
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--b-muted);
+  }
+
+  // Le cadre montre l'image ENTIÈRE, sans aspect-ratio imposé : on doit
+  // voir ce qu'on écarte. Sa hauteur suit donc celle de la photo.
+  &__frame {
+    position: relative;
+    // `fit-content` : le cadre épouse exactement l'image affichée. C'est
+    // indispensable — les coordonnées de la zone sont des pourcentages
+    // mesurés sur ce cadre (cf pct() dans CropModal). S'il était plus
+    // large que la photo, le cadrage enregistré serait décalé.
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+    border-radius: 3px;
+    background: var(--b-bg);
+    touch-action: none;
+    user-select: none;
+    line-height: 0;
+
+    img {
+      display: block;
+      max-width: 100%;
+      max-height: 56vh;
+      width: auto;
+      height: auto;
+    }
+  }
+
+  // Voile sur les parties écartées. `box-shadow` d'un noir translucide
+  // projeté vers l'extérieur sur une très grande distance : tout ce qui
+  // entoure la zone est assombri, sans avoir à empiler quatre bandeaux.
+  &__shade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    // Indispensable : l'ombre de __hole s'étend sur 9999px dans toutes
+    // les directions. Sans découpe, elle assombrit toute la modale —
+    // texte et marges compris — au lieu de la seule image.
+    overflow: hidden;
+  }
+
+  &__hole {
+    position: absolute;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  }
+
+  &__sel {
+    position: absolute;
+    border: 2px solid #fff;
+    box-sizing: border-box;
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  // Poignée d'angle bas-droit — déborde à cheval sur le coin pour rester
+  // attrapable même quand la zone est réduite au minimum.
+  &__handle {
+    position: absolute;
+    right: -7px;
+    bottom: -7px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    border-radius: 2px;
+    cursor: nwse-resize;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+}
+
 .tituba-modal--unsplash {
-  // Plus large que la modale de confirmation par défaut (480px), qui ne
-  // tiendrait que deux vignettes par rangée.
-  max-width: 880px;
-  height: 78vh;
+  // Nettement plus large que la modale de confirmation par défaut
+  // (480px) : on parcourt une photothèque, il faut voir plusieurs
+  // colonnes à la fois. `min()` garde une marge sur les petits écrans.
+  max-width: min(1360px, 94vw);
+  height: 86vh;
 }
 
 .tituba-unsplash {
@@ -2444,9 +2543,26 @@ button.btn--style-primary,
     padding: 16px 20px;
   }
 
+  // Mosaïque : chaque photo garde ses proportions d'origine (portrait,
+  // paysage, carré), comme sur Unsplash — une grille à lignes régulières
+  // imposerait une hauteur commune, donc un recadrage.
+  //
+  // Colonnes réelles et non `columns` CSS : le multi-colonnes équilibre
+  // les hauteurs, si bien que chaque page ajoutée redistribue tout et
+  // que les photos déjà vues changent de place. La répartition est donc
+  // faite en amont (cf UnsplashSearchModal), et chaque colonne n'est
+  // qu'une pile verticale.
   &__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  &__col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
   }
 
@@ -2461,21 +2577,46 @@ button.btn--style-primary,
     position: relative;
     display: block;
     padding: 0;
-    border: 1px solid var(--b-rule);
+    // Pas de bordure : elle cernait chaque photo d'un liseré et hachait
+    // la mosaïque. Le fond ne sert plus qu'à occuper la place réservée
+    // avant chargement. `overflow: hidden` fait épouser l'arrondi à
+    // l'image, qui sinon déborderait aux coins.
+    border: 0;
+    border-radius: 3px;
+    overflow: hidden;
     background: var(--b-bg);
     cursor: pointer;
     line-height: 0;
-    transition: border-color 0.12s;
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
 
+    // Hauteur libre : ni aspect-ratio ni object-fit, la photo s'affiche
+    // dans ses proportions réelles. Les attributs width/height posés sur
+    // la balise (cf UnsplashImagePicker) permettent au navigateur de
+    // réserver la hauteur avant chargement, sans quoi la mosaïque se
+    // réagence à chaque image qui arrive.
     img {
       width: 100%;
-      aspect-ratio: 1 / 1;
-      object-fit: cover;
+      height: auto;
       display: block;
     }
 
+    // Survol : léger soulèvement + ombre portée, plutôt qu'un cerne.
+    // `transform` et `box-shadow` se peignent hors du flux — la mosaïque
+    // ne se réagence donc pas au passage de la souris, ce que ferait
+    // l'apparition d'une bordure.
     &:hover:not(:disabled) {
-      border-color: var(--b-accent);
+      transform: translateY(-2px);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    // Respecte le réglage système « réduire les animations » : le
+    // soulèvement disparaît, l'ombre reste comme indice de survol.
+    @media (prefers-reduced-motion: reduce) {
+      transition: box-shadow 0.14s ease;
+
+      &:hover:not(:disabled) {
+        transform: none;
+      }
     }
 
     &:disabled {
@@ -2495,25 +2636,6 @@ button.btn--style-primary,
     font-family: var(--font-mono);
     font-size: 11px;
     line-height: 1;
-  }
-
-  // Crédit sous chaque vignette : exigé par les conditions Unsplash dès
-  // que la photo est affichée, pas seulement une fois retenue.
-  &__credit {
-    font-size: 11px;
-    line-height: 1.3;
-    color: var(--b-muted);
-    overflow-wrap: anywhere;
-
-    a {
-      color: inherit;
-      text-decoration: none;
-      border-bottom: 1px dotted currentColor;
-
-      &:hover {
-        color: var(--b-accent);
-      }
-    }
   }
 
   &__note {
@@ -5364,8 +5486,7 @@ button.btn--style-primary,
   // (bib-block, déplacée du sidebar de droite pour mieux refléter ce
   // qu'on lit en pied d'article côté frontend).
   .fn-block,
-  .bib-block,
-  .img-block {
+  .bib-block {
     margin: 24px 0 0;
     border: 1px solid var(--b-rule);
     background: var(--b-paper);
@@ -5513,24 +5634,29 @@ button.btn--style-primary,
   // rangée d'actions. Le choix d'une photo Unsplash se fait dans une
   // fenêtre contextuelle (cf .tituba-modal--unsplash), pas ici : la
   // grille de résultats demande une largeur que la colonne n'a pas.
+  // Champ « Image de couverture » de la barre latérale. Pas de châssis
+  // de panneau (bordure, en-tête) : le <label> et l'aide viennent de la
+  // boucle de champs, comme pour les autres champs du sidebar.
   .img-block {
     &__body {
-      padding: 14px 20px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
 
+    // Colonne de 300px : l'aperçu passe au-dessus des informations, pas
+    // à côté — côte à côte, il ne resterait qu'une trentaine de pixels
+    // pour le nom du fichier.
     &__current {
       display: flex;
-      gap: 14px;
-      align-items: flex-start;
+      flex-direction: column;
+      gap: 8px;
 
       img {
-        width: 160px;
-        height: 160px;
+        width: 100%;
+        aspect-ratio: 1 / 1;
         object-fit: cover;
-        border: 1px solid var(--b-rule);
+        border-radius: 3px;
         background: var(--b-bg);
       }
     }
@@ -5539,7 +5665,7 @@ button.btn--style-primary,
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      gap: 8px;
+      gap: 6px;
       min-width: 0;
     }
 
@@ -5550,6 +5676,15 @@ button.btn--style-primary,
       overflow-wrap: anywhere;
     }
 
+    // Rangée « Ajuster le cadrage · Retirer » sous le nom du fichier.
+    &__links {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    &__link,
     &__remove {
       background: transparent;
       border: 0;
@@ -5559,16 +5694,32 @@ button.btn--style-primary,
       color: var(--b-muted);
       cursor: pointer;
       text-decoration: underline;
+    }
 
-      &:hover {
-        color: #b63a3a;
+    &__link:hover {
+      color: var(--b-accent);
+    }
+
+    &__remove:hover {
+      color: #b63a3a;
+    }
+
+    // Boutons empilés : « Rechercher sur Unsplash » ne tient pas à côté
+    // de « Uploader un fichier » dans une colonne de 300px.
+    &__actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      .tituba-btn {
+        width: 100%;
       }
     }
 
-    &__actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
+    &__empty {
+      font-size: 12px;
+      color: var(--b-muted);
+      font-style: italic;
     }
 
     &__error {

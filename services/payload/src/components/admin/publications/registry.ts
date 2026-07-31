@@ -96,7 +96,6 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
         name: 'image',
         type: 'upload',
         label: 'Image de couverture',
-        help: "Affichée à côté du titre en haut du billet. Upload manuel ou recherche Unsplash.",
       },
     ],
     required: BASE_REQUIRED,

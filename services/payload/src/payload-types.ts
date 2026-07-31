@@ -537,6 +537,15 @@ export interface Media {
     photographerProfileUrl?: string | null;
     photoPageUrl?: string | null;
   };
+  /**
+   * Zone visible en couverture. Réglée depuis le sélecteur de zone.
+   */
+  crop?: {
+    x?: number | null;
+    y?: number | null;
+    w?: number | null;
+    h?: number | null;
+  };
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -1401,6 +1410,14 @@ export interface MediaSelect<T extends boolean = true> {
         photographerName?: T;
         photographerProfileUrl?: T;
         photoPageUrl?: T;
+      };
+  crop?:
+    | T
+    | {
+        x?: T;
+        y?: T;
+        w?: T;
+        h?: T;
       };
   updatedAt?: T;
   createdAt?: T;

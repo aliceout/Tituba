@@ -62,6 +62,32 @@ export const Media: CollectionConfig = {
         { name: 'photoPageUrl', type: 'text' },
       ],
     },
+    // Zone retenue quand l'image sert de couverture : le hero d'un billet
+    // l'affiche dans un carré, il faut donc dire laquelle de ses parties
+    // montrer. Choisie dans le sélecteur de zone du picker.
+    //
+    // Rectangle et non simple point focal : la zone est redimensionnable,
+    // ce qui revient à zoomer — quatre valeurs sont nécessaires, un point
+    // focal n'en porte que deux et ne sait que déplacer.
+    //
+    // Exprimé en pourcentages des dimensions de l'image (0–100) et non en
+    // pixels : reste juste quelle que soit la taille du fichier servi, et
+    // se traduit directement en CSS côté site. Vide = image entière,
+    // cadrée au centre.
+    {
+      name: 'crop',
+      type: 'group',
+      admin: {
+        readOnly: true,
+        description: 'Zone visible en couverture. Réglée depuis le sélecteur de zone.',
+      },
+      fields: [
+        { name: 'x', type: 'number', label: 'Bord gauche (%)' },
+        { name: 'y', type: 'number', label: 'Bord haut (%)' },
+        { name: 'w', type: 'number', label: 'Largeur (%)' },
+        { name: 'h', type: 'number', label: 'Hauteur (%)' },
+      ],
+    },
   ],
   upload: true,
 }

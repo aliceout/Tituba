@@ -97,6 +97,39 @@ const titlePlain = stripHeroMarkers(post.title);
 const coverImageUrl = uploadedImageUrl(post.image);
 const coverImageObj = typeof post.image === 'object' && post.image ? post.image : null;
 const coverImageAlt = coverImageObj?.alt || '';
+// Le hero affiche l'image dans un carré : d'une photo non carrée, il
+// n'en montre qu'une partie. La zone choisie dans l'admin décide
+// laquelle (cf CropModal côté Payload).
+//
+// Traduite en agrandissement + décalage plutôt qu'en `object-position` :
+// la zone est redimensionnable, donc il y a un facteur d'échelle à
+// appliquer, ce qu'un point focal ne sait pas exprimer. L'image est
+// posée en absolu dans un carré à `overflow: hidden`, agrandie de sorte
+// que la zone retenue occupe exactement ce carré.
+//
+// Sans zone enregistrée, on laisse `object-fit: cover` faire son cadrage
+// centré habituel — c'est le cas de toutes les images d'avant l'option.
+const cropRaw = coverImageObj?.crop ?? null;
+const crop =
+  cropRaw &&
+  typeof cropRaw.w === 'number' &&
+  cropRaw.w > 0 &&
+  typeof cropRaw.h === 'number' &&
+  cropRaw.h > 0
+    ? {
+        x: cropRaw.x ?? 0,
+        y: cropRaw.y ?? 0,
+        w: cropRaw.w,
+        h: cropRaw.h,
+      }
+    : null;
+// Largeur/hauteur en % du carré conteneur, et décalage du coin
+// haut-gauche : montrer une zone large de `w` % revient à afficher
+// l'image à `100 / w × 100` % de la taille du cadre.
+const cropStyle = crop
+  ? `width:${(100 / crop.w) * 100}%;height:${(100 / crop.h) * 100}%;` +
+    `left:${(-crop.x / crop.w) * 100}%;top:${(-crop.y / crop.h) * 100}%;`
+  : null;
 // Crédit obligatoire (conditions d'utilisation Unsplash) — absent pour
 // un upload manuel, le champ `unsplash` n'est rempli qu'à l'import
 // (cf endpoints/unsplash.ts). UTM requis par Unsplash sur les deux liens.
@@ -224,7 +257,9 @@ const postTags = (post.tags ?? []).filter(
         </div>
         {coverImageUrl && (
           <figure class="hero-figure">
-            <img class="hero-image" src={coverImageUrl} alt={coverImageAlt} />
+            <div class:list={['hero-frame', { cropped: !!crop }]}>
+              <img class="hero-image" src={coverImageUrl} alt={coverImageAlt} style={cropStyle} />
+            </div>
             {unsplashCredit && (
               <figcaption class="hero-credit">
                 Photo par{' '}
@@ -394,20 +429,38 @@ const postTags = (post.tags ?? []).filter(
        pleine. */
     margin: 0;
   }
-  .hero-image {
-    /* width:100% + aspect-ratio : la largeur vient de la colonne (donc
-       de l'espace laissé par le cadre), la hauteur s'en déduit. Sans
-       width explicite, le flex-basis d'une <img> part de ses dimensions
-       intrinsèques (celles du fichier, ex. 1600×820) et la colonne se
-       calerait dessus plutôt que sur l'espace disponible. */
-    display: block;
+  /* Fenêtre carrée de la couverture. width:100% + aspect-ratio : la
+     largeur vient de la colonne (donc de l'espace laissé par le cadre),
+     la hauteur s'en déduit. Sans width explicite, le flex-basis d'une
+     <img> part de ses dimensions intrinsèques (celles du fichier, ex.
+     1600×820) et la colonne se calerait dessus plutôt que sur l'espace
+     disponible.
+     L'arrondi ne gêne pas le raccord avec le cadre du titre : l'image
+     déborde largement au-dessus et en dessous, ses coins arrondis sont
+     donc loin des extrémités de la bordure. */
+  .hero-frame {
+    position: relative;
     width: 100%;
     aspect-ratio: 1 / 1;
-    object-fit: cover;
-    /* L'arrondi ne gêne pas le raccord avec le cadre : l'image déborde
-       largement au-dessus et en dessous de lui, ses coins arrondis sont
-       donc loin des extrémités de la bordure. */
+    overflow: hidden;
     border-radius: 10px;
+  }
+  .hero-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  /* Avec une zone enregistrée, l'image est agrandie et décalée pour que
+     cette zone remplisse exactement la fenêtre (dimensions et décalage
+     posés en style inline, calculés plus haut). `object-fit` n'a alors
+     plus lieu d'être : c'est la géométrie qui fait le cadrage. */
+  .hero-frame.cropped .hero-image {
+    position: absolute;
+    width: auto;
+    height: auto;
+    max-width: none;
+    object-fit: fill;
   }
   /* Crédit photographe — obligatoire dès que la photo est affichée
      (conditions d'utilisation Unsplash), pas seulement au moment du

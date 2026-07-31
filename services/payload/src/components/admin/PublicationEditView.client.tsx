@@ -941,25 +941,6 @@ export default function PublicationEditViewClient({
               />
             </div>
 
-            {/* Champs `upload` du format (aujourd'hui : l'image de
-                couverture des analyses). En colonne centrale et non dans
-                le sidebar, sur le gabarit des panneaux ci-dessous : une
-                image de couverture est du contenu. Leur sérialisation
-                passe par le même pickExtraValues() que les champs restés
-                dans le sidebar — la place à l'écran ne change rien à la
-                sauvegarde. */}
-            {spec.extraFields
-              .filter((f) => f.type === 'upload')
-              .map((f) => (
-                <UnsplashImagePicker
-                  key={f.name}
-                  label={f.label}
-                  help={f.help}
-                  value={(post as WithExtras)[f.name] as never}
-                  onChange={(id) => patch(f.name as keyof Post, id as never)}
-                />
-              ))}
-
             <div className="fn-block">
               <div className="fn-block__h">
                 <span>Notes de bas de page ({footnotes.length})</span>
@@ -1130,13 +1111,7 @@ export default function PublicationEditViewClient({
                 Leur sérialisation est prise en charge par
                 pickExtraValues() dans save() — les deux dérivent de la
                 même déclaration, donc ils ne peuvent pas diverger. */}
-            {spec.extraFields
-              // Les champs `upload` sortent du sidebar : ils sont rendus
-              // en bloc dans la colonne centrale (cf plus haut, à côté
-              // de fn-block/bib-block). Une image de couverture est du
-              // contenu, pas une métadonnée.
-              .filter((f) => f.type !== 'upload')
-              .map((f) => (
+            {spec.extraFields.map((f) => (
               <div
                 key={f.name}
                 className={`field${fieldErrors[f.name] ? ' field--invalid' : ''}`}
@@ -1159,6 +1134,11 @@ export default function PublicationEditViewClient({
                     placeholder={f.placeholder}
                     onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
                   />
+                ) : f.type === 'upload' ? (
+                  <UnsplashImagePicker
+                    value={(post as WithExtras)[f.name] as never}
+                    onChange={(id) => patch(f.name as keyof Post, id as never)}
+                  />
                 ) : (
                   <input
                     type={f.type === 'number' ? 'number' : f.type === 'url' ? 'url' : 'text'}
@@ -1172,7 +1152,7 @@ export default function PublicationEditViewClient({
                 {f.help && <div className="hint">{f.help}</div>}
                 {fieldErrors[f.name] && <div className="err">{fieldErrors[f.name]}</div>}
               </div>
-              ))}
+            ))}
             <div className={`field${fieldErrors.slug ? ' field--invalid' : ''}`}>
               <label>Slug</label>
               <input
