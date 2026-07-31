@@ -325,13 +325,21 @@ export type FeedResult = {
  * paginé côté SQL. Filtrable par thématique ou par tag.
  */
 export async function fetchPublicationsFeed(
-  opts: { page?: number; limit?: number; theme?: string; tag?: string; featured?: boolean } = {},
+  opts: {
+    page?: number;
+    limit?: number;
+    theme?: string;
+    tag?: string;
+    author?: number | string;
+    featured?: boolean;
+  } = {},
 ): Promise<FeedResult> {
   const params = new URLSearchParams();
   if (opts.page) params.set('page', String(opts.page));
   if (opts.limit) params.set('limit', String(opts.limit));
   if (opts.theme) params.set('theme', opts.theme);
   if (opts.tag) params.set('tag', opts.tag);
+  if (opts.author) params.set('author', String(opts.author));
   if (opts.featured) params.set('featured', '1');
   const qs = params.toString();
   return fetchPayload<FeedResult>(`/publications${qs ? `?${qs}` : ''}`);
@@ -348,4 +356,40 @@ export async function fetchPublicationCounts(
     `/publications/counts?groupBy=${groupBy}`,
   );
   return res.counts ?? {};
+}
+
+export type AuthorListEntry = {
+  id: number | string;
+  displayName: string | null;
+  count: number;
+};
+
+/**
+ * Auteur·ices internes (comptes Users) ayant signé au moins une
+ * publication publiée, toutes collections confondues, avec leur compte
+ * de publications. Sert la page /auteurices/.
+ */
+export async function fetchAuthorsList(): Promise<AuthorListEntry[]> {
+  const res = await fetchPayload<{ docs: AuthorListEntry[] }>('/publications/authors');
+  return res.docs ?? [];
+}
+
+/**
+ * Nom affichable d'un user par id, pour la page /auteurice/<id>/. Le
+ * `select` explicite est une barrière volontaire : `Users.access.read`
+ * autorise déjà la lecture anonyme au niveau collection (nécessaire à
+ * l'hydratation JWT interne de Payload, cf. collections/Users.ts), mais
+ * `email` n'a pas de restriction `access.read` au niveau champ — ne
+ * jamais élargir ce select sous peine de l'exposer publiquement ici.
+ */
+export async function fetchUserDisplayName(
+  id: number | string,
+): Promise<{ id: number | string; displayName: string | null } | null> {
+  try {
+    return await fetchPayload<{ id: number | string; displayName: string | null }>(
+      `/users/${encodeURIComponent(String(id))}?depth=0&select[displayName]=true`,
+    );
+  } catch {
+    return null;
+  }
 }

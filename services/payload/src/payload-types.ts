@@ -490,6 +490,10 @@ export interface Analysis {
    */
   bibliography?: (number | Bibliography)[] | null;
   /**
+   * Affichée à côté du titre en haut du billet. Sans image, la page garde son rendu actuel (titre pleine largeur).
+   */
+  image?: (number | null) | Media;
+  /**
    * Calculé automatiquement depuis le corps au save.
    */
   readingTime?: number | null;
@@ -512,6 +516,38 @@ export interface Analysis {
   hasDraftZones?: boolean | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  /**
+   * Affiché en légende ou en infobulle selon le contexte.
+   */
+  title: string;
+  alt: string;
+  /**
+   * Rempli automatiquement pour les images importées depuis Unsplash.
+   */
+  unsplash?: {
+    photoId?: string | null;
+    photographerName?: string | null;
+    photographerProfileUrl?: string | null;
+    photoPageUrl?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -891,29 +927,6 @@ export interface Page {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: number;
-  /**
-   * Affiché en légende ou en infobulle selon le contexte.
-   */
-  title: string;
-  alt: string;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "subscribers".
  */
 export interface Subscriber {
@@ -1104,6 +1117,7 @@ export interface AnalysesSelect<T extends boolean = true> {
   lede?: T;
   body?: T;
   bibliography?: T;
+  image?: T;
   readingTime?: T;
   idCarnet?: T;
   featured?: T;
@@ -1380,6 +1394,14 @@ export interface UsersSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   title?: T;
   alt?: T;
+  unsplash?:
+    | T
+    | {
+        photoId?: T;
+        photographerName?: T;
+        photographerProfileUrl?: T;
+        photoPageUrl?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1513,10 +1535,6 @@ export interface Navigation {
 export interface IndexPage {
   id: number;
   home?: {
-    /**
-     * « Flux direct » liste toutes les publications sous le hero. « Avec une à la une » met en avant la publication cochée « Mettre à la une », puis affiche les six plus récentes.
-     */
-    layout?: ('flux' | 'une') | null;
     /**
      * H1 de la page d'accueil. Entourer une portion de "*" pour la mettre en italique.
      */
@@ -1688,7 +1706,6 @@ export interface IndexPagesSelect<T extends boolean = true> {
   home?:
     | T
     | {
-        layout?: T;
         heroTitle?: T;
         heroLede?: T;
       };

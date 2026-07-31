@@ -15,7 +15,7 @@
  */
 import { publicationHref } from '../lib/publications';
 import type { FeedDoc } from '../lib/payload';
-import { formatNumero } from '../lib/site';
+import { formatNumero, stripHeroMarkers } from '../lib/site';
 
 export interface Props {
   doc: (FeedDoc & { durationSeconds?: number | null }) | null;
@@ -60,7 +60,7 @@ const numero = doc && doc.numero != null ? formatNumero(doc.numero) : '';
         {numero && <span class="numero">{numero}</span>}
       </div>
 
-      <h3>{doc.title}</h3>
+      <h3>{stripHeroMarkers(doc.title)}</h3>
     </div>
 
     <div class="foot">

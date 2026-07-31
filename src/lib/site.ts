@@ -89,6 +89,29 @@ function escapeHtml(s: string): string {
  *   formatHeroTitle('Notes en *études de genre*.')
  *     → 'Notes en <em>études de genre</em>.'
  */
+/**
+ * Retire les astérisques de mise en avant sans rien mettre à la place.
+ *
+ * Le titre d'une page éditoriale sert à trois endroits : le h1, où les
+ * astérisques deviennent des mots surlignés ; le `<title>` du document ;
+ * et le libellé de son onglet dans la navigation. Les deux derniers
+ * doivent recevoir le texte nu — sans quoi on lirait « L'*association* »
+ * dans l'onglet du navigateur et dans le menu.
+ *
+ *   stripHeroMarkers("L'*association*") → "L'association"
+ *
+ * Tolère null/undefined et les renvoie tels quels : la fonction sert
+ * aussi à nettoyer les titres de publication dans les listes et les
+ * cartes, où le titre est nullable. Le générique conserve le typage
+ * exact — un `string` en entrée reste un `string` en sortie, donc les
+ * appelants qui exigent une chaîne (documentTitle, etc.) ne perdent
+ * rien.
+ */
+export function stripHeroMarkers<T extends string | null | undefined>(s: T): T {
+  if (typeof s !== 'string') return s;
+  return s.replace(/\*([^*]+)\*/g, '$1') as T;
+}
+
 export function formatHeroTitle(s: string): string {
   return escapeHtml(s).replace(/\*([^*]+)\*/g, '<em>$1</em>');
 }
@@ -110,7 +133,7 @@ export function formatHeroLede(s: string): string {
 export type PostAuthorEntry = {
   kind?: 'user' | 'external';
   user?:
-    | { displayName?: string; email?: string; citationFormat?: string | null }
+    | { id?: number | string; displayName?: string; email?: string; citationFormat?: string | null }
     | number
     | string
     | null;
@@ -157,6 +180,35 @@ export function formatPostByline(authors: PostAuthorEntry[] | null | undefined):
   if (parts.length === 1) return parts[0];
   if (parts.length === 2) return `${parts[0]} et ${parts[1]}`;
   return `${parts.slice(0, -1).join(', ')} et ${parts[parts.length - 1]}`;
+}
+
+/** Une entrée auteur·ice pour le meta-strip : cliquable seulement si
+ *  c'est un compte du site (kind=user) — les externes n'ont pas de
+ *  fiche publique. */
+export type DisplayAuthor = { name: string; href: string | null };
+
+/**
+ * Variante de `formatPostByline` pour l'affichage dans le meta-strip :
+ * renvoie chaque auteur·ice séparément (au lieu d'une chaîne déjà
+ * jointe) pour que le template puisse ne linker que les internes.
+ */
+export function formatPostAuthorsForDisplay(
+  authors: PostAuthorEntry[] | null | undefined,
+): DisplayAuthor[] {
+  if (!authors || authors.length === 0) return [];
+  return authors
+    .map((a) => {
+      const name = authorDisplayName(a);
+      if (!name) return null;
+      const aff = a.kind === 'external' && a.affiliation?.trim();
+      const label = aff ? `${name} (${aff.trim()})` : name;
+      const href =
+        (a.kind ?? 'user') === 'user' && a.user && typeof a.user === 'object' && a.user.id != null
+          ? `/auteurice/${a.user.id}/`
+          : null;
+      return { name: label, href };
+    })
+    .filter((x): x is DisplayAuthor => x !== null);
 }
 
 /**

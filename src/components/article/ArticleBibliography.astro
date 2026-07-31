@@ -1,0 +1,76 @@
+---
+/** Bibliographie d'un article — ancres #bib-<slug> ciblées par les
+ *  renvois inline (.biblio-inline) rendus dans le corps. */
+import { formatAuthorsChicago, formatTranslators } from '../../lib/format-authors';
+import type { BiblioEntry } from '../../lib/publications';
+
+interface Props {
+  entries: BiblioEntry[];
+}
+
+const { entries } = Astro.props;
+---
+
+<section id="biblio">
+  <h3>Bibliographie</h3>
+  <ul class="biblio">
+    {entries.map((b) => (
+      <li id={`bib-${b.slug}`}>
+        <span class="ba">{formatAuthorsChicago(b.authors)}</span>
+        {`, ${b.year}, `}
+        <em>{b.title}</em>
+        {formatTranslators(b.authors) && `, ${formatTranslators(b.authors)}`}
+        {b.publisher && `, ${b.place ? b.place + ', ' : ''}${b.publisher}`}
+        {b.journal && `, ${b.journal}`}
+        {b.volume && `, ${b.volume}`}
+        {b.pages && `, p. ${b.pages}`}
+        {b.url && (
+          <>
+            {' '}
+            <a href={b.url} class="ext" rel="noopener">{b.url}</a>
+          </>
+        )}
+        {!b.url && b.doi && (
+          <>
+            {' doi:'}
+            <a href={`https://doi.org/${b.doi}`} class="ext" rel="noopener">
+              {b.doi}
+            </a>
+          </>
+        )}
+        .
+      </li>
+    ))}
+  </ul>
+</section>
+
+<style>
+  h3 {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+    margin: 0 0 14px;
+  }
+  .biblio {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--color-body-soft);
+    padding-left: 22px;
+    margin: 0;
+  }
+  .biblio li {
+    margin-bottom: 6px;
+  }
+  .biblio .ba {
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+  .biblio a.ext {
+    border-bottom: 1px solid var(--color-accent);
+    color: inherit;
+  }
+</style>

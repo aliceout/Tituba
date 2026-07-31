@@ -1,0 +1,111 @@
+---
+/**
+ * Ligne Auteur·ice / Thème / Format / Publié, juste sous le deck. La
+ * durée de lecture vit désormais au-dessus du sommaire (ArticleToc),
+ * pas ici — cf PublicationArticle.
+ */
+import FormatIcon from '../FormatIcon.astro';
+import type { PublicationCollection } from '../../lib/publications';
+import type { DisplayAuthor } from '../../lib/site';
+
+interface Props {
+  authors: DisplayAuthor[];
+  publishedFr: string;
+  publishedIso: string;
+  collection: PublicationCollection;
+  badge: string;
+  themeName: string | null;
+  themeSlug: string | null;
+  formatHref: string;
+}
+
+const {
+  authors,
+  publishedFr,
+  publishedIso,
+  collection,
+  badge,
+  themeName,
+  themeSlug,
+  formatHref,
+} = Astro.props;
+---
+
+<div class="meta-strip">
+  <div>
+    <div class="lbl">Auteur·ice</div>
+    {authors.length === 0 ? (
+      '—'
+    ) : (
+      authors.map((a, i) => (
+        <Fragment>
+          {i > 0 && (i === authors.length - 1 ? ' et ' : ', ')}
+          {a.href ? <a href={a.href}>{a.name}</a> : a.name}
+        </Fragment>
+      ))
+    )}
+  </div>
+  <div>
+    <div class="lbl">Thème</div>
+    {themeSlug && themeName ? (
+      <a href={`/theme/${themeSlug}/`}>{themeName}</a>
+    ) : (
+      themeName ?? '—'
+    )}
+  </div>
+  <div>
+    <div class="lbl">Format</div>
+    <a href={formatHref}><FormatIcon collection={collection} />{badge}</a>
+  </div>
+  <div>
+    <div class="lbl">Publié</div>
+    <time datetime={publishedIso}>{publishedFr}</time>
+  </div>
+</div>
+
+<style>
+  .meta-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    padding: 20px 0;
+    border-top: 1px solid var(--color-rule);
+    border-bottom: 1px solid var(--color-rule);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--color-muted);
+    margin-bottom: 48px;
+  }
+  /* --color-accent brut est presque aussi sombre que l'encre (calibré
+     pour du texte de contenu, pas pour un petit label 11px) — les deux
+     se confondaient à cette taille. Éclairci pour se distinguer de
+     l'encre, mais pas trop dilué non plus : à 60 % ça tournait au gris,
+     plus assez saturé pour vraiment se lire comme une couleur. */
+  .meta-strip .lbl {
+    color: color-mix(in srgb, var(--color-accent) 85%, white);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  /* Les valeurs restent en gris neutre, y compris les liens — seuls
+     les libellés (ci-dessus) portent la couleur. Le survol reste le
+     seul indice visuel qu'une valeur est cliquable. */
+  .meta-strip a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: color 0.12s, border-color 0.12s;
+  }
+  .meta-strip a:hover {
+    color: var(--color-ink);
+    border-bottom-color: var(--color-ink);
+  }
+
+  @media (max-width: 900px) {
+    .meta-strip {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

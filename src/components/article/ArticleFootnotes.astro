@@ -1,0 +1,52 @@
+---
+/** Notes classiques en pied d'article (mode notesMode="classic"). */
+interface Props {
+  html: string;
+}
+
+const { html } = Astro.props;
+---
+
+<div class="footnotes-wrap" id="notes">
+  <Fragment set:html={html} />
+</div>
+
+<style>
+  .footnotes-wrap {
+    margin: 48px 0 0;
+  }
+  .footnotes-wrap :global(.footnotes-classic) {
+    border-top: 1px solid var(--color-rule);
+    padding-top: 24px;
+  }
+  .footnotes-wrap :global(.footnotes-classic h3) {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+    margin: 0 0 14px;
+  }
+  .footnotes-wrap :global(.footnotes-classic ol) {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--color-body-soft);
+    padding-left: 22px;
+    margin: 0;
+  }
+  .footnotes-wrap :global(.footnotes-classic li) {
+    margin-bottom: 8px;
+  }
+  .footnotes-wrap :global(.fn-back) {
+    color: var(--color-accent);
+    margin-left: 4px;
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+  .footnotes-wrap :global(.fn-back:hover) {
+    text-decoration: underline;
+  }
+</style>

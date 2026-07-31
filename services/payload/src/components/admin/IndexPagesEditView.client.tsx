@@ -21,8 +21,6 @@ type HeroBlock = {
   enabled?: boolean;
   heroTitle?: string;
   heroLede?: string;
-  /** Propre à la page d'accueil : disposition du contenu sous le hero. */
-  layout?: 'flux' | 'une';
 };
 
 type IndexPagesData = {
@@ -90,7 +88,7 @@ const SECTION_META: Record<
 };
 
 const EMPTY: IndexPagesData = {
-  home: { enabled: true, heroTitle: '', heroLede: '', layout: 'flux' },
+  home: { enabled: true, heroTitle: '', heroLede: '' },
   archives: { enabled: true, heroTitle: '', heroLede: '' },
   themes: { enabled: true, heroTitle: '', heroLede: '' },
   subscribe: { enabled: true, heroTitle: '', heroLede: '' },
@@ -101,9 +99,6 @@ function normalizeBlock(b: HeroBlock | undefined): HeroBlock {
     enabled: b?.enabled !== false, // défaut true
     heroTitle: b?.heroTitle ?? '',
     heroLede: b?.heroLede ?? '',
-    // Conservé tel quel : seule la section « accueil » le porte, les
-    // autres le laissent à undefined et il n'est alors pas envoyé.
-    ...(b?.layout ? { layout: b.layout } : {}),
   };
 }
 
@@ -249,28 +244,6 @@ export default function IndexPagesEditViewClient(): React.ReactElement {
                       {enabled ? `Accessible à ${meta.route}.` : meta.disabledHint}
                     </span>
                   </div>
-                )}
-
-                {k === 'home' && (
-                  <label className="tituba-editview__field">
-                    <span className="lbl">Disposition de l'accueil</span>
-                    <select
-                      value={block.layout ?? 'flux'}
-                      onChange={(e) => updateField(k, 'layout', e.target.value)}
-                      disabled={!enabled}
-                    >
-                      <option value="flux">
-                        Flux direct — toutes les publications à la suite
-                      </option>
-                      <option value="une">
-                        Avec une à la une — mise en avant puis dernières publications
-                      </option>
-                    </select>
-                    <span className="hint">
-                      « À la une » met en avant la publication cochée « Mettre à la une »
-                      dans sa fiche ; à défaut, la plus récente.
-                    </span>
-                  </label>
                 )}
 
                 <label className="tituba-editview__field">

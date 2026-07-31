@@ -1,0 +1,157 @@
+---
+/**
+ * Cartouche « Pour citer cet article » — citation Chicago author-date,
+ * bouton Copier (clipboard) et liens de téléchargement BibTeX/RIS/Zotero.
+ * Les routes de téléchargement vivent sous src/pages/<format>/
+ * [slug].bib.ts et [slug].ris.ts. Zotero importe RIS nativement, on
+ * pointe donc sur le même fichier ; la détection auto via les <meta>
+ * Highwire en <head> (cf src/lib/citations.ts) rend même ce bouton
+ * accessoire pour qui a l'extension installée.
+ *
+ * Même modèle que le carré « URL du flux » de RssFeedBlock.astro :
+ * Panel teinté (ici famille="marque", la couleur de marque configurable,
+ * pas une des quatre familles fixes) + label petites capitales + Button.
+ */
+import Panel from '../ui/Panel.astro';
+import Button from '../ui/Button.astro';
+
+interface Props {
+  authorCitation: string;
+  title: string;
+  numLabel: string;
+  publishedFr: string;
+  articleUrl: string;
+  citationText: string;
+  routePrefix: string;
+  slug: string;
+}
+
+const { authorCitation, title, numLabel, publishedFr, articleUrl, citationText, routePrefix, slug } =
+  Astro.props;
+---
+
+<section id="cite">
+  <Panel famille="marque" padding="serre" class="citation-panel">
+    <div class="lbl">Pour citer cet article</div>
+    <div class="body">
+      {authorCitation}. « {title} », <em>Tituba</em>, {numLabel}, {publishedFr},
+      <span class="url">{' '}{articleUrl}</span>.
+    </div>
+    <div class="acts">
+      <Button
+        ton="contour"
+        famille="marque"
+        class="copy-btn"
+        data-citation={citationText}
+        aria-label="Copier la citation"
+      >
+        Copier
+      </Button>
+      <a
+        class="download-link"
+        href={`${routePrefix}/${slug}.bib`}
+        download={`${slug}.bib`}
+        aria-label="Télécharger la citation au format BibTeX"
+      >
+        BibTeX
+      </a>
+      <a
+        class="download-link"
+        href={`${routePrefix}/${slug}.ris`}
+        download={`${slug}.ris`}
+        aria-label="Télécharger la citation au format RIS"
+      >
+        RIS
+      </a>
+      <a
+        class="download-link"
+        href={`${routePrefix}/${slug}.ris`}
+        download={`${slug}.ris`}
+        aria-label="Importer la citation dans Zotero (format RIS)"
+        title="Zotero importe RIS nativement"
+      >
+        Zotero
+      </a>
+    </div>
+  </Panel>
+</section>
+
+<style>
+  /* La forme vient de Panel : fond de marque dilué, rayon des panneaux
+     du site — même construction que le carré « URL du flux » de
+     RssFeedBlock. Colonne flex + gap plutôt que des margin-top/bottom
+     dépareillés entre le label, le corps et les actions : un seul
+     écart à régler, pas trois.
+     :global() ici est nécessaire, pas juste une note de style : la
+     classe est passée en prop à <Panel>, qui la pose sur SA propre
+     racine — un élément qui porte le data-astro-cid de Panel.astro,
+     pas celui de ce composant-ci. Sans :global(), ce sélecteur ne
+     matche jamais rien (vérifié : display restait 'block', gap
+     'normal' malgré la règle). Les sélecteurs descendants plus bas
+     (.lbl, .body, .acts) n'ont pas ce problème : ce sont des éléments
+     à nous, passés dans le slot par défaut. */
+  :global(.citation-panel) {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 40px;
+  }
+  .lbl {
+    font-family: var(--font-mono);
+    font-size: var(--t-label);
+    letter-spacing: var(--ls-label);
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .body {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .body .url {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .acts {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .acts :global(.copy-btn.copied) {
+    background: var(--accent);
+    color: var(--color-paper);
+  }
+  .download-link {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--accent);
+    border-bottom: 1px solid var(--accent);
+  }
+  .download-link:hover {
+    color: var(--color-ink);
+    border-bottom-color: var(--color-ink);
+  }
+</style>
+
+<script>
+  const copyBtn = document.querySelector<HTMLButtonElement>('.copy-btn');
+  if (copyBtn && navigator.clipboard) {
+    copyBtn.addEventListener('click', async () => {
+      const text = copyBtn.dataset.citation || '';
+      try {
+        await navigator.clipboard.writeText(text);
+        const original = copyBtn.textContent;
+        copyBtn.textContent = 'Copié';
+        copyBtn.classList.add('copied');
+        setTimeout(() => {
+          copyBtn.textContent = original;
+          copyBtn.classList.remove('copied');
+        }, 2000);
+      } catch {
+        // Pas de fallback si clipboard refuse — rare en HTTPS, OK en
+        // contexte où l'utilisateur peut sélectionner le texte à la main.
+      }
+    });
+  }
+</script>

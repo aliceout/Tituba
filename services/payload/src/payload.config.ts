@@ -26,10 +26,12 @@ import { authEndpoints } from './auth/endpoints';
 import { zoteroEndpoints } from './zotero/endpoints';
 import { publicationsSearchEndpoint } from './endpoints/publications-search';
 import {
+  publicationsAuthorsEndpoint,
   publicationsCountsEndpoint,
   publicationsFeedEndpoint,
 } from './endpoints/publications-feed';
 import { subscribersEndpoints } from './endpoints/subscribers';
+import { unsplashEndpoints } from './endpoints/unsplash';
 import { extendPublicationsSearchVector } from './db/extend-publications-search-vector';
 import { buildEmailAdapter } from './auth/transport';
 import { startCleanupJob } from './auth/cleanup';
@@ -150,7 +152,16 @@ export default buildConfig({
   //   GET /cms/api/search              recherche plein texte unifiée
   //   GET /cms/api/publications        flux fusionné, paginé en SQL
   //   GET /cms/api/publications/counts compteurs par thématique / tag
-  endpoints: [publicationsSearchEndpoint, publicationsFeedEndpoint, publicationsCountsEndpoint],
+  //   GET /cms/api/publications/authors auteur·ices internes + compteur
+  //   GET  /cms/api/unsplash/search      recherche Unsplash (picker admin)
+  //   POST /cms/api/unsplash/import      télécharge + auto-héberge un choix
+  endpoints: [
+    publicationsSearchEndpoint,
+    publicationsFeedEndpoint,
+    publicationsCountsEndpoint,
+    publicationsAuthorsEndpoint,
+    ...unsplashEndpoints,
+  ],
   editor: lexicalEditor(),
   email: buildEmailAdapter(),
   secret: process.env.PAYLOAD_SECRET || '',

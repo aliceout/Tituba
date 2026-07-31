@@ -7,8 +7,7 @@
  * ici une seule collection, donc pas besoin du flux fusionné — un
  * `fetchCollection` direct suffit et évite un aller-retour SQL.
  */
-import Layout from '../layouts/Layout.astro';
-import Hero from '../components/Hero.astro';
+import PageShell from '../components/ui/PageShell.astro';
 import PublicationCard from './PublicationCard.astro';
 import FormatIcon from './FormatIcon.astro';
 import CardFilterBar from './CardFilterBar.astro';
@@ -91,24 +90,23 @@ const LEDES: Record<PublicationCollection, string> = {
 };
 ---
 
-<Layout
-  title={spec.labelPlural}
+<PageShell
+  documentTitle={spec.labelPlural}
   description={`${spec.labelPlural} de Tituba. ${LEDES[collection]}`}
+  title={spec.labelPlural}
+  lede={LEDES[collection]}
+  taille="compacte"
 >
-  <Hero
-    kicker={`${spec.labelPlural} · ${total} publication${total > 1 ? 's' : ''}`}
-    title={spec.labelPlural}
-    lede={LEDES[collection]}
-  />
+  <Fragment slot="sous-titre">
+    <CardFilterBar
+      dimension="themes"
+      label="Thématique"
+      options={themeOptions}
+      total={total}
+    />
+  </Fragment>
 
-  <CardFilterBar
-    dimension="themes"
-    label="Thématique"
-    options={themeOptions}
-    total={total}
-  />
-
-  <section class="container feed">
+  <section class="feed">
     {docs.length === 0 ? (
       <p class="empty">
         <FormatIcon collection={collection} />
@@ -130,14 +128,9 @@ const LEDES: Record<PublicationCollection, string> = {
       ))
     )}
   </section>
-</Layout>
+</PageShell>
 
 <style>
-  .container {
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: 0 var(--page-gutter);
-  }
   .feed {
     padding-top: 24px;
     padding-bottom: 40px;
@@ -147,11 +140,5 @@ const LEDES: Record<PublicationCollection, string> = {
     color: var(--color-muted);
     text-align: center;
     font-family: var(--font-sans);
-  }
-
-  @media (max-width: 900px) {
-    .container {
-      padding: 0 var(--page-gutter-narrow);
-    }
   }
 </style>

@@ -1,0 +1,114 @@
+---
+/**
+ * Fiche d'un·e auteur·ice interne — /auteurice/<id>/
+ *
+ * Calque de src/pages/theme/[slug].astro : hero (nom), compteur + lien
+ * retour, filtre par format, grille des publications de cette personne
+ * (toutes collections confondues). Id numérique plutôt que slug — pas
+ * de champ dédié sur Users, cf plan validé.
+ */
+import PageShell from '../../components/ui/PageShell.astro';
+import PublicationCard from '../../components/PublicationCard.astro';
+import CardFilterBar from '../../components/CardFilterBar.astro';
+import { PUBLICATIONS, PUBLICATION_ORDER, fetchFeed } from '../../lib/publications';
+import { fetchUserDisplayName } from '../../lib/payload';
+import type { FeedDoc } from '../../lib/payload';
+
+type Post = FeedDoc;
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/auteurices/');
+
+const author = await fetchUserDisplayName(id);
+if (!author) {
+  return new Response('Auteur·ice introuvable', { status: 404 });
+}
+
+let posts: Post[] = [];
+try {
+  const feed = await fetchFeed({ author: id, limit: 200 });
+  posts = feed.docs;
+} catch (err) {
+  console.warn('[auteurice] posts fetch failed:', (err as Error).message);
+}
+
+const total = posts.length;
+const name = author.displayName ?? 'Auteur·ice';
+
+// Formats réellement représentés chez cette personne, dans l'ordre
+// éditorial — un filtre vide n'aurait pas de sens ici non plus.
+const formatCounts = new Map<string, number>();
+for (const p of posts) formatCounts.set(p.collection, (formatCounts.get(p.collection) ?? 0) + 1);
+const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((c) => ({
+  value: c,
+  label: PUBLICATIONS[c].labelPlural,
+  count: formatCounts.get(c) ?? 0,
+}));
+---
+
+<PageShell
+  documentTitle={name}
+  description={`Les publications de ${name} sur Tituba.`}
+  title={name}
+  famille="bleu"
+>
+  <div class="hero-bottom-meta" slot="titre-pied">
+    <span>{total} publication{total > 1 ? 's' : ''}</span>
+    <span aria-hidden="true">·</span>
+    <a class="back mono" href="/auteurices/">← tous les auteur·ices</a>
+  </div>
+
+  <Fragment slot="sous-titre">
+    <CardFilterBar
+      dimension="type"
+      label="Format"
+      options={formatOptions}
+      total={total}
+    />
+  </Fragment>
+
+  {posts.length === 0 ? (
+    <p class="empty">Aucune publication pour l'instant.</p>
+  ) : (
+    posts.map((p) => (
+      <PublicationCard
+        collection={p.collection}
+        numero={p.numero}
+        slug={p.slug}
+        title={p.title}
+        themeSlugs={p.themeSlugs}
+        publishedAt={p.publishedAt}
+        lede={p.lede}
+        readingTime={p.readingTime}
+      />
+    ))
+  )}
+</PageShell>
+
+<style>
+  /* Pied du hero, propre à cette page — compteur + lien retour. Rendu
+     dans le slot par défaut de PageTitle (cf. titre-pied ci-dessus). */
+  .hero-bottom-meta {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--color-muted);
+    margin-top: 24px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  .hero-bottom-meta .back {
+    color: var(--c-bleu-deep);
+    transition: color 0.12s;
+  }
+  .hero-bottom-meta .back:hover {
+    color: var(--color-ink);
+  }
+
+  .empty {
+    padding: 64px 0;
+    color: var(--color-muted);
+    text-align: center;
+    font-family: var(--font-sans);
+  }
+</style>

@@ -10,7 +10,7 @@
  * L'action est idempotente : si on clique deux fois, on reste désabonné.
  */
 import Layout from '../../layouts/Layout.astro';
-import Hero from '../../components/Hero.astro';
+import PageTitle from '../../components/ui/PageTitle.astro';
 import { postPayload } from '../../lib/payload';
 
 const id = (Astro.url.searchParams.get('id') ?? '').trim();
@@ -48,7 +48,7 @@ const title = TITLES[state];
 ---
 
 <Layout title={title} noindex={true}>
-  <Hero kicker="Désabonnement" title={title} />
+  <PageTitle title={title} />
 
   <section class="container">
     {state === 'success' && (

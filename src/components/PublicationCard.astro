@@ -12,7 +12,7 @@
  *
  * Réf : design_handoff_tituba/Tituba B.html → .item.
  */
-import { formatDateFr, formatNumero } from '../lib/site';
+import { formatDateFr, formatNumero, stripHeroMarkers } from '../lib/site';
 import FormatIcon from './FormatIcon.astro';
 import {
   PUBLICATIONS,
@@ -101,7 +101,13 @@ const href = publicationHref(collection, slug ?? '');
         </span>
       </div>
     )}
-    <h2>{title}</h2>
+    {/* Les `*` d'un titre ne sont interprétés que dans le h1 de la page
+        de lecture (cf formatHeroTitle) : partout ailleurs on affiche le
+        texte nu, sinon on lirait « L'*homonationalisme* » dans les
+        listes. Fait ici et non chez les appelants pour que le cas soit
+        traité une fois pour toutes les surfaces qui passent par la
+        carte. */}
+    <h2>{stripHeroMarkers(title)}</h2>
     <p>{lede}</p>
   </a>
   <a class="rcol" href={href}>
@@ -124,7 +130,7 @@ const href = publicationHref(collection, slug ?? '');
     text-decoration: none;
   }
   .item:hover h2 {
-    color: var(--color-accent);
+    color: var(--c-bleu-deep);
   }
   .item .lcol {
     font-family: var(--font-sans);
@@ -139,7 +145,7 @@ const href = publicationHref(collection, slug ?? '');
     font-size: 11px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--color-accent);
+    color: var(--c-bleu-deep);
     margin-bottom: 10px;
   }
   .item .num {
@@ -161,7 +167,7 @@ const href = publicationHref(collection, slug ?? '');
     font-size: 11px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--color-accent);
+    color: var(--c-bleu-deep);
     margin-bottom: 10px;
   }
   .item .kicker .theme {
@@ -192,7 +198,7 @@ const href = publicationHref(collection, slug ?? '');
     min-height: 100%;
   }
   .item .rcol .lk {
-    color: var(--color-accent);
+    color: var(--c-bleu-deep);
     font-weight: 500;
   }
 

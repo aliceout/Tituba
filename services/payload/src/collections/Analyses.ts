@@ -20,6 +20,19 @@ export const Analyses: CollectionConfig = buildPublicationCollection({
   slug: 'analyses',
   labels: { singular: "Billet d'analyse", plural: "Billets d'analyse" },
   idPrefix: 'tituba:analyse',
+  extraFields: [
+    {
+      name: 'image',
+      type: 'upload',
+      relationTo: 'media',
+      required: false,
+      label: 'Image de couverture',
+      admin: {
+        description:
+          "Affichée à côté du titre en haut du billet. Sans image, la page garde son rendu actuel (titre pleine largeur).",
+      },
+    },
+  ],
   afterChange: [
     makeUpdateSearchVector('analyses'),
     makeNotifyNewPublication({

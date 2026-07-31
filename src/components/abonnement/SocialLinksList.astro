@@ -1,0 +1,47 @@
+---
+/** Bloc « Sur les réseaux » — liens sociaux renseignés dans le global
+ *  Subscriptions, un par un, chacun avec son indice de registre. */
+import Heading from '../ui/Heading.astro';
+
+interface Props {
+  entries: Array<{ label: string; href: string; hint: string }>;
+}
+
+const { entries } = Astro.props;
+---
+
+<Heading>Sur les réseaux</Heading>
+<ul class="socials">
+  {entries.map((s) => (
+    <li>
+      <a href={s.href} rel="noopener" class="ext">{s.label}</a>
+      <span class="hint">— {s.hint}</span>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .socials {
+    font-family: var(--font-serif);
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--color-body);
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+    display: grid;
+    gap: 10px;
+  }
+  .socials a.ext {
+    color: var(--color-ink);
+    border-bottom: 1px solid var(--c-vert-deep);
+    font-weight: 500;
+  }
+  .socials a.ext:hover {
+    color: var(--c-vert-deep);
+  }
+  .socials .hint {
+    color: var(--color-muted);
+    font-size: 15px;
+  }
+</style>

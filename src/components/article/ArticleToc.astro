@@ -1,0 +1,287 @@
+---
+/**
+ * Sommaire de la page de lecture — visible seulement au-delà de
+ * 1300 px, en seconde colonne de la grille posée par PublicationArticle
+ * (`.article-shell`). `position: sticky` plutôt que `fixed` : la
+ * colonne est stretchée à la hauteur de l'article par la grille, donc
+ * le sommaire peut « suivre » le défilement sans qu'on ait à recaler
+ * sa position à la main — c'est la grille qui aligne les deux colonnes
+ * en haut, pas un calcul de pixels dupliqué ici et côté article.
+ * Scroll-spy par position plutôt que par IntersectionObserver : #intro
+ * contient tous les h2/h3, un observer y gagnait en permanence.
+ *
+ * Porte aussi : la durée de lecture (qui vivait avant dans ArticleMeta)
+ * au-dessus du sommaire — repère rapide, avant de naviguer — puis les
+ * actions rapides en dessous (copier le lien, citer, télécharger en
+ * PDF — non câblées pour l'instant, juste posées), en bloc secondaire
+ * après la navigation plutôt qu'avant.
+ */
+interface TocEntry {
+  id: string;
+  level: number;
+  text: string;
+}
+
+interface Props {
+  entries: TocEntry[];
+  readingLabel: { label: string; value: string } | null;
+  hasFootnotes: boolean;
+  hasBiblio: boolean;
+  hasCitation: boolean;
+}
+
+const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.props;
+---
+
+{entries.length > 0 && (
+  <aside class="toc" id="toc" aria-label="Sommaire">
+    {readingLabel && (
+      <div class="duree">
+        <span class="duree-label">{readingLabel.label} : </span>
+        <span class="duree-value">{readingLabel.value}</span>
+      </div>
+    )}
+
+    <div class="lbl">Sommaire</div>
+    <a href="#intro" class="on" data-toc="intro">Introduction</a>
+    {entries.map((entry) => (
+      <a
+        href={`#${entry.id}`}
+        data-toc={entry.id}
+        class:list={[`level-${entry.level}`]}
+      >
+        {entry.text}
+      </a>
+    ))}
+    {hasFootnotes && <a href="#notes" data-toc="notes">Notes</a>}
+    {hasBiblio && <a href="#biblio" data-toc="biblio">Bibliographie</a>}
+    {hasCitation && <a href="#cite" data-toc="cite">Pour citer</a>}
+
+    <div class="actions">
+      <button type="button" class="action-btn" aria-label="Copier le lien de l'article">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="9" width="12" height="12" rx="2"/>
+          <path d="M5.5 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v0.5"/>
+        </svg>
+        Copier le lien
+      </button>
+      <button type="button" class="action-btn" aria-label="Copier la citation de l'article">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M7 8.5c-2 0-3.2 1.4-3.2 3.4S5 15.2 7 15.2c0 2-1.2 2.8-3 2.8"/>
+          <path d="M16.2 8.5c-2 0-3.2 1.4-3.2 3.4s1.2 3.3 3.2 3.3c0 2-1.2 2.8-3 2.8"/>
+        </svg>
+        Citer cet article
+      </button>
+      <button type="button" class="action-btn" aria-label="Télécharger l'article en PDF">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v11"/>
+          <path d="m7.5 10 4.5 4.5 4.5-4.5"/>
+          <path d="M4.5 19.5h15"/>
+        </svg>
+        Télécharger en PDF
+      </button>
+    </div>
+
+    <div class="haut-wrap">
+      <a href="#haut" data-toc="haut" class="haut">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 19V5"/>
+          <path d="m5 12 7-7 7 7"/>
+        </svg>
+        Haut de page
+      </a>
+    </div>
+  </aside>
+)}
+
+<style>
+  /* La position horizontale (colonne 2) et la hauteur du bloc viennent
+     de la grille du parent (.article-shell) — rien à calculer ici.
+     Le `top` du sticky est calé sur sa position naturelle au chargement
+     (header ~76px + padding-top de main 32px + padding-top de
+     .article-shell 75px ≈ 183px), pas sur une valeur plus petite : avec
+     un seuil plus bas, le sommaire défilerait normalement sur la
+     distance qui sépare les deux, ce qui se voit comme un bloc qui
+     « rattrape » sa position avant de se figer. Casé sur son point de
+     départ, il ne semble jamais bouger. */
+  .toc {
+    position: sticky;
+    top: 183px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--color-muted);
+    line-height: 1.5;
+    z-index: 4;
+  }
+  /* Actions rapides — non câblées : le design est posé, le clic ne
+     fait rien pour l'instant (cf commentaire d'en-tête). En bas de
+     bloc plutôt qu'en haut : ce sont des gestes secondaires (copier,
+     citer, télécharger), qui viennent après s'être repéré (durée) et
+     avoir navigué (sommaire), pas avant. */
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-rule);
+  }
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 5px 2px;
+    background: transparent;
+    border: none;
+    color: var(--color-muted);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: color 0.12s;
+  }
+  .action-btn svg {
+    flex-shrink: 0;
+  }
+  .action-btn:hover {
+    color: var(--color-accent);
+  }
+  .action-btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Même style que .lbl (le label « Sommaire ») plutôt qu'une ligne à
+     part avec icône — les deux sont des micro-labels au même niveau
+     hiérarchique, pas un texte courant. */
+  .toc .lbl,
+  .duree {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+    margin-bottom: 10px;
+  }
+  .duree-value {
+    font-weight: 400;
+  }
+  .duree {
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .toc a {
+    display: block;
+    padding: 4px 0;
+    color: var(--color-muted);
+    border-left: 2px solid transparent;
+    padding-left: 10px;
+    margin-left: -10px;
+    transition: color 0.12s, border-left-color 0.12s;
+  }
+  .toc a.level-3 {
+    padding-left: 22px;
+  }
+  .toc a.on {
+    color: var(--color-ink);
+    border-left-color: var(--color-accent);
+  }
+  /* Séparé du reste du sommaire par un filet : ce n'est pas une section
+     du texte comme les autres liens, plutôt un utilitaire de nav — au
+     même titre que les actions juste en dessous. */
+  /* Même typographie et même indentation qu'un lien de sommaire — juste
+     une icône 16px devant (même gabarit que les actions) et un filet
+     au-dessus pour le séparer du bloc actions. */
+  /* Même répartition à deux niveaux que .actions/.action-btn juste
+     au-dessus : le filet + l'écart avant/après portés par le
+     conteneur (18px/14px, identiques à .actions), le padding interne
+     du lien (5px 2px, identique à .action-btn) — pas un seul bloc qui
+     rejoue approximativement le même total en une seule règle. */
+  .haut-wrap {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-rule);
+  }
+  /* .toc a.haut hérite de .toc a un margin-left/border-left destinés
+     au repère actif des liens de sommaire (cf plus haut) — annulés ici
+     pour retrouver exactement le même modèle de boîte que .action-btn
+     (pas de marge ni de bordure, juste le padding), sans quoi son
+     icône ne tombe pas à la même colonne que celles des boutons. */
+  .toc a.haut {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 0;
+    padding: 5px 2px;
+    border-left: none;
+  }
+  .toc a.haut svg {
+    flex-shrink: 0;
+  }
+  @media (max-width: 1299px) {
+    .toc {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  // Scrollspy basé sur la position : on prend la dernière section dont
+  // le haut a dépassé la ligne 1/3 du viewport (cohérent avec
+  // `scroll-margin-top: 33vh` posé sur les cibles d'ancre). Évite le bug
+  // où #intro (qui contient tous les h2/h3) gagnait en permanence avec
+  // IntersectionObserver.
+  (function () {
+    const tocLinks = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>('.toc a[data-toc]'),
+    );
+    if (!tocLinks.length) return;
+    const ids = tocLinks.map((a) => a.dataset.toc).filter((id): id is string => !!id);
+    const sections = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    function setActive(id: string) {
+      for (const a of tocLinks) {
+        a.classList.toggle('on', a.dataset.toc === id);
+      }
+    }
+
+    if (sections.length > 0) {
+      let raf = 0;
+      const updateActive = () => {
+        raf = 0;
+        const line = window.innerHeight * 0.33;
+        let activeId = sections[0].id;
+        for (const sec of sections) {
+          if (sec.getBoundingClientRect().top <= line) activeId = sec.id;
+          else break;
+        }
+        setActive(activeId);
+      };
+      const onScroll = () => {
+        if (raf) return;
+        raf = requestAnimationFrame(updateActive);
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+      updateActive();
+    }
+
+    // Smooth scroll au clic
+    for (const a of tocLinks) {
+      a.addEventListener('click', (e) => {
+        const id = a.dataset.toc;
+        if (!id) return;
+        const target = document.getElementById(id);
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          history.replaceState(null, '', '#' + id);
+        }
+      });
+    }
+  })();
+</script>

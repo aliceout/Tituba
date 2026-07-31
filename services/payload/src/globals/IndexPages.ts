@@ -46,21 +46,11 @@ export const IndexPages: GlobalConfig = {
       fields: [
         // Pas de toggle `enabled` ici : la page d'accueil est la racine
         // du site, elle doit toujours exister.
-        {
-          name: 'layout',
-          type: 'select',
-          required: false,
-          defaultValue: 'flux',
-          label: "Disposition de l'accueil",
-          options: [
-            { label: 'Flux direct — toutes les publications à la suite', value: 'flux' },
-            { label: 'Avec une à la une — mise en avant puis dernières publications', value: 'une' },
-          ],
-          admin: {
-            description:
-              "« Flux direct » liste toutes les publications sous le hero. « Avec une à la une » met en avant la publication cochée « Mettre à la une », puis affiche les six plus récentes.",
-          },
-        },
+        //
+        // Pas de champ de disposition non plus : l'accueil ne connaît
+        // plus qu'un seul agencement (une à la une + sommaire). Le mode
+        // « flux direct » (toutes les publications listées sous le
+        // hero) a été retiré, déprécié.
         {
           name: 'heroTitle',
           type: 'textarea',

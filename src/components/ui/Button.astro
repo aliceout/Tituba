@@ -1,0 +1,119 @@
+---
+/**
+ * Bouton — action, envoi de formulaire, ou lien qui se comporte comme
+ * une commande.
+ *
+ * Il manquait : le bouton d'envoi vivait à l'intérieur de Field, celui
+ * de copie du flux RSS était écrit à la main dans la page, et les deux
+ * avaient fini avec des tailles différentes pour un même rôle.
+ *
+ * Deux tons, et le choix entre eux n'est pas décoratif :
+ *   plein   — sur fond clair. C'est l'aplat qui porte la couleur.
+ *   contour — sur un panneau déjà teinté. Un aplat y ferait deux
+ *             surfaces colorées l'une dans l'autre.
+ *
+ * Rend un `<button>` par défaut, un `<a>` si `href` est fourni : un
+ * élément qui navigue doit être un lien, quelle que soit son apparence.
+ */
+interface Props {
+  ton?: 'plein' | 'contour';
+  famille?: 'bleu' | 'vert' | 'jaune' | 'violet' | 'marque';
+  /** Rend un lien plutôt qu'un bouton. */
+  href?: string;
+  type?: 'button' | 'submit';
+  class?: string;
+  'aria-label'?: string;
+  [key: string]: unknown;
+}
+
+const {
+  ton = 'plein',
+  famille = 'vert',
+  href,
+  type = 'button',
+  class: className,
+  ...reste
+} = Astro.props;
+
+const Tag = href ? 'a' : 'button';
+---
+
+<Tag
+  class:list={['btn', `t-${ton}`, className]}
+  data-famille={famille}
+  href={href}
+  type={href ? undefined : type}
+  {...reste}
+>
+  <slot />
+</Tag>
+
+<style>
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    padding: 7px 16px;
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, filter 0.12s;
+  }
+
+  [data-famille='bleu'] {
+    --fam: var(--c-bleu-deep);
+    --fam-fill: var(--c-bleu-fill);
+    --fam-on: var(--c-bleu-on);
+  }
+  [data-famille='vert'] {
+    --fam: var(--c-vert-deep);
+    --fam-fill: var(--c-vert-fill);
+    --fam-on: var(--c-vert-on);
+  }
+  [data-famille='jaune'] {
+    --fam: var(--c-jaune-deep);
+    --fam-fill: var(--c-jaune-fill);
+    --fam-on: var(--c-jaune-on);
+  }
+  [data-famille='violet'] {
+    --fam: var(--c-violet-deep);
+    --fam-fill: var(--c-violet);
+    --fam-on: #ffffff;
+  }
+  /* Couleur de marque configurable — seul `--fam` est défini, `t-contour`
+     est le seul ton qui l'utilise ici (son survol retombe sur
+     --color-paper, pas sur --fam-on) : --color-accent est une valeur
+     admin arbitraire, pas de --fam-fill/--fam-on sans contraste garanti. */
+  [data-famille='marque'] {
+    --fam: var(--color-accent);
+  }
+
+  .t-plein {
+    background: var(--fam-fill);
+    color: var(--fam-on);
+    border: 1px solid transparent;
+  }
+  .t-plein:hover {
+    filter: brightness(1.12);
+  }
+
+  .t-contour {
+    background: transparent;
+    color: var(--fam);
+    border: 1px solid var(--fam);
+  }
+  .t-contour:hover {
+    background: var(--fam);
+    color: var(--color-paper);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+    filter: none;
+  }
+</style>

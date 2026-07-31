@@ -2402,6 +2402,139 @@ button.btn--style-primary,
   }
 }
 
+// Fenêtre contextuelle de recherche Unsplash (cf
+// UnsplashImagePicker.client.tsx) : champ de recherche en haut, grille
+// de résultats en dessous. En modale et non dans la colonne du billet,
+// parce qu'une grille de vignettes lisible demande une largeur que ni
+// le sidebar meta (300px) ni la colonne centrale n'offrent.
+.tituba-modal--unsplash {
+  // Plus large que la modale de confirmation par défaut (480px), qui ne
+  // tiendrait que deux vignettes par rangée.
+  max-width: 880px;
+  height: 78vh;
+}
+
+.tituba-unsplash {
+  &__search {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--b-rule);
+    flex: 0 0 auto;
+
+    input {
+      width: 100%;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--b-ink);
+      background: var(--b-bg);
+      border: 1px solid var(--b-rule);
+
+      &:focus {
+        outline: none;
+        border-color: var(--b-accent);
+      }
+    }
+  }
+
+  // Seule zone défilante : l'en-tête et le champ de recherche restent
+  // fixes pendant qu'on parcourt les résultats.
+  &__body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+  }
+
+  &__item {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  &__thumb {
+    position: relative;
+    display: block;
+    padding: 0;
+    border: 1px solid var(--b-rule);
+    background: var(--b-bg);
+    cursor: pointer;
+    line-height: 0;
+    transition: border-color 0.12s;
+
+    img {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      display: block;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: var(--b-accent);
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+  }
+
+  &__importing {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  // Crédit sous chaque vignette : exigé par les conditions Unsplash dès
+  // que la photo est affichée, pas seulement une fois retenue.
+  &__credit {
+    font-size: 11px;
+    line-height: 1.3;
+    color: var(--b-muted);
+    overflow-wrap: anywhere;
+
+    a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px dotted currentColor;
+
+      &:hover {
+        color: var(--b-accent);
+      }
+    }
+  }
+
+  &__note {
+    margin: 0;
+    padding: 8px 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--b-muted);
+  }
+
+  &__error {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--b-danger, #b3261e);
+    background: rgba(179, 38, 30, 0.06);
+    border: 1px solid rgba(179, 38, 30, 0.25);
+  }
+}
+
 .tituba-media-preview {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -5231,7 +5364,8 @@ button.btn--style-primary,
   // (bib-block, déplacée du sidebar de droite pour mieux refléter ce
   // qu'on lit en pied d'article côté frontend).
   .fn-block,
-  .bib-block {
+  .bib-block,
+  .img-block {
     margin: 24px 0 0;
     border: 1px solid var(--b-rule);
     background: var(--b-paper);
@@ -5371,6 +5505,75 @@ button.btn--style-primary,
           color: #b63a3a;
         }
       }
+    }
+  }
+
+  // img-block : image de couverture. Reprend le châssis commun
+  // ci-dessus (bordure, en-tête, aide) et n'ajoute que l'aperçu et la
+  // rangée d'actions. Le choix d'une photo Unsplash se fait dans une
+  // fenêtre contextuelle (cf .tituba-modal--unsplash), pas ici : la
+  // grille de résultats demande une largeur que la colonne n'a pas.
+  .img-block {
+    &__body {
+      padding: 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    &__current {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+
+      img {
+        width: 160px;
+        height: 160px;
+        object-fit: cover;
+        border: 1px solid var(--b-rule);
+        background: var(--b-bg);
+      }
+    }
+
+    &__meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    &__name {
+      font-size: 12.5px;
+      color: var(--b-muted);
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    &__remove {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--b-muted);
+      cursor: pointer;
+      text-decoration: underline;
+
+      &:hover {
+        color: #b63a3a;
+      }
+    }
+
+    &__actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    &__error {
+      font-size: 12px;
+      color: var(--b-danger, #b3261e);
     }
   }
 

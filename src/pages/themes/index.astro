@@ -8,8 +8,7 @@
  *
  * Réf : design_handoff_tituba/Tituba B.html → PolePage (overview).
  */
-import Layout from '../../layouts/Layout.astro';
-import Hero from '../../components/Hero.astro';
+import PageShell from '../../components/ui/PageShell.astro';
 import {
   fetchCollection,
   fetchIndexPages,
@@ -69,8 +68,6 @@ const sorted = themes.slice().sort((a, b) => {
   return a.name.localeCompare(b.name, 'fr');
 });
 
-const total = sorted.length;
-
 const heroTitleHtml = formatHeroTitle(
   indexPages.themes?.heroTitle?.trim() || DEFAULT_TITLE,
 );
@@ -79,55 +76,39 @@ const heroLedeHtml = formatHeroLede(
 );
 ---
 
-<Layout
-  title="Thèmes"
+<PageShell
+  documentTitle="Thèmes"
   description="Les sujets de recherche de Tituba — taxonomie multivaluée et libre."
+  title={heroTitleHtml}
+  lede={heroLedeHtml}
+  famille="violet"
 >
-  <Hero
-    kicker={`Thèmes thématiques · ${total} thème${total > 1 ? 's' : ''}`}
-    title={heroTitleHtml}
-    lede={heroLedeHtml}
-  />
-
-  <section class="container themes-list">
-    {sorted.length === 0 ? (
-      <p class="empty">Aucun thème pour l'instant.</p>
-    ) : (
-      <div class="grid">
-        {sorted.map((t) => {
-          const count = counts.get(t.slug) ?? 0;
-          return (
-            <a class="theme-card" href={`/theme/${t.slug}/`}>
-              <div class="left">
-                <div class="ty mono">#{t.slug}</div>
-                <div class="t">{t.name}</div>
-                {t.description && <p class="desc">{t.description}</p>}
-              </div>
-              <div class="right">
-                {count} publication{count > 1 ? 's' : ''}
-              </div>
-            </a>
-          );
-        })}
-      </div>
-    )}
-  </section>
-</Layout>
+  {sorted.length === 0 ? (
+    <p class="empty">Aucun thème pour l'instant.</p>
+  ) : (
+    <div class="grid">
+      {sorted.map((t) => {
+        const count = counts.get(t.slug) ?? 0;
+        return (
+          <a class="theme-card" href={`/theme/${t.slug}/`}>
+            <div class="left">
+              <div class="ty mono">#{t.slug}</div>
+              <div class="t">{t.name}</div>
+              {t.description && <p class="desc">{t.description}</p>}
+            </div>
+            <div class="right">
+              {count} publication{count > 1 ? 's' : ''}
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  )}
+</PageShell>
 
 <style>
-  .container {
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: 0 var(--page-gutter);
-  }
-
-  /* Hero : centralisé dans src/components/Hero.astro */
-
-  .themes-list {
-    padding-top: 40px;
-    padding-bottom: 40px;
-  }
-  .themes-list .empty {
+  /* Gouttière et rythme vertical viennent de PageShell. */
+  .empty {
     padding: 64px 0;
     color: var(--color-muted);
     text-align: center;
@@ -155,22 +136,25 @@ const heroLedeHtml = formatHeroLede(
   .theme-card:nth-child(even) {
     padding-left: 24px;
   }
+  /* Violet : la famille de cette taxonomie, cohérente avec le panneau
+     « Au sommaire » de l'accueil qui la porte déjà. */
   .theme-card:hover .t {
-    color: var(--color-accent);
+    color: var(--c-violet-deep);
   }
   .theme-card .ty {
     font-family: var(--font-mono);
     font-size: 11px;
-    color: var(--color-accent);
+    color: var(--c-violet-deep);
     margin-bottom: 8px;
     letter-spacing: 0.04em;
   }
   .theme-card .t {
+    font-family: var(--font-serif);
     font-size: 24px;
     line-height: 1.2;
-    font-weight: 600;
+    font-weight: var(--w-heading);
     margin: 0 0 8px;
-    letter-spacing: -0.3px;
+    letter-spacing: -0.02em;
     transition: color 0.12s;
   }
   .theme-card .desc {
@@ -188,12 +172,6 @@ const heroLedeHtml = formatHeroLede(
   }
 
   @media (max-width: 900px) {
-    .container {
-      padding: 0 var(--page-gutter-narrow);
-    }
-    .hero h1 {
-      font-size: 40px;
-    }
     .grid {
       grid-template-columns: 1fr;
     }

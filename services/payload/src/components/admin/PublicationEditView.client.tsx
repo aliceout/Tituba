@@ -53,6 +53,7 @@ import {
   getPublicationSpec,
   pickExtraValues,
 } from './publications/registry';
+import UnsplashImagePicker from './publications/UnsplashImagePicker.client';
 
 type PostType = string;
 
@@ -940,6 +941,25 @@ export default function PublicationEditViewClient({
               />
             </div>
 
+            {/* Champs `upload` du format (aujourd'hui : l'image de
+                couverture des analyses). En colonne centrale et non dans
+                le sidebar, sur le gabarit des panneaux ci-dessous : une
+                image de couverture est du contenu. Leur sérialisation
+                passe par le même pickExtraValues() que les champs restés
+                dans le sidebar — la place à l'écran ne change rien à la
+                sauvegarde. */}
+            {spec.extraFields
+              .filter((f) => f.type === 'upload')
+              .map((f) => (
+                <UnsplashImagePicker
+                  key={f.name}
+                  label={f.label}
+                  help={f.help}
+                  value={(post as WithExtras)[f.name] as never}
+                  onChange={(id) => patch(f.name as keyof Post, id as never)}
+                />
+              ))}
+
             <div className="fn-block">
               <div className="fn-block__h">
                 <span>Notes de bas de page ({footnotes.length})</span>
@@ -1110,7 +1130,13 @@ export default function PublicationEditViewClient({
                 Leur sérialisation est prise en charge par
                 pickExtraValues() dans save() — les deux dérivent de la
                 même déclaration, donc ils ne peuvent pas diverger. */}
-            {spec.extraFields.map((f) => (
+            {spec.extraFields
+              // Les champs `upload` sortent du sidebar : ils sont rendus
+              // en bloc dans la colonne centrale (cf plus haut, à côté
+              // de fn-block/bib-block). Une image de couverture est du
+              // contenu, pas une métadonnée.
+              .filter((f) => f.type !== 'upload')
+              .map((f) => (
               <div
                 key={f.name}
                 className={`field${fieldErrors[f.name] ? ' field--invalid' : ''}`}
@@ -1146,7 +1172,7 @@ export default function PublicationEditViewClient({
                 {f.help && <div className="hint">{f.help}</div>}
                 {fieldErrors[f.name] && <div className="err">{fieldErrors[f.name]}</div>}
               </div>
-            ))}
+              ))}
             <div className={`field${fieldErrors.slug ? ' field--invalid' : ''}`}>
               <label>Slug</label>
               <input
@@ -1354,18 +1380,10 @@ export default function PublicationEditViewClient({
               </div>
             )}
 
-            <hr />
-            <h3>Auto-calculé</h3>
-            <div className="field">
-              <label>ID Tituba</label>
-              <div className="auto">{idCarnet ?? '—'}</div>
-            </div>
-            <div className="field">
-              <label>Temps de lecture</label>
-              <div className="auto">
-                {post.readingTime ? `≈ ${post.readingTime} min` : '— (calculé au save)'}
-              </div>
-            </div>
+            {/* Pas de section « Auto-calculé » (ID Tituba, temps de
+                lecture) : ces deux valeurs sont dérivées à la
+                sauvegarde, rien à y régler. L'ID Tituba reste visible
+                là où il sert, dans l'en-tête du billet (.ed-num). */}
 
             {post.id != null && (
               <>

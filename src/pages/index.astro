@@ -1,38 +1,22 @@
 ---
 /**
- * Page d'accueil — hero + barre de filtres + flux d'items.
+ * Page d'accueil — hero + vitrine à la une (publication mise en avant
+ * puis sommaire des dernières parutions).
  *
- * Trois sections empilées (cf design_handoff_tituba/Tituba B.html → Home) :
- *  1. Hero : h1 + lede (titre/lede éditables via le global Pages principales)
- *  2. Filtres : chips Type & Thème + compteur. Filtrage côté client en JS
- *     progressif via data-attrs ; persistance en URL hash. Lecture sans JS
- *     possible (la liste complète reste rendue).
- *  3. Flux : grille `120px 1fr 200px`, gap 48 px (cf. PostCard).
- *
- * Ajout d'une "Voir toutes les archives" en pied.
+ * Passe par PageShell comme toutes les pages du site.
  */
-import Layout from '../layouts/Layout.astro';
-import Hero from '../components/Hero.astro';
-import PublicationCard from '../components/PublicationCard.astro';
-import FormatIcon from '../components/FormatIcon.astro';
+import PageShell from '../components/ui/PageShell.astro';
 import SommairePanel from '../components/SommairePanel.astro';
 import LettreBand from '../components/LettreBand.astro';
 import FeaturedPublication from '../components/FeaturedPublication.astro';
 import PodcastSquare from '../components/PodcastSquare.astro';
-import { fetchCollection, fetchIndexPages, fetchPublicationCounts, type FeedDoc } from '../lib/payload';
-import { PUBLICATIONS, PUBLICATION_ORDER, fetchFeed } from '../lib/publications';
+import { fetchIndexPages, type FeedDoc } from '../lib/payload';
+import { fetchFeed } from '../lib/publications';
 import { formatHeroLede, formatHeroTitle } from '../lib/site';
-
-type Theme = { id: number | string; slug: string; name: string };
-
-type Post = FeedDoc;
+import { saison, deriveUne } from '../lib/home';
 
 type IndexPagesGlobal = {
-  home?: {
-    layout?: 'flux' | 'une';
-    heroTitle?: string;
-    heroLede?: string;
-  };
+  home?: { heroTitle?: string; heroLede?: string };
 };
 
 const DEFAULT_HERO_TITLE =
@@ -40,26 +24,20 @@ const DEFAULT_HERO_TITLE =
 const DEFAULT_HERO_LEDE =
   "Association loi 1901 fondée à Paris en octobre 2024. Nous construisons un espace de ressources en accès libre autour d'une conviction : les inégalités structurelles se nouent ensemble — orientation sexuelle, construction sociale de la race, classe, colonialité — et ne se démêlent pas une à une. Dix thématiques, cinq formats, rien derrière un mur payant.";
 
-let posts: Post[] = [];
-let featured: Post[] = [];
-let themeCounts: Record<string, number> = {};
-let allThemes: Theme[] = [];
+let posts: FeedDoc[] = [];
+let featured: FeedDoc[] = [];
 let indexPages: IndexPagesGlobal = {};
 try {
-  // Flux fusionné des cinq formats, servi par l'endpoint SQL : trier
-  // et paginer un mélange de cinq collections côté client demanderait
-  // de sur-récupérer massivement. Le filtre brouillon/date est posé
-  // côté serveur, d'où l'absence de filterPublished ici.
-  const [feed, une, counts, themes] = await Promise.all([
+  // Flux fusionné des cinq formats, servi par l'endpoint SQL : trier et
+  // paginer un mélange de cinq collections côté client demanderait de
+  // sur-récupérer massivement. Le filtre brouillon/date est posé côté
+  // serveur, d'où l'absence de filterPublished ici.
+  const [feed, une] = await Promise.all([
     fetchFeed({ limit: 200 }),
     fetchFeed({ featured: true, limit: 1 }),
-    fetchPublicationCounts('theme'),
-    fetchCollection<Theme>('themes', { limit: 100, depth: 0, select: ['slug', 'name'] }),
   ]);
-  posts = feed.docs as Post[];
-  featured = une.docs as Post[];
-  themeCounts = counts;
-  allThemes = themes;
+  posts = feed.docs;
+  featured = une.docs;
 } catch (err) {
   console.warn('[home] fetch failed, rendering empty:', (err as Error).message);
 }
@@ -69,353 +47,18 @@ try {
   console.warn('[home] fetchIndexPages failed, using defaults:', (err as Error).message);
 }
 
+const { une, dernierPodcast, sommaire } = deriveUne(posts, featured);
 
-
-// Disposition de l'accueil, pilotée depuis l'admin.
-const layout = indexPages.home?.layout === 'une' ? 'une' : 'flux';
-
-// Le mode « flux » liste tout ; le mode vitrine n'affiche pas cette
-// liste du tout, elle est remplacée par la une et le sommaire.
-const listed = posts;
-
-// À la une : la publication cochée « Mettre à la une » dans l'admin.
-// À défaut — aucune coche, ou fetch en échec — la plus récente prend la
-// place : le bloc structure le haut de page, le laisser vide creuserait
-// un trou entre le hero et le sommaire.
-const une = featured[0] ?? posts[0] ?? null;
-
-// Dernier épisode, pour le carré posé à droite de la une. `posts` est
-// déjà trié par date décroissante côté SQL, le premier trouvé est donc
-// le plus récent.
-//
-// On écarte celui qui occupe déjà la une : rien n'empêche un épisode
-// d'être mis à la une, et il se retrouverait alors affiché deux fois
-// côte à côte. À défaut d'un autre épisode, pas de carré et la une
-// reprend toute la largeur.
-const dernierPodcast =
-  posts.find((p) => p.collection === 'podcasts' && !(une && p.id === une.id)) ?? null;
-
-// Sommaire : les cinq dernières publications, la une exclue. Sans ce
-// filtre elle apparaîtrait deux fois à trente centimètres d'écart.
-const sommaire = posts.filter((p) => !(une && p.collection === une.collection && p.id === une.id)).slice(0, 5);
-
-/**
- * Repère éditorial de la une, « printemps 2026 ». Dérivé de la date de
- * publication plutôt que saisi : c'est une indication de fraîcheur, pas
- * un champ à tenir à jour dans l'admin.
- */
-function saison(iso: string | null): string | undefined {
-  if (!iso) return undefined;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return undefined;
-  const m = d.getMonth();
-  const nom = m >= 2 && m <= 4 ? 'printemps' : m >= 5 && m <= 7 ? 'été' : m >= 8 && m <= 10 ? 'automne' : 'hiver';
-  // L'hiver de janvier-février appartient à la saison ouverte en
-  // décembre de l'année précédente.
-  const annee = nom === 'hiver' && m <= 1 ? d.getFullYear() - 1 : d.getFullYear();
-  return `${nom} ${annee} →`;
-}
-
-const heroTitleHtml = formatHeroTitle(
-  indexPages.home?.heroTitle?.trim() || DEFAULT_HERO_TITLE,
-);
-const heroLedeHtml = formatHeroLede(
-  indexPages.home?.heroLede?.trim() || DEFAULT_HERO_LEDE,
-);
-
-// Thématiques proposées dans la barre de filtres.
-// Toutes les thématiques qui portent au moins une publication, triées
-// par usage puis par ordre alphabétique. Pas de troncature : les dix
-// axes de l'association sont structurants, en cacher une partie
-// reviendrait à masquer un pan du travail.
-// Seules les thématiques qui portent au moins une publication. Une
-// puce de filtre est une promesse : cliquer doit mener quelque part.
-// Les dix axes de l'association restent listés sur /themes/, qui est
-// leur place — la barre de filtres, elle, décrit ce qui est publié.
-const topThemes = allThemes
-  .filter((t) => (themeCounts[t.slug] ?? 0) > 0)
-  .sort((a, b) => {
-    const d = (themeCounts[b.slug] ?? 0) - (themeCounts[a.slug] ?? 0);
-    return d !== 0 ? d : a.name.localeCompare(b.name, 'fr');
-  });
+const heroTitleHtml = formatHeroTitle(indexPages.home?.heroTitle?.trim() || DEFAULT_HERO_TITLE);
+const heroLedeHtml = formatHeroLede(indexPages.home?.heroLede?.trim() || DEFAULT_HERO_LEDE);
 ---
 
-<Layout bodyClass="justify">
-  {/* Pas de kicker : le titre ouvre la page directement. Le composant
-      Hero le rend optionnel, les autres pages continuent d'en poser un. */}
-  <Hero variant="ouvert" title={heroTitleHtml} lede={heroLedeHtml} />
-
-  {layout === 'une' ? (
-    <>
-      {une && (
-        <FeaturedPublication doc={une} eyebrow={saison(une.publishedAt)}>
-          {dernierPodcast && <PodcastSquare slot="aside" doc={dernierPodcast} />}
-        </FeaturedPublication>
-      )}
-      <SommairePanel docs={sommaire} />
-      <LettreBand />
-    </>
-  ) : (
-    <>
-      <!-- Filtres -->
-      <section class="filters" id="filters">
-        <div class="container">
-          <div class="row">
-            <div class="grp" role="group" aria-label="Filtrer par format">
-              <span class="lbl">Format</span>
-              <div class="chips">
-                <button class="chip on" type="button" data-filter-type="all">Tous</button>
-                {PUBLICATION_ORDER.map((c) => (
-                  <button class="chip" type="button" data-filter-type={c}>
-                    <FormatIcon collection={c} />
-                    {PUBLICATIONS[c].labelPlural}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          {topThemes.length > 0 && (
-            <div class="row">
-              <div class="grp" role="group" aria-label="Filtrer par thématique">
-                <span class="lbl">Thématique</span>
-                <div class="chips">
-                  <button class="chip on" type="button" data-filter-theme="all">Tous</button>
-                  {topThemes.map((t) => (
-                    <button
-                      class="chip"
-                      type="button"
-                      data-filter-theme={t.slug}
-                      title={`${t.name} — ${themeCounts[t.slug] ?? 0} publication${(themeCounts[t.slug] ?? 0) > 1 ? 's' : ''}`}
-                    >
-                      {t.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <!-- Flux -->
-      <section class="container feed">
-        {listed.length === 0 ? (
-          <p class="empty">Aucune publication pour l'instant.</p>
-        ) : (
-          listed.map((p) => (
-            <PublicationCard
-              collection={p.collection}
-              numero={p.numero}
-              slug={p.slug}
-              title={p.title}
-              themeSlugs={p.themeSlugs}
-              publishedAt={p.publishedAt}
-              lede={p.lede}
-              readingTime={p.readingTime}
-            />
-          ))
-        )}
-        <div class="archives-link">
-          <a href="/archives/" class="btn-link">Voir toutes les archives</a>
-        </div>
-      </section>
-    </>
+<PageShell title={heroTitleHtml} lede={heroLedeHtml} bodyClass="justify" taille="pleine">
+  {une && (
+    <FeaturedPublication doc={une} eyebrow={saison(une.publishedAt)}>
+      {dernierPodcast && <PodcastSquare slot="aside" doc={dernierPodcast} />}
+    </FeaturedPublication>
   )}
-
-</Layout>
-
-<style>
-  .container {
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: 0 var(--page-gutter);
-  }
-  @media (max-width: 900px) {
-    .container {
-      padding: 0 var(--page-gutter-narrow);
-    }
-  }
-
-  /* Hero : styles centralisés dans src/components/Hero.astro */
-
-  /* Filtres */
-  .filters {
-    padding: 18px 0;
-    border-bottom: 1px solid var(--color-rule);
-    font-family: var(--font-sans);
-    font-size: 13px;
-  }
-  .filters .row {
-    display: flex;
-    gap: 24px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  /* Espacement vertical entre la ligne Thème et la ligne Type. */
-  .filters .row + .row {
-    margin-top: 10px;
-  }
-  .filters .grp {
-    display: flex;
-    gap: 6px;
-    align-items: baseline;
-    /* Occupe toute la largeur de la ligne. Sans ça le groupe se
-       dimensionne sur son contenu et la boîte de puces hérite d'une
-       largeur plus étroite que l'espace réellement disponible : une
-       puce partait à la ligne alors qu'il restait de la place. */
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  /* Les puces vivent dans leur propre boîte : le libellé reste hors du
-     flux d'enroulement, donc une puce reportée à la ligne suivante
-     s'aligne sous « Tous » plutôt que sous le libellé. */
-  .filters .chips {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .filters .lbl {
-    color: var(--color-muted);
-    padding-right: 8px;
-    /* Largeur réservée au libellé, pour que les boutons « Tous » des
-       deux lignes s'alignent sur la même verticale. Calibrée sur le plus
-       long — « Thématique » — sans quoi sa ligne décale vers la droite. */
-    flex: 0 0 96px;
-  }
-  .chip {
-    padding: 6px 12px;
-    border-radius: 999px;
-    border: 1px solid var(--color-rule);
-    background: transparent;
-    color: var(--color-muted);
-    cursor: pointer;
-    font: inherit;
-    transition: color 0.12s, border-color 0.12s, background 0.12s;
-  }
-  .chip.on {
-    background: var(--color-accent);
-    color: var(--color-bg);
-    border-color: var(--color-accent);
-  }
-  .chip:hover:not(.on) {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-  }
-  .filters .count {
-    margin-left: auto;
-    color: var(--color-muted);
-  }
-  .filters .sep {
-    width: 1px;
-    height: 20px;
-    background: var(--color-rule);
-  }
-
-  /* Flux */
-  .feed {
-    /* Item border-bottom déjà géré dans PostCard */
-  }
-  .feed .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
-  }
-  .archives-link {
-    padding: 32px 0;
-    text-align: center;
-  }
-  .btn-link {
-    padding: 10px 24px;
-    border-radius: 999px;
-    border: 1px solid var(--color-accent);
-    color: var(--color-accent);
-    font-family: var(--font-sans);
-    font-size: 13px;
-    transition: background 0.12s, color 0.12s, border-color 0.12s;
-    display: inline-block;
-  }
-  .btn-link:hover {
-    background: var(--color-accent);
-    color: var(--color-bg);
-  }
-</style>
-
-<script>
-  // Filtres home — JS progressif. Lecture sans JS = tout est rendu.
-  // Sélection persistée en URL hash : #type=analyse&theme=queer-theory
-  // Format compact : si 'all' partout, hash retiré.
-  (function () {
-    // Le narrow `if (!x) return` n'est pas conservé dans les closures
-    // imbriquées. On rebinde après la garde pour donner un type
-    // non-nullable aux fonctions internes.
-    const filtersRaw = document.getElementById('filters');
-    const items = Array.from(document.querySelectorAll<HTMLElement>('.item'));
-    if (!filtersRaw || !items.length) return;
-    const filters: HTMLElement = filtersRaw;
-
-    type State = { type: string; theme: string };
-    const state: State = { type: 'all', theme: 'all' };
-
-    function readHash(): State {
-      const hash = window.location.hash.replace(/^#/, '');
-      if (!hash) return { type: 'all', theme: 'all' };
-      const params = new URLSearchParams(hash);
-      return {
-        type: params.get('type') || 'all',
-        theme: params.get('theme') || 'all',
-      };
-    }
-
-    function writeHash() {
-      const params = new URLSearchParams();
-      if (state.type !== 'all') params.set('type', state.type);
-      if (state.theme !== 'all') params.set('theme', state.theme);
-      const str = params.toString();
-      const newHash = str ? '#' + str : '';
-      if (newHash !== window.location.hash) {
-        history.replaceState(null, '', window.location.pathname + newHash);
-      }
-    }
-
-    function applyFilters() {
-      let visible = 0;
-      for (const item of items) {
-        const itemType = item.getAttribute('data-type') || '';
-        const itemThemes = (item.getAttribute('data-themes') || '').split(' ').filter(Boolean);
-        const okType = state.type === 'all' || itemType === state.type;
-        const okTheme = state.theme === 'all' || itemThemes.includes(state.theme);
-        const show = okType && okTheme;
-        item.style.display = show ? '' : 'none';
-        if (show) visible++;
-      }
-    }
-
-    function syncChipsFromState() {
-      filters.querySelectorAll<HTMLButtonElement>('[data-filter-type]').forEach((btn) => {
-        btn.classList.toggle('on', btn.dataset.filterType === state.type);
-      });
-      filters.querySelectorAll<HTMLButtonElement>('[data-filter-theme]').forEach((btn) => {
-        btn.classList.toggle('on', btn.dataset.filterTheme === state.theme);
-      });
-    }
-
-    filters.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-filter-type], button[data-filter-theme]');
-      if (!btn) return;
-      if (btn.dataset.filterType) state.type = btn.dataset.filterType;
-      if (btn.dataset.filterTheme) state.theme = btn.dataset.filterTheme;
-      syncChipsFromState();
-      applyFilters();
-      writeHash();
-    });
-
-    // Init from URL hash
-    const initial = readHash();
-    state.type = initial.type;
-    state.theme = initial.theme;
-    syncChipsFromState();
-    applyFilters();
-  })();
-</script>
+  <SommairePanel docs={sommaire} />
+  <LettreBand />
+</PageShell>

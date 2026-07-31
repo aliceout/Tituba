@@ -13,10 +13,10 @@
  * Rien n'y est saisi : libellés, descriptions et racines d'URL viennent
  * de la table PUBLICATIONS, les compteurs d'une requête SQL unique.
  */
-import Layout from '../../layouts/Layout.astro';
-import Hero from '../../components/Hero.astro';
+import PageShell from '../../components/ui/PageShell.astro';
 import FormatIcon from '../../components/FormatIcon.astro';
 import { fetchFeed, PUBLICATIONS, PUBLICATION_ORDER } from '../../lib/publications';
+import { formatHeroTitle } from '../../lib/site';
 
 /** Familles de couleur, distribuées dans l'ordre éditorial. */
 const FAMILLES = ['bleu', 'vert', 'jaune'] as const;
@@ -47,79 +47,77 @@ function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
 }
 ---
 
-<Layout
-  title="Formats"
-  description="Les cinq formats de publication de Tituba : articles de recherche, billets d'analyse, billets d'actu, podcasts et outils."
+<PageShell
+  documentTitle="Formats"
+  description="Les cinq formats de publication de Tituba : articles de recherche, analyses, actus, podcasts et outils."
+  title={formatHeroTitle('Cinq *formats*, une même exigence.')}
+  lede="Un texte long avec son appareil de notes n'appelle pas la même lecture qu'un rebond d'actualité ou qu'un kit d'animation. Chaque format a sa place, ses codes et sa page."
 >
-  <Hero
-    kicker={`Formats · ${PUBLICATION_ORDER.length} manières de publier`}
-    title="Cinq *formats*, une même exigence."
-    lede="Un texte long avec son appareil de notes n'appelle pas la même lecture qu'un rebond d'actualité ou qu'un kit d'animation. Chaque format a sa place, ses codes et sa page."
-  />
-
-  <section class="container formats-list">
-    <div class="grid">
-      {PUBLICATION_ORDER.map((c, i) => {
-        const spec = PUBLICATIONS[c];
-        const n = counts[c] ?? 0;
-        return (
-          <a
-            class="format-card"
-            data-famille={FAMILLES[i % FAMILLES.length]}
-            href={`${spec.routePrefix}/`}
-          >
-            <div class="left">
-              <div class="ty mono">
-                <FormatIcon collection={c} />
-                {spec.routePrefix}
-              </div>
-              <div class="t">{spec.labelPlural}</div>
-              <p class="desc">{spec.description}</p>
+  <div class="grid">
+    {PUBLICATION_ORDER.map((c, i) => {
+      const spec = PUBLICATIONS[c];
+      const n = counts[c] ?? 0;
+      return (
+        <a
+          class="format-card"
+          data-famille={FAMILLES[i % FAMILLES.length]}
+          href={`${spec.routePrefix}/`}
+        >
+          <div class="left">
+            <div class="ty mono">
+              <FormatIcon collection={c} />
+              {spec.routePrefix}
             </div>
-            <div class="right">{compteur(c, n)}</div>
-          </a>
-        );
-      })}
-    </div>
+            <div class="t">{spec.labelPlural}</div>
+            <p class="desc">{spec.description}</p>
+          </div>
+          <div class="right">{compteur(c, n)}</div>
+        </a>
+      );
+    })}
+  </div>
 
-    <p class="total">
-      {total} publication{total > 1 ? 's' : ''} en ligne, tous formats confondus.
-      <a href="/archives/">Voir les archives →</a>
-    </p>
-  </section>
-</Layout>
+  <p class="total">
+    {total} publication{total > 1 ? 's' : ''} en ligne, tous formats confondus.
+    <a href="/archives/">Voir les archives →</a>
+  </p>
+</PageShell>
 
 <style>
-  .container {
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: 0 var(--page-gutter);
-  }
+  /* Gouttière et rythme vertical viennent de PageShell : cette page ne
+     déclare plus que sa grille propre. */
 
-  .formats-list {
-    padding-top: 40px;
-    padding-bottom: 40px;
-  }
-
-  /* Une colonne, pas deux comme /themes/ : il n'y a que cinq entrées, et
-     chacune porte une description d'une ligne et demie. Sur deux colonnes
-     elles se liraient en zigzag pour gagner deux centimètres de hauteur. */
+  /* Deux colonnes, comme /themes/ : même registre de taxonomie, même
+     grille. Cinq entrées donnent une colonne impaire d'une carte de
+     plus que la paire — la dernière reste seule à gauche, cellule vide
+     à sa droite, ce qui est aussi ce que /themes/ ferait avec un
+     nombre impair de thèmes. */
   .grid {
     display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 0;
   }
 
   .format-card {
     display: grid;
-    grid-template-columns: 1fr 180px;
+    grid-template-columns: 1fr 140px;
     gap: 24px;
-    padding: 26px 0;
+    padding: 24px 0;
     border-top: 1px solid var(--color-rule);
     align-items: baseline;
     color: inherit;
     transition: color 0.12s;
   }
-  .format-card:last-child {
+  .format-card:nth-child(odd) {
+    padding-right: 24px;
+    border-right: 1px solid var(--color-rule);
+  }
+  .format-card:nth-child(even) {
+    padding-left: 24px;
+  }
+  /* Les deux dernières cartes ferment la grille en bas — sur cinq
+     entrées, ce sont les positions 4 et 5. */
+  .format-card:nth-last-child(-n + 2) {
     border-bottom: 1px solid var(--color-rule);
   }
 
@@ -150,9 +148,9 @@ function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
   }
   .format-card .t {
     font-family: var(--font-serif);
-    font-size: 26px;
-    line-height: 1.15;
-    font-weight: 400;
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: var(--w-heading);
     letter-spacing: -0.02em;
     margin: 0 0 8px;
     transition: color 0.12s;
@@ -163,7 +161,6 @@ function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
     line-height: 1.55;
     color: var(--color-muted);
     margin: 0;
-    max-width: 60ch;
   }
   .format-card .right {
     font-family: var(--font-mono);
@@ -184,11 +181,24 @@ function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
   }
 
   @media (max-width: 900px) {
-    .container {
-      padding: 0 var(--page-gutter-narrow);
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .format-card:nth-child(odd) {
+      padding-right: 0;
+      border-right: 0;
+    }
+    .format-card:nth-child(even) {
+      padding-left: 0;
+    }
+    .format-card:nth-last-child(-n + 2) {
+      border-bottom: 0;
+    }
+    .format-card:last-child {
+      border-bottom: 1px solid var(--color-rule);
     }
     /* Le compteur passe sous la description plutôt que de comprimer le
-       titre dans une colonne de 180 px. */
+       titre dans une colonne de 140 px. */
     .format-card {
       grid-template-columns: 1fr;
       gap: 10px;

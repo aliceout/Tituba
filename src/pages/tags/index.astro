@@ -5,10 +5,9 @@
  * Hero + liste alphabétique des tags avec leur compteur d'usages.
  * Couvre l'ex-issue #7 (index alphabétique des mots-clés).
  */
-import Layout from '../../layouts/Layout.astro';
-import Hero from '../../components/Hero.astro';
-import { fetchCollection,   fetchPublicationCounts,
-} from '../../lib/payload';
+import PageShell from '../../components/ui/PageShell.astro';
+import { fetchCollection, fetchPublicationCounts } from '../../lib/payload';
+import { formatHeroTitle } from '../../lib/site';
 
 type Tag = {
   id: number | string;
@@ -36,20 +35,15 @@ try {
 // Alphabétique strict (les tags sont non-éditoriaux : pas de tri par
 // usage prioritaire comme pour les thèmes)
 const sorted = tags.slice().sort((a, b) => a.name.localeCompare(b.name, 'fr'));
-const total = sorted.length;
 ---
 
-<Layout
-  title="Tags"
-  description="Tous les mots-clés utilisés dans le Tituba — index alphabétique."
+<PageShell
+  documentTitle="Tags"
+  description="Tous les mots-clés utilisés sur Tituba — index alphabétique."
+  title={formatHeroTitle('Les *tags* de Tituba.')}
+  lede="Mots-clés libres ajoutés au fil des publications. Cliquer sur un tag mène à la liste des publications qui l'utilisent."
+  famille="violet"
 >
-  <Hero
-    kicker={`Index · ${total} tag${total > 1 ? 's' : ''}`}
-    title="Les <em>tags</em> de Tituba."
-    lede="Mots-clés libres ajoutés au fil des billets. Cliquer sur un tag mène à la liste des billets qui l'utilisent."
-  />
-
-  <section class="container tags-list">
     {sorted.length === 0 ? (
       <p class="empty">Aucun tag pour l'instant.</p>
     ) : (
@@ -70,21 +64,11 @@ const total = sorted.length;
         })}
       </ul>
     )}
-  </section>
-</Layout>
+</PageShell>
 
 <style>
-  .container {
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: 0 var(--page-gutter);
-  }
-
-  .tags-list {
-    padding-top: 40px;
-    padding-bottom: 64px;
-  }
-  .tags-list .empty {
+  /* Gouttière et rythme vertical viennent de PageShell. */
+  .empty {
     padding: 64px 0;
     color: var(--color-muted);
     text-align: center;
@@ -117,8 +101,9 @@ const total = sorted.length;
   .tag-card:hover {
     background: var(--color-citation-bg);
   }
+  /* Violet, comme /themes/ : les tags sont l'autre taxonomie du site. */
   .tag-card:hover .name {
-    color: var(--color-accent);
+    color: var(--c-violet-deep);
   }
   .tag-card .slug {
     font-family: var(--font-mono);
@@ -135,11 +120,5 @@ const total = sorted.length;
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--color-muted);
-  }
-
-  @media (max-width: 900px) {
-    .container {
-      padding: 0 var(--page-gutter-narrow);
-    }
   }
 </style>

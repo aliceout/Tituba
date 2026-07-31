@@ -1,0 +1,235 @@
+---
+/** Bloc « Par flux RSS » — URL du flux avec bouton copier, lecteurs
+ *  recommandés en accordéon, note de pied vers la page Wikipédia. */
+import Heading from '../ui/Heading.astro';
+import Lede from '../ui/Lede.astro';
+import Panel from '../ui/Panel.astro';
+import Button from '../ui/Button.astro';
+
+interface Props {
+  feedUrl: string;
+}
+
+const { feedUrl } = Astro.props;
+---
+
+<Heading>Par flux RSS</Heading>
+<Lede>
+  Le RSS est une façon simple de recevoir les nouveaux billets dans une
+  application dédiée. Vous ajoutez l'URL ci-dessous à votre lecteur de
+  flux, et chaque nouveau billet apparaît automatiquement.
+</Lede>
+
+<Panel famille="vert" padding="serre" class="url-block">
+  <div class="lbl">URL du flux</div>
+  <div class="url-row">
+    <code>{feedUrl}</code>
+    <Button
+      ton="contour"
+      famille="vert"
+      class="copy-btn"
+      data-url={feedUrl}
+      aria-label="Copier l'URL du flux"
+    >
+      Copier
+    </Button>
+  </div>
+  <p class="hint">
+    Vous pouvez aussi <a href="/rss.xml">ouvrir le flux directement</a> —
+    c'est un fichier XML, pas conçu pour la lecture humaine.
+  </p>
+</Panel>
+
+<details class="readers-accordion">
+  <summary>Quelques lecteurs recommandés</summary>
+  <ul class="readers">
+    <li>
+      <a href="https://feedly.com/" rel="noopener" class="ext">Feedly</a>
+      — le plus connu, web et mobile, version gratuite suffisante.
+    </li>
+    <li>
+      <a href="https://netnewswire.com/" rel="noopener" class="ext">NetNewsWire</a>
+      <span class="oss" title="Logiciel libre / open source">open source</span>
+      — léger, macOS et iOS.
+    </li>
+    <li>
+      <a href="https://www.inoreader.com/" rel="noopener" class="ext">Inoreader</a>
+      — multi-plateformes, organisation poussée.
+    </li>
+    <li>
+      <a href="https://www.thunderbird.net/" rel="noopener" class="ext">Thunderbird</a>
+      <span class="oss" title="Logiciel libre / open source">open source</span>
+      — le client mail de Mozilla lit aussi les flux RSS.
+    </li>
+  </ul>
+</details>
+
+<p class="footnote">
+  Pas familier avec RSS ? La <a
+    href="https://fr.wikipedia.org/wiki/RSS"
+    rel="noopener"
+    class="ext">page Wikipédia</a
+  > donne une bonne vue d'ensemble.
+</p>
+
+<style>
+  /* La forme vient de Panel : fond de famille dilué, rayon des
+     panneaux du site. Il ne reste ici que la marge basse. */
+  .url-block {
+    margin-bottom: 32px;
+  }
+  /* Ciblage direct : .url-block vit sur la racine de Panel, qui a sa
+     propre portée de style. Un sélecteur descendant depuis elle ne
+     matcherait rien. */
+  .lbl {
+    font-family: var(--font-mono);
+    font-size: var(--t-label);
+    letter-spacing: var(--ls-label);
+    text-transform: uppercase;
+    color: var(--c-vert-deep);
+    margin-bottom: 12px;
+  }
+  .url-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .url-row code {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--color-ink);
+    word-break: break-all;
+    flex: 1 1 280px;
+    min-width: 0;
+  }
+  .copy-btn.copied {
+    background: var(--c-vert-fill);
+    color: var(--c-vert-on);
+  }
+  /* --c-panel-mute et non --color-muted : le second est calibré sur le
+     fond de page, et tombe à 4,24:1 sur une teinte de panneau. */
+  .hint {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--c-panel-mute);
+    margin: 14px 0 0;
+  }
+  .hint a {
+    color: var(--c-vert-deep);
+    border-bottom: 1px dotted var(--c-vert-deep);
+  }
+
+  .readers-accordion {
+    margin: 32px 0;
+    border-top: 1px solid var(--color-rule);
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .readers-accordion summary {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 600;
+    padding: 16px 0;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--color-ink);
+  }
+  .readers-accordion summary::-webkit-details-marker {
+    display: none;
+  }
+  .readers-accordion summary::before {
+    content: '+';
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--c-vert-deep);
+    width: 1ch;
+    transition: transform 0.15s;
+  }
+  .readers-accordion[open] summary::before {
+    content: '−';
+  }
+  .readers-accordion summary:hover {
+    color: var(--c-vert-deep);
+  }
+  .readers-accordion summary:focus-visible {
+    outline: 2px solid var(--c-vert-deep);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .readers {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--color-body);
+    list-style: none;
+    padding: 0 0 16px;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .readers a.ext {
+    color: var(--color-ink);
+    border-bottom: 1px solid var(--c-vert-deep);
+    font-weight: 500;
+  }
+  .readers a.ext:hover {
+    color: var(--c-vert-deep);
+  }
+  .readers .oss {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--c-vert-deep);
+    border: 1px solid var(--c-vert-deep);
+    border-radius: 999px;
+    padding: 1px 8px;
+    margin-left: 6px;
+    vertical-align: 2px;
+    cursor: help;
+  }
+
+  .footnote {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--color-muted);
+    margin: 0;
+  }
+  .footnote a.ext {
+    color: var(--color-muted);
+    border-bottom: 1px dotted var(--color-muted);
+  }
+  .footnote a.ext:hover {
+    color: var(--c-vert-deep);
+    border-bottom-color: var(--c-vert-deep);
+  }
+</style>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>('.copy-btn');
+  if (btn) {
+    const original = btn.textContent ?? 'Copier';
+    btn.addEventListener('click', async () => {
+      const url = btn.dataset.url;
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        btn.textContent = 'Copié ✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 1800);
+      } catch (err) {
+        console.warn('clipboard:', err);
+      }
+    });
+  }
+</script>

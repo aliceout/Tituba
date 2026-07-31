@@ -1,0 +1,77 @@
+---
+/**
+ * Titre intermédiaire — « Par mail », « Par flux RSS », « Au sommaire »…
+ *
+ * Prose donne déjà la bonne échelle aux `<h2>` et `<h3>` qu'elle
+ * contient, mais rien n'oblige une page à passer par elle : il suffit
+ * d'écrire un `<h2>` ailleurs pour retrouver les valeurs par défaut du
+ * navigateur, ou pire, d'en redéfinir de nouvelles. Ce composant ferme
+ * cette porte — un titre de section s'écrit d'une seule façon.
+ *
+ * `niveau` porte la hiérarchie du document, `taille` l'apparence. Les
+ * deux sont séparés parce qu'ils ne répondent pas à la même question :
+ * un h3 peut avoir à ressembler à un h2 quand la structure l'impose,
+ * sans qu'on doive mentir sur le plan du document.
+ */
+interface Props {
+  /** Niveau réel dans le plan du document. */
+  niveau?: 2 | 3 | 4;
+  /** Apparence, si elle doit différer du niveau. */
+  taille?: 'h2' | 'h3';
+  /** Famille de couleur. L'encre par défaut. */
+  famille?: 'encre' | 'bleu' | 'vert' | 'jaune' | 'violet';
+  class?: string;
+}
+
+const {
+  niveau = 2,
+  taille,
+  famille = 'encre',
+  class: className,
+} = Astro.props;
+
+const Tag = `h${niveau}` as 'h2' | 'h3' | 'h4';
+const apparence = taille ?? (niveau === 2 ? 'h2' : 'h3');
+---
+
+<Tag class:list={['titre', `t-${apparence}`, className]} data-famille={famille}>
+  <slot />
+</Tag>
+
+<style>
+  .titre {
+    font-family: var(--font-serif);
+    font-weight: var(--w-heading);
+    line-height: var(--lh-heading);
+    letter-spacing: var(--ls-display);
+    /* Marge haute nettement plus grande que la basse : un titre
+       appartient à ce qui le suit, pas à ce qui le précède. */
+    margin-block: 52px 14px;
+  }
+  .t-h2 {
+    font-size: var(--t-h2);
+  }
+  .t-h3 {
+    font-size: var(--t-h3);
+    margin-block: 36px 12px;
+  }
+  .titre:first-child {
+    margin-top: 0;
+  }
+
+  [data-famille='encre'] {
+    color: var(--color-ink);
+  }
+  [data-famille='bleu'] {
+    color: var(--c-bleu-deep);
+  }
+  [data-famille='vert'] {
+    color: var(--c-vert-deep);
+  }
+  [data-famille='jaune'] {
+    color: var(--c-jaune-deep);
+  }
+  [data-famille='violet'] {
+    color: var(--c-violet-deep);
+  }
+</style>

@@ -13,7 +13,7 @@
 import FormatIcon from './FormatIcon.astro';
 import { PUBLICATIONS, publicationHref, readingLabelFor } from '../lib/publications';
 import type { FeedDoc } from '../lib/payload';
-import { formatDateFr, formatNumero } from '../lib/site';
+import { formatDateFr, formatNumero, stripHeroMarkers } from '../lib/site';
 
 export interface Props {
   doc: FeedDoc & { durationSeconds?: number | null };
@@ -79,13 +79,12 @@ const signature =
 ---
 
 <section class="featured">
-  <div class="container">
-    <div class="head">
-      <span class="label">À la une</span>
-      {eyebrow && <span class="eyebrow">{eyebrow}</span>}
-    </div>
+  <div class="head">
+    <span class="label">À la une</span>
+    {eyebrow && <span class="eyebrow">{eyebrow}</span>}
+  </div>
 
-    <div class:list={['bloc', { 'bloc--scinde': scinde }]}>
+  <div class:list={['bloc', { 'bloc--scinde': scinde }]}>
     <div class="card">
       {/* Format à gauche, date à droite — la ligne de tête reprend la
           composition de l'étiquette de section juste au-dessus. La date
@@ -102,7 +101,7 @@ const signature =
         )}
       </div>
 
-      <h2><a href={href}>{doc.title}</a></h2>
+      <h2><a href={href}>{stripHeroMarkers(doc.title)}</a></h2>
 
       {doc.lede && <p class="lede">{doc.lede}</p>}
 
@@ -121,19 +120,16 @@ const signature =
       </div>
     </div>
 
-      {scinde && <slot name="aside" />}
-    </div>
+    {scinde && <slot name="aside" />}
   </div>
 </section>
 
 <style>
-  .container {
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: 0 var(--page-gutter);
-  }
+  /* Pas de padding-top : PageShell.page-body le porte déjà. Un top ici
+     doublerait l'écart avec le hero — exactement le défaut qu'on a eu
+     en rendant ce Container systématique. */
   .featured {
-    padding: var(--block-gap) 0 var(--block-gap);
+    padding: 0 0 var(--block-gap);
   }
 
   /* Ligne de section, hors de la carte : intitulé à gauche, repère
@@ -327,9 +323,6 @@ const signature =
   }
 
   @media (max-width: 900px) {
-    .container {
-      padding: 0 var(--page-gutter-narrow);
-    }
     /* La carte garde son fond mais perd ses marges généreuses : à cette
        largeur, 64 px de padding ne laisseraient plus de place au texte. */
     .card {

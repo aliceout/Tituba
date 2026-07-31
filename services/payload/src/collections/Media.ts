@@ -44,6 +44,24 @@ export const Media: CollectionConfig = {
       type: 'text',
       required: true,
     },
+    // Rempli automatiquement à l'import depuis le picker Unsplash (cf.
+    // endpoints/unsplash.ts) — vide pour un média uploadé à la main.
+    // Sert au crédit obligatoire (conditions d'utilisation Unsplash),
+    // affiché à la fois dans l'admin et sur la page publique.
+    {
+      name: 'unsplash',
+      type: 'group',
+      admin: {
+        readOnly: true,
+        description: 'Rempli automatiquement pour les images importées depuis Unsplash.',
+      },
+      fields: [
+        { name: 'photoId', type: 'text' },
+        { name: 'photographerName', type: 'text' },
+        { name: 'photographerProfileUrl', type: 'text' },
+        { name: 'photoPageUrl', type: 'text' },
+      ],
+    },
   ],
   upload: true,
 }

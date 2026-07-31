@@ -16,7 +16,7 @@
  */
 import { PUBLICATIONS, publicationHref, readingLabelFor } from '../lib/publications';
 import type { FeedDoc } from '../lib/payload';
-import { formatNumero } from '../lib/site';
+import { formatNumero, stripHeroMarkers } from '../lib/site';
 
 export interface Props {
   docs: Array<FeedDoc & { durationSeconds?: number | null }>;
@@ -36,41 +36,34 @@ function jourMois(iso: string | null): string {
 
 {docs.length > 0 && (
   <section class="sommaire">
-    <div class="container">
-      <div class="panel">
-        <div class="head">
-          <span class="label">Au sommaire</span>
-          <a class="all" href={allHref}>Tout lire →</a>
-        </div>
-
-        <ul class="rows">
-          {docs.map((d) => {
-            const spec = PUBLICATIONS[d.collection] ?? PUBLICATIONS.articles;
-            const duree = readingLabelFor(d.collection, d);
-            return (
-              <li>
-                <a href={publicationHref(d.collection, d.slug ?? '')}>
-                  <span class="num">{d.numero != null ? formatNumero(d.numero) : ''}</span>
-                  <span class="fmt">{spec.badge}</span>
-                  <span class="titre">{d.title}</span>
-                  <span class="duree">{duree}</span>
-                  <span class="date">{jourMois(d.publishedAt)} →</span>
-                </a>
-              </li>
-            );
-          })}
-        </ul>
+    <div class="panel">
+      <div class="head">
+        <span class="label">Au sommaire</span>
+        <a class="all" href={allHref}>Tout lire →</a>
       </div>
+
+      <ul class="rows">
+        {docs.map((d) => {
+          const spec = PUBLICATIONS[d.collection] ?? PUBLICATIONS.articles;
+          const duree = readingLabelFor(d.collection, d);
+          return (
+            <li>
+              <a href={publicationHref(d.collection, d.slug ?? '')}>
+                <span class="num">{d.numero != null ? formatNumero(d.numero) : ''}</span>
+                <span class="fmt">{spec.badge}</span>
+                <span class="titre">{stripHeroMarkers(d.title)}</span>
+                <span class="duree">{duree}</span>
+                <span class="date">{jourMois(d.publishedAt)} →</span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   </section>
 )}
 
 <style>
-  .container {
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: 0 var(--page-gutter);
-  }
   /* Pas de marge haute : la carte de la une ferme déjà par 40 px. Les
      cumuler donnait 80 px ici contre 40 partout ailleurs, et le
      sommaire semblait décroché du reste de la page. */
@@ -175,9 +168,6 @@ function jourMois(iso: string | null): string {
   }
 
   @media (max-width: 900px) {
-    .container {
-      padding: 0 var(--page-gutter-narrow);
-    }
     .panel {
       padding: 22px 20px 12px;
       border-radius: 18px;

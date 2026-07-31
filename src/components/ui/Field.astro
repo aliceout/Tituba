@@ -1,0 +1,157 @@
+---
+/**
+ * Champ de saisie accompagné de son bouton d'envoi.
+ *
+ * Les angles reprennent la pastille de la bande « Nous suivre » de
+ * l'accueil : rayon complet, filet fin, bouton plein à l'intérieur. Le
+ * champ était auparavant un rectangle à angles vifs et le bouton un
+ * carré de 4 px de rayon — deux formes qui ne se retrouvaient nulle
+ * part ailleurs sur le site, où tout est soit une pastille soit un
+ * panneau largement arrondi.
+ *
+ * Pensé pour vivre dans un Panel : la pastille remplit la largeur qui
+ * lui est donnée plutôt que de la contraindre, et son filet est fin —
+ * elle est déjà posée sur une teinte, un trait épais ferait deux
+ * bordures concentriques.
+ *
+ * Le composant ne gère que la forme. La soumission, la validation et le
+ * message d'état restent à l'appelant : ce sont des comportements
+ * propres à chaque formulaire, et les enfermer ici obligerait à les
+ * paramétrer un par un.
+ */
+import Button from './Button.astro';
+
+interface Props {
+  id: string;
+  /** Libellé, lu par les lecteurs d'écran. Masqué visuellement quand le
+   *  contexte le rend évident. */
+  label: string;
+  labelVisible?: boolean;
+  type?: 'email' | 'text' | 'search';
+  name?: string;
+  placeholder?: string;
+  required?: boolean;
+  autocomplete?: string;
+  /** Texte du bouton. Sans lui, le champ est rendu seul. */
+  action?: string;
+  famille?: 'bleu' | 'vert' | 'jaune' | 'violet';
+}
+
+const {
+  id,
+  label,
+  labelVisible = false,
+  type = 'text',
+  name,
+  placeholder,
+  required,
+  autocomplete,
+  action,
+  famille = 'vert',
+} = Astro.props;
+---
+
+<div class="champ" data-famille={famille}>
+  <label class:list={['lbl', { 'visually-hidden': !labelVisible }]} for={id}>
+    {label}
+  </label>
+  <div class="rangee">
+    <input
+      id={id}
+      type={type}
+      name={name ?? id}
+      placeholder={placeholder}
+      required={required}
+      autocomplete={autocomplete}
+      spellcheck="false"
+    />
+    {action && (
+      <Button type="submit" ton="plein" famille={famille}>{action}</Button>
+    )}
+  </div>
+</div>
+
+<style>
+  .champ[data-famille='bleu'] {
+    --fam: var(--c-bleu-deep);
+    --fam-fill: var(--c-bleu-fill);
+    --fam-on: var(--c-bleu-on);
+  }
+  .champ[data-famille='vert'] {
+    --fam: var(--c-vert-deep);
+    --fam-fill: var(--c-vert-fill);
+    --fam-on: var(--c-vert-on);
+  }
+  .champ[data-famille='jaune'] {
+    --fam: var(--c-jaune-deep);
+    --fam-fill: var(--c-jaune-fill);
+    --fam-on: var(--c-jaune-on);
+  }
+  .champ[data-famille='violet'] {
+    --fam: var(--c-violet-deep);
+    --fam-fill: var(--c-violet);
+    --fam-on: #ffffff;
+  }
+
+  .lbl {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--t-label);
+    letter-spacing: var(--ls-label);
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 10px;
+  }
+
+  /* Une seule pastille contenant le champ et le bouton, comme celle de
+     la bande « Nous suivre ». Le rembourrage droit est réduit pour que
+     le bouton vienne se loger dans le filet sans le toucher. */
+  .rangee {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 5px 5px 16px;
+    border: 1px solid color-mix(in srgb, var(--fam) 35%, transparent);
+    border-radius: 999px;
+    background: var(--color-paper);
+    transition: border-color 0.12s;
+  }
+  .rangee:focus-within {
+    border-color: var(--fam);
+  }
+
+  input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background: none;
+    padding: 7px 0;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--color-ink);
+  }
+  input::placeholder {
+    color: var(--color-muted);
+  }
+  /* Le contour de focus est porté par la pastille, pas par le champ :
+     un liseré rectangulaire à l'intérieur d'une forme arrondie. */
+  input:focus {
+    outline: none;
+  }
+
+
+  @media (max-width: 560px) {
+    /* Sous cette largeur la pastille comprimerait le champ à quelques
+       caractères : les deux se séparent et s'empilent. */
+    .rangee {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+      border-radius: 22px;
+      padding: 14px;
+    }
+    input {
+      padding: 4px 8px;
+    }
+  }
+</style>

@@ -442,6 +442,59 @@ const POSTS: SeedPost[] = [
   },
 ];
 
+// Auteur·ices internes fictives, pour tester les pages /auteurice/<id>/
+// et /auteurices/ (cf plan « pages publiques auteur·ice »). Mot de passe
+// >= 12 caractères pour passer le hook de politique de Users.ts — ces
+// comptes ne servent qu'à peupler `authors`, jamais à se connecter.
+type SeedUser = {
+  email: string;
+  password: string;
+  displayName: string;
+  role: 'editor' | 'admin';
+};
+
+const USERS: SeedUser[] = [
+  {
+    email: 'jeanne.dupont@tituba.example',
+    password: 'seed-dev-mot-de-passe-1',
+    displayName: 'Jeanne Dupont',
+    role: 'editor',
+  },
+  {
+    email: 'aicha.toure@tituba.example',
+    password: 'seed-dev-mot-de-passe-2',
+    displayName: 'Aïcha Touré',
+    role: 'editor',
+  },
+];
+
+/**
+ * Auteur·ices à rattacher à quelques billets existants, par slug. Mixe
+ * interne (kind='user', par email → résolu vers l'id) et externe
+ * (kind='external', texte libre) pour couvrir les deux cas dans les
+ * pages publiques : un seul·e auteur·ice interne, plusieurs, un mélange
+ * interne + externe, et un externe seul (jamais cliquable).
+ */
+const POST_AUTHORS: Record<
+  string,
+  Array<
+    | { kind: 'user'; email: string }
+    | { kind: 'external'; name: string; affiliation?: string }
+  >
+> = {
+  'homonationalisme-diplomatie': [
+    { kind: 'user', email: 'jeanne.dupont@tituba.example' },
+    { kind: 'external', name: 'Marc Lefèvre', affiliation: 'LATTS' },
+  ],
+  'directive-2024-1346': [{ kind: 'user', email: 'aicha.toure@tituba.example' }],
+  'antigenre-international': [{ kind: 'external', name: 'Camille Roy' }],
+  'wps-1325': [{ kind: 'user', email: 'jeanne.dupont@tituba.example' }],
+  'centrafrique-terrains': [
+    { kind: 'user', email: 'jeanne.dupont@tituba.example' },
+    { kind: 'user', email: 'aicha.toure@tituba.example' },
+  ],
+};
+
 // Identité fictive utilisée par le seed dev — à remplacer par les
 // vraies valeurs depuis l'admin Payload (global Site + page About)
 // après le premier boot. Les données ci-dessous existent uniquement
@@ -736,6 +789,33 @@ async function main() {
     console.log(`[seed-dev] +biblio ${entry.slug}`);
   }
 
+  // 2bis. Users — auteur·ices fictives pour tester les pages
+  // /auteurice/<id>/ et /auteurices/ (cf plan « pages publiques
+  // auteur·ice »). `create` est verrouillé côté access (invitation
+  // uniquement), d'où `overrideAccess: true` ici.
+  const userIdByEmail = new Map<string, number | string>();
+  for (const u of USERS) {
+    const found = await payload.find({
+      collection: 'users',
+      where: { email: { equals: u.email } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    });
+    if (found.docs[0]) {
+      userIdByEmail.set(u.email, (found.docs[0] as { id: number | string }).id);
+      console.log(`[seed-dev] SKIP user ${u.email} (existe)`);
+      continue;
+    }
+    const created = await payload.create({
+      collection: 'users',
+      data: { email: u.email, password: u.password, displayName: u.displayName, role: u.role },
+      overrideAccess: true,
+    });
+    userIdByEmail.set(u.email, (created as { id: number | string }).id);
+    console.log(`[seed-dev] +user ${u.email}`);
+  }
+
   // 3. Posts
   for (const post of POSTS) {
     const collection = TYPE_TO_COLLECTION[post.type] ?? 'analyses';
@@ -766,6 +846,44 @@ async function main() {
       overrideAccess: true,
     });
     console.log(`[seed-dev] +${collection} n°${post.numero} ${post.slug}`);
+  }
+
+  // 3bis. Rattache les auteur·ices de POST_AUTHORS aux billets déjà
+  // présents en base (créés à l'instant ou pré-existants — la boucle
+  // Posts ci-dessus les SKIP sans toucher `authors`). Ne touche que les
+  // billets dont `authors` est encore vide, pour ne jamais écraser une
+  // édition faite depuis l'admin après un premier seed.
+  const slugToCollection = new Map(
+    POSTS.map((p) => [p.slug, TYPE_TO_COLLECTION[p.type] ?? 'analyses'] as const),
+  );
+  for (const [slug, entries] of Object.entries(POST_AUTHORS)) {
+    const collection = slugToCollection.get(slug);
+    if (!collection) {
+      console.warn(`[seed-dev] POST_AUTHORS: slug ${slug} absent de POSTS, ignoré`);
+      continue;
+    }
+    const existing = await findBySlug(payload, collection, slug);
+    if (!existing) {
+      console.warn(`[seed-dev] POST_AUTHORS: ${collection}/${slug} introuvable en base, ignoré`);
+      continue;
+    }
+    const currentAuthors = (existing as { authors?: unknown[] }).authors;
+    if (currentAuthors && currentAuthors.length > 0) {
+      console.log(`[seed-dev] SKIP authors ${collection}/${slug} (déjà renseignés)`);
+      continue;
+    }
+    const authors = entries.map((e) =>
+      e.kind === 'user'
+        ? { kind: 'user' as const, user: userIdByEmail.get(e.email) }
+        : { kind: 'external' as const, name: e.name, affiliation: e.affiliation },
+    );
+    await payload.update({
+      collection: collection as never,
+      id: (existing as { id: number | string }).id,
+      data: { authors },
+      overrideAccess: true,
+    });
+    console.log(`[seed-dev] +authors ${collection}/${slug} (${authors.length})`);
   }
 
   // 4. Page À propos — avec sections Prose

@@ -1,0 +1,226 @@
+---
+/**
+ * Corps Lexical rendu côté serveur — lettrine, justify+hyphens,
+ * blockquote, notes/citations inline, figures, et le mode sidenotes
+ * (notes en marge, cf issue #6). Un seul fichier parce que c'est un
+ * seul sujet : comment on habille le HTML que renderLexicalWithFootnotes
+ * / renderLexicalSidenotes produit.
+ */
+interface Props {
+  html: string;
+}
+
+const { html } = Astro.props;
+---
+
+<div class="body-grid">
+  <div class="col" id="intro">
+    <Fragment set:html={html} />
+  </div>
+</div>
+
+<style>
+  .body-grid {
+    margin: 0;
+  }
+  .body-grid .col {
+    font-family: var(--font-serif);
+    font-size: 19px;
+    line-height: 1.7;
+    color: var(--color-body);
+  }
+  .body-grid .col :global(p) {
+    margin: 0 0 1.2em;
+  }
+  /* Lettrine sur le tout premier paragraphe du corps */
+  .body-grid .col :global(p:first-of-type::first-letter) {
+    float: left;
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 90px;
+    line-height: 0.82;
+    margin: 8px 10px 0 0;
+    color: var(--color-ink);
+  }
+  body.no-lettrine .body-grid .col :global(p:first-of-type::first-letter) {
+    float: none;
+    font-size: inherit;
+    font-weight: inherit;
+    margin: 0;
+    line-height: inherit;
+  }
+  body.justify .body-grid .col :global(p),
+  body.justify .body-grid .col :global(li) {
+    text-align: justify;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+  }
+  .body-grid .col :global(h2) {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin: 48px 0 16px;
+    font-family: var(--font-serif);
+    text-align: left;
+  }
+  .body-grid .col :global(h3) {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 32px 0 12px;
+  }
+  .body-grid .col :global(blockquote) {
+    font-size: 22px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin: 36px 0;
+    padding: 0 0 0 22px;
+    border-left: 2px solid var(--color-accent);
+    text-align: left;
+  }
+  .body-grid .col :global(a.ext) {
+    border-bottom: 1px solid var(--color-accent);
+    color: inherit;
+  }
+  .body-grid .col :global(a.int) {
+    border-bottom: 1px dotted var(--color-muted);
+    color: inherit;
+  }
+  .body-grid .col :global(sup a) {
+    color: var(--color-accent);
+  }
+
+  /* ── Blocks Lexical custom (rendus par renderLexicalWithFootnotes) ── */
+
+  /* Footnote inline : <sup><a> qui pointe vers #fn-N */
+  .body-grid .col :global(.fn-mark) {
+    line-height: 0;
+    font-size: 0.78em;
+    margin-left: 1px;
+  }
+  .body-grid .col :global(.fn-mark a) {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-family: var(--font-sans);
+    font-weight: 500;
+  }
+  .body-grid .col :global(.fn-mark a:hover) {
+    text-decoration: underline;
+  }
+
+  /* BiblioInline : (Auteur, année) → #bib-<slug> */
+  .body-grid .col :global(.biblio-inline) {
+    color: var(--color-accent);
+    border-bottom: 1px dotted var(--color-accent);
+    text-decoration: none;
+    transition: color 0.12s;
+  }
+  .body-grid .col :global(.biblio-inline:hover) {
+    color: var(--color-ink);
+    border-bottom-style: solid;
+  }
+  .body-grid .col :global(.biblio-inline-empty) {
+    color: var(--color-muted);
+    font-style: italic;
+  }
+
+  /* CitationBloc — citation longue avec source (ré-utilise le style
+     blockquote existant + cite). */
+  .body-grid .col :global(.block-citation) {
+    /* hérite du style blockquote */
+  }
+  .body-grid .col :global(.citation-source) {
+    display: block;
+    margin-top: 12px;
+    font-style: normal;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--color-muted);
+    text-align: left;
+  }
+
+  /* Figure (image + légende + crédit) */
+  .body-grid .col :global(.block-figure) {
+    margin: 32px 0;
+  }
+  .body-grid .col :global(.block-figure.align-center) {
+    text-align: center;
+  }
+  .body-grid .col :global(.block-figure.align-wide) {
+    /* Ne déborde pas du body-grid en mode classic, juste plus large */
+    margin-left: -40px;
+    margin-right: -40px;
+  }
+  .body-grid .col :global(.block-figure img) {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+  .body-grid .col :global(.block-figure figcaption) {
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--color-muted);
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+  }
+  .body-grid .col :global(.block-figure .credit) {
+    font-size: 11px;
+  }
+
+  /* Mode sidenotes — notes en marge à droite (cf issue #6).
+     Activé par body.notes-sidenotes. La <aside class="marg"> est
+     rendue inline juste après le bloc qui l'appelle, et flotte à
+     droite via margin-right négatif pour sortir dans la gouttière. */
+  body.notes-sidenotes .body-grid .col {
+    padding-right: 240px;
+    position: relative;
+  }
+  body.notes-sidenotes .body-grid .col :global(.marg) {
+    float: right;
+    clear: right;
+    width: 200px;
+    margin: 4px -240px 1.4em 16px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--color-muted);
+    text-align: left;
+  }
+  body.notes-sidenotes .body-grid .col :global(.marg-num) {
+    display: inline-block;
+    margin-right: 6px;
+    color: var(--color-accent);
+    font-weight: 600;
+    font-size: 11px;
+  }
+  body.notes-sidenotes .body-grid .col :global(.marg .fn-back) {
+    display: inline-block;
+    margin-left: 6px;
+    color: var(--color-accent);
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    text-decoration: none;
+  }
+  body.notes-sidenotes .body-grid .col :global(.marg .fn-back:hover) {
+    text-decoration: underline;
+  }
+  /* Sous 1100px, plus la place pour la gouttière — fallback en bloc
+     intercalé, encadré accent à gauche pour distinguer le contenu. */
+  @media (max-width: 1100px) {
+    body.notes-sidenotes .body-grid .col {
+      padding-right: 0;
+    }
+    body.notes-sidenotes .body-grid .col :global(.marg) {
+      float: none;
+      width: auto;
+      margin: 16px 0;
+      padding: 10px 14px;
+      border-left: 2px solid var(--color-accent);
+      background: var(--color-citation-bg);
+    }
+  }
+</style>

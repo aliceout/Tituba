@@ -2,13 +2,12 @@
 /**
  * Page d'un tag individuel — /tag/<slug>/
  *
- * Hero compact (kicker mono `#slug`, h1 nom du tag, compteur + lien
- * retour vers /tags/), puis flux des billets qui ont ce tag. Calqué
- * sur /theme/<slug>/ mais sans description éditoriale (les tags sont
- * non-éditoriaux par design).
+ * Hero compact (h1 nom du tag, compteur + lien retour vers /tags/),
+ * puis flux des publications qui portent ce tag.
+ * Calqué sur /theme/<slug>/ mais sans description éditoriale (les tags
+ * sont non-éditoriaux par design).
  */
-import Layout from '../../layouts/Layout.astro';
-import Hero from '../../components/Hero.astro';
+import PageShell from '../../components/ui/PageShell.astro';
 import PublicationCard from '../../components/PublicationCard.astro';
 import {
   fetchBySlug,
@@ -49,49 +48,39 @@ try {
 const total = posts.length;
 ---
 
-<Layout
-  title={`#${tag.slug}`}
-  description={`Billets de Tituba taggés #${tag.slug}.`}
+<PageShell
+  documentTitle={`#${tag.slug}`}
+  description={`Publications de Tituba taguées #${tag.slug}.`}
+  title={tag.name}
+  famille="violet"
 >
-  <Hero
-    kicker={`Tag · #${tag.slug}`}
-    kickerVariant="mono"
-    title={tag.name}
-  >
-    <div class="hero-bottom-meta">
-      <span>{total} publication{total > 1 ? 's' : ''}</span>
-      <span aria-hidden="true">·</span>
-      <a class="back mono" href="/tags/">← tous les tags</a>
-    </div>
-  </Hero>
+  <div class="hero-bottom-meta" slot="titre-pied">
+    <span>{total} publication{total > 1 ? 's' : ''}</span>
+    <span aria-hidden="true">·</span>
+    <a class="back mono" href="/tags/">← tous les tags</a>
+  </div>
 
-  <section class="container feed">
-    {posts.length === 0 ? (
-      <p class="empty">Aucun billet sous ce tag pour l'instant.</p>
-    ) : (
-      posts.map((p) => (
-        <PublicationCard
-          collection={p.collection}
-          numero={p.numero}
-          slug={p.slug}
-          title={p.title}
-          themeSlugs={p.themeSlugs}
-          publishedAt={p.publishedAt}
-          lede={p.lede}
-          readingTime={p.readingTime}
-        />
-      ))
-    )}
-  </section>
-</Layout>
+  {posts.length === 0 ? (
+    <p class="empty">Aucune publication sous ce tag pour l'instant.</p>
+  ) : (
+    posts.map((p) => (
+      <PublicationCard
+        collection={p.collection}
+        numero={p.numero}
+        slug={p.slug}
+        title={p.title}
+        themeSlugs={p.themeSlugs}
+        publishedAt={p.publishedAt}
+        lede={p.lede}
+        readingTime={p.readingTime}
+      />
+    ))
+  )}
+</PageShell>
 
 <style>
-  .container {
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: 0 var(--page-gutter);
-  }
-
+  /* Pied du hero, propre à cette page — compteur + lien retour. Rendu
+     dans le slot par défaut de PageTitle (cf. titre-pied ci-dessus). */
   .hero-bottom-meta {
     font-family: var(--font-sans);
     font-size: 13px;
@@ -101,24 +90,19 @@ const total = posts.length;
     gap: 24px;
     align-items: center;
   }
+  /* Violet, comme /tags/ et /themes/. */
   .hero-bottom-meta .back {
-    color: var(--color-accent);
+    color: var(--c-violet-deep);
     transition: color 0.12s;
   }
   .hero-bottom-meta .back:hover {
     color: var(--color-ink);
   }
 
-  .feed .empty {
+  .empty {
     padding: 64px 0;
     color: var(--color-muted);
     text-align: center;
     font-family: var(--font-sans);
-  }
-
-  @media (max-width: 900px) {
-    .container {
-      padding: 0 var(--page-gutter-narrow);
-    }
   }
 </style>

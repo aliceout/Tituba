@@ -70,6 +70,11 @@ export const publicationsFeedEndpoint: Endpoint = {
     const offset = (page - 1) * limit;
     const theme = (url.searchParams.get('theme') ?? '').trim();
     const tag = (url.searchParams.get('tag') ?? '').trim();
+    // Id numérique d'un user — filtre la page /auteurice/<id>/. Seules
+    // les entrées internes (kind='user') portent un user_id ; une
+    // auteur·ice externe ne peut donc jamais matcher ce filtre.
+    const authorParam = url.searchParams.get('author');
+    const author = authorParam ? parseInt(authorParam, 10) : null;
     // Restreint aux publications mises à la une. Combiné à limit=1,
     // c'est ainsi que l'accueil désigne sa une.
     const featuredOnly = url.searchParams.get('featured') === '1';
@@ -93,6 +98,16 @@ export const publicationsFeedEndpoint: Endpoint = {
           SELECT 1 FROM ${sql.raw(`"${t}_rels"`)} r
           JOIN tags tg ON tg.id = r.tags_id
           WHERE r.parent_id = p.id AND tg.slug = ${tag}
+        )`);
+      }
+      if (author && Number.isFinite(author)) {
+        // Les auteur·ices vivent dans une table d'array (`<t>_authors`),
+        // pas dans `<t>_rels` comme themes/tags — ce ne sont pas des
+        // relations Payload mais des lignes imbriquées avec un
+        // discriminant `kind`. Seul `kind='user'` porte un `user_id`.
+        preds.push(sql`EXISTS (
+          SELECT 1 FROM ${sql.raw(`"${t}_authors"`)} a
+          WHERE a._parent_id = p.id AND a.kind = 'user' AND a.user_id = ${author}
         )`);
       }
       return sql`
@@ -222,5 +237,51 @@ export const publicationsCountsEndpoint: Endpoint = {
     for (const r of result.rows ?? []) counts[r.slug] = Number(r.total ?? 0);
 
     return jsonResponse({ groupBy, counts });
+  },
+};
+
+type AuthorRow = { id: number; display_name: string | null; total: number };
+
+/**
+ * Liste des auteur·ices internes (comptes Users) ayant signé au moins
+ * une publication publiée, toutes collections confondues, avec leur
+ * compte de publications. Sert /auteurices/ (index public).
+ *
+ * Pas de branchement dans `publicationsCountsEndpoint` : ce dernier
+ * suppose une jointure `<t>_rels` vers une table à `slug` (thèmes/tags).
+ * Les auteur·ices vivent dans `<t>_authors` (une table d'array, pas une
+ * relation Payload) et se rejoignent sur `users.display_name`, pas un
+ * slug — un endpoint dédié est plus simple qu'un cas particulier ici.
+ */
+export const publicationsAuthorsEndpoint: Endpoint = {
+  path: '/publications/authors',
+  method: 'get',
+  handler: async (req) => {
+    const branches = PUBLICATION_TABLES.map(
+      (t) => sql`
+        SELECT a.user_id AS user_id
+        FROM ${sql.raw(`"${t}_authors"`)} a
+        JOIN ${sql.raw(`"${t}"`)} p ON p.id = a._parent_id
+        WHERE a.kind = 'user' AND a.user_id IS NOT NULL
+          AND p.draft IS NOT TRUE AND p.published_at <= now()`,
+    );
+
+    const result = await req.payload.db.drizzle.execute<AuthorRow>(sql`
+      WITH signed AS (
+        ${sql.join(branches, sql` UNION ALL `)}
+      )
+      SELECT u.id AS id, u.display_name AS display_name, count(*)::int AS total
+      FROM signed s
+      JOIN users u ON u.id = s.user_id
+      GROUP BY u.id, u.display_name
+    `);
+
+    const docs = (result.rows ?? []).map((r) => ({
+      id: r.id,
+      displayName: r.display_name,
+      count: Number(r.total ?? 0),
+    }));
+
+    return jsonResponse({ docs });
   },
 };

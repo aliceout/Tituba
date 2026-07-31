@@ -21,39 +21,34 @@ const { href = '/abonnement/' } = Astro.props as Props;
 ---
 
 <section class="lettre">
-  <div class="container">
-    {/* Étiquette de section hors du panneau, comme « À LA UNE » : elle
-        nomme le bloc, elle n'en fait pas partie. Le libellé reprend
-        celui de l'onglet du header et de la colonne du pied — trois
-        surfaces, une seule formule pour la même chose. */}
-    <div class="head">
-      <span class="label">Nous suivre</span>
-    </div>
+  {/* Étiquette de section hors du panneau, comme « À LA UNE » : elle
+      nomme le bloc, elle n'en fait pas partie. Le libellé reprend
+      celui de l'onglet du header et de la colonne du pied — trois
+      surfaces, une seule formule pour la même chose. */}
+  <div class="head">
+    <span class="label">Nous suivre</span>
+  </div>
 
-    <div class="panel">
-      <div class="txt">
-        <div class="label">La lettre</div>
-        <p>Une fois par trimestre.</p>
-      </div>
-      <a class="cta" href={href}>
-        <span class="cta-lead">Une adresse suffit</span>
-        <span class="cta-btn">S'abonner →</span>
-      </a>
+  <div class="panel">
+    <div class="txt">
+      <div class="label">La lettre</div>
+      <p>Une fois par trimestre.</p>
     </div>
+    <a class="cta" href={href}>
+      <span class="cta-lead">Une adresse suffit</span>
+      <span class="cta-btn">S'abonner →</span>
+    </a>
   </div>
 </section>
 
 <style>
-  .container {
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: 0 var(--page-gutter);
-  }
-  /* Le pied de page apporte déjà 80 px de marge haute : cumulés aux
-     96 px d'ici, ils creusaient 176 px de vide, presque trois fois le
-     rythme de la page. */
+  /* Pas de padding-bottom : PageShell.page-body (72px) + le margin-top
+     du Footer s'en chargent déjà, exactement comme sur toute autre
+     page. En ajouter un ici recreuserait le même vide en trop qu'on a
+     déjà eu (Footer + LettreBand cumulés) avant que PageShell porte
+     systématiquement l'écart de fin de page. */
   .lettre {
-    padding: 0 0 var(--block-gap);
+    padding: 0;
   }
 
   /* Même traitement que l'étiquette de la une : mono, capitales,
@@ -130,9 +125,6 @@ const { href = '/abonnement/' } = Astro.props as Props;
   }
 
   @media (max-width: 900px) {
-    .container {
-      padding: 0 var(--page-gutter-narrow);
-    }
     .panel {
       padding: 24px 20px;
       border-radius: 18px;

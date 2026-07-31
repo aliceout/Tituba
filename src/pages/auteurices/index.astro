@@ -1,0 +1,112 @@
+---
+/**
+ * Vue d'ensemble des auteur·ices internes — /auteurices/
+ *
+ * Calque de src/pages/themes/index.astro : grille de cartes avec
+ * compteur d'usage. Seuls les comptes Users ayant signé au moins une
+ * publication publiée apparaissent (cf publicationsAuthorsEndpoint) —
+ * pas de fiche pour les auteur·ices externes (pas de compte, pas de
+ * page cf plan validé).
+ */
+import PageShell from '../../components/ui/PageShell.astro';
+import { fetchAuthorsList } from '../../lib/payload';
+
+let authors: Awaited<ReturnType<typeof fetchAuthorsList>> = [];
+try {
+  authors = await fetchAuthorsList();
+} catch (err) {
+  console.warn('[auteurices] fetch failed:', (err as Error).message);
+}
+
+// Tri : décroissant par usage, puis alpha.
+const sorted = authors.slice().sort((a, b) => {
+  if (b.count !== a.count) return b.count - a.count;
+  return (a.displayName ?? '').localeCompare(b.displayName ?? '', 'fr');
+});
+---
+
+<PageShell
+  documentTitle="Auteur·ices"
+  description="Les auteur·ices internes de Tituba et leurs publications."
+  title="Auteur·ices"
+  lede="Les membres du collectif qui signent les publications de Tituba."
+  famille="bleu"
+>
+  {sorted.length === 0 ? (
+    <p class="empty">Aucun·e auteur·ice pour l'instant.</p>
+  ) : (
+    <div class="grid">
+      {sorted.map((a) => (
+        <a class="author-card" href={`/auteurice/${a.id}/`}>
+          <div class="t">{a.displayName ?? 'Auteur·ice'}</div>
+          <div class="right">
+            {a.count} publication{a.count > 1 ? 's' : ''}
+          </div>
+        </a>
+      ))}
+    </div>
+  )}
+</PageShell>
+
+<style>
+  /* Gouttière et rythme vertical viennent de PageShell. */
+  .empty {
+    padding: 64px 0;
+    color: var(--color-muted);
+    text-align: center;
+    font-family: var(--font-sans);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .author-card {
+    display: grid;
+    grid-template-columns: 1fr 100px;
+    gap: 24px;
+    padding: 24px 0;
+    border-top: 1px solid var(--color-rule);
+    align-items: baseline;
+    color: inherit;
+    transition: color 0.12s;
+  }
+  .author-card:nth-child(odd) {
+    padding-right: 24px;
+    border-right: 1px solid var(--color-rule);
+  }
+  .author-card:nth-child(even) {
+    padding-left: 24px;
+  }
+  .author-card:hover .t {
+    color: var(--c-bleu-deep);
+  }
+  .author-card .t {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: var(--w-heading);
+    margin: 0;
+    letter-spacing: -0.02em;
+    transition: color 0.12s;
+  }
+  .author-card .right {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--color-muted);
+    text-align: right;
+  }
+
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .author-card:nth-child(odd) {
+      padding-right: 0;
+      border-right: 0;
+    }
+    .author-card:nth-child(even) {
+      padding-left: 0;
+    }
+  }
+</style>

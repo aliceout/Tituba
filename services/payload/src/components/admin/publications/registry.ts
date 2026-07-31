@@ -35,6 +35,9 @@ export type FieldSpec = {
   | { type: 'number'; min?: number; max?: number }
   | { type: 'select'; options: { label: string; value: string }[] }
   | { type: 'checkbox' }
+  /** Relation vers `media` (id). Rendu par UnsplashImagePicker, pas un
+   *  <input> — cf branche dédiée dans PublicationEditView.client.tsx. */
+  | { type: 'upload' }
 );
 
 /** Comment présenter la durée d'une publication. */
@@ -88,7 +91,14 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
     routePrefix: '/analyses',
     labelSingular: "Billet d'analyse",
     labelPlural: "Billets d'analyse",
-    extraFields: [],
+    extraFields: [
+      {
+        name: 'image',
+        type: 'upload',
+        label: 'Image de couverture',
+        help: "Affichée à côté du titre en haut du billet. Upload manuel ou recherche Unsplash.",
+      },
+    ],
     required: BASE_REQUIRED,
     readingLabel: 'minutes',
   },
@@ -193,7 +203,7 @@ export function emptyExtraValues(spec: PublicationSpec): Record<string, unknown>
   const out: Record<string, unknown> = {};
   for (const f of spec.extraFields) {
     out[f.name] =
-      f.type === 'number'
+      f.type === 'number' || f.type === 'upload'
         ? null
         : f.type === 'checkbox'
         ? false
@@ -221,6 +231,14 @@ export function pickExtraValues(
     } else if (f.type === 'number') {
       const n = typeof raw === 'string' ? Number.parseInt(raw, 10) : raw;
       out[f.name] = typeof n === 'number' && Number.isFinite(n) ? n : null;
+    } else if (f.type === 'upload') {
+      // La valeur peut être un id brut (déjà sélectionné puis re-tapé
+      // via patch()) ou l'objet media peuplé par depth>0 au chargement
+      // du doc — dans les deux cas on ne sauvegarde que l'id.
+      out[f.name] =
+        raw && typeof raw === 'object' && 'id' in (raw as Record<string, unknown>)
+          ? (raw as { id: unknown }).id
+          : raw || null;
     } else {
       const s = typeof raw === 'string' ? raw.trim() : raw == null ? '' : String(raw);
       out[f.name] = s === '' ? null : s;

@@ -1,0 +1,123 @@
+---
+/**
+ * Panneau teinté aux angles arrondis — la « pièce posée sur la page ».
+ *
+ * Quatre composants en portaient chacun une copie, avec des rayons et
+ * des paddings qui avaient déjà commencé à diverger. Le fond vient de
+ * la famille demandée ; ces teintes sont dérivées de la couleur de
+ * famille diluée dans le fond de page, donc elles suivent la charte
+ * sans qu'on ait à les resynchroniser (cf. global.css).
+ *
+ * `ton="plein"` pour un aplat saturé à texte clair — une carte de
+ * format, un carré podcast. `ton="dilue"` pour un panneau posé sur la
+ * page, qui est le cas courant.
+ */
+interface Props {
+  famille: 'bleu' | 'vert' | 'jaune' | 'violet' | 'marque';
+  ton?: 'dilue' | 'plein';
+  /** Rembourrage. `serre` pour les panneaux qui listent. */
+  padding?: 'normal' | 'serre' | 'aucun';
+  class?: string;
+}
+
+const {
+  famille,
+  ton = 'dilue',
+  padding = 'normal',
+  class: className,
+} = Astro.props;
+---
+
+<div
+  class:list={['panneau', `p-${padding}`, className]}
+  data-famille={famille}
+  data-ton={ton}
+>
+  <slot />
+</div>
+
+<style>
+  .panneau {
+    background: var(--fond);
+    color: var(--encre);
+    border-radius: var(--radius-panel);
+  }
+  .p-normal {
+    padding: 36px 48px;
+  }
+  .p-serre {
+    padding: 26px 32px;
+  }
+  .p-aucun {
+    padding: 0;
+  }
+
+  /* ── Teintes diluées ─────────────────────────────────────────────
+     L'encre reste celle de la page : sur une teinte à 14-20 %, le texte
+     courant garde son contraste et n'a pas à être redéfini. */
+  [data-ton='dilue'][data-famille='bleu'] {
+    --fond: var(--c-bleu-tint);
+    --encre: var(--color-ink);
+    --accent: var(--c-bleu-deep);
+  }
+  [data-ton='dilue'][data-famille='vert'] {
+    --fond: var(--c-vert-tint);
+    --encre: var(--color-ink);
+    --accent: var(--c-vert-deep);
+  }
+  [data-ton='dilue'][data-famille='jaune'] {
+    --fond: var(--c-jaune-tint);
+    --encre: var(--color-ink);
+    --accent: var(--c-jaune-deep);
+  }
+  [data-ton='dilue'][data-famille='violet'] {
+    --fond: var(--c-violet-tint);
+    --encre: var(--color-ink);
+    --accent: var(--c-violet-deep);
+  }
+  /* Couleur de marque configurable (--color-accent) plutôt qu'une des
+     quatre familles fixes — même mécanisme que PageTitle famille="marque".
+     Pas de variante `ton="plein"` : --color-accent est une valeur admin
+     arbitraire, rien ne garantit son contraste avec un texte clair. */
+  [data-ton='dilue'][data-famille='marque'] {
+    --fond: color-mix(in srgb, var(--color-accent) 14%, var(--color-bg));
+    --encre: var(--color-ink);
+    --accent: var(--color-accent);
+  }
+
+  /* ── Aplats saturés ──────────────────────────────────────────────
+     Ici l'encre ne peut pas être celle de la page : chaque famille
+     porte sa propre paire fond / texte, calibrée pour passer 4,5:1. */
+  [data-ton='plein'][data-famille='bleu'] {
+    --fond: var(--c-bleu-fill);
+    --encre: var(--c-bleu-on);
+    --accent: var(--c-bleu-on-soft);
+  }
+  [data-ton='plein'][data-famille='vert'] {
+    --fond: var(--c-vert-fill);
+    --encre: var(--c-vert-on);
+    --accent: var(--c-vert-on-soft);
+  }
+  [data-ton='plein'][data-famille='jaune'] {
+    --fond: var(--c-jaune-fill);
+    --encre: var(--c-jaune-on);
+    --accent: var(--c-jaune-on-soft);
+  }
+  [data-ton='plein'][data-famille='violet'] {
+    --fond: var(--c-violet);
+    --encre: #ffffff;
+    --accent: #cdc0da;
+  }
+
+  @media (max-width: 900px) {
+    .p-normal {
+      padding: 26px 20px;
+    }
+    .p-serre {
+      padding: 20px 18px;
+    }
+    .panneau {
+      border-radius: 18px;
+    }
+  }
+</style>

@@ -9,10 +9,10 @@
  * Réf : design_handoff_tituba/Tituba B.html → About + autres pages
  * structurées (terrains, recherche, publications, colophon).
  */
-import Layout from '../layouts/Layout.astro';
-import Hero from '../components/Hero.astro';
+import PageShell from '../components/ui/PageShell.astro';
 import PageRenderer from '../components/PageRenderer.astro';
 import { fetchBySlug } from '../lib/payload';
+import { formatHeroLede, formatHeroTitle, stripHeroMarkers } from '../lib/site';
 
 type PageDoc = {
   id: number | string;
@@ -34,37 +34,13 @@ if (!page) {
 }
 ---
 
-<Layout
-  title={page.title}
+<PageShell
+  documentTitle={stripHeroMarkers(page.title)}
   description={page.description ?? page.lede ?? undefined}
   noindex={page.noindex ?? false}
+  title={formatHeroTitle(page.title)}
+  lede={page.lede ? formatHeroLede(page.lede) : undefined}
+  famille="jaune"
 >
-  <article class="page-article">
-    <Hero
-      kicker={page.eyebrow ?? undefined}
-      title={page.title}
-      lede={page.lede ?? undefined}
-    />
-
-    <div class="sections narrow">
-      <PageRenderer sections={page.sections as never} />
-    </div>
-  </article>
-</Layout>
-
-<style>
-  /* Body inset dans le Hero : container 1080 (vs Hero 1280), centré.
-     Même convention que /abonnement/ — le body apparaît visuellement
-     « niché » à l'intérieur du band Hero. */
-  .sections {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 40px 80px 64px;
-  }
-
-  @media (max-width: 900px) {
-    .sections {
-      padding: 32px 24px 48px;
-    }
-  }
-</style>
+  <PageRenderer sections={page.sections as never} />
+</PageShell>
