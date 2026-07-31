@@ -78,6 +78,11 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_FROM: ${SMTP_FROM:?SMTP_FROM is required}
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:?SMTP_FROM_NAME is required}
+      # Unsplash : clé du picker d'image de couverture (recherche +
+      # import côté admin, cf endpoints/unsplash.ts). Optionnelle — sans
+      # elle le reste de l'admin fonctionne, seule la recherche Unsplash
+      # répond « clé absente côté serveur ». D'où `:-` et non `:?`.
+      UNSPLASH_ACCESS_KEY: ${UNSPLASH_ACCESS_KEY:-}
       # Knobs optionnels — defaults dans services/payload/src/auth/config.ts
       INVITATION_TTL_DAYS: ${INVITATION_TTL_DAYS:-}
       OTP_TTL_MINUTES: ${OTP_TTL_MINUTES:-}
