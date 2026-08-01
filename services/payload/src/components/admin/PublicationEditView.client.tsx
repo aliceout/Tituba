@@ -8,7 +8,7 @@
 //   .doc grid : center 1fr | meta 300px
 //     center : .ed-card (ed-num + title + lede + divider + body Lexical)
 //              + .fn-block (notes auto-numérotées)
-//     meta   : Métadonnées · Calendrier · Biblio liée · Auto-calculé
+//     meta   : champs du billet · Calendrier · Biblio liée
 //
 // Fetch / save via /cms/api/posts/[id] (cookies de session). Le body
 // est édité par un Lexical custom (cf body/Editor.tsx) sans aucune
@@ -94,9 +94,11 @@ type MediaEntry = {
 
 type Post = {
   id: number | string;
-  numero?: number | null;
+  /** Identifiant public court — c'est lui, et non `id`, qui forme
+   *  l'URL du site (cf publicationHref côté Astro). Attribué par
+   *  Payload à la création, jamais saisi. */
+  publicId?: string | null;
   title: string;
-  slug: string;
   type: PostType;
   themes?: (Theme | number | string)[] | null;
   tags?: (Tag | number | string)[] | null;
@@ -107,7 +109,6 @@ type Post = {
   body?: LexicalState | null;
   bibliography?: (BibEntry | number | string)[] | null;
   readingTime?: number | null;
-  idCarnet?: string | null;
   draft?: boolean;
 };
 
@@ -125,13 +126,6 @@ const STATUS_LABEL: Record<Status, string> = {
   scheduled: 'Planifié',
   published: 'Publié',
 };
-
-function pad3(n: number | string | undefined | null): string {
-  if (n === undefined || n === null || n === '') return '—';
-  const num = typeof n === 'string' ? parseInt(n, 10) : n;
-  if (Number.isNaN(num)) return String(n);
-  return String(num).padStart(3, '0');
-}
 
 function inferStatus(p: Pick<Post, 'draft' | 'publishedAt'>): Status {
   if (p.draft) return 'draft';
@@ -174,9 +168,7 @@ export default function PublicationEditViewClient({
   // initialisés depuis `extraFields`, jamais listés à la main.
   const EMPTY_DRAFT = useMemo<Omit<Post, 'id'> & { id?: number | string | null }>(
     () => ({
-      numero: null,
       title: '',
-      slug: '',
       type: spec.subtypes?.defaultValue ?? '',
       themes: [],
       tags: [],
@@ -331,13 +323,6 @@ export default function PublicationEditViewClient({
 
   const dirty = JSON.stringify(post) !== initialJson;
   const status: Status = inferStatus(post);
-  const idCarnet = useMemo(() => {
-    if (!post.numero || !post.publishedAt) return null;
-    const y = new Date(post.publishedAt).getFullYear();
-    if (Number.isNaN(y)) return null;
-    return `site:${y}-${pad3(post.numero)}`;
-  }, [post.numero, post.publishedAt]);
-
   function patch<K extends keyof Post>(key: K, value: Post[K]) {
     setPost((p) => ({ ...p, [key]: value }));
   }
@@ -531,7 +516,6 @@ export default function PublicationEditViewClient({
     const errs: Record<string, string> = {};
     const req = new Set(spec.required);
     if (req.has('title') && !post.title.trim()) errs.title = 'Champ obligatoire.';
-    if (req.has('slug') && !post.slug.trim()) errs.slug = 'Champ obligatoire.';
     if (req.has('lede') && !post.lede.trim()) errs.lede = 'Champ obligatoire.';
     if (req.has('body') && isLexicalBodyEmpty(post.body ?? null)) {
       errs.body = 'Le corps de l’article est vide.';
@@ -559,13 +543,8 @@ export default function PublicationEditViewClient({
     setSaving(true);
     setError(null);
     try {
-      // Pour PATCH (billet existant), on omet `numero` du body s'il
-      // est nul/undefined côté state pour ne pas écraser la valeur DB
-      // avec un null. Pour POST (création), on n'envoie pas numero du
-      // tout : le hook beforeValidate côté Payload l'attribue auto.
       const body: Record<string, unknown> = {
         title: post.title,
-        slug: post.slug,
         // Champs de format sérialisés depuis le registre. C'est ce qui
         // évite qu'une URL audio saisie dans l'éditeur soit
         // silencieusement absente de la requête, donc jamais persistée.
@@ -591,9 +570,6 @@ export default function PublicationEditViewClient({
         bibliography: (post.bibliography ?? []).map((b) => (typeof b === 'object' ? b.id : b)),
         draft: opts.publish ? false : post.draft,
       };
-      if (typeof post.numero === 'number' && post.numero > 0) {
-        body.numero = post.numero;
-      }
       // `type` (sous-genre) n'existe que sur les collections qui en
       // déclarent. Ailleurs, le format est porté par la collection
       // elle-même et envoyer le champ ferait échouer la validation.
@@ -779,7 +755,15 @@ export default function PublicationEditViewClient({
       crumbs={[
         { href: '/cms/admin', label: 'Tituba' },
         { href: spec.adminBase, label: spec.labelPlural },
-        { label: <>n°&nbsp;{pad3(post.numero ?? null)}</> },
+        // Le titre, pas l'identifiant : un fil d'Ariane sert à se situer,
+        // et un code opaque n'y aide personne. Tronqué, sinon un titre
+        // long pousse les actions de la barre hors de l'écran.
+        {
+          label:
+            post.title.trim().length > 48
+              ? `${post.title.trim().slice(0, 48)}…`
+              : post.title.trim() || 'Nouveau',
+        },
       ]}
       topbarStatus={
         <span className={`tituba-status tituba-status--${status}`}>
@@ -800,10 +784,14 @@ export default function PublicationEditViewClient({
               Modifications non enregistrées
             </span>
           )}
-          {post.slug && post.id != null && (
+          {/* `publicId` et non `id` : l'URL du site est bâtie sur
+              l'identifiant public, pas sur la clé primaire. Le lien est
+              masqué tant qu'il est absent — sur un brouillon jamais
+              enregistré, il n'y a pas encore de page à prévisualiser. */}
+          {post.publicId && (
             <a
               className="tituba-btn tituba-btn--ghost"
-              href={`${spec.routePrefix}/${post.slug}/`}
+              href={`${spec.routePrefix}/${post.publicId}/`}
               target="_blank"
               rel="noreferrer"
             >
@@ -841,14 +829,14 @@ export default function PublicationEditViewClient({
           <div className="tituba-postedit__center">
             <div className="ed-card">
               <div className="ed-num">
+                {/* Le format, sans identifiant. `post.id` est la clé
+                    primaire de la base — séquentielle, donc elle
+                    ressemblait à une numérotation éditoriale alors
+                    qu'elle n'en est pas une. Ce qui identifie
+                    publiquement le billet, c'est `publicId`, et il
+                    figure déjà dans le fil d'Ariane. */}
                 <span className="ed-num__id">
-                  Billet n°&nbsp;{pad3(post.numero ?? null)}
-                  {idCarnet && (
-                    <>
-                      <span aria-hidden="true"> · </span>
-                      <span className="id">{idCarnet}</span>
-                    </>
-                  )}
+                  {post.id != null ? spec.labelSingular : 'Nouveau billet'}
                 </span>
                 {themeIds.length > 0 && (
                   <span className="ed-num__themes">
@@ -1079,14 +1067,7 @@ export default function PublicationEditViewClient({
           </div>
 
           <aside className="tituba-postedit__meta">
-            <h3>Métadonnées</h3>
             <div className="row">
-              <div className="field">
-                <label>Numéro</label>
-                <div className="auto" title="Attribué automatiquement à la création">
-                  {post.numero != null ? `n° ${pad3(post.numero)}` : 'auto'}
-                </div>
-              </div>
               {/* Sous-genre : affiché seulement si la collection en
                   déclare. Pour les formats de Tituba, le format est la
                   collection, il n'y a rien à choisir ici. */}
@@ -1103,83 +1084,6 @@ export default function PublicationEditViewClient({
                       </option>
                     ))}
                   </select>
-                </div>
-              )}
-            </div>
-
-            {/* Champs propres au format, rendus depuis le registre.
-                Leur sérialisation est prise en charge par
-                pickExtraValues() dans save() — les deux dérivent de la
-                même déclaration, donc ils ne peuvent pas diverger. */}
-            {spec.extraFields.map((f) => (
-              <div
-                key={f.name}
-                className={`field${fieldErrors[f.name] ? ' field--invalid' : ''}`}
-              >
-                <label>{f.label}</label>
-                {f.type === 'select' ? (
-                  <select
-                    value={String((post as WithExtras)[f.name] ?? '')}
-                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
-                  >
-                    {f.options.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : f.type === 'textarea' ? (
-                  <textarea
-                    value={String((post as WithExtras)[f.name] ?? '')}
-                    placeholder={f.placeholder}
-                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
-                  />
-                ) : f.type === 'upload' ? (
-                  <UnsplashImagePicker
-                    value={(post as WithExtras)[f.name] as never}
-                    onChange={(id) => patch(f.name as keyof Post, id as never)}
-                  />
-                ) : (
-                  <input
-                    type={f.type === 'number' ? 'number' : f.type === 'url' ? 'url' : 'text'}
-                    value={String((post as WithExtras)[f.name] ?? '')}
-                    placeholder={f.placeholder}
-                    min={f.type === 'number' ? f.min : undefined}
-                    max={f.type === 'number' ? f.max : undefined}
-                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
-                  />
-                )}
-                {f.help && <div className="hint">{f.help}</div>}
-                {fieldErrors[f.name] && <div className="err">{fieldErrors[f.name]}</div>}
-              </div>
-            ))}
-            <div className={`field${fieldErrors.slug ? ' field--invalid' : ''}`}>
-              <label>Slug</label>
-              <input
-                type="text"
-                value={post.slug}
-                onChange={(e) => {
-                  patch('slug', e.target.value);
-                  if (fieldErrors.slug) {
-                    setFieldErrors((prev) => {
-                      const { slug: _omit, ...rest } = prev;
-                      return rest;
-                    });
-                  }
-                }}
-              />
-              {fieldErrors.slug && (
-                <div className="field__error" role="alert">
-                  {fieldErrors.slug}
-                </div>
-              )}
-              {!fieldErrors.slug && post.slug && post.publishedAt && (
-                <div className="help">
-                  URL :{' '}
-                  <span className="mono">
-                    /{new Date(post.publishedAt).getFullYear()}/
-                    {String(new Date(post.publishedAt).getMonth() + 1).padStart(2, '0')}/{post.slug}
-                  </span>
                 </div>
               )}
             </div>
@@ -1342,6 +1246,55 @@ export default function PublicationEditViewClient({
                 </div>
               </div>
             </div>
+
+
+            {/* Champs propres au format, rendus depuis le registre.
+                Leur sérialisation est prise en charge par
+                pickExtraValues() dans save() — les deux dérivent de la
+                même déclaration, donc ils ne peuvent pas diverger. */}
+            {spec.extraFields.map((f) => (
+              <div
+                key={f.name}
+                className={`field${fieldErrors[f.name] ? ' field--invalid' : ''}`}
+              >
+                <label>{f.label}</label>
+                {f.type === 'select' ? (
+                  <select
+                    value={String((post as WithExtras)[f.name] ?? '')}
+                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+                  >
+                    {f.options.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : f.type === 'textarea' ? (
+                  <textarea
+                    value={String((post as WithExtras)[f.name] ?? '')}
+                    placeholder={f.placeholder}
+                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+                  />
+                ) : f.type === 'upload' ? (
+                  <UnsplashImagePicker
+                    value={(post as WithExtras)[f.name] as never}
+                    onChange={(id) => patch(f.name as keyof Post, id as never)}
+                  />
+                ) : (
+                  <input
+                    type={f.type === 'number' ? 'number' : f.type === 'url' ? 'url' : 'text'}
+                    value={String((post as WithExtras)[f.name] ?? '')}
+                    placeholder={f.placeholder}
+                    min={f.type === 'number' ? f.min : undefined}
+                    max={f.type === 'number' ? f.max : undefined}
+                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+                  />
+                )}
+                {f.help && <div className="hint">{f.help}</div>}
+                {fieldErrors[f.name] && <div className="err">{fieldErrors[f.name]}</div>}
+              </div>
+            ))}
+
 
             <hr />
             <h3>Calendrier</h3>

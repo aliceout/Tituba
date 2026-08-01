@@ -661,12 +661,11 @@ export default function UnsplashImagePicker({
         {resolved ? (
           <div className="img-block__current">
             {img && <img src={img} alt={resolved.alt ?? ''} />}
+            {/* Ni nom de fichier ni crédit : l'aperçu montre déjà quelle
+                image est en place, et le nom généré à l'import
+                (« unsplash-GHZhwTiO0y4.jpg ») n'apprend rien. Le crédit
+                photographe, lui, s'affiche sur la page publique. */}
             <div className="img-block__meta">
-              <span className="img-block__name">
-                {resolved.unsplash?.photographerName
-                  ? `Photo par ${resolved.unsplash.photographerName} (Unsplash)`
-                  : resolved.filename ?? 'Fichier importé'}
-              </span>
               <div className="img-block__links">
                 {/* Rouvrir le cadrage sans repasser par une sélection —
                     l'image en place peut avoir été choisie avant, ou son

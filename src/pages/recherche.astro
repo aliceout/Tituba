@@ -118,12 +118,11 @@ function pageHref(p: number): string {
       <ol class="results">
         {docs.map((d) => (
           <li class="result">
-            <a href={publicationHref(d.collection, d.slug ?? '')} class="result__title">
+            <a href={publicationHref(d.collection, d.publicId)} class="result__title">
               {stripHeroMarkers(d.title)}
             </a>
             <div class="result__meta">
               {d.publishedAt && <span class="d">{formatDateIso(d.publishedAt)}</span>}
-              {d.idTituba && <span class="id mono">{d.idTituba}</span>}
             </div>
             {d.excerpt && (
               <p class="result__excerpt" set:html={d.excerpt}></p>

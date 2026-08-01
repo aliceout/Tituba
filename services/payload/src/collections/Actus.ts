@@ -18,7 +18,6 @@ import { makeNotifyNewPublication } from '../hooks/notify-new-post';
 export const Actus: CollectionConfig = buildPublicationCollection({
   slug: 'actus',
   labels: { singular: "Billet d'actu", plural: "Billets d'actu" },
-  idPrefix: 'tituba:actu',
   afterChange: [
     makeUpdateSearchVector('actus'),
     makeNotifyNewPublication({
@@ -29,7 +28,7 @@ export const Actus: CollectionConfig = buildPublicationCollection({
   ],
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['numero', 'title', 'publishedAt', 'draft', 'updatedAt'],
+    defaultColumns: ['title', 'publishedAt', 'draft', 'updatedAt'],
     listSearchableFields: ['title', 'slug', 'lede'],
     components: {
       views: {

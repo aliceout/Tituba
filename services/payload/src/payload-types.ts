@@ -156,14 +156,10 @@ export interface UserAuthOperations {
 export interface Article {
   id: number;
   /**
-   * Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Attribué à la création — c’est lui qui forme l’URL publique.
    */
-  numero: number;
+  publicId?: string | null;
   title: string;
-  /**
-   * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
-   */
-  slug: string;
   /**
    * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
    */
@@ -225,10 +221,6 @@ export interface Article {
    * Calculé automatiquement depuis le corps au save.
    */
   readingTime?: number | null;
-  /**
-   * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:article:2026-042).
-   */
-  idCarnet?: string | null;
   /**
    * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
    */
@@ -428,14 +420,10 @@ export interface Bibliography {
 export interface Analysis {
   id: number;
   /**
-   * Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Attribué à la création — c’est lui qui forme l’URL publique.
    */
-  numero: number;
+  publicId?: string | null;
   title: string;
-  /**
-   * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
-   */
-  slug: string;
   /**
    * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
    */
@@ -497,10 +485,6 @@ export interface Analysis {
    * Calculé automatiquement depuis le corps au save.
    */
   readingTime?: number | null;
-  /**
-   * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:analyse:2026-042).
-   */
-  idCarnet?: string | null;
   /**
    * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
    */
@@ -565,14 +549,10 @@ export interface Media {
 export interface Actus {
   id: number;
   /**
-   * Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Attribué à la création — c’est lui qui forme l’URL publique.
    */
-  numero: number;
+  publicId?: string | null;
   title: string;
-  /**
-   * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
-   */
-  slug: string;
   /**
    * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
    */
@@ -631,10 +611,6 @@ export interface Actus {
    */
   readingTime?: number | null;
   /**
-   * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:actu:2026-042).
-   */
-  idCarnet?: string | null;
-  /**
    * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
    */
   featured?: boolean | null;
@@ -657,14 +633,10 @@ export interface Actus {
 export interface Podcast {
   id: number;
   /**
-   * Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Attribué à la création — c’est lui qui forme l’URL publique.
    */
-  numero: number;
+  publicId?: string | null;
   title: string;
-  /**
-   * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
-   */
-  slug: string;
   /**
    * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
    */
@@ -735,10 +707,6 @@ export interface Podcast {
    */
   readingTime?: number | null;
   /**
-   * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:podcast:2026-042).
-   */
-  idCarnet?: string | null;
-  /**
    * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
    */
   featured?: boolean | null;
@@ -761,14 +729,10 @@ export interface Podcast {
 export interface Outil {
   id: number;
   /**
-   * Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Attribué à la création — c’est lui qui forme l’URL publique.
    */
-  numero: number;
+  publicId?: string | null;
   title: string;
-  /**
-   * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
-   */
-  slug: string;
   /**
    * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
    */
@@ -831,10 +795,6 @@ export interface Outil {
    * Calculé automatiquement depuis le corps au save.
    */
   readingTime?: number | null;
-  /**
-   * Identifiant stable, dérivé de l’année et du numéro (ex : tituba:outil:2026-042).
-   */
-  idCarnet?: string | null;
   /**
    * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
    */
@@ -1075,9 +1035,8 @@ export interface PayloadMigration {
  * via the `definition` "articles_select".
  */
 export interface ArticlesSelect<T extends boolean = true> {
-  numero?: T;
+  publicId?: T;
   title?: T;
-  slug?: T;
   themes?: T;
   tags?: T;
   authors?:
@@ -1095,7 +1054,6 @@ export interface ArticlesSelect<T extends boolean = true> {
   bibliography?: T;
   doi?: T;
   readingTime?: T;
-  idCarnet?: T;
   featured?: T;
   draft?: T;
   notificationsSentAt?: T;
@@ -1108,9 +1066,8 @@ export interface ArticlesSelect<T extends boolean = true> {
  * via the `definition` "analyses_select".
  */
 export interface AnalysesSelect<T extends boolean = true> {
-  numero?: T;
+  publicId?: T;
   title?: T;
-  slug?: T;
   themes?: T;
   tags?: T;
   authors?:
@@ -1128,7 +1085,6 @@ export interface AnalysesSelect<T extends boolean = true> {
   bibliography?: T;
   image?: T;
   readingTime?: T;
-  idCarnet?: T;
   featured?: T;
   draft?: T;
   notificationsSentAt?: T;
@@ -1141,9 +1097,8 @@ export interface AnalysesSelect<T extends boolean = true> {
  * via the `definition` "actus_select".
  */
 export interface ActusSelect<T extends boolean = true> {
-  numero?: T;
+  publicId?: T;
   title?: T;
-  slug?: T;
   themes?: T;
   tags?: T;
   authors?:
@@ -1160,7 +1115,6 @@ export interface ActusSelect<T extends boolean = true> {
   body?: T;
   bibliography?: T;
   readingTime?: T;
-  idCarnet?: T;
   featured?: T;
   draft?: T;
   notificationsSentAt?: T;
@@ -1173,9 +1127,8 @@ export interface ActusSelect<T extends boolean = true> {
  * via the `definition` "podcasts_select".
  */
 export interface PodcastsSelect<T extends boolean = true> {
-  numero?: T;
+  publicId?: T;
   title?: T;
-  slug?: T;
   themes?: T;
   tags?: T;
   authors?:
@@ -1195,7 +1148,6 @@ export interface PodcastsSelect<T extends boolean = true> {
   durationSeconds?: T;
   guests?: T;
   readingTime?: T;
-  idCarnet?: T;
   featured?: T;
   draft?: T;
   notificationsSentAt?: T;
@@ -1208,9 +1160,8 @@ export interface PodcastsSelect<T extends boolean = true> {
  * via the `definition` "outils_select".
  */
 export interface OutilsSelect<T extends boolean = true> {
-  numero?: T;
+  publicId?: T;
   title?: T;
-  slug?: T;
   themes?: T;
   tags?: T;
   authors?:
@@ -1229,7 +1180,6 @@ export interface OutilsSelect<T extends boolean = true> {
   resourceUrl?: T;
   audience?: T;
   readingTime?: T;
-  idCarnet?: T;
   featured?: T;
   draft?: T;
   notificationsSentAt?: T;

@@ -64,7 +64,7 @@ export type PublicationSpec = {
   readingLabel: ReadingLabel;
 };
 
-const BASE_REQUIRED = ['title', 'slug', 'lede', 'body'];
+const BASE_REQUIRED = ['title', 'lede', 'body'];
 
 export const PUBLICATIONS: Record<string, PublicationSpec> = {
   articles: {
@@ -141,7 +141,7 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
     ],
     // Un épisode n'a pas forcément de corps rédigé : l'audio est le
     // contenu, le corps ne sert qu'aux notes d'épisode.
-    required: ['title', 'slug', 'lede', 'audioUrl'],
+    required: ['title', 'lede', 'audioUrl'],
     readingLabel: 'duration',
   },
   outils: {
@@ -171,7 +171,7 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
       },
     ],
     // Une ressource peut se suffire de son lien et de son chapô.
-    required: ['title', 'slug', 'lede', 'resourceUrl'],
+    required: ['title', 'lede', 'resourceUrl'],
     readingLabel: 'none',
   },
 };

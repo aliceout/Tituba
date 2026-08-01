@@ -105,8 +105,7 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
     posts.map((p) => (
       <PublicationCard
         collection={p.collection}
-        numero={p.numero}
-        slug={p.slug}
+        docId={p.publicId}
         title={p.title}
         themeSlugs={p.themeSlugs}
         publishedAt={p.publishedAt}

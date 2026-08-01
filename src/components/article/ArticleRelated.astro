@@ -5,7 +5,7 @@ import { formatDateFr, stripHeroMarkers } from '../../lib/site';
 
 interface Props {
   collection: PublicationCollection;
-  items: Array<{ slug: string; title: string; publishedAt: string }>;
+  items: Array<{ publicId: string; title: string; publishedAt: string }>;
 }
 
 const { collection, items } = Astro.props;
@@ -15,7 +15,7 @@ const { collection, items } = Astro.props;
   <h3>Dans le même thème</h3>
   <div class="grid">
     {items.map((r) => (
-      <a href={publicationHref(collection, r.slug)}>
+      <a href={publicationHref(collection, r.publicId)}>
         <div class="d">{formatDateFr(r.publishedAt)}</div>
         <div class="t">{stripHeroMarkers(r.title)}</div>
       </a>

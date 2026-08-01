@@ -86,7 +86,7 @@ const heroLedeHtml = formatHeroLede(
           {list.map((p) => {
             const primaryTheme = (p.themeSlugs ?? [])[0];
             return (
-              <a class="arch-row" href={publicationHref(p.collection, p.slug ?? '')}>
+              <a class="arch-row" href={publicationHref(p.collection, p.publicId)}>
                 <div class="d">{p.publishedAt ? formatDateIso(p.publishedAt) : ''}</div>
                 <div class="ty">{PUBLICATIONS[p.collection]?.badge ?? ''}</div>
                 <div class="t">{stripHeroMarkers(p.title)}</div>

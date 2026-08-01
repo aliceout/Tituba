@@ -2,7 +2,7 @@
  * Endpoint Astro — sert un fichier RIS (.ris) téléchargeable pour un
  * billet de Tituba.
  *
- *   GET /articles/<slug>.ris
+ *   GET /podcasts/<code>.ris
  *
  * Utilisé par les boutons « RIS » et « Zotero » du bloc « Pour citer
  * cet article ». Zotero importe RIS nativement via son translator
@@ -13,7 +13,7 @@
 
 import type { APIRoute } from 'astro';
 
-import { fetchBySlug, fetchIdentity } from '../../lib/payload';
+import { fetchByPublicId, fetchIdentity } from '../../lib/payload';
 import { toRIS, type CitationPost } from '../../lib/citations';
 import type { PostAuthorEntry } from '../../lib/site';
 
@@ -25,16 +25,16 @@ type Post = CitationPost & {
 };
 
 export const GET: APIRoute = async ({ params, url }) => {
-  const slug = params.slug;
-  if (!slug) {
+  const publicId = params.publicId;
+  if (!publicId) {
     return new Response('Not found', { status: 404 });
   }
-  const post = await fetchBySlug<Post>('articles', slug);
+  const post = await fetchByPublicId<Post>('podcasts', publicId);
   if (!post || post.draft) {
     return new Response('Not found', { status: 404 });
   }
 
-  const articleUrl = new URL(`/articles/${post.slug}/`, url).toString();
+  const articleUrl = new URL(`/podcasts/${post.publicId}/`, url).toString();
   const accessedAt = new Date().toISOString().slice(0, 10);
   let siteName: string | undefined;
   try {
@@ -43,13 +43,13 @@ export const GET: APIRoute = async ({ params, url }) => {
   } catch {
     /* fallback côté toRIS */
   }
-  const body = toRIS(post, { articleUrl, accessedAt, siteName, collection: 'articles' });
+  const body = toRIS(post, { articleUrl, accessedAt, siteName, collection: 'podcasts' });
 
   return new Response(body, {
     status: 200,
     headers: {
       'Content-Type': 'application/x-research-info-systems; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${post.slug}.ris"`,
+      'Content-Disposition': `attachment; filename="podcasts-${post.publicId}.ris"`,
       'Cache-Control': 'public, max-age=300',
     },
   });

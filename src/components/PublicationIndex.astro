@@ -21,9 +21,8 @@ export interface Props {
 type ThemeRef = { id: number | string; slug: string; name: string };
 
 type Doc = {
+  publicId: string;
   id: number | string;
-  numero: number | null;
-  slug: string | null;
   title: string | null;
   themes?: ThemeRef[] | null;
   publishedAt: string | null;
@@ -44,8 +43,10 @@ try {
     limit: 200,
     depth: 1,
     select: [
-      'numero',
-      'slug',
+      // Sans `publicId` ici, Payload ne le renvoie pas et toutes les
+      // cartes pointent vers /<format>/undefined/ — `select` restreint
+      // les champs, un oubli est donc silencieux.
+      'publicId',
       'title',
       'themes',
       'publishedAt',
@@ -116,8 +117,7 @@ const LEDES: Record<PublicationCollection, string> = {
       docs.map((d) => (
         <PublicationCard
           collection={collection}
-          numero={d.numero}
-          slug={d.slug}
+          docId={d.publicId}
           title={d.title}
           themes={d.themes}
           publishedAt={d.publishedAt}

@@ -46,23 +46,19 @@ export type PublicationTable = (typeof PUBLICATION_TABLES)[number];
  */
 const COMMON_COLUMNS = [
   'id',
-  'numero',
-  'slug',
+  'public_id',
   'title',
   'lede',
   'published_at',
-  'id_carnet',
 ] as const;
 
 export type PublicationRow = {
   collection: PublicationTable;
   id: number;
-  numero: number | null;
-  slug: string;
+  public_id: string | null;
   title: string;
   lede: string | null;
   published_at: string;
-  id_carnet: string | null;
 };
 
 /**

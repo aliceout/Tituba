@@ -15,7 +15,7 @@
  */
 import { publicationHref } from '../lib/publications';
 import type { FeedDoc } from '../lib/payload';
-import { formatNumero, stripHeroMarkers } from '../lib/site';
+import { stripHeroMarkers } from '../lib/site';
 
 export interface Props {
   doc: (FeedDoc & { durationSeconds?: number | null }) | null;
@@ -23,7 +23,7 @@ export interface Props {
 
 const { doc } = Astro.props as Props;
 
-const href = doc ? publicationHref('podcasts', doc.slug ?? '') : '#';
+const href = doc ? publicationHref('podcasts', doc.publicId) : '#';
 
 /** Durée en minutes, ou chaîne vide si la source ne la connaît pas. */
 const duree =
@@ -31,7 +31,6 @@ const duree =
     ? `${Math.round(doc.durationSeconds / 60)} min`
     : '';
 
-const numero = doc && doc.numero != null ? formatNumero(doc.numero) : '';
 ---
 
 {doc && (
@@ -57,7 +56,6 @@ const numero = doc && doc.numero != null ? formatNumero(doc.numero) : '';
           </svg>
           Podcast
         </span>
-        {numero && <span class="numero">{numero}</span>}
       </div>
 
       <h3>{stripHeroMarkers(doc.title)}</h3>

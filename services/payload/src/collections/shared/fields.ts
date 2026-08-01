@@ -3,9 +3,13 @@
  *
  * Toutes les publications de Tituba (articles de recherche, billets
  * d'analyse, billets d'actu, podcasts, outils) partagent le même socle :
- * numérotation, titre/slug, taxonomie, auteur·ices, dates, chapô, corps
- * Lexical, bibliographie, et les champs calculés (temps de lecture,
- * identifiant citable, zones brouillon).
+ * titre, taxonomie, auteur·ices, dates, chapô, corps Lexical,
+ * bibliographie, et les champs calculés (temps de lecture, zones
+ * brouillon).
+ *
+ * Une publication est identifiée par son id. Il n'y a ni slug ni numéro
+ * de série : le premier laissait choisir son URL au coup par coup, le
+ * second était un héritage de Carnet sans usage ici.
  *
  * Déclarer ce socle une fois ici évite de le dupliquer cinq fois et
  * garantit que les cinq collections restent alignées — notamment sur
@@ -25,20 +29,27 @@ import { extractLexicalText } from '../../lib/extract-lexical-text';
 /** Comment afficher la durée d'une publication côté lecteur·ice. */
 export type ReadingLabel = 'minutes' | 'duration' | 'none';
 
-export function numeroField(): Field {
+/**
+ * Identifiant public court, celui qui figure dans l'URL. Généré à la
+ * création (cf makePublicId) et jamais saisi : personne ne choisit
+ * l'adresse d'une publication.
+ *
+ * `unique` est per-table chez Payload, et c'est suffisant : l'URL porte
+ * la collection (`/analyses/k7m2xp/`), deux formats peuvent donc
+ * partager un identifiant sans ambiguïté.
+ */
+export function publicIdField(): Field {
   return {
-    name: 'numero',
-    type: 'number',
-    required: true,
+    name: 'publicId',
+    type: 'text',
+    required: false,
     unique: true,
     index: true,
-    label: 'Numéro',
-    min: 1,
-    max: 9999,
+    label: 'Identifiant public',
     admin: {
       position: 'sidebar',
-      description:
-        'Numéro de série du site — affiché « n° 042 » côté lecteur. Manuel et stable.',
+      readOnly: true,
+      description: 'Attribué à la création — c’est lui qui forme l’URL publique.',
     },
   };
 }
@@ -49,20 +60,6 @@ export function titleField(): Field {
     type: 'text',
     required: true,
     label: 'Titre',
-  };
-}
-
-export function slugField(): Field {
-  return {
-    name: 'slug',
-    type: 'text',
-    required: true,
-    unique: true,
-    index: true,
-    admin: {
-      description:
-        "URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.",
-    },
   };
 }
 
@@ -274,43 +271,6 @@ export function readingTimeField(): Field {
           const text = extractLexicalText(siblingData?.body);
           const words = text.trim().split(/\s+/).filter(Boolean).length;
           return Math.max(1, Math.ceil(words / 220));
-        },
-      ],
-    },
-  };
-}
-
-/**
- * Identifiant citable stable, dérivé de l'année de publication et du
- * numéro de série (ex. `site:2026-042`). Repris tel quel dans les
- * exports BibTeX (`note`) et RIS (`AN`), et indexé en poids B dans le
- * vecteur de recherche.
- */
-export function idField(prefix: string): Field {
-  return {
-    name: 'idCarnet',
-    type: 'text',
-    required: false,
-    label: 'Identifiant citable',
-    admin: {
-      position: 'sidebar',
-      readOnly: true,
-      description: `Identifiant stable, dérivé de l’année et du numéro (ex : ${prefix}:2026-042).`,
-    },
-    hooks: {
-      beforeChange: [
-        ({ siblingData }) => {
-          const numero = siblingData?.numero;
-          const publishedAt = siblingData?.publishedAt;
-          if (typeof numero !== 'number' || !publishedAt) return undefined;
-          const year =
-            typeof publishedAt === 'string'
-              ? new Date(publishedAt).getFullYear()
-              : publishedAt instanceof Date
-              ? publishedAt.getFullYear()
-              : new Date(String(publishedAt)).getFullYear();
-          if (!Number.isFinite(year)) return undefined;
-          return `${prefix}:${year}-${String(numero).padStart(3, '0')}`;
         },
       ],
     },

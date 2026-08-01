@@ -26,11 +26,11 @@ import type { PostAuthorEntry } from './site';
 // ─── Types publics ────────────────────────────────────────────────
 
 export type CitationPost = {
-  slug: string;
-  numero: number | string;
+  id?: number | string;
+  /** Identifiant public court — figure dans l'URL. */
+  publicId?: string;
   title: string;
   publishedAt: string;
-  idTituba?: string | null;
   authors?: PostAuthorEntry[] | null;
   themes?: Array<{ slug?: string; name?: string }> | null;
   doi?: string | null;
@@ -107,11 +107,29 @@ function toYear(s: string): string {
   return new Date(s).getUTCFullYear().toString();
 }
 
-/** Slug + numero pour un identifiant BibTeX stable et lisible.
- *  Ex. : `tituba-042-spivak-agency`. */
+/**
+ * Clé de citation BibTeX, en `auteur+année` — ex. `farris2026`.
+ *
+ * C'est la convention très majoritaire (Zotero, JabRef, BibLaTeX la
+ * génèrent ainsi), et surtout ce n'est **pas** un identifiant public :
+ * c'est l'étiquette locale du fichier .bib de la personne, celle qu'elle
+ * écrit dans `\cite{…}`. Elle doit être lisible et unique dans *sa*
+ * bibliographie, rien de plus — les gestionnaires la réécrivent
+ * d'ailleurs souvent à l'import.
+ *
+ * Repli sur l'identifiant du document quand la publication n'a aucun·e
+ * auteur·ice renseigné·e : une clé vide casserait le fichier.
+ */
 function bibKey(post: CitationPost): string {
-  const num = String(post.numero ?? '').padStart(3, '0');
-  return `tituba-${num}-${post.slug}`.replace(/[^a-z0-9-]/gi, '-').replace(/-+/g, '-');
+  const authors = extractCitationAuthors(post.authors);
+  const family = authors[0]?.family?.trim() ?? '';
+  const year = toYear(post.publishedAt);
+  const base = family ? `${family}${year}` : `tituba${post.id ?? ''}${year}`;
+  return base
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toLowerCase();
 }
 
 // ─── BibTeX ───────────────────────────────────────────────────────
@@ -190,7 +208,6 @@ export function toBibTeX(post: CitationPost, ctx: CitationContext): string {
   push('month', new Date(post.publishedAt).toLocaleString('en-US', { month: 'short' }).toLowerCase());
   push('url', ctx.articleUrl);
   push('urldate', ctx.accessedAt ?? toIsoDate(new Date().toISOString()));
-  if (post.idTituba) push('note', post.idTituba);
   if (post.doi) push('doi', post.doi);
   // Trailing comma déjà sur la dernière ligne — BibTeX moderne l'accepte ;
   // certains parsers stricts non. On enlève la virgule du dernier item.
@@ -242,7 +259,6 @@ export function toRIS(post: CitationPost, ctx: CitationContext): string {
   push('PB', ctx.siteName?.trim() || 'Tituba');
   push('UR', ctx.articleUrl);
   if (ctx.accessedAt) push('Y2', ctx.accessedAt.replace(/-/g, '/'));
-  if (post.idTituba) push('AN', post.idTituba);
   if (post.doi) push('DO', post.doi);
   lines.push('ER  - ');
   // RIS attend des fins de ligne CRLF pour la portabilité Windows.

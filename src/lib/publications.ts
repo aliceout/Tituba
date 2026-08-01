@@ -43,9 +43,9 @@ export type BiblioEntry = {
   doi?: string;
 };
 export type PublicationPost = {
+  /** Identifiant public court — celui qui figure dans l'URL. */
+  publicId: string;
   id: number | string;
-  numero: number;
-  slug: string;
   title: string;
   type: 'analyse' | 'note' | 'fiche';
   themes?: PublicationTheme[] | null;
@@ -186,13 +186,20 @@ export function isPublicationCollection(v: unknown): v is PublicationCollection 
   return typeof v === 'string' && v in PUBLICATIONS;
 }
 
-/** URL publique d'une publication. */
+/**
+ * URL publique d'une publication, bâtie sur son identifiant.
+ *
+ * Pas de slug : l'adresse n'est pas rédigée au coup par coup, elle
+ * découle de l'identifiant attribué à la création. Elle est donc
+ * insensible aux corrections de titre, et personne n'a à choisir —
+ * ni à s'accorder sur — la forme d'une URL.
+ */
 export function publicationHref(
   collection: PublicationCollection | string,
-  slug: string,
+  publicId: string,
 ): string {
   const spec = isPublicationCollection(collection) ? PUBLICATIONS[collection] : PUBLICATIONS.articles;
-  return `${spec.routePrefix}/${slug}/`;
+  return `${spec.routePrefix}/${publicId}/`;
 }
 
 /**
@@ -271,8 +278,8 @@ export async function fetchFeed(
 export async function fetchRelatedPosts(
   collection: PublicationCollection,
   themeSlug: string | undefined,
-  excludeSlug: string,
-): Promise<Array<{ slug: string; title: string; publishedAt: string }>> {
+  excludeId: number | string,
+): Promise<Array<{ publicId: string; title: string; publishedAt: string }>> {
   if (!themeSlug) return [];
   try {
     const raw = await fetchCollection<PublicationPost>(collection, {
@@ -283,12 +290,12 @@ export async function fetchRelatedPosts(
       limit: 10,
       sort: '-publishedAt',
       depth: 0,
-      select: ['slug', 'title', 'publishedAt', 'draft'],
+      select: ['publicId', 'title', 'publishedAt', 'draft'],
     });
     return raw
-      .filter((p) => p.slug !== excludeSlug && !p.draft)
+      .filter((p) => String(p.id) !== String(excludeId) && !p.draft)
       .slice(0, 4)
-      .map((p) => ({ slug: p.slug, title: p.title, publishedAt: p.publishedAt }));
+      .map((p) => ({ publicId: p.publicId, title: p.title, publishedAt: p.publishedAt }));
   } catch (err) {
     console.warn('[publications] fetchRelatedPosts failed:', (err as Error).message);
     return [];

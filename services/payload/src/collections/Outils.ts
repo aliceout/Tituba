@@ -19,7 +19,6 @@ import { makeNotifyNewPublication } from '../hooks/notify-new-post';
 export const Outils: CollectionConfig = buildPublicationCollection({
   slug: 'outils',
   labels: { singular: 'Outil', plural: 'Outils' },
-  idPrefix: 'tituba:outil',
   bodyRequired: false,
   extraFields: [
     {
@@ -57,7 +56,7 @@ export const Outils: CollectionConfig = buildPublicationCollection({
   ],
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['numero', 'title', 'publishedAt', 'draft', 'updatedAt'],
+    defaultColumns: ['title', 'publishedAt', 'draft', 'updatedAt'],
     listSearchableFields: ['title', 'slug', 'lede'],
     components: {
       views: {

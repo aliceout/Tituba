@@ -2,8 +2,8 @@
 /**
  * Page de détail d'une publication, partagée par les cinq formats.
  *
- * Les routes /articles/<slug>/, /analyses/<slug>/, /actus/<slug>/,
- * /podcasts/<slug>/ et /outils/<slug>/ sont des enveloppes minces qui
+ * Les routes /articles/<code>/, /analyses/<code>/, /actus/<code>/,
+ * /podcasts/<code>/ et /outils/<code>/ sont des enveloppes minces qui
  * délèguent ici en passant leur collection. Ce qui varie d'un format à
  * l'autre — racine d'URL, pastille, libellé de durée, type de citation,
  * lecteur audio ou lien de téléchargement — est résolu depuis la table
@@ -44,7 +44,7 @@ import {
   type PublicationTheme,
   type PublicationTag,
 } from '../lib/publications';
-import { fetchBySlug, fetchIdentity, fetchSite, uploadedImageUrl } from '../lib/payload';
+import { fetchByPublicId, fetchIdentity, fetchSite, uploadedImageUrl } from '../lib/payload';
 import {
   extractToc,
   renderLexicalSidenotes,
@@ -53,7 +53,7 @@ import {
 import {
   formatDateFr,
   formatHeroTitle,
-  formatNumero,
+
   formatPostAuthorsForDisplay,
   formatPostCitationChicago,
   stripHeroMarkers,
@@ -63,13 +63,19 @@ import { highwireMeta } from '../lib/citations';
 
 export interface Props {
   collection: PublicationCollection;
-  slug: string;
+  publicId: string;
 }
 
-const { collection, slug } = Astro.props as Props;
+const { collection, publicId } = Astro.props as Props;
 const spec = PUBLICATIONS[collection];
 
-const post = await fetchBySlug<PublicationPost>(collection, slug);
+const post = await fetchByPublicId<PublicationPost>(collection, publicId);
+
+// NOTE : `Astro.rewrite('/404')` affiche la bonne page mais laisse la
+// réponse en 200 — un lien mort annonce donc aux moteurs que la page
+// existe. Comportement préexistant, non corrigé ici : forcer
+// `Astro.response.status` avant le rewrite fait échouer le rendu
+// (« Internal server error »). À traiter à part.
 if (!post || post.draft) {
   return Astro.rewrite('/404');
 }
@@ -188,9 +194,22 @@ const biblio = (post.bibliography ?? []).filter(
   (b): b is BiblioEntry => typeof b === 'object' && b !== null && 'slug' in b,
 );
 
-const related = await fetchRelatedPosts(collection, primaryTheme?.slug, post.slug);
+// Affichage de l'aside — décidé ici et nulle part ailleurs : c'est la
+// même valeur qui monte le composant et qui réserve sa colonne dans la
+// grille (`no-toc`). Deux conditions séparées finiraient par diverger.
+//
+// Le seuil n'est pas « y a-t-il des titres de section » mais « y a-t-il
+// quelque chose à offrir » : un billet d'analyse court n'a souvent aucun
+// titre, alors que la durée de lecture, les liens de pied et les actions
+// (copier, citer, télécharger) lui sont tout aussi utiles.
+const afficherToc =
+  tocEntries.length > 0 ||
+  !!readingLabel ||
+  !!footnotesHtml ||
+  biblio.length > 0 ||
+  spec.citationType === 'article';
 
-const numLabel = formatNumero(post.numero);
+const related = await fetchRelatedPosts(collection, primaryTheme?.slug, post.id);
 
 // Auteur·ices du billet — affichage dans le meta-strip (interne =
 // cliquable vers /auteurice/<id>/, externe = texte simple) et signature
@@ -207,15 +226,13 @@ const authorCitation = postCitation || 'Auteur·ice';
 
 // Citation bibliographique du billet (Chicago author-date façon Tituba)
 const articleUrl = new URL(Astro.url.pathname, Astro.site).toString();
-const citationText = `${authorCitation}. « ${titlePlain} », ${siteName}, ${numLabel}, ${publishedFr}, ${articleUrl}.`;
+const citationText = `${authorCitation}. « ${titlePlain} », ${siteName}, ${publishedFr}, ${articleUrl}.`;
 
 // Métadonnées Highwire/Google Scholar pour que l'extension Zotero
 // détecte automatiquement la citation à la visite de l'article (sans
 // que l'utilisatrice ait besoin de cliquer un bouton).
 const citationMeta = highwireMeta(
   {
-    slug: post.slug,
-    numero: post.numero,
     title: titlePlain,
     publishedAt: post.publishedAt,
     authors: postAuthors,
@@ -240,37 +257,35 @@ const postTags = (post.tags ?? []).filter(
     ))}
   </Fragment>
 
-  <div class:list={['article-shell', { 'no-toc': tocEntries.length === 0 }]}>
-    <ArticleToc
-      entries={tocEntries}
-      readingLabel={readingLabel}
-      hasFootnotes={!!footnotesHtml}
-      hasBiblio={biblio.length > 0}
-      hasCitation={spec.citationType === 'article'}
-    />
+  <div class:list={['article-shell', { 'no-toc': !afficherToc }]}>
 
     <article class="post" id="haut">
       <div class:list={['hero', { 'has-image': coverImageUrl }]}>
-        <div class="hero-text">
-          <PageTitle title={titleHtml} famille="marque" />
-          <p class="deck">{post.lede}</p>
+        {/* Le crédit vit sous le cadre du titre, pas sous l'image : c'est
+            une colonne à part entière du hero, sinon il deviendrait un
+            troisième bloc de la rangée flex. */}
+        <div class="hero-left">
+          <div class="hero-text">
+            <PageTitle title={titleHtml} famille="marque" />
+            <p class="deck">{post.lede}</p>
+          </div>
+          {unsplashCredit && (
+            <p class="hero-credit">
+              Photo par{' '}
+              {unsplashCredit.profileUrl ? (
+                <a href={unsplashCredit.profileUrl} rel="noopener">{unsplashCredit.name}</a>
+              ) : (
+                unsplashCredit.name
+              )}
+              {' '}sur <a href={unsplashCredit.unsplashUrl} rel="noopener">Unsplash</a>
+            </p>
+          )}
         </div>
         {coverImageUrl && (
           <figure class="hero-figure">
             <div class:list={['hero-frame', { cropped: !!crop }]}>
               <img class="hero-image" src={coverImageUrl} alt={coverImageAlt} style={cropStyle} />
             </div>
-            {unsplashCredit && (
-              <figcaption class="hero-credit">
-                Photo par{' '}
-                {unsplashCredit.profileUrl ? (
-                  <a href={unsplashCredit.profileUrl} rel="noopener">{unsplashCredit.name}</a>
-                ) : (
-                  unsplashCredit.name
-                )}
-                {' '}sur <a href={unsplashCredit.unsplashUrl} rel="noopener">Unsplash</a>
-              </figcaption>
-            )}
           </figure>
         )}
       </div>
@@ -286,6 +301,11 @@ const postTags = (post.tags ?? []).filter(
         formatHref={`${spec.routePrefix}/`}
       />
 
+      {/* Hero et bandeau meta courent sur toute la largeur ; c'est ici
+          seulement que la page se scinde en deux colonnes, texte et
+          aside. */}
+      <div class="post-split">
+        <div class="post-main">
       <ArticleBody html={bodyHtml} />
 
       {footnotesHtml && <ArticleFootnotes html={footnotesHtml} />}
@@ -297,16 +317,26 @@ const postTags = (post.tags ?? []).filter(
           <ArticleCitationBlock
             authorCitation={authorCitation}
             title={titlePlain}
-            numLabel={numLabel}
             publishedFr={publishedFr}
             articleUrl={articleUrl}
             citationText={citationText}
             routePrefix={spec.routePrefix}
-            slug={post.slug}
+            docId={post.publicId}
           />
         )}
         {related.length > 0 && primaryTheme && (
           <ArticleRelated collection={collection} items={related} />
+        )}
+      </div>
+        </div>
+        {afficherToc && (
+          <ArticleToc
+            entries={tocEntries}
+            readingLabel={readingLabel}
+            hasFootnotes={!!footnotesHtml}
+            hasBiblio={biblio.length > 0}
+            hasCitation={spec.citationType === 'article'}
+          />
         )}
       </div>
     </article>
@@ -314,41 +344,28 @@ const postTags = (post.tags ?? []).filter(
 </Layout>
 
 <style>
-  /* Enveloppe commune à l'article et au sommaire : un seul padding-top
-     pour les deux, plutôt que de le régler séparément sur chacun (cf le
-     bug d'alignement qu'on a eu — le sommaire recalait son `top` à la
-     main pour retomber sur celui de l'article). En dessous de 1300px,
-     bloc simple — le sommaire ne s'affiche pas. À partir de 1300px,
-     grille à deux colonnes : la largeur de la seconde vient d'ici, pas
-     d'un padding-right recalculé côté article. */
   .article-shell {
     padding-top: 75px;
   }
+  /* La scission en deux colonnes ne porte plus sur toute la page mais
+     sur le seul corps de l'article : le hero (cadre du titre + image) et
+     le bandeau meta courent sur toute la largeur, et c'est en dessous
+     que le texte cède 220px à l'aside.
+     En dessous de 1300px, pas de scission — l'aside n'est pas affiché,
+     le texte occupe tout. */
   @media (min-width: 1300px) {
-    .article-shell:not(.no-toc) {
+    .article-shell:not(.no-toc) .post-split {
       display: grid;
       grid-template-columns: 1fr 220px;
       column-gap: 52px;
-      /* Sans "start" ici, la grille étire le sommaire (item le plus
-         court) à la hauteur de la ligne (celle de l'article) — sa
-         propre boîte devient alors aussi haute que l'article, ce qui
-         ne laisse plus aucune marge pour que `sticky` puisse le
-         déplacer : il se comporte comme un élément statique. */
+      /* Sans "start", la grille étire l'aside (item le plus court) à la
+         hauteur de la ligne : sa boîte devient aussi haute que le texte,
+         ce qui ne laisse plus aucune marge pour que `sticky` puisse le
+         déplacer — il se comporte alors comme un élément statique. */
       align-items: start;
     }
-    /* grid-column ET grid-row explicites sur les deux : ArticleToc est
-       rendu avant l'article dans le markup, donc sans grid-column ça
-       inverserait les colonnes — et sans grid-row, le placement
-       automatique (le curseur avance sans revenir en arrière) envoie
-       chaque élément sur sa propre ligne au lieu de les superposer sur
-       la même, laissant un trou vide au-dessus de l'article. */
-    .article-shell:not(.no-toc) article.post {
-      grid-column: 1;
-      grid-row: 1;
-    }
-    .article-shell:not(.no-toc) :global(.toc) {
-      grid-column: 2;
-      grid-row: 1;
+    .post-main {
+      min-width: 0;
     }
   }
 
@@ -381,37 +398,33 @@ const postTags = (post.tags ?? []).filter(
      sous lui, sur toute la largeur du contenu (cf markup), donc pas
      de règle qui le recadre ici. */
   @media (min-width: 900px) {
-    /* L'image occupe toute la largeur restante et reste carrée : sa
-       hauteur en découle, sans rapport avec celle du cadre — elle est
-       donc généralement plus grande que lui et le déborde en haut comme
-       en bas. `center` cale le cadre à mi-hauteur de l'image pour que ce
-       débordement soit symétrique. Pas de gap : c'est l'image qui vient
-       fermer le rectangle à droite, elle doit toucher le cadre. */
+    /* Deux blocs encadrés de même facture, côte à côte : le titre et son
+       chapô à gauche, l'image à droite. `center` les aligne sur leur
+       milieu — l'image étant carrée et généralement plus haute que le
+       cadre, elle le déborde alors symétriquement.
+
+       L'image est calée au bord droit et garde une largeur fixe ; c'est
+       le cadre du titre qui absorbe le reste (`flex: 1 1 auto`). Sans
+       ça, l'écart tomberait à droite de l'image au lieu de séparer les
+       deux blocs. */
     .hero.has-image {
+      --hero-image-part: 39%;
       display: flex;
       align-items: center;
+      /* Pas d'écart : l'image est collée au cadre du titre, et c'est sa
+         bordure gauche qui vient fermer le rectangle resté ouvert de ce
+         côté. Un `gap` séparerait les deux blocs et laisserait le cadre
+         béant. */
       gap: 0;
       margin-bottom: 40px;
     }
-    /* flex-basis 0 (et non auto) : la colonne image se dimensionne sur
-       l'espace restant, pas sur la largeur intrinsèque du fichier. */
-    .hero-figure {
-      flex: 1 1 0;
+    .hero-left {
+      flex: 1 1 auto;
       min-width: 0;
     }
-    /* Cadre en U : haut, gauche, bas. Volontairement pas de
-       border-right — c'est l'image, collée contre ce côté et de même
-       hauteur (posée en JS), qui ferme le rectangle. */
-    .hero.has-image .hero-text {
-      border-top: 2px solid var(--color-accent);
-      border-left: 2px solid var(--color-accent);
-      border-bottom: 2px solid var(--color-accent);
-      padding: 32px;
-    }
-    /* Largeur de lecture stable, indépendante de la taille de l'image —
-       sans ça le texte s'étirerait sur tout l'espace laissé libre. */
-    .hero-text {
-      flex: 0 1 680px;
+    .hero-figure {
+      flex: 0 0 var(--hero-image-part);
+      min-width: 0;
     }
     /* Le chapô porte l'écart qui le sépare du bandeau meta dans le flux
        normal ; à l'intérieur du cadre c'est le padding qui doit donner
@@ -422,34 +435,79 @@ const postTags = (post.tags ?? []).filter(
     }
   }
   .hero-figure {
-    /* Collée au bloc texte, pas poussée au bord droit du contenu :
-       l'image ferme le cadre, elle doit toucher sa bordure. Le hero
-       s'arrête donc avant la largeur du contenu quand l'image est
-       petite — c'est le bandeau meta, en dessous, qui tient la largeur
-       pleine. */
     margin: 0;
   }
+  /* Cadre du titre et fenêtre de l'image : même trait, même arrondi.
+     Le trait reprend celui des filets du bandeau meta (cf ArticleMeta),
+     pour que les trois se lisent comme une même famille plutôt que
+     comme trois objets distincts. */
+  .hero.has-image .hero-text,
+  .hero-frame {
+    border: 1px solid var(--color-rule);
+    border-radius: 10px;
+  }
+  /* Le cadre du titre reste ouvert à droite : l'image y est collée, et
+     c'est sa propre bordure gauche qui ferme le rectangle. Sans ça, les
+     deux traits se superposeraient en un filet deux fois plus épais à
+     la jointure. Les angles droits redeviennent vifs pour la même
+     raison — un arrondi laisserait une encoche au raccord. */
+  .hero.has-image .hero-text {
+    border-right: 0;
+    border-radius: 10px 0 0 10px;
+    padding: 32px;
+  }
   /* Fenêtre carrée de la couverture. width:100% + aspect-ratio : la
-     largeur vient de la colonne (donc de l'espace laissé par le cadre),
-     la hauteur s'en déduit. Sans width explicite, le flex-basis d'une
-     <img> part de ses dimensions intrinsèques (celles du fichier, ex.
-     1600×820) et la colonne se calerait dessus plutôt que sur l'espace
-     disponible.
-     L'arrondi ne gêne pas le raccord avec le cadre du titre : l'image
-     déborde largement au-dessus et en dessous, ses coins arrondis sont
-     donc loin des extrémités de la bordure. */
+     largeur vient de la colonne, la hauteur s'en déduit. Sans width
+     explicite, le flex-basis d'une <img> part de ses dimensions
+     intrinsèques (celles du fichier, ex. 1600×820) et la colonne se
+     calerait dessus plutôt que sur l'espace disponible. */
   .hero-frame {
     position: relative;
     width: 100%;
     aspect-ratio: 1 / 1;
     overflow: hidden;
+    /* Arrondi sur les quatre angles. Sans conséquence à la jointure :
+       l'image dépasse largement le cadre en haut et en bas, les
+       bordures de celui-ci la rejoignent donc sur sa partie droite,
+       loin de ses angles. */
     border-radius: 10px;
+  }
+  /* Crédit photo sous le cadre du titre, aligné à droite — contre sa
+     bordure basse, et non sous l'image où il se lisait comme une
+     légende de celle-ci. */
+  .hero-credit {
+    margin: 8px 0 0;
+    /* Le bord droit du cadre est aussi le bord gauche de l'image :
+       sans ce retrait, le crédit vient buter contre la photo. */
+    padding-right: 14px;
+    text-align: right;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+  .hero-credit a {
+    color: inherit;
+    border-bottom: 1px dotted var(--color-muted);
+  }
+  .hero-credit a:hover {
+    color: var(--color-ink);
+    border-bottom-color: var(--color-ink);
   }
   .hero-image {
     display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+  /* Mode sombre : la photo est assombrie d'un cran. Une image livrée
+     pour un fond clair « brille » sur un fond sombre — elle capte le
+     regard plus qu'elle ne le devrait et fatigue à la lecture de nuit.
+     Léger et sans désaturation : on tempère, on ne délave pas.
+     `:global()` sur le sélecteur de thème — il vit sur <html>, hors de
+     la portée de ce composant, sans quoi Astro le préfixerait de son
+     hash et la règle ne s'appliquerait jamais. */
+  :global([data-theme='dark']) .hero-image {
+    filter: brightness(0.82);
   }
   /* Avec une zone enregistrée, l'image est agrandie et décalée pour que
      cette zone remplisse exactement la fenêtre (dimensions et décalage
@@ -462,29 +520,12 @@ const postTags = (post.tags ?? []).filter(
     max-width: none;
     object-fit: fill;
   }
-  /* Crédit photographe — obligatoire dès que la photo est affichée
-     (conditions d'utilisation Unsplash), pas seulement au moment du
-     choix dans l'admin. Absent pour une image uploadée à la main (pas
-     de champ `unsplash` rempli sur le doc media, cf Media.ts). */
-  .hero-credit {
-    margin-top: 6px;
-    font-family: var(--font-sans);
-    font-size: 11px;
-    color: var(--color-muted);
-    text-align: right;
-  }
-  .hero-credit a {
-    color: inherit;
-    border-bottom: 1px dotted var(--color-muted);
-  }
-  .hero-credit a:hover {
-    color: var(--color-ink);
-    border-bottom-color: var(--color-ink);
-  }
-
   article.post .deck {
     font-family: var(--font-serif);
-    font-size: 22px;
+    /* Même corps que le texte de l'article (cf ArticleBody) : le chapô
+       n'est pas un titre secondaire, c'est déjà de la lecture. Sa
+       distinction tient à la couleur et au cadre, pas à la taille. */
+    font-size: 19px;
     line-height: 1.5;
     color: var(--color-muted);
     margin: 0 0 32px;

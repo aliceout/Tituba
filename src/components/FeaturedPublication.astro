@@ -13,7 +13,7 @@
 import FormatIcon from './FormatIcon.astro';
 import { PUBLICATIONS, publicationHref, readingLabelFor } from '../lib/publications';
 import type { FeedDoc } from '../lib/payload';
-import { formatDateFr, formatNumero, stripHeroMarkers } from '../lib/site';
+import { formatDateFr, stripHeroMarkers } from '../lib/site';
 
 export interface Props {
   doc: FeedDoc & { durationSeconds?: number | null };
@@ -39,11 +39,11 @@ const APPELS: Record<string, string> = {
 };
 const appel = APPELS[doc.collection] ?? 'lire le texte →';
 const spec = PUBLICATIONS[doc.collection] ?? PUBLICATIONS.articles;
-const href = publicationHref(doc.collection, doc.slug ?? '');
+const href = publicationHref(doc.collection, doc.publicId);
 const duree = readingLabelFor(doc.collection, doc);
 
 // Métadonnées assemblées en une seule ligne mono, façon ours de revue.
-const meta = [spec.badge.toUpperCase(), doc.numero != null ? formatNumero(doc.numero) : null, duree]
+const meta = [spec.badge.toUpperCase(), duree]
   .filter(Boolean)
   .join(' · ');
 

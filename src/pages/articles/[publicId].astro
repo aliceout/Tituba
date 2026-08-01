@@ -1,14 +1,14 @@
 ---
 /**
- * Détail d'une publication du format « analyses » — /analyses/<slug>/
+ * Détail d'une publication du format « articles » — /articles/<code>/
  *
  * Enveloppe mince : tout le rendu vit dans PublicationArticle, partagé
  * par les cinq formats. Seule la collection change.
  */
 import PublicationArticle from '../../components/PublicationArticle.astro';
 
-const { slug } = Astro.params;
-if (!slug) return Astro.redirect('/');
+const { publicId } = Astro.params;
+if (!publicId) return Astro.redirect('/');
 ---
 
-<PublicationArticle collection="analyses" slug={slug} />
+<PublicationArticle collection="articles" publicId={publicId} />

@@ -50,12 +50,10 @@ import { PUBLICATION_TABLES, type PublicationTable } from '../db/publications-un
 type SearchRow = {
   collection: PublicationTable;
   id: number;
-  numero: number | null;
-  slug: string | null;
+  public_id: string | null;
   title: string | null;
   lede: string | null;
   published_at: string | null;
-  id_carnet: string | null;
   excerpt: string | null;
   rank: number;
   total: number;
@@ -96,8 +94,8 @@ export const publicationsSearchEndpoint: Endpoint = {
     const branches = PUBLICATION_TABLES.map(
       (t) => sql`
         SELECT ${sql.raw(`'${t}'`)}::text AS collection,
-               p.id, p.numero, p.slug, p.title, p.lede,
-               p.published_at, p.id_carnet,
+               p.id, p.public_id, p.title, p.lede,
+               p.published_at,
                ts_rank(p.search_vector, q.query, 32) AS rank
         FROM ${sql.raw(`"${t}"`)} p, q
         WHERE p.search_vector @@ q.query
@@ -128,12 +126,10 @@ export const publicationsSearchEndpoint: Endpoint = {
     const docs = rows.map((r) => ({
       collection: r.collection,
       id: r.id,
-      numero: r.numero,
-      slug: r.slug,
+      publicId: r.public_id,
       title: r.title,
       lede: r.lede,
       publishedAt: r.published_at,
-      idTituba: r.id_carnet,
       excerpt: r.excerpt,
       rank: typeof r.rank === 'string' ? parseFloat(r.rank) : r.rank,
     }));

@@ -3,7 +3,7 @@
  * Cartouche « Pour citer cet article » — citation Chicago author-date,
  * bouton Copier (clipboard) et liens de téléchargement BibTeX/RIS/Zotero.
  * Les routes de téléchargement vivent sous src/pages/<format>/
- * [slug].bib.ts et [slug].ris.ts. Zotero importe RIS nativement, on
+ * [id].bib.ts et [id].ris.ts. Zotero importe RIS nativement, on
  * pointe donc sur le même fichier ; la détection auto via les <meta>
  * Highwire en <head> (cf src/lib/citations.ts) rend même ce bouton
  * accessoire pour qui a l'extension installée.
@@ -18,15 +18,14 @@ import Button from '../ui/Button.astro';
 interface Props {
   authorCitation: string;
   title: string;
-  numLabel: string;
   publishedFr: string;
   articleUrl: string;
   citationText: string;
   routePrefix: string;
-  slug: string;
+  docId: number | string;
 }
 
-const { authorCitation, title, numLabel, publishedFr, articleUrl, citationText, routePrefix, slug } =
+const { authorCitation, title, publishedFr, articleUrl, citationText, routePrefix, docId } =
   Astro.props;
 ---
 
@@ -34,7 +33,7 @@ const { authorCitation, title, numLabel, publishedFr, articleUrl, citationText, 
   <Panel famille="marque" padding="serre" class="citation-panel">
     <div class="lbl">Pour citer cet article</div>
     <div class="body">
-      {authorCitation}. « {title} », <em>Tituba</em>, {numLabel}, {publishedFr},
+      {authorCitation}. « {title} », <em>Tituba</em>, {publishedFr},
       <span class="url">{' '}{articleUrl}</span>.
     </div>
     <div class="acts">
@@ -49,24 +48,24 @@ const { authorCitation, title, numLabel, publishedFr, articleUrl, citationText, 
       </Button>
       <a
         class="download-link"
-        href={`${routePrefix}/${slug}.bib`}
-        download={`${slug}.bib`}
+        href={`${routePrefix}/${docId}.bib`}
+        download={`tituba-${docId}.bib`}
         aria-label="Télécharger la citation au format BibTeX"
       >
         BibTeX
       </a>
       <a
         class="download-link"
-        href={`${routePrefix}/${slug}.ris`}
-        download={`${slug}.ris`}
+        href={`${routePrefix}/${docId}.ris`}
+        download={`tituba-${docId}.ris`}
         aria-label="Télécharger la citation au format RIS"
       >
         RIS
       </a>
       <a
         class="download-link"
-        href={`${routePrefix}/${slug}.ris`}
-        download={`${slug}.ris`}
+        href={`${routePrefix}/${docId}.ris`}
+        download={`tituba-${docId}.ris`}
         aria-label="Importer la citation dans Zotero (format RIS)"
         title="Zotero importe RIS nativement"
       >

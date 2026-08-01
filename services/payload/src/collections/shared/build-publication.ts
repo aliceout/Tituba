@@ -17,7 +17,7 @@
 import type { CollectionAfterChangeHook, CollectionConfig, Field } from 'payload';
 
 import { authenticated } from '../../access/authenticated';
-import { makeAutoNumero } from './hooks';
+import { makeDefaultAuthor, makePublicId } from './hooks';
 import {
   authorsField,
   bibliographyField,
@@ -25,13 +25,14 @@ import {
   draftField,
   featuredField,
   hasDraftZonesField,
-  idField,
+
   ledeField,
   notificationsSentAtField,
-  numeroField,
+
+  publicIdField,
   publishedAtField,
   readingTimeField,
-  slugField,
+
   subtypeField,
   tagsField,
   themesField,
@@ -42,11 +43,6 @@ export type BuildPublicationArgs = {
   /** Slug de la collection, ex. `articles`. Pilote aussi l'URL d'API. */
   slug: string;
   labels: { singular: string; plural: string };
-  /**
-   * Préfixe de l'identifiant citable (`<prefix>:2026-042`). Repris tel
-   * quel dans les exports BibTeX/RIS, donc stable une fois publié.
-   */
-  idPrefix: string;
   /**
    * Sous-genre optionnel, rendu en select dans la sidebar. Hérité du
    * Tituba ; les collections Tituba n'en déclarent pas, le format étant
@@ -72,7 +68,6 @@ export function buildPublicationCollection(args: BuildPublicationArgs): Collecti
   const {
     slug,
     labels,
-    idPrefix,
     subtypes,
     extraFields = [],
     afterChange = [],
@@ -91,14 +86,13 @@ export function buildPublicationCollection(args: BuildPublicationArgs): Collecti
       delete: authenticated,
     },
     hooks: {
-      beforeValidate: [makeAutoNumero(slug)],
+      beforeValidate: [makePublicId(slug), makeDefaultAuthor()],
       afterChange,
     },
     admin,
     fields: [
-      numeroField(),
+      publicIdField(),
       titleField(),
-      slugField(),
       ...(subtypes ? [subtypeField(subtypes.options, subtypes.defaultValue)] : []),
       themesField(),
       tagsField(),
@@ -112,7 +106,6 @@ export function buildPublicationCollection(args: BuildPublicationArgs): Collecti
       // de déclaration (et donc dans les colonnes générées).
       ...extraFields,
       readingTimeField(),
-      idField(idPrefix),
       featuredField(),
       draftField(),
       notificationsSentAtField(),

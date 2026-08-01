@@ -1,61 +1,71 @@
 /**
  * Hooks partagés par les collections de publication.
  *
- * Chaque fabrique est fermée sur le slug de sa collection, parce que
- * les hooks Payload ne reçoivent pas le slug courant dans leurs
- * arguments — il faut le leur donner à la construction.
+ * Les hooks Payload ne reçoivent pas le slug de la collection courante
+ * dans leurs arguments : une fabrique qui en aurait besoin doit être
+ * fermée dessus à la construction.
  */
 
 import type { CollectionBeforeValidateHook } from 'payload';
 
+import { generatePublicId } from '../../lib/public-id';
+
 /**
- * Numérotation automatique à la création : on ne demande jamais le
- * numéro à l'auteur·ice. Cherche le max existant **dans cette
- * collection** et assigne max+1.
+ * Attribue l'identifiant public à la création (cf lib/public-id.ts pour
+ * le choix de l'alphabet et de la longueur).
  *
- * La numérotation est volontairement **par format** : chaque collection
- * a sa propre série (Podcast n° 003, Article n° 012). Conséquence
- * technique importante — l'unicité reste exprimable en contrainte
- * Postgres (`unique: true` est per-table), donc la base rattrape une
- * éventuelle collision au lieu de laisser passer deux publications
- * portant le même numéro. Un compteur global partagé entre les cinq
- * tables n'aurait pas cette garantie et aurait exigé un verrou
- * consultatif.
- *
- * S'exécute en `beforeValidate` — donc avant le check `required: true` —
- * pour qu'une création sans `numero` dans le payload passe la validation.
+ * Quelques tentatives en cas de collision, puis on laisse filer : la
+ * contrainte d'unicité en base tranche. C'est volontaire — cette
+ * vérification applicative ne peut de toute façon pas couvrir la course
+ * entre deux créations simultanées, seul l'index le peut. Elle sert à
+ * éviter l'erreur, pas à la garantir impossible.
  */
-export function makeAutoNumero(collectionSlug: string): CollectionBeforeValidateHook {
+export function makePublicId(collectionSlug: string): CollectionBeforeValidateHook {
   return async ({ data, req, operation }) => {
     if (operation !== 'create') return data;
-    let next = data;
+    if ((data as { publicId?: string } | undefined)?.publicId) return data;
 
-    // Numéro auto
-    if (!next || typeof next.numero !== 'number' || next.numero <= 0) {
+    for (let essai = 0; essai < 5; essai++) {
+      const candidat = generatePublicId();
       try {
-        const existing = await req.payload.find({
+        const existant = await req.payload.find({
           collection: collectionSlug as never,
-          sort: '-numero',
+          where: { publicId: { equals: candidat } },
           limit: 1,
           depth: 0,
         });
-        const top = existing.docs[0] as { numero?: number } | undefined;
-        const max = typeof top?.numero === 'number' ? top.numero : 0;
-        next = { ...(next ?? {}), numero: max + 1 };
+        if (existant.totalDocs === 0) return { ...(data ?? {}), publicId: candidat };
       } catch {
-        // Repli prudent : on laisse Payload échouer sur le `required`
-        // plutôt que d'écrire un numéro arbitraire.
+        // Base injoignable : on pose quand même l'identifiant plutôt que
+        // de bloquer la création. L'index unique reste le garde-fou.
+        return { ...(data ?? {}), publicId: candidat };
       }
     }
+    return { ...(data ?? {}), publicId: generatePublicId() };
+  };
+}
 
-    // Auteur·ice par défaut : la personne connectée signe en premier.
-    // Elle peut ensuite ajouter des co-auteur·ices, internes ou externes.
-    const authors = (next as { authors?: unknown[] } | undefined)?.authors;
+/**
+ * Auteur·ice par défaut à la création : la personne connectée signe en
+ * premier. Elle peut ensuite ajouter des co-auteur·ices, internes ou
+ * externes.
+ *
+ * Ce hook portait aussi l'attribution d'un numéro de série auto-
+ * incrémenté, hérité de Carnet. Tituba n'a pas d'usage pour une telle
+ * numérotation : les publications sont identifiées par leur id et
+ * datées, et rien — ni les URL, ni les citations, ni les métadonnées
+ * Zotero — ne s'appuyait dessus.
+ */
+export function makeDefaultAuthor(): CollectionBeforeValidateHook {
+  return async ({ data, req, operation }) => {
+    if (operation !== 'create') return data;
+
+    const authors = (data as { authors?: unknown[] } | undefined)?.authors;
     const userId = (req.user as { id?: number | string } | null | undefined)?.id;
     if ((!authors || authors.length === 0) && userId) {
-      next = { ...(next ?? {}), authors: [{ kind: 'user', user: userId }] };
+      return { ...(data ?? {}), authors: [{ kind: 'user', user: userId }] };
     }
 
-    return next;
+    return data;
   };
 }

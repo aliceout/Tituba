@@ -64,8 +64,6 @@ type IndexableDoc = {
   title?: string | null;
   lede?: string | null;
   body?: unknown;
-  slug?: string | null;
-  idCarnet?: string | null;
   themes?: unknown[] | null;
   tags?: unknown[] | null;
   authors?: unknown[] | null;
@@ -105,8 +103,6 @@ export function makeUpdateSearchVector(collectionSlug: string): CollectionAfterC
       title: fresh.title as string | null | undefined,
       lede: fresh.lede as string | null | undefined,
       body: fresh.body,
-      slug: fresh.slug as string | null | undefined,
-      idCarnet: fresh.idCarnet as string | null | undefined,
       themeNames,
       tagNames,
       authorNames,

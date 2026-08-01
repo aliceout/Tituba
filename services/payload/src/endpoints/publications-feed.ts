@@ -29,12 +29,10 @@ import { PUBLICATION_TABLES, type PublicationTable } from '../db/publications-un
 type FeedRow = {
   collection: PublicationTable;
   id: number;
-  numero: number | null;
-  slug: string | null;
+  public_id: string | null;
   title: string | null;
   lede: string | null;
   published_at: string | null;
-  id_carnet: string | null;
   reading_time: number | null;
   duration_seconds: number | null;
   theme_slugs: string | null;
@@ -112,8 +110,8 @@ export const publicationsFeedEndpoint: Endpoint = {
       }
       return sql`
         SELECT ${sql.raw(`'${t}'`)}::text AS collection,
-               p.id, p.numero, p.slug, p.title, p.lede,
-               p.published_at, p.id_carnet, p.reading_time,
+               p.id, p.public_id, p.title, p.lede,
+               p.published_at, p.reading_time,
                -- Durée d'écoute. Seule la table des podcasts porte la
                -- colonne ; les quatre autres branches projettent un NULL
                -- typé, sans quoi l'UNION refuserait des listes de
@@ -171,12 +169,10 @@ export const publicationsFeedEndpoint: Endpoint = {
     const docs = rows.map((r) => ({
       collection: r.collection,
       id: r.id,
-      numero: r.numero,
-      slug: r.slug,
+      publicId: r.public_id,
       title: r.title,
       lede: r.lede,
       publishedAt: r.published_at,
-      idTituba: r.id_carnet,
       readingTime: r.reading_time,
       durationSeconds: r.duration_seconds === null ? null : Number(r.duration_seconds),
       themeSlugs: (r.theme_slugs ?? '').split(' ').filter(Boolean),

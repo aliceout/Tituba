@@ -55,7 +55,7 @@ export const GET: APIRoute = async (context) => {
     items: posts.map((p) => {
       return {
         title: p.title ?? '',
-        link: publicationHref(p.collection, p.slug ?? ''),
+        link: publicationHref(p.collection, p.publicId),
         pubDate: p.publishedAt ? new Date(p.publishedAt) : new Date(),
         description: p.lede ?? '',
         categories: p.themeSlugs ?? [],

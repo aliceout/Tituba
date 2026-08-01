@@ -18,7 +18,6 @@ import { makeNotifyNewPublication } from '../hooks/notify-new-post';
 export const Podcasts: CollectionConfig = buildPublicationCollection({
   slug: 'podcasts',
   labels: { singular: 'Podcast', plural: 'Podcasts' },
-  idPrefix: 'tituba:podcast',
   bodyRequired: false,
   extraFields: [
     {
@@ -64,7 +63,7 @@ export const Podcasts: CollectionConfig = buildPublicationCollection({
   ],
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['numero', 'title', 'publishedAt', 'draft', 'updatedAt'],
+    defaultColumns: ['title', 'publishedAt', 'draft', 'updatedAt'],
     listSearchableFields: ['title', 'slug', 'lede'],
     components: {
       views: {

@@ -33,8 +33,11 @@ interface Props {
 const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.props;
 ---
 
-{entries.length > 0 && (
-  <aside class="toc" id="toc" aria-label="Sommaire">
+{/* Pas de condition d'affichage ici : c'est PublicationArticle qui
+    décide de monter ou non ce composant, et qui pose `no-toc` sur la
+    grille en conséquence. Deux conditions séparées finiraient par
+    diverger — une colonne réservée sans rien dedans, ou l'inverse. */}
+<aside class="toc" id="toc" aria-label="Sommaire">
     {readingLabel && (
       <div class="duree">
         <span class="duree-label">{readingLabel.label} : </span>
@@ -42,17 +45,25 @@ const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.pr
       </div>
     )}
 
-    <div class="lbl">Sommaire</div>
-    <a href="#intro" class="on" data-toc="intro">Introduction</a>
-    {entries.map((entry) => (
-      <a
-        href={`#${entry.id}`}
-        data-toc={entry.id}
-        class:list={[`level-${entry.level}`]}
-      >
-        {entry.text}
-      </a>
-    ))}
+    {/* Le sommaire proprement dit n'a de sens qu'avec des titres de
+        section. Sans eux — cas courant d'un billet d'analyse court — le
+        reste de l'aside (durée, liens de pied, actions) garde tout son
+        intérêt. */}
+    {entries.length > 0 && (
+      <>
+        <div class="lbl">Sommaire</div>
+        <a href="#intro" class="on" data-toc="intro">Introduction</a>
+        {entries.map((entry) => (
+          <a
+            href={`#${entry.id}`}
+            data-toc={entry.id}
+            class:list={[`level-${entry.level}`]}
+          >
+            {entry.text}
+          </a>
+        ))}
+      </>
+    )}
     {hasFootnotes && <a href="#notes" data-toc="notes">Notes</a>}
     {hasBiblio && <a href="#biblio" data-toc="biblio">Bibliographie</a>}
     {hasCitation && <a href="#cite" data-toc="cite">Pour citer</a>}
@@ -91,8 +102,7 @@ const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.pr
         Haut de page
       </a>
     </div>
-  </aside>
-)}
+</aside>
 
 <style>
   /* La position horizontale (colonne 2) et la hauteur du bloc viennent

@@ -5,9 +5,9 @@
  *
  * Pondération (poids tsvector) :
  *  - A : titre — match prioritaire
- *  - B : chapô (lede) + idCarnet — l'identifiant n° canonique
+ *  - B : chapô (lede)
  *  - C : corps + footnotes + citations + légendes — le gros du contenu
- *  - D : métadonnées (slug, noms de thèmes, noms de tags, auteur·ices)
+ *  - D : métadonnées (noms de thèmes, noms de tags, auteur·ices)
  *
  * Le calcul se fait côté Node (hook beforeChange), pas via un trigger
  * SQL, parce que le `body` est en JSON Lexical — extraire son texte
@@ -27,8 +27,6 @@ export type PostSearchSource = {
   title?: string | null;
   lede?: string | null;
   body?: unknown;
-  slug?: string | null;
-  idCarnet?: string | null;
   // Liste de noms (pas d'IDs) résolus côté hook avant l'appel.
   themeNames?: string[];
   tagNames?: string[];
@@ -55,16 +53,14 @@ function joinNonEmpty(parts: Array<string | null | undefined>): string {
 export function buildPostSearchVectorSQL(src: PostSearchSource): SQL {
   // A : titre seul.
   const a = (src.title ?? '').toString().trim();
-  // B : chapô + idCarnet (souvent cherché tel quel : « site:2026-042 »).
-  const b = joinNonEmpty([src.lede, src.idCarnet]);
+  // B : chapô.
+  const b = joinNonEmpty([src.lede]);
   // C : corps + tous les blocks (footnotes, citations, légendes).
   //     On inclut les blocks custom pour que la recherche matche aussi
   //     une phrase enfouie dans une note de bas de page.
   const c = extractLexicalText(src.body, { includeBlocks: true });
-  // D : métadonnées textuelles utiles à matcher (taxonomie, auteur·ices,
-  //     slug pour les permaliens copiés-collés).
+  // D : métadonnées textuelles utiles à matcher (taxonomie, auteur·ices).
   const d = joinNonEmpty([
-    src.slug,
     ...(src.themeNames ?? []),
     ...(src.tagNames ?? []),
     ...(src.authorNames ?? []),

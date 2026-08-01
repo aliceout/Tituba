@@ -19,7 +19,6 @@ import { makeNotifyNewPublication } from '../hooks/notify-new-post';
 export const Analyses: CollectionConfig = buildPublicationCollection({
   slug: 'analyses',
   labels: { singular: "Billet d'analyse", plural: "Billets d'analyse" },
-  idPrefix: 'tituba:analyse',
   extraFields: [
     {
       name: 'image',
@@ -43,7 +42,7 @@ export const Analyses: CollectionConfig = buildPublicationCollection({
   ],
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['numero', 'title', 'publishedAt', 'draft', 'updatedAt'],
+    defaultColumns: ['title', 'publishedAt', 'draft', 'updatedAt'],
     listSearchableFields: ['title', 'slug', 'lede'],
     components: {
       views: {

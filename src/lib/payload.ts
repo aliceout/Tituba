@@ -112,6 +112,30 @@ export async function fetchBySlug<T = unknown>(
   return data.docs[0] ?? null;
 }
 
+/**
+ * Récupère une publication par son identifiant public — le code court
+ * qui figure dans l'URL (`/analyses/k7m2xp/`), et non la clé primaire.
+ *
+ * Retourne null sur un identifiant mal formé sans interroger Payload :
+ * les URL trafiquées sont le cas courant, inutile d'aller jusqu'à la
+ * base pour les rejeter.
+ */
+export async function fetchByPublicId<T = unknown>(
+  collection: string,
+  publicId: string,
+  depth = 2,
+): Promise<T | null> {
+  if (!/^[a-z0-9]{4,12}$/.test(publicId)) return null;
+  try {
+    const data = await fetchPayload<FindResult<T>>(
+      `/${collection}?where[publicId][equals]=${encodeURIComponent(publicId)}&depth=${depth}&limit=1`,
+    );
+    return data.docs[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Variante pour `pages` — passe par fetchBySlug avec un cast confortable. */
 export async function fetchPage<T = unknown>(
   slug: string,
@@ -260,12 +284,11 @@ export type PublicationCollection = 'articles' | 'analyses' | 'actus' | 'podcast
 export type SearchPost = {
   collection: PublicationCollection;
   id: number | string;
-  numero: number | null;
-  slug: string | null;
+  /** Identifiant public court — sert à bâtir l'URL. */
+  publicId: string;
   title: string | null;
   lede: string | null;
   publishedAt: string | null;
-  idTituba: string | null;
   /**
    * Extrait avec les termes trouvés enveloppés dans <mark>…</mark>,
    * produit par ts_headline. Injecté via set:html — la source est
@@ -298,12 +321,11 @@ export async function searchPublications(
 export type FeedDoc = {
   collection: PublicationCollection;
   id: number | string;
-  numero: number | null;
-  slug: string | null;
+  /** Identifiant public court — sert à bâtir l'URL. */
+  publicId: string;
   title: string | null;
   lede: string | null;
   publishedAt: string | null;
-  idTituba: string | null;
   readingTime: number | null;
   /** Duree d ecoute, renseignee pour les podcasts uniquement. */
   durationSeconds: number | null;

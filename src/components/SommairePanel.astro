@@ -16,7 +16,7 @@
  */
 import { PUBLICATIONS, publicationHref, readingLabelFor } from '../lib/publications';
 import type { FeedDoc } from '../lib/payload';
-import { formatNumero, stripHeroMarkers } from '../lib/site';
+import { stripHeroMarkers } from '../lib/site';
 
 export interface Props {
   docs: Array<FeedDoc & { durationSeconds?: number | null }>;
@@ -48,8 +48,7 @@ function jourMois(iso: string | null): string {
           const duree = readingLabelFor(d.collection, d);
           return (
             <li>
-              <a href={publicationHref(d.collection, d.slug ?? '')}>
-                <span class="num">{d.numero != null ? formatNumero(d.numero) : ''}</span>
+              <a href={publicationHref(d.collection, d.publicId)}>
                 <span class="fmt">{spec.badge}</span>
                 <span class="titre">{stripHeroMarkers(d.title)}</span>
                 <span class="duree">{duree}</span>

@@ -4,7 +4,7 @@
  * Réutilisé sur la home, la page d'un thème individuel et la
  * future page archives par série.
  *
- * Colonne gauche : numéro + date sur deux lignes + temps de lecture
+ * Colonne gauche : format + date sur deux lignes + temps de lecture
  * Colonne centre : kicker (type · thèmes) + titre + chapô
  * Colonne droite : « Lire → » en accent
  *
@@ -12,7 +12,7 @@
  *
  * Réf : design_handoff_tituba/Tituba B.html → .item.
  */
-import { formatDateFr, formatNumero, stripHeroMarkers } from '../lib/site';
+import { formatDateFr, stripHeroMarkers } from '../lib/site';
 import FormatIcon from './FormatIcon.astro';
 import {
   PUBLICATIONS,
@@ -24,9 +24,9 @@ import {
 type Theme = { id: number | string; slug: string; name: string };
 
 export interface Props {
-  numero: number | null;
-  slug: string | null;
   title: string | null;
+  /** Identifiant public du document — forme l'URL publique. */
+  docId: string;
   /** Collection d'origine — pilote l'URL, la pastille et la durée. */
   collection: PublicationCollection;
   /** Durée d'écoute, pour les podcasts. */
@@ -42,9 +42,8 @@ export interface Props {
 }
 
 const {
-  numero,
-  slug,
   title,
+  docId,
   collection,
   durationSeconds,
   themes,
@@ -72,7 +71,7 @@ const themeSlugs = (themeSlugsProp ?? populatedThemes.map((t) => t.slug)).join('
 // textes, minutes d'écoute pour un podcast, rien pour un outil.
 const readingLabel = readingLabelFor(collection, { readingTime, durationSeconds }) || null;
 const spec = PUBLICATIONS[collection] ?? PUBLICATIONS.articles;
-const href = publicationHref(collection, slug ?? '');
+const href = publicationHref(collection, docId);
 ---
 
 <article
@@ -112,7 +111,6 @@ const href = publicationHref(collection, slug ?? '');
   </a>
   <a class="rcol" href={href}>
     <div class="lk">Lire →</div>
-    <div class="num">{numero != null ? formatNumero(numero) : ''}</div>
   </a>
 </article>
 
