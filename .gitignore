@@ -29,6 +29,6 @@ services/payload/dist/
 # Astro Node SSR
 .vercel/
 
-# Référence locale (copie d'un autre projet) — gitignored, à supprimer
-# une fois le scaffolding stable.
-/2mains/
+# Média de test à la racine — trop lourd pour le dépôt, sert seulement
+# à éprouver le lecteur audio en local.
+/podcast.mp3
