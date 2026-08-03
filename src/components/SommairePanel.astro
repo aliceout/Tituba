@@ -7,7 +7,7 @@
  * registre d'un ours de revue, pas d'un fil d'actualité.
  *
  * Panneau en violet très dilué — c'est ce qui le détache sans recourir à
- * une bordure. Les numéros et les rubriques prennent trois couleurs de
+ * une bordure. Les rubriques prennent trois couleurs de
  * famille à tour de rôle, par position et non par format : à cinq
  * formats pour trois couleurs, tout appariement serait arbitraire et se
  * lirait pourtant comme un code. Une alternance régulière ne prétend
@@ -112,7 +112,10 @@ function jourMois(iso: string | null): string {
      ce qu'un simple flex ne garantirait pas. */
   .rows a {
     display: grid;
-    grid-template-columns: 64px 128px 1fr auto 64px;
+    /* Quatre colonnes : format, titre, durée, date. La première, de
+       64px, portait le numéro de série — supprimé avec lui, sans quoi
+       le titre se retrouvait comprimé dans la colonne suivante. */
+    grid-template-columns: 128px 1fr auto 64px;
     gap: 24px;
     align-items: baseline;
     padding: 20px 0;
@@ -123,7 +126,6 @@ function jourMois(iso: string | null): string {
     color: var(--c-sommaire-accent);
   }
 
-  .num,
   .fmt,
   .duree,
   .date {
@@ -135,22 +137,15 @@ function jourMois(iso: string | null): string {
     letter-spacing: 0.14em;
     text-transform: uppercase;
   }
-  .num {
-    font-size: 12px;
-  }
-
-  /* Alternance des trois familles sur le numéro et la rubrique. Le
-     titre, lui, reste d'une seule encre : c'est le texte à lire, il
-     n'a pas à participer au rythme. */
-  .rows li:nth-child(3n + 1) .num,
+  /* Alternance des trois familles sur la rubrique. Le titre, lui,
+     reste d'une seule encre : c'est le texte à lire, il n'a pas à
+     participer au rythme. */
   .rows li:nth-child(3n + 1) .fmt {
     color: var(--c-bleu-deep);
   }
-  .rows li:nth-child(3n + 2) .num,
   .rows li:nth-child(3n + 2) .fmt {
     color: var(--c-vert-deep);
   }
-  .rows li:nth-child(3n + 3) .num,
   .rows li:nth-child(3n + 3) .fmt {
     color: var(--c-jaune-deep);
   }
@@ -171,11 +166,11 @@ function jourMois(iso: string | null): string {
       padding: 22px 20px 12px;
       border-radius: 18px;
     }
-    /* Sur étroit, la grille se replie : numéro et format sur une ligne,
+    /* Sur étroit, la grille se replie : le format sur une ligne, le
        titre en dessous. Les colonnes de durée et de date disparaissent —
        l'information reste sur la page de la publication. */
     .rows a {
-      grid-template-columns: 64px 1fr;
+      grid-template-columns: 1fr;
       gap: 6px 20px;
       row-gap: 6px;
       padding: 16px 0;

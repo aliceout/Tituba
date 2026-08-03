@@ -530,10 +530,15 @@ const postTags = (post.tags ?? []).filter(
     color: var(--color-muted);
     margin: 0 0 32px;
   }
+  /* Justification suivie, mais sans césure : le chapô est du titrage, et
+     un mot coupé y attire l'œil sur la coupure plutôt que sur le propos.
+     La césure reste en vigueur dans le corps de l'article (cf
+     ArticleBody), où les lignes sont assez nombreuses pour que le gain
+     de régularité l'emporte. */
   body.justify article.post .deck {
     text-align: justify;
-    hyphens: auto;
-    -webkit-hyphens: auto;
+    hyphens: manual;
+    -webkit-hyphens: manual;
   }
 
   .tail {
