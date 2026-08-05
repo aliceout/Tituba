@@ -55,6 +55,11 @@
   --page-gutter: 56px;
   /* Sous 900 px : la gouttière se resserre, le pouce reprend la place. */
   --page-gutter-narrow: 24px;
+  /* Écart entre le header et le premier bloc de la page. Nommé parce
+     qu'un hero pleine largeur doit pouvoir l'annuler pour venir toucher
+     le header — et le remonter d'une valeur devinée finirait par
+     décoller le jour où celle-ci change. */
+  --page-pad-top: 32px;
 
   /* ── Échelle typographique ────────────────────────────────────────
      Corps, graisses, interlignes et interlettrages, à un seul endroit.
@@ -328,6 +333,17 @@ body {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-serif);
+  /* Rognage horizontal au niveau du document, pour les blocs qui sortent
+     de la gouttière et vont jusqu'aux bords de la fenêtre (le hero d'un
+     épisode). Leurs marges se calculent en `vw`, qui compte la barre de
+     défilement : sans ce rognage, il resterait un défilement horizontal
+     de la largeur de celle-ci.
+     Posé ici et non sur <main>, qui est plafonné à --page-max : au-delà
+     de cette largeur, il rognait le bloc à sa propre boîte et la pleine
+     largeur devenait celle du composant.
+     `clip` et non `hidden` : `hidden` ferait de <body> un conteneur de
+     défilement et casserait le `position: sticky` de l'aside. */
+  overflow-x: clip;
   /* Transition douce sur le changement de thème — uniquement les
      couleurs, pas tout (pour éviter de transitionner les layouts). */
   transition: background-color 0.18s ease, color 0.18s ease;

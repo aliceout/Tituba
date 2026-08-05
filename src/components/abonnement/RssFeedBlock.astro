@@ -213,23 +213,28 @@ const { feedUrl } = Astro.props;
 </style>
 
 <script>
-  const btn = document.querySelector<HTMLButtonElement>('.copy-btn');
-  if (btn) {
-    const original = btn.textContent ?? 'Copier';
-    btn.addEventListener('click', async () => {
-      const url = btn.dataset.url;
-      if (!url) return;
-      try {
-        await navigator.clipboard.writeText(url);
-        btn.textContent = 'Copié ✓';
-        btn.classList.add('copied');
-        setTimeout(() => {
-          btn.textContent = original;
-          btn.classList.remove('copied');
-        }, 1800);
-      } catch (err) {
-        console.warn('clipboard:', err);
-      }
-    });
-  }
+  // Sur `astro:page-load` : avec le ClientRouter, un module ne
+  // s'exécute qu'une fois par URL — sans cet évènement, le bouton de
+  // la page suivante resterait sans écouteur.
+  document.addEventListener('astro:page-load', () => {
+    const btn = document.querySelector<HTMLButtonElement>('.copy-btn');
+    if (btn) {
+      const original = btn.textContent ?? 'Copier';
+      btn.addEventListener('click', async () => {
+        const url = btn.dataset.url;
+        if (!url) return;
+        try {
+          await navigator.clipboard.writeText(url);
+          btn.textContent = 'Copié ✓';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = original;
+            btn.classList.remove('copied');
+          }, 1800);
+        } catch (err) {
+          console.warn('clipboard:', err);
+        }
+      });
+    }
+  });
 </script>

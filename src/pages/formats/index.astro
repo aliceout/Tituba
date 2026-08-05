@@ -16,7 +16,27 @@
 import PageShell from '../../components/ui/PageShell.astro';
 import FormatIcon from '../../components/FormatIcon.astro';
 import { fetchFeed, PUBLICATIONS, PUBLICATION_ORDER } from '../../lib/publications';
+import { fetchIndexPages } from '../../lib/payload';
 import { formatHeroTitle } from '../../lib/site';
+
+type PagesFixes = { formats?: { heroTitle?: string; heroLede?: string } };
+
+// Titre et chapô écrits en dur jusqu'ici — cette page était la seule
+// des cinq à ne pas être réglable depuis l'admin. Les valeurs
+// ci-dessous restent le repli si Payload ne répond pas, comme partout
+// ailleurs : une page d'index doit s'afficher même privée du CMS.
+const TITRE_DEFAUT = 'Cinq *formats*, une même exigence.';
+const LEDE_DEFAUT =
+  "Un texte long avec son appareil de notes n'appelle pas la même lecture qu'un rebond d'actualité ou qu'un kit d'animation. Chaque format a sa place, ses codes et sa page.";
+
+let pagesFixes: PagesFixes = {};
+try {
+  pagesFixes = await fetchIndexPages<PagesFixes>();
+} catch (err) {
+  console.warn('[formats] fetchIndexPages failed:', (err as Error).message);
+}
+const heroTitre = pagesFixes.formats?.heroTitle?.trim() || TITRE_DEFAUT;
+const heroLede = pagesFixes.formats?.heroLede?.trim() || LEDE_DEFAUT;
 
 /** Familles de couleur, distribuées dans l'ordre éditorial. */
 const FAMILLES = ['bleu', 'vert', 'jaune'] as const;
@@ -50,8 +70,8 @@ function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
 <PageShell
   documentTitle="Formats"
   description="Les cinq formats de publication de Tituba : articles de recherche, analyses, actus, podcasts et outils."
-  title={formatHeroTitle('Cinq *formats*, une même exigence.')}
-  lede="Un texte long avec son appareil de notes n'appelle pas la même lecture qu'un rebond d'actualité ou qu'un kit d'animation. Chaque format a sa place, ses codes et sa page."
+  title={formatHeroTitle(heroTitre)}
+  lede={heroLede}
 >
   <div class="grid">
     {PUBLICATION_ORDER.map((c, i) => {

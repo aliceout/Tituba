@@ -1,33 +1,40 @@
 ---
 /**
- * Ligne Auteur·ice / Thème / Format / Publié, juste sous le deck. La
- * durée de lecture vit désormais au-dessus du sommaire (ArticleToc),
- * pas ici — cf PublicationArticle.
+ * Ligne Auteur·ice / Thème / Publié, juste sous le deck.
+ *
+ * Ni format ni durée de lecture ici : le premier est déjà en surtitre en
+ * haut de la page, avec le même mot et le même pictogramme ; la seconde
+ * vit au-dessus du sommaire (ArticleToc). Un bandeau de métadonnées ne
+ * vaut que par ce qu'il apprend — répéter ce qui est écrit dix
+ * centimètres plus haut le fait lire comme du remplissage.
  */
-import FormatIcon from '../FormatIcon.astro';
-import type { PublicationCollection } from '../../lib/publications';
+import type { PublicationTheme } from '../../lib/publications';
 import type { DisplayAuthor } from '../../lib/site';
 
 interface Props {
   authors: DisplayAuthor[];
   publishedFr: string;
   publishedIso: string;
-  collection: PublicationCollection;
-  badge: string;
-  themeName: string | null;
-  themeSlug: string | null;
-  formatHref: string;
+  /**
+   * Toutes les thématiques du billet, et non la seule première : un
+   * billet peut en porter plusieurs, et n'en montrer qu'une revenait à
+   * jeter le reste sans que rien ne le signale.
+   */
+  themes: PublicationTheme[];
+  /**
+   * Affiche la colonne « Publié ». Fausse quand la date vit dans
+   * l'aside — c'est la page qui tranche, elle seule sait si cet aside
+   * est monté (cf PublicationArticle, dateDansAside).
+   */
+  showPublished?: boolean;
 }
 
 const {
   authors,
   publishedFr,
   publishedIso,
-  collection,
-  badge,
-  themeName,
-  themeSlug,
-  formatHref,
+  themes,
+  showPublished = true,
 } = Astro.props;
 ---
 
@@ -46,28 +53,43 @@ const {
     )}
   </div>
   <div>
-    <div class="lbl">Thème</div>
-    {themeSlug && themeName ? (
-      <a href={`/theme/${themeSlug}/`}>{themeName}</a>
+    {/* Libellé accordé au nombre : « Thèmes » au pluriel devant une
+        valeur unique se lit comme une liste tronquée. */}
+    <div class="lbl">{themes.length > 1 ? 'Thèmes' : 'Thème'}</div>
+    {/* Séparateur et lien tenus sur une seule ligne : à la ligne, le
+        retour se rend en espace et la virgule se détachait du nom qui la
+        précède (« Genre et RI , Genre et politiques »). */}
+    {themes.length === 0 ? (
+      '—'
     ) : (
-      themeName ?? '—'
+      themes.map((t, i) => (
+        <Fragment>{i > 0 && ', '}<a href={`/theme/${t.slug}/`}>{t.name}</a></Fragment>
+      ))
     )}
   </div>
-  <div>
-    <div class="lbl">Format</div>
-    <a href={formatHref}><FormatIcon collection={collection} />{badge}</a>
-  </div>
-  <div>
-    <div class="lbl">Publié</div>
-    <time datetime={publishedIso}>{publishedFr}</time>
-  </div>
+  {showPublished && (
+    <div>
+      <div class="lbl">Publié</div>
+      <time datetime={publishedIso}>{publishedFr}</time>
+    </div>
+  )}
 </div>
 
 <style>
+  /* Colonnes calées sur leur contenu, et non en fractions égales : le
+     bandeau ne porte plus que deux ou trois valeurs selon le format, et
+     des colonnes de largeur fixe laissaient un tiers vide qu'on lisait
+     comme une donnée manquante. Au contenu, deux valeurs font une ligne,
+     trois aussi — la composition ne dépend plus du nombre.
+     `wrap` pour les cas où une signature à quatre noms et trois
+     thématiques ne tiennent plus sur une ligne : le groupe passe en
+     dessous entier, jamais coupé en son milieu. */
   .meta-strip {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    /* Écart horizontal large : c'est lui qui sépare deux groupes
+       étiquetés, là où la grille s'en remettait aux colonnes. */
+    gap: 20px 56px;
     padding: 20px 0;
     border-top: 1px solid var(--color-rule);
     border-bottom: 1px solid var(--color-rule);
@@ -104,8 +126,10 @@ const {
   }
 
   @media (max-width: 900px) {
+    /* L'écart se resserre : à cette largeur, 56 px entre deux groupes
+       enverraient le second à la ligne alors qu'il tenait. */
     .meta-strip {
-      grid-template-columns: 1fr 1fr;
+      gap: 18px 32px;
     }
   }
 </style>

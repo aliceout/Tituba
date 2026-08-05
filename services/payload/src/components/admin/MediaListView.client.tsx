@@ -52,6 +52,11 @@ export default function MediaListViewClient(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  // Images et fichiers audio partagent cette liste depuis la fusion des
+  // deux collections. Le filtre est ce qui rend la fusion vivable :
+  // sans lui, un épisode s'intercale au milieu des couvertures quand on
+  // en cherche une.
+  const [type, setType] = useState<'tous' | 'image' | 'audio'>('tous');
 
   useEffect(() => {
     setLoading(true);
@@ -62,6 +67,11 @@ export default function MediaListViewClient(): React.ReactElement {
     params.set('sort', '-updatedAt');
     params.set('depth', '0');
     if (search.trim()) params.append('where[filename][like]', search.trim());
+    // `like` sur le type MIME plutôt qu'une égalité : un mp3 arrive en
+    // « audio/mpeg », un m4a en « audio/x-m4a », et une image en
+    // « image/jpeg » ou « image/png » — c'est la famille qui compte, pas
+    // le format exact.
+    if (type !== 'tous') params.append('where[mimeType][like]', type);
 
     fetch(`/cms/api/media?${params.toString()}`, { credentials: 'include' })
       .then((r) => {
@@ -78,9 +88,9 @@ export default function MediaListViewClient(): React.ReactElement {
         setMedia([]);
       })
       .finally(() => setLoading(false));
-  }, [page, search]);
+  }, [page, search, type]);
 
-  useEffect(() => setPage(1), [search]);
+  useEffect(() => setPage(1), [search, type]);
 
   const startIdx = (page - 1) * PER_PAGE + 1;
   const endIdx = Math.min(page * PER_PAGE, totalDocs);
@@ -111,6 +121,21 @@ export default function MediaListViewClient(): React.ReactElement {
             placeholder={`Rechercher dans ${totalDocs} média${totalDocs > 1 ? 's' : ''}…`}
           />
         </div>
+
+        {/* Même gabarit de filtre que la liste des billets et celle de
+            la bibliographie — c'est le même geste, restreindre une liste
+            à une famille. */}
+        <label className="tituba-listview__filter">
+          <span className="lbl">Type :</span>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as 'tous' | 'image' | 'audio')}
+          >
+            <option value="tous">tous</option>
+            <option value="image">images</option>
+            <option value="audio">fichiers audio</option>
+          </select>
+        </label>
       </div>
 
       {error && <div className="tituba-listview__error">Erreur : {error}</div>}

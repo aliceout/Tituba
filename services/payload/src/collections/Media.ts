@@ -40,9 +40,31 @@ export const Media: CollectionConfig = {
       },
     },
     {
+      /**
+       * Obligatoire pour une image, sans objet pour un fichier audio :
+       * un texte alternatif décrit ce qu'on ne peut pas voir, et un
+       * épisode n'a rien à faire voir. D'où une validation conditionnelle
+       * plutôt qu'un `required` global — qui aurait empêché d'enregistrer
+       * le moindre mp3, ou forcé à inventer une description bidon.
+       *
+       * La contrainte reste tenue là où elle compte : aucune image ne
+       * peut être enregistrée sans alternative textuelle.
+       */
       name: 'alt',
       type: 'text',
-      required: true,
+      required: false,
+      label: 'Texte alternatif',
+      validate: (value: string | null | undefined, { data }: { data?: { mimeType?: string | null } }) => {
+        const estImage = (data?.mimeType ?? '').startsWith('image/');
+        if (estImage && !String(value ?? '').trim()) {
+          return 'Obligatoire sur une image : c’est ce que lisent les personnes qui ne la voient pas.';
+        }
+        return true;
+      },
+      admin: {
+        description:
+          'Ce que décrit l’image pour qui ne la voit pas. Laissé vide sur un fichier audio, qui n’a rien à décrire.',
+      },
     },
     // Rempli automatiquement à l'import depuis le picker Unsplash (cf.
     // endpoints/unsplash.ts) — vide pour un média uploadé à la main.

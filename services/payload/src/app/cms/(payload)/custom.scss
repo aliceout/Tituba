@@ -1538,40 +1538,59 @@ button.btn--style-primary,
   // Themes : 3 colonnes (Nom, Description, Billets). Slug retiré
   // de la liste — visible côté édition uniquement (#slug du billet
   // dans le hash). En tablette on cache la description.
-  &--themes &__row {
+  //
+  // Series partage exactement la même forme — un nom, une colonne de
+  // texte, un compte — et donc les mêmes règles plutôt qu'une copie :
+  // deux blocs jumeaux finissent toujours par diverger au premier
+  // ajustement.
+  &--themes &__row,
+  &--series &__row {
     grid-template-columns: 220px 1fr 80px;
   }
-  &--themes &__row .desc {
+  &--themes &__row .desc,
+  &--series &__row .desc {
     font-family: var(--font-serif);
     font-size: 14px;
     color: var(--b-muted);
     line-height: 1.4;
   }
-  &--themes &__row .count {
+  &--themes &__row .count,
+  &--series &__row .count {
     font-family: var(--font-mono);
     font-size: 12px;
     color: var(--b-muted);
     text-align: right;
+  }
+  // La pastille « brouillon » suit le nom dans la même cellule : c'est
+  // un état du nom, pas une colonne de plus — en ouvrir une la
+  // laisserait vide sur toutes les séries publiées.
+  &--series &__row .title .status-pill {
+    margin-left: 10px;
+    vertical-align: middle;
   }
   // En-tête « Billets » (3e cell : <div role="columnheader"> sans
   // className) aligné à droite pour matcher .count en dessous, à
   // toutes les tailles d'écran. En mobile (≤ 900) la 2e cell « Description »
   // est cachée → « Billets » devient nth-child(3) sur 2 cellules visibles
   // mais reste la 3e dans le DOM, donc ce sélecteur continue de matcher.
-  &--themes &__row--head > *:nth-child(3) {
+  &--themes &__row--head > *:nth-child(3),
+  &--series &__row--head > *:nth-child(3) {
     text-align: right;
   }
   // ≥ 901px : on garde les 3 colonnes (Nom + Description + Billets)
   // — y compris en zone tablette (901-1440). Description cachée
   // uniquement en vrai mobile (≤ 900) où elle bouffe trop de place.
   @include mobile {
-    &--themes &__row {
+    &--themes &__row,
+    &--series &__row {
       grid-template-columns: 1fr 60px;
     }
     // Hide cellule data .desc + en-tête « Description » (2e cell, sans
     // className car role=columnheader est plain <div>).
     &--themes &__row > .desc,
-    &--themes &__row--head > *:nth-child(2) {
+    &--themes &__row--head > *:nth-child(2),
+    &--series &__row > .desc,
+    &--series &__row--head > *:nth-child(2) {
       display: none;
     }
   }
@@ -1712,8 +1731,12 @@ button.btn--style-primary,
   }
 
   // ─── Variante --pages ────────────────────────────────────────
+  // Quatre colonnes depuis que les pages fixes du site partagent cette
+  // liste avec les pages libres : sans colonne qui l'annonce, rien ne
+  // distinguerait une page qu'on peut supprimer d'une qui titre une
+  // route et refusera de partir.
   &--pages &__row {
-    grid-template-columns: 1fr 220px 110px;
+    grid-template-columns: 1fr 190px 120px 110px;
   }
   &--pages &__row .title {
     font-family: var(--font-serif);
@@ -1726,16 +1749,35 @@ button.btn--style-primary,
     font-size: 12px;
     color: var(--b-muted);
   }
+  &--pages &__row .nature {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--b-muted);
+  }
+  // La page fixe est l'exception dans cette liste — elle seule porte la
+  // couleur, les pages libres restant en gris. Signaler la règle aussi
+  // fort que l'exception aurait annulé le contraste.
+  &--pages &__row .nature--fixe {
+    color: var(--b-accent);
+  }
+  &--pages &__row .nature small {
+    display: block;
+    font-size: 11px;
+    color: var(--b-muted);
+  }
   &--pages &__row .date {
     font-family: var(--font-mono);
     font-size: 11.5px;
     color: var(--b-muted);
   }
   @include mobile {
+    // La nature reste, le slug part : à cette largeur, savoir ce qu'on
+    // peut faire d'une page prime sur son adresse.
     &--pages &__row {
-      grid-template-columns: 1fr 100px;
+      grid-template-columns: 1fr 110px 100px;
     }
-    &--pages &__row > .slug {
+    &--pages &__row > .slug,
+    &--pages &__row--head > *:nth-child(2) {
       display: none;
     }
   }
@@ -2169,6 +2211,33 @@ button.btn--style-primary,
   &:hover {
     color: #b63a3a;
     border-color: #b63a3a;
+  }
+}
+
+// Saisie d'une liste de valeurs libres en pastilles (cf ChipsInput).
+// Reprend .tag-chip pour les pastilles : c'est le même geste que les
+// tags, il n'y a aucune raison qu'il n'en ait pas l'air.
+.chips-input {
+  &__field {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--b-ink);
+
+    &:focus {
+      outline: none;
+      border-color: var(--b-accent);
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
   }
 }
 
@@ -3575,6 +3644,69 @@ button.btn--style-primary,
     }
   }
 
+  // Couverture du flux podcast (cf SubscriptionsEditView). Aperçu carré
+  // à gauche, actions à droite : le carré n'est pas décoratif, c'est la
+  // proportion exigée par les applications d'écoute, et la voir en
+  // permanence rend l'écart visible avant même l'avertissement.
+  .podcast-cover {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+
+    &__img,
+    &__empty {
+      flex: 0 0 auto;
+      width: 120px;
+      height: 120px;
+      border-radius: 4px;
+      background: var(--b-bg);
+      object-fit: cover;
+    }
+
+    &__empty {
+      display: grid;
+      place-items: center;
+      border: 1px dashed var(--b-rule);
+      font-size: 11px;
+      color: var(--b-muted);
+      text-align: center;
+      padding: 0 8px;
+    }
+
+    &__side {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    &__remove {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--b-muted);
+      cursor: pointer;
+      text-decoration: underline;
+
+      &:hover:not(:disabled) {
+        color: #b63a3a;
+      }
+    }
+
+    &__dims {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--b-muted);
+    }
+
+    &__warn {
+      font-size: 11.5px;
+      color: #b63a3a;
+    }
+  }
+
   // Message d'erreur affiché sous un .tituba-editview__field--invalid.
   // Margin-top négatif pour grignoter le gap du field et coller le
   // message à l'input.
@@ -4097,11 +4229,19 @@ button.btn--style-primary,
     font-size: 12px;
   }
 
+  // Le filet qui sépare le corps de la barre latérale est peint par la
+  // grille et non par la barre elle-même : celle-ci est `sticky` et
+  // haute de son seul contenu, si bien qu'une bordure portée par elle
+  // s'arrêtait au dernier champ au lieu de descendre jusqu'en bas.
+  // Deux couches : le fond de la colonne, et le trait à sa gauche.
   &__doc {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 300px;
     align-items: start;
     flex: 1;
+    background:
+      linear-gradient(var(--b-rule), var(--b-rule)) right 300px top / 1px 100% no-repeat,
+      linear-gradient(var(--b-bg), var(--b-bg)) right top / 300px 100% no-repeat;
   }
 
   &__center {
@@ -4134,7 +4274,8 @@ button.btn--style-primary,
   }
 
   &__meta {
-    border-left: 1px solid var(--b-rule);
+    // Pas de border-left ici : le filet est peint par __doc, pour
+    // qu'il descende plus bas que le dernier champ (cf plus haut).
     background: var(--b-bg);
     padding: 24px 22px 10px 22px;
     // Sticky : reste visible quand on scroll le corps du billet.
@@ -4207,6 +4348,23 @@ button.btn--style-primary,
         .mono {
           font-family: var(--font-mono);
         }
+      }
+
+      // Aide sous un champ de format (cf renderExtraField). Même corps
+      // que .help juste au-dessus : ce sont deux fois la même chose —
+      // une phrase de service sous un champ — et rien ne justifierait
+      // qu'elles ne se ressemblent pas.
+      .hint {
+        margin-top: 5px;
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--b-muted);
+      }
+
+      .err {
+        margin-top: 5px;
+        font-size: 11px;
+        color: #b63a3a;
       }
 
       // État invalide : bordure rouge sur l'input + message en dessous.
@@ -4381,95 +4539,6 @@ button.btn--style-primary,
   // Pattern <details> qui imite un <select> natif — le summary fait
   // office de "trigger" comme une caret-arrow de select, le body
   // déroule des checkboxes scrollables. Les éléments sélectionnés
-  // sont aussi repris en chips sous le multi-select pour retrait
-  // rapide.
-  .multi-select {
-    position: relative;
-
-    & > summary {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 7px 28px 7px 10px;
-      background: var(--b-paper);
-      border: 1px solid var(--b-rule);
-      font-family: inherit;
-      font-size: 12.5px;
-      color: var(--b-ink);
-      cursor: pointer;
-      list-style: none;
-      position: relative;
-
-      &::-webkit-details-marker {
-        display: none;
-      }
-
-      &::after {
-        content: '▾';
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--b-muted);
-        font-size: 11px;
-      }
-    }
-
-    &[open] > summary {
-      border-color: var(--b-accent);
-    }
-
-    &__list {
-      // Overlay : on flotte au-dessus du contenu suivant plutôt que
-      // de le pousser quand on ouvre le multi-select. Le parent
-      // .multi-select a `position: relative` (pour ancrer ce
-      // overlay).
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 100%;
-      margin-top: 2px;
-      z-index: 20;
-      max-height: 220px;
-      overflow: auto;
-      background: var(--b-paper);
-      border: 1px solid var(--b-rule);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-    }
-
-    &__opt {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 6px 10px;
-      border-bottom: 1px solid var(--b-rule);
-      font-size: 12px;
-      color: var(--b-ink);
-      cursor: pointer;
-      transition: background 0.12s;
-
-      &:last-child {
-        border-bottom: 0;
-      }
-
-      &:hover {
-        background: var(--b-accent-tint);
-      }
-
-      input {
-        margin: 0;
-        width: auto;
-        flex: 0 0 auto;
-      }
-    }
-
-    &__empty {
-      padding: 10px;
-      color: var(--b-muted);
-      font-size: 11.5px;
-      font-style: italic;
-    }
-  }
 
   // ─── Chip toggle (thèmes) ──────────────────────────────────────
   .chip-toggle {
@@ -5486,7 +5555,8 @@ button.btn--style-primary,
   // (bib-block, déplacée du sidebar de droite pour mieux refléter ce
   // qu'on lit en pied d'article côté frontend).
   .fn-block,
-  .bib-block {
+  .bib-block,
+  .ep-block {
     margin: 24px 0 0;
     border: 1px solid var(--b-rule);
     background: var(--b-paper);
@@ -5634,47 +5704,114 @@ button.btn--style-primary,
   // rangée d'actions. Le choix d'une photo Unsplash se fait dans une
   // fenêtre contextuelle (cf .tituba-modal--unsplash), pas ici : la
   // grille de résultats demande une largeur que la colonne n'a pas.
-  // Champ « Image de couverture » de la barre latérale. Pas de châssis
-  // de panneau (bordure, en-tête) : le <label> et l'aide viennent de la
-  // boucle de champs, comme pour les autres champs du sidebar.
-  .img-block {
+
+  // ep-block : panneau des champs de format rendus en colonne centrale
+  // (cf FieldSpec.zone). Le châssis vient du groupe .fn-block /
+  // .bib-block plus haut ; ne restent ici que la disposition interne et
+  // les styles de champ, que la barre latérale porte de son côté et qui
+  // ne descendent pas jusqu'ici.
+  //
+  // `auto-fit` plutôt qu'un nombre de colonnes figé : le panneau ne
+  // contient aujourd'hui qu'un champ, qui prend donc toute la largeur.
+  // Une déclaration à deux colonnes en aurait laissé une vide.
+  .ep-block {
     &__body {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px 24px;
+      align-items: start;
+      padding: 16px 20px;
     }
 
-    // Colonne de 300px : l'aperçu passe au-dessus des informations, pas
-    // à côté — côte à côte, il ne resterait qu'une trentaine de pixels
-    // pour le nom du fichier.
-    &__current {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    .field {
+      min-width: 0;
 
-      img {
+      > label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--b-muted);
+        margin-bottom: 6px;
+      }
+
+      input[type='number'],
+      input[type='text'],
+      input[type='url'] {
         width: 100%;
-        aspect-ratio: 1 / 1;
-        object-fit: cover;
-        border-radius: 3px;
-        background: var(--b-bg);
+        padding: 7px 10px;
+        background: var(--b-paper);
+        border: 1px solid var(--b-rule);
+        font-family: inherit;
+        font-size: 12.5px;
+        color: var(--b-ink);
+
+        &:focus {
+          outline: none;
+          border-color: var(--b-accent);
+        }
+      }
+
+      .hint {
+        margin-top: 6px;
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--b-muted);
+      }
+
+      .err {
+        margin-top: 6px;
+        font-size: 11px;
+        color: #b63a3a;
       }
     }
 
-    &__meta {
+  }
+
+  // audio-block : fichier d'un épisode de podcast. Même parti que
+  // .img-block juste au-dessus — le <label> et l'aide viennent de la
+  // boucle de champs, pas d'en-tête propre.
+  .audio-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    &__current {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
       gap: 6px;
       min-width: 0;
     }
 
-    // Rangée « Ajuster le cadrage · Retirer » sous l’aperçu.
+    &__player {
+      width: 100%;
+      height: 34px;
+    }
+
+    // Nom de fichier tronqué et non replié : dans une colonne de 300px,
+    // un nom d'export un peu long occuperait trois lignes pour une
+    // information de contrôle qu'on ne lit qu'en diagonale.
+    &__name {
+      font-size: 12px;
+      color: var(--b-ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__meta {
+      font-size: 11px;
+      color: var(--b-muted);
+      font-family: var(--font-mono);
+    }
+
     &__links {
       display: flex;
       align-items: center;
       gap: 14px;
       flex-wrap: wrap;
+      margin-top: 2px;
     }
 
     &__link,
@@ -5687,32 +5824,57 @@ button.btn--style-primary,
       color: var(--b-muted);
       cursor: pointer;
       text-decoration: underline;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
     }
 
-    &__link:hover {
+    &__link:hover:not(:disabled) {
       color: var(--b-accent);
     }
 
-    &__remove:hover {
+    &__remove:hover:not(:disabled) {
       color: #b63a3a;
     }
 
-    // Boutons empilés : « Rechercher sur Unsplash » ne tient pas à côté
-    // de « Uploader un fichier » dans une colonne de 300px.
-    &__actions {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-
-      .tituba-btn {
-        width: 100%;
-      }
+    &__pick {
+      width: 100%;
     }
 
     &__empty {
       font-size: 12px;
       color: var(--b-muted);
       font-style: italic;
+    }
+
+    // Jauge d'envoi : un épisode pèse des dizaines de mégaoctets, et
+    // sans elle rien ne distingue un envoi en cours d'une admin figée.
+    &__progress {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    &__bar {
+      height: 3px;
+      border-radius: 2px;
+      background: var(--b-rule);
+      overflow: hidden;
+
+      span {
+        display: block;
+        height: 100%;
+        background: var(--b-accent);
+        transition: width 0.15s linear;
+      }
+    }
+
+    &__pct {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--b-muted);
     }
 
     &__error {
@@ -5891,8 +6053,11 @@ button.btn--style-primary,
   }
 
   @media (max-width: 1100px) {
+    // Colonnes empilées : la bande peinte à droite n'a plus de colonne
+    // à souligner, et le filet redevient une bordure haute.
     &__doc {
       grid-template-columns: 1fr;
+      background: none;
     }
     &__meta {
       border-left: 0;
@@ -6528,5 +6693,221 @@ button.btn--style-primary,
 
   &:hover {
     text-decoration: none;
+  }
+}
+
+
+// ─── Sélecteur d image partagé (UnsplashImagePicker) ────────────
+// Au niveau racine et non dans .tituba-postedit : le composant sert
+// aussi bien à la couverture d un billet qu à l image d une série,
+// et deux vues différentes le rendent. Imbriqué dans l une des deux,
+// il arrivait sans le moindre style dans l autre — aperçu nu et
+// boutons bruts, alors que le composant, lui, était le bon.
+// Pas de châssis de panneau (bordure, en-tête) : le libellé et l'aide
+// sont fournis par la vue qui l'accueille, comme pour ses champs
+// voisins.
+.img-block {
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  // Colonne de 300px : l'aperçu passe au-dessus des informations, pas
+  // à côté — côte à côte, il ne resterait qu'une trentaine de pixels
+  // pour le nom du fichier.
+  &__current {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /**
+   * Fenêtre de l'aperçu — même mécanique que le hero du site (cf
+   * PublicationArticle, .hero-frame). Sa proportion est celle de
+   * l'emplacement, posée en style en ligne par le composant : carré pour
+   * la couverture d'un billet, bande large pour l'image d'une série.
+   *
+   * Sans cadrage enregistré, l'image remplit la fenêtre et c'est
+   * `object-fit` qui décide — un centrage, faute de mieux. Avec cadrage,
+   * elle est agrandie et décalée pour que la zone retenue tombe
+   * exactement dans la fenêtre : montrer une zone large de `w` % revient
+   * à afficher l'image à `100 / w × 100` % de la taille du cadre. C'est
+   * le composant qui calcule ces pourcentages, comme le fait le site.
+   */
+  &__cadre {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    border-radius: 3px;
+    background: var(--b-bg);
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+  &__cadre--cadree img {
+    position: absolute;
+    width: auto;
+    height: auto;
+    max-width: none;
+    object-fit: fill;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  // Rangée « Ajuster le cadrage · Retirer » sous l’aperçu.
+  &__links {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  &__link,
+  &__remove {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--b-muted);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  &__link:hover {
+    color: var(--b-accent);
+  }
+
+  &__remove:hover {
+    color: #b63a3a;
+  }
+
+  // Boutons empilés : « Rechercher sur Unsplash » ne tient pas à côté
+  // de « Uploader un fichier » dans une colonne de 300px.
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .tituba-btn {
+      width: 100%;
+    }
+  }
+
+  &__empty {
+    font-size: 12px;
+    color: var(--b-muted);
+    font-style: italic;
+  }
+
+  &__error {
+    font-size: 12px;
+    color: var(--b-danger, #b3261e);
+  }
+}
+
+
+// ─── Sélecteur multiple partagé ─────────────────────────────────
+// Au niveau racine, comme .img-block : la fiche d un billet et celle
+// d une série s en servent toutes deux pour choisir des thématiques.
+// Imbriqué dans l une, il arrivait sans style dans l autre.
+// sont aussi repris en chips sous le multi-select pour retrait
+// rapide.
+.multi-select {
+  position: relative;
+
+  & > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 28px 7px 10px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--b-ink);
+    cursor: pointer;
+    list-style: none;
+    position: relative;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::after {
+      content: '▾';
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--b-muted);
+      font-size: 11px;
+    }
+  }
+
+  &[open] > summary {
+    border-color: var(--b-accent);
+  }
+
+  &__list {
+    // Overlay : on flotte au-dessus du contenu suivant plutôt que
+    // de le pousser quand on ouvre le multi-select. Le parent
+    // .multi-select a `position: relative` (pour ancrer ce
+    // overlay).
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 2px;
+    z-index: 20;
+    max-height: 220px;
+    overflow: auto;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  &__opt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--b-rule);
+    font-size: 12px;
+    color: var(--b-ink);
+    cursor: pointer;
+    transition: background 0.12s;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    &:hover {
+      background: var(--b-accent-tint);
+    }
+
+    input {
+      margin: 0;
+      width: auto;
+      flex: 0 0 auto;
+    }
+  }
+
+  &__empty {
+    padding: 10px;
+    color: var(--b-muted);
+    font-size: 11.5px;
+    font-style: italic;
   }
 }

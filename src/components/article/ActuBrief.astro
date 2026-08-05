@@ -1,0 +1,129 @@
+---
+/**
+ * Colonne latérale d'un billet d'actu — le fait dont il part.
+ *
+ * Elle occupe l'emplacement du sommaire des autres formats, et hérite
+ * donc de sa géométrie et de son comportement collant (cf
+ * PublicationArticle, .post-split). C'est délibéré : monter une seconde
+ * grille pour ce seul format aurait dupliqué un mécanisme qui marche.
+ *
+ * Ce qu'elle contient n'est pas un résumé du billet mais un rappel des
+ * faits. La distinction commande la mise en forme : registre sec,
+ * corps réduit, pas de rhétorique. Le billet argumente ; cette colonne
+ * établit.
+ */
+export interface Props {
+  /** Le fait, en deux à quatre phrases. */
+  texte: string;
+  /** Liens de vérification — ceux du fait, pas ceux de l'argumentation. */
+  sources?: { label?: string | null; url?: string | null }[] | null;
+}
+
+const { texte, sources } = Astro.props as Props;
+
+// Les entrées incomplètes sont écartées plutôt que rendues à moitié :
+// un intitulé sans adresse donne un lien mort, une adresse sans
+// intitulé une ligne qu'on ne sait pas lire.
+const liens = (sources ?? []).filter(
+  (s): s is { label: string; url: string } => Boolean(s?.label?.trim() && s?.url?.trim()),
+);
+---
+
+<aside class="brief" aria-labelledby="brief-titre">
+  <h2 class="brief-titre" id="brief-titre">L’actualité en bref</h2>
+  <p class="brief-texte">{texte}</p>
+
+  {liens.length > 0 && (
+    <div class="brief-sources">
+      <h3 class="brief-sources-titre">Sources</h3>
+      <ul>
+        {liens.map((s) => (
+          <li>
+            <a href={s.url} rel="noopener noreferrer" target="_blank">{s.label}</a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+</aside>
+
+<style>
+  /* Pas de collage ici : c'est la colonne qui l'enveloppe qui colle (cf
+     PublicationArticle, .brief-colonne), puisqu'elle contient aussi les
+     repères et les actions. Deux blocs collants imbriqués se contraignent
+     l'un l'autre et finissent par se figer à contretemps. */
+  .brief {
+    font-family: var(--font-sans);
+  }
+
+  /* Un filet à gauche plutôt qu'un cadre : le bloc se distingue du texte
+     sans devenir un encadré, qui appellerait à être lu en premier alors
+     qu'il n'est qu'un préalable. */
+  .brief-titre {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin: 0 0 12px;
+  }
+
+  /* Justifié avec césure, comme le corps des billets (cf ArticleBody) :
+     la justification seule, dans une colonne de cette largeur, ouvre des
+     blancs béants entre les mots. La césure les referme. */
+  .brief-texte {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--color-ink);
+    text-align: justify;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    margin: 0;
+    padding-left: 14px;
+    border-left: 2px solid var(--color-rule);
+  }
+
+  .brief-sources {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--color-rule);
+  }
+  .brief-sources-titre {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin: 0 0 8px;
+  }
+  .brief-sources ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .brief-sources a {
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--color-muted);
+    border-bottom: 1px solid var(--color-rule);
+    transition: color 0.12s, border-color 0.12s;
+  }
+  .brief-sources a:hover {
+    color: var(--color-ink);
+    border-bottom-color: var(--color-ink);
+  }
+
+  /* Sous 1300 px la colonne n'existe plus (cf .post-split) : le bloc
+     repasse au-dessus du texte, où il garde son sens — on lit le fait
+     avant le commentaire. */
+  @media (max-width: 1300px) {
+    .brief {
+      margin-bottom: 34px;
+    }
+  }
+</style>

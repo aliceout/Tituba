@@ -32,6 +32,8 @@ import {
   publicIdField,
   publishedAtField,
   readingTimeField,
+  seriesField,
+  seriesNumberField,
 
   subtypeField,
   tagsField,
@@ -51,6 +53,15 @@ export type BuildPublicationArgs = {
   subtypes?: { options: { label: string; value: string }[]; defaultValue: string };
   /** Champs propres au format (audio d'un podcast, lien d'un outil…). */
   extraFields?: Field[];
+  /**
+   * Ouvre le format à la mise en série : ajoute le sélecteur de série et
+   * le rang. Réservé aux trois formats qui s'y prêtent — podcasts (les
+   * émissions), articles de recherche, billets d'analyse. Un billet
+   * d'actu est ponctuel, un outil se retrouve par sa thématique : leur
+   * ajouter le champ aurait chargé leur formulaire et créé une colonne
+   * qui resterait vide.
+   */
+  series?: boolean;
   /**
    * Rend le chapô et/ou le corps facultatifs. Un outil peut n'être
    * qu'un lien accompagné d'une description, un podcast qu'un fichier
@@ -74,6 +85,7 @@ export function buildPublicationCollection(args: BuildPublicationArgs): Collecti
     admin,
     ledeRequired = true,
     bodyRequired = true,
+    series = false,
   } = args;
 
   return {
@@ -96,6 +108,10 @@ export function buildPublicationCollection(args: BuildPublicationArgs): Collecti
       ...(subtypes ? [subtypeField(subtypes.options, subtypes.defaultValue)] : []),
       themesField(),
       tagsField(),
+      // Juste après la taxonomie : la série est de même nature — un
+      // rattachement qui situe le billet parmi les autres — et se
+      // renseigne dans le même geste.
+      ...(series ? [seriesField(slug), seriesNumberField()] : []),
       authorsField(),
       publishedAtField(),
       ledeField(ledeRequired),

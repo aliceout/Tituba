@@ -55,7 +55,8 @@ function sendWithTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 type PostDoc = {
   id: number | string;
-  slug?: string | null;
+  /** Identifiant public court — celui qui forme l'URL du billet. */
+  publicId?: string | null;
   title?: string | null;
   lede?: string | null;
   draft?: boolean;
@@ -126,10 +127,16 @@ type PublicationCtx = { slug: string; routePrefix: string; label: string };
 
 // Construction de l'URL publique du billet pour le lien dans le mail.
 // Convention Infisical : ADDRESS contient le domaine sans schème.
-function buildPostUrl(routePrefix: string, slug: string): string {
+//
+// Bâtie sur l'identifiant public, comme partout ailleurs depuis la
+// suppression des slugs. Le champ `slug` lu ici n'existait plus : la
+// condition de garde plus bas le trouvait donc toujours vide, et
+// l'envoi était abandonné pour tous les billets, avec pour seule trace
+// une ligne d'avertissement dans les logs du serveur.
+function buildPostUrl(routePrefix: string, publicId: string): string {
   const raw = process.env.ADDRESS || 'http://localhost:4321';
   const withScheme = /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
-  return `${withScheme.replace(/\/$/, '')}${routePrefix}/${slug}/`;
+  return `${withScheme.replace(/\/$/, '')}${routePrefix}/${publicId}/`;
 }
 
 async function isEmailFeatureEnabled(req: PayloadRequest): Promise<boolean> {
@@ -155,8 +162,11 @@ async function dispatchPostNotifications(
   post: PostDoc,
   ctx: PublicationCtx,
 ): Promise<void> {
-  if (!post.slug || !post.title) {
-    payload.logger.warn({ postId: post.id }, 'notify_new_post: missing slug/title, skipping');
+  if (!post.publicId || !post.title) {
+    payload.logger.warn(
+      { postId: post.id },
+      'notify_new_post: publicId ou titre manquant, envoi abandonné',
+    );
     return;
   }
 
@@ -197,7 +207,7 @@ async function dispatchPostNotifications(
   }
 
   const siteName = await getSiteName(payload);
-  const postUrl = buildPostUrl(ctx.routePrefix, post.slug);
+  const postUrl = buildPostUrl(ctx.routePrefix, post.publicId);
   const byline = formatByline(postFull.authors);
   // Le format est désormais porté par la collection : son libellé vient
   // du contexte, plutôt que d'un champ `type` sur le document.

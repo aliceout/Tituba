@@ -21,13 +21,20 @@ interface Props {
   /** Sur les pages article : le filet dégradé du bas laisse place à la
    * barre de progression de lecture, plutôt que d'empiler les deux. */
   progressBar?: boolean;
+  /**
+   * Escamote le filet dégradé, sans toucher à la barre de progression.
+   * Pour les pages dont le premier bloc est une image pleine largeur :
+   * le filet s'y lit comme un trait posé sur la photo, alors qu'il est
+   * fait pour marquer une ligne d'horizon sur du fond de page.
+   */
+  sansFilet?: boolean;
 }
-const { progressBar = false } = Astro.props;
+const { progressBar = false, sansFilet = false } = Astro.props;
 
 const nav = await resolveHeaderNav(Astro.url.pathname);
 ---
 
-<header class:list={['site', { 'has-progress': progressBar }]} id="site-header">
+<header class:list={['site', { 'has-progress': progressBar, 'no-filet': sansFilet }]} id="site-header">
   <div class="row">
     <div class="lead">
       <a class="brand" href="/">{nav.siteName}<span class="dot">.</span></a>
@@ -146,6 +153,12 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
      que .is-scrolled (scrollY > 4px) qu'il cède la place à la barre de
      progression, plutôt que d'empiler les deux dès le chargement. */
   header.site.has-progress.is-scrolled::after {
+    display: none;
+  }
+  /* Page à hero pleine largeur : pas de filet du tout, à aucun moment.
+     La barre de progression, elle, reste — c'est un repère de lecture,
+     pas un ornement. */
+  header.site.no-filet::after {
     display: none;
   }
   header.site .progress {

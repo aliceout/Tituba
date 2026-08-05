@@ -59,6 +59,8 @@ const duree =
       </div>
 
       <h3>{stripHeroMarkers(doc.title)}</h3>
+
+      {doc.lede && <p class="lede">{doc.lede}</p>}
     </div>
 
     <div class="foot">
@@ -74,7 +76,12 @@ const duree =
     flex-direction: column;
     justify-content: space-between;
     gap: 16px;
-    padding: 26px;
+    /* Fond plus creux que les côtés, et c'est voulu : le pied reprend
+       la rangée de 38 px de la une (cf .foot), qui la tient de sa
+       pastille d'initiales. Même rangée et même retrait des deux côtés,
+       donc « écouter » et « lire le texte » tombent sur la même ligne —
+       les deux blocs se lisent comme un seul bandeau. */
+    padding: 26px 26px 36px;
     border-radius: var(--radius-panel);
     background: var(--c-podcast-bg);
     color: var(--c-podcast-fg);
@@ -87,10 +94,10 @@ const duree =
     filter: brightness(0.97);
   }
 
-  /* En-tête et titre solidaires, en haut du bloc. Sans ce groupe,
-     la répartition en espace égal porte sur trois enfants et cale le
-     titre au centre vertical — ce qui le détache de la rubrique qu'il
-     prolonge, et laisse un trou au-dessus de lui. */
+  /* Rubrique, titre et chapô solidaires, en haut du bloc. Sans ce
+     groupe, la répartition en espace égal porterait sur quatre enfants
+     et disperserait le titre au milieu du carré — détaché de la rubrique
+     qu'il prolonge, avec un trou au-dessus de lui. */
   .haut {
     display: flex;
     flex-direction: column;
@@ -126,8 +133,11 @@ const duree =
     font-family: var(--font-serif);
     font-weight: 300;
     /* clamp() fait rétrécir le titre avec la colonne, sans quoi un
-       titre long déborderait aux largeurs intermédiaires. */
-    font-size: clamp(19px, 1.7vw, 25px);
+       titre long déborderait aux largeurs intermédiaires. Les trois
+       valeurs montent ensemble d'un point : ne relever que le plafond
+       aurait laissé le titre inchangé partout sauf au-delà de 1530 px,
+       où seul ce plafond s'applique. */
+    font-size: clamp(20px, 1.75vw, 26px);
     line-height: 1.15;
     letter-spacing: -0.01em;
     margin: 0;
@@ -139,9 +149,44 @@ const duree =
     overflow: hidden;
   }
 
+  /* Même parti que le chapô de la une : serif italique, en retrait de
+     couleur sur le titre. C'est ce qui les fait lire comme deux fois le
+     même objet — une accroche sous un titre — malgré la différence de
+     format et de fond.
+     Le corps descend à 16 px : la une dispose de toute la largeur du
+     bloc, le carré d'un quart, et 20 px y donneraient trois mots par
+     ligne. La couleur est tirée de celle du texte plutôt que d'un jeton
+     à part, faute d'équivalent au `--c-une-soft` de la une — et parce
+     qu'un mélange suit le fond du carré dans les deux thèmes. */
+  .lede {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 1.5;
+    color: color-mix(in srgb, var(--c-podcast-fg) 72%, transparent);
+    margin: 0;
+    /* Cinq lignes au plus : au-delà, le chapô et le titre ensemble
+       dépasseraient la hauteur que la carte voisine impose au carré, et
+       le pied sortirait du bloc. */
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
   .foot {
     display: flex;
-    align-items: baseline;
+    /* Hauteur calquée sur la pastille d'initiales du pied de la une :
+       c'est elle qui y fixe la rangée, et l'appel s'y centre. Sans cette
+       rangée, le pied du carré ferait la hauteur de son seul texte et
+       « écouter » se retrouverait plus bas que « lire le texte ».
+       Centré et non aligné sur la ligne de base : la durée et l'appel
+       n'ont plus le même corps depuis que celui-ci est monté à 14 px, et
+       une rangée plus haute que son contenu ne sait pas où poser un
+       groupe de lignes de base. */
+    min-height: 38px;
+    align-items: center;
     gap: 12px;
     font-family: var(--font-mono);
     font-size: 11px;
@@ -154,6 +199,10 @@ const duree =
   .ecouter {
     margin-left: auto;
     color: var(--c-podcast-fg);
+    /* Le corps de la signature de la une, comme l'appel qui s'y trouve :
+       à peine au-dessus des 11 px du pied, assez pour ne plus se
+       confondre avec la durée posée à côté. */
+    font-size: 12px;
     border-bottom: 1px solid currentColor;
     padding-bottom: 1px;
     white-space: nowrap;

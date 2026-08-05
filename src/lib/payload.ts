@@ -51,6 +51,22 @@ export function uploadedImageUrl(
   return mediaUrl(field.filename);
 }
 
+/**
+ * Même chose pour un épisode de podcast. Servi par `media` comme les
+ * images depuis que les deux collections ont fusionné : une médiathèque
+ * unique, filtrée par type, plutôt qu'une liste par nature de fichier.
+ * URL absolue sur ADDRESS comme les images : c'est le navigateur du
+ * visiteur qui la demande, et il ne connaît pas le réseau interne.
+ *
+ * Fonction distincte de `mediaUrl` malgré le chemin identique : le flux
+ * podcast et le lecteur passent par ici, et un jour où les épisodes
+ * partiraient sur un stockage à part, c'est le seul endroit à changer.
+ */
+export function audioFileUrl(filename: string | undefined | null): string | null {
+  if (!filename) return null;
+  return `${ADDRESS.replace(/\/$/, '')}/cms/api/media/file/${encodeURIComponent(filename)}`;
+}
+
 // ─── Fetch generics ─────────────────────────────────────────────
 
 type FindResult<T> = {
@@ -244,9 +260,36 @@ export async function fetchNavigation<T = unknown>(depth = 1): Promise<T> {
   return fetchPayload<T>(`/globals/navigation?depth=${depth}`);
 }
 
-/** Récupère le global IndexPages (hero des landings home/archives/themes). */
-export async function fetchIndexPages<T = unknown>(depth = 0): Promise<T> {
-  return fetchPayload<T>(`/globals/index-pages?depth=${depth}`);
+/**
+ * En-têtes des quatre pages fixes du site — accueil, archives, thèmes,
+ * abonnement.
+ *
+ * Elles vivaient dans un global `index-pages` ; elles sont désormais des
+ * documents de la collection `pages`, marqués `kind: 'fixe'`, pour qu'il
+ * n'y ait qu'un seul endroit nommé « Pages » dans l'admin.
+ *
+ * La forme rendue est celle du global d'avant — un objet indexé par clé,
+ * chaque entrée portant `heroTitle`, `heroLede` et `enabled`. C'est
+ * délibéré : cinq fichiers la consomment, et changer la source d'une
+ * donnée ne devrait pas obliger à retoucher tout ce qui la lit.
+ */
+export async function fetchIndexPages<T = unknown>(): Promise<T> {
+  const res = await fetchPayload<{
+    docs?: { slug?: string; title?: string | null; lede?: string | null; enabled?: boolean }[];
+  }>('/pages?where[kind][equals]=fixe&limit=10&depth=0');
+
+  const sortie: Record<string, { heroTitle?: string; heroLede?: string; enabled?: boolean }> = {};
+  for (const d of res.docs ?? []) {
+    if (!d.slug) continue;
+    sortie[d.slug] = {
+      heroTitle: d.title ?? undefined,
+      heroLede: d.lede ?? undefined,
+      // Absent vaut affiché : une page fixe dont la case n'a jamais été
+      // touchée doit apparaître, pas disparaître.
+      enabled: d.enabled !== false,
+    };
+  }
+  return sortie as T;
 }
 
 /** Récupère le global Identity (siteName, authorName, baseline, copyright). */

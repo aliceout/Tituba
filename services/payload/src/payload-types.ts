@@ -73,6 +73,7 @@ export interface Config {
     podcasts: Podcast;
     outils: Outil;
     themes: Theme;
+    series: Series;
     tags: Tag;
     bibliography: Bibliography;
     pages: Page;
@@ -92,6 +93,7 @@ export interface Config {
     podcasts: PodcastsSelect<false> | PodcastsSelect<true>;
     outils: OutilsSelect<false> | OutilsSelect<true>;
     themes: ThemesSelect<false> | ThemesSelect<true>;
+    series: SeriesSelect<false> | SeriesSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
     bibliography: BibliographySelect<false> | BibliographySelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
@@ -110,14 +112,12 @@ export interface Config {
   globals: {
     site: Site;
     navigation: Navigation;
-    'index-pages': IndexPage;
     identity: Identity;
     subscriptions: Subscription;
   };
   globalsSelect: {
     site: SiteSelect<false> | SiteSelect<true>;
     navigation: NavigationSelect<false> | NavigationSelect<true>;
-    'index-pages': IndexPagesSelect<false> | IndexPagesSelect<true>;
     identity: IdentitySelect<false> | IdentitySelect<true>;
     subscriptions: SubscriptionsSelect<false> | SubscriptionsSelect<true>;
   };
@@ -168,6 +168,14 @@ export interface Article {
    * Mots-clés libres, ajoutés à la volée depuis l’édition du billet. Différents des thèmes (qui sont structurants).
    */
   tags?: (number | Tag)[] | null;
+  /**
+   * Facultatif. Ne sont proposées que les séries de ce format — une émission pour un podcast, une série d’articles pour un article.
+   */
+  series?: (number | null) | Series;
+  /**
+   * Laissez vide pour classer par date de publication. Ne le renseignez que si l’ordre de lecture diffère de l’ordre de parution.
+   */
+  seriesNumber?: number | null;
   /**
    * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
    */
@@ -274,6 +282,100 @@ export interface Tag {
   slug: string;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "series".
+ */
+export interface Series {
+  id: number;
+  /**
+   * Ex : « Voix de la mer » pour une émission, « Homonationalismes » pour une série d’articles.
+   */
+  name: string;
+  /**
+   * Identifiant URL, ex : « voix-de-la-mer ». Forme l’adresse /series/<slug>/, définitivement.
+   */
+  slug: string;
+  /**
+   * Décide de ce qu’on peut ranger dans cette série, et du mot employé pour ses entrées. Non modifiable une fois la série créée.
+   */
+  format: 'podcasts' | 'articles' | 'analyses';
+  /**
+   * Ce dont traite la série dans son ensemble. Indépendantes de celles de ses billets, qui peuvent être plus précises.
+   */
+  themes?: (number | Theme)[] | null;
+  /**
+   * 2 à 4 phrases — en tête de la page de la série, et reprise comme description du flux pour une émission.
+   */
+  lede?: string | null;
+  /**
+   * Fond du hero des billets de la série. Pour une émission, elle sert aussi de couverture dans les applications d’écoute : carrée, entre 1400 et 3000 px de côté.
+   */
+  image?: (number | null) | Media;
+  /**
+   * Laissez vide pour reprendre les réglages du global Abonnements. Ne renseignez ici que ce qui doit différer pour cette émission.
+   */
+  feed?: {
+    /**
+     * À cocher si les épisodes de cette émission comportent des propos crus. Une omission peut faire retirer le flux.
+     */
+    explicit?: boolean | null;
+    /**
+     * Sert à Apple et Spotify pour vérifier que le flux est bien déposé par vous. Publique, puisque présente dans le flux.
+     */
+    ownerEmail?: string | null;
+  };
+  /**
+   * Tant que la case est cochée, la série n’a pas de page publique et son flux n’est pas publié.
+   */
+  draft?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  /**
+   * Affiché en légende ou en infobulle selon le contexte.
+   */
+  title: string;
+  /**
+   * Ce que décrit l’image pour qui ne la voit pas. Laissé vide sur un fichier audio, qui n’a rien à décrire.
+   */
+  alt?: string | null;
+  /**
+   * Rempli automatiquement pour les images importées depuis Unsplash.
+   */
+  unsplash?: {
+    photoId?: string | null;
+    photographerName?: string | null;
+    photographerProfileUrl?: string | null;
+    photoPageUrl?: string | null;
+  };
+  /**
+   * Zone visible en couverture. Réglée depuis le sélecteur de zone.
+   */
+  crop?: {
+    x?: number | null;
+    y?: number | null;
+    w?: number | null;
+    h?: number | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -433,6 +535,14 @@ export interface Analysis {
    */
   tags?: (number | Tag)[] | null;
   /**
+   * Facultatif. Ne sont proposées que les séries de ce format — une émission pour un podcast, une série d’articles pour un article.
+   */
+  series?: (number | null) | Series;
+  /**
+   * Laissez vide pour classer par date de publication. Ne le renseignez que si l’ordre de lecture diffère de l’ordre de parution.
+   */
+  seriesNumber?: number | null;
+  /**
    * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
    */
   authors?:
@@ -503,47 +613,6 @@ export interface Analysis {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: number;
-  /**
-   * Affiché en légende ou en infobulle selon le contexte.
-   */
-  title: string;
-  alt: string;
-  /**
-   * Rempli automatiquement pour les images importées depuis Unsplash.
-   */
-  unsplash?: {
-    photoId?: string | null;
-    photographerName?: string | null;
-    photographerProfileUrl?: string | null;
-    photoPageUrl?: string | null;
-  };
-  /**
-   * Zone visible en couverture. Réglée depuis le sélecteur de zone.
-   */
-  crop?: {
-    x?: number | null;
-    y?: number | null;
-    w?: number | null;
-    h?: number | null;
-  };
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "actus".
  */
 export interface Actus {
@@ -607,6 +676,27 @@ export interface Actus {
    */
   bibliography?: (number | Bibliography)[] | null;
   /**
+   * Deux à quatre phrases factuelles : ce qui s’est passé, quand, décidé par qui. Affiché en colonne à côté du texte, pas dans le billet.
+   */
+  enBref?: string | null;
+  /**
+   * Les liens qui permettent de vérifier le fait résumé ci-dessus.
+   */
+  sources?:
+    | {
+        /**
+         * Ex : « Cour suprême du Royaume-Uni », « Le Monde ».
+         */
+        label: string;
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Facultative. Affichée en bandeau au-dessus du titre, et en vignette dans les listes.
+   */
+  image?: (number | null) | Media;
+  /**
    * Calculé automatiquement depuis le corps au save.
    */
   readingTime?: number | null;
@@ -645,6 +735,14 @@ export interface Podcast {
    * Mots-clés libres, ajoutés à la volée depuis l’édition du billet. Différents des thèmes (qui sont structurants).
    */
   tags?: (number | Tag)[] | null;
+  /**
+   * Facultatif. Ne sont proposées que les séries de ce format — une émission pour un podcast, une série d’articles pour un article.
+   */
+  series?: (number | null) | Series;
+  /**
+   * Laissez vide pour classer par date de publication. Ne le renseignez que si l’ordre de lecture diffère de l’ordre de parution.
+   */
+  seriesNumber?: number | null;
   /**
    * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
    */
@@ -691,17 +789,21 @@ export interface Podcast {
    */
   bibliography?: (number | Bibliography)[] | null;
   /**
-   * URL directe du fichier (mp3, ogg…) ou de la page d'écoute chez l'hébergeur. C'est ce lien qui alimente le lecteur côté site.
+   * Épisode à déposer (mp3 de préférence). Il est servi depuis nos serveurs et alimente le lecteur du site comme le flux podcast.
    */
-  audioUrl: string;
+  audio?: (number | null) | Media;
   /**
-   * Durée de l'épisode, affichée en « 42 min » côté lecteur·ice. Remplace le temps de lecture, qui n'a pas de sens pour de l'audio.
+   * Affichée à côté du titre en haut de l'épisode. Sans image, la page garde son rendu actuel (titre pleine largeur).
+   */
+  image?: (number | null) | Media;
+  /**
+   * Relevée dans le fichier au moment du dépôt.
    */
   durationSeconds?: number | null;
   /**
-   * Personnes reçues dans l'épisode, séparées par des virgules. Distinct des auteur·ices, qui signent la production.
+   * Personnes reçues dans l'épisode. Distinct des auteur·ices, qui signent la production.
    */
-  guests?: string | null;
+  guests?: string[] | null;
   /**
    * Calculé automatiquement depuis le corps au save.
    */
@@ -817,7 +919,18 @@ export interface Outil {
  */
 export interface Page {
   id: number;
+  /**
+   * Une page libre se crée et se supprime. Une page fixe titre une route existante du site (accueil, archives, thèmes, abonnement) — non modifiable.
+   */
+  kind?: ('libre' | 'fixe') | null;
+  /**
+   * Les *astérisques* surlignent un mot dans le hero, comme sur les titres de billets.
+   */
   title: string;
+  /**
+   * Décochée, la page disparaît du menu du site. Sa route continue d’exister — c’est le lien qui s’en va, pas la page.
+   */
+  enabled?: boolean | null;
   /**
    * URL-safe, ex : 'about', 'colophon', 'mentions-legales'. Sert de match de route Astro.
    */
@@ -965,6 +1078,10 @@ export interface PayloadLockedDocument {
         value: number | Theme;
       } | null)
     | ({
+        relationTo: 'series';
+        value: number | Series;
+      } | null)
+    | ({
         relationTo: 'tags';
         value: number | Tag;
       } | null)
@@ -1039,6 +1156,8 @@ export interface ArticlesSelect<T extends boolean = true> {
   title?: T;
   themes?: T;
   tags?: T;
+  series?: T;
+  seriesNumber?: T;
   authors?:
     | T
     | {
@@ -1070,6 +1189,8 @@ export interface AnalysesSelect<T extends boolean = true> {
   title?: T;
   themes?: T;
   tags?: T;
+  series?: T;
+  seriesNumber?: T;
   authors?:
     | T
     | {
@@ -1114,6 +1235,15 @@ export interface ActusSelect<T extends boolean = true> {
   lede?: T;
   body?: T;
   bibliography?: T;
+  enBref?: T;
+  sources?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        id?: T;
+      };
+  image?: T;
   readingTime?: T;
   featured?: T;
   draft?: T;
@@ -1131,6 +1261,8 @@ export interface PodcastsSelect<T extends boolean = true> {
   title?: T;
   themes?: T;
   tags?: T;
+  series?: T;
+  seriesNumber?: T;
   authors?:
     | T
     | {
@@ -1144,7 +1276,8 @@ export interface PodcastsSelect<T extends boolean = true> {
   lede?: T;
   body?: T;
   bibliography?: T;
-  audioUrl?: T;
+  audio?: T;
+  image?: T;
   durationSeconds?: T;
   guests?: T;
   readingTime?: T;
@@ -1200,6 +1333,27 @@ export interface ThemesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "series_select".
+ */
+export interface SeriesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  format?: T;
+  themes?: T;
+  lede?: T;
+  image?: T;
+  feed?:
+    | T
+    | {
+        explicit?: T;
+        ownerEmail?: T;
+      };
+  draft?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "tags_select".
  */
 export interface TagsSelect<T extends boolean = true> {
@@ -1247,7 +1401,9 @@ export interface BibliographySelect<T extends boolean = true> {
  * via the `definition` "pages_select".
  */
 export interface PagesSelect<T extends boolean = true> {
+  kind?: T;
   title?: T;
+  enabled?: T;
   slug?: T;
   description?: T;
   noindex?: T;
@@ -1497,67 +1653,6 @@ export interface Navigation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "index-pages".
- */
-export interface IndexPage {
-  id: number;
-  home?: {
-    /**
-     * H1 de la page d'accueil. Entourer une portion de "*" pour la mettre en italique.
-     */
-    heroTitle?: string | null;
-    /**
-     * Paragraphe sous le titre de la page d'accueil.
-     */
-    heroLede?: string | null;
-  };
-  archives?: {
-    /**
-     * Si décochée, /archives/ renvoie 404.
-     */
-    enabled?: boolean | null;
-    /**
-     * H1 de la page /archives/. Entourer une portion de "*" pour la mettre en italique.
-     */
-    heroTitle?: string | null;
-    /**
-     * Paragraphe sous le titre de /archives/.
-     */
-    heroLede?: string | null;
-  };
-  themes?: {
-    /**
-     * Si décochée, /themes/ et /theme/<slug>/ renvoient 404.
-     */
-    enabled?: boolean | null;
-    /**
-     * H1 de la page /themes/. Entourer une portion de "*" pour la mettre en italique (ex. *thèmes*).
-     */
-    heroTitle?: string | null;
-    /**
-     * Paragraphe sous le titre de /themes/.
-     */
-    heroLede?: string | null;
-  };
-  subscribe?: {
-    /**
-     * Si décochée, /abonnement/ renvoie 404.
-     */
-    enabled?: boolean | null;
-    /**
-     * H1 de la page /abonnement/. Entourer une portion de "*" pour la mettre en italique.
-     */
-    heroTitle?: string | null;
-    /**
-     * Paragraphe sous le titre de /abonnement/.
-     */
-    heroLede?: string | null;
-  };
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "identity".
  */
 export interface Identity {
@@ -1595,6 +1690,18 @@ export interface Subscription {
    * Si décoché : le formulaire d'inscription disparaît de /abonnement/ et aucun mail n'est envoyé à la publication des nouveaux billets — même pour les abonné·es déjà actif·ves (qui ne sont pas supprimé·es pour autant : on peut réactiver plus tard).
    */
   emailEnabled?: boolean | null;
+  /**
+   * Image carrée, entre 1400 et 3000 px de côté. Affichée comme vignette dans les applications d’écoute.
+   */
+  podcastCover?: (number | null) | Media;
+  /**
+   * À cocher si les épisodes comportent des propos crus. Déclaration obligatoire : une omission peut faire retirer le flux.
+   */
+  podcastExplicit?: boolean | null;
+  /**
+   * Sert à Apple et Spotify pour vérifier que le flux est bien déposé par vous. Non affichée sur le site, mais présente dans le flux, donc publique.
+   */
+  podcastOwnerEmail?: string | null;
   /**
    * URL complète du profil Mastodon.
    */
@@ -1667,42 +1774,6 @@ export interface NavigationSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "index-pages_select".
- */
-export interface IndexPagesSelect<T extends boolean = true> {
-  home?:
-    | T
-    | {
-        heroTitle?: T;
-        heroLede?: T;
-      };
-  archives?:
-    | T
-    | {
-        enabled?: T;
-        heroTitle?: T;
-        heroLede?: T;
-      };
-  themes?:
-    | T
-    | {
-        enabled?: T;
-        heroTitle?: T;
-        heroLede?: T;
-      };
-  subscribe?:
-    | T
-    | {
-        enabled?: T;
-        heroTitle?: T;
-        heroLede?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "identity_select".
  */
 export interface IdentitySelect<T extends boolean = true> {
@@ -1721,6 +1792,9 @@ export interface IdentitySelect<T extends boolean = true> {
 export interface SubscriptionsSelect<T extends boolean = true> {
   rssEnabled?: T;
   emailEnabled?: T;
+  podcastCover?: T;
+  podcastExplicit?: T;
+  podcastOwnerEmail?: T;
   mastodon?: T;
   bluesky?: T;
   orcid?: T;

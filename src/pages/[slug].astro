@@ -18,6 +18,8 @@ type PageDoc = {
   id: number | string;
   slug: string;
   title: string;
+  /** « libre » = page composée ici ; « fixe » = en-tête d'une route dédiée. */
+  kind?: string | null;
   description?: string | null;
   noindex?: boolean;
   eyebrow?: string | null;
@@ -29,7 +31,12 @@ const { slug } = Astro.params;
 if (!slug) return Astro.redirect('/');
 
 const page = await fetchBySlug<PageDoc>('pages', slug);
-if (!page) {
+// Les pages fixes vivent dans la même collection mais ne se rendent pas
+// ici : elles ne portent que le titre et le chapô de routes qui ont leur
+// propre fichier (`archives.astro`, `abonnement.astro`…). Sans ce
+// filtre, /home/ et /subscribe/ afficheraient une page vide — un
+// gabarit sans sections, donc sans rien à montrer.
+if (!page || page.kind === 'fixe') {
   return Astro.rewrite('/404');
 }
 ---

@@ -6,7 +6,8 @@
  *
  * Colonne gauche : format + date sur deux lignes + temps de lecture
  * Colonne centre : kicker (type · thèmes) + titre + chapô
- * Colonne droite : « Lire → » en accent
+ * Colonne droite : appel à l'action en accent — « Lire → », ou
+ * « Écouter → » pour un épisode (cf PUBLICATIONS.actionLabel)
  *
  * Hover : titre passe en accent.
  *
@@ -110,7 +111,7 @@ const href = publicationHref(collection, docId);
     <p>{lede}</p>
   </a>
   <a class="rcol" href={href}>
-    <div class="lk">Lire →</div>
+    <div class="lk">{spec.actionLabel} →</div>
   </a>
 </article>
 

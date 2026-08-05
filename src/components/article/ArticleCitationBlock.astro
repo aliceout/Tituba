@@ -134,23 +134,28 @@ const { authorCitation, title, publishedFr, articleUrl, citationText, routePrefi
 </style>
 
 <script>
-  const copyBtn = document.querySelector<HTMLButtonElement>('.copy-btn');
-  if (copyBtn && navigator.clipboard) {
-    copyBtn.addEventListener('click', async () => {
-      const text = copyBtn.dataset.citation || '';
-      try {
-        await navigator.clipboard.writeText(text);
-        const original = copyBtn.textContent;
-        copyBtn.textContent = 'Copié';
-        copyBtn.classList.add('copied');
-        setTimeout(() => {
-          copyBtn.textContent = original;
-          copyBtn.classList.remove('copied');
-        }, 2000);
-      } catch {
-        // Pas de fallback si clipboard refuse — rare en HTTPS, OK en
-        // contexte où l'utilisateur peut sélectionner le texte à la main.
-      }
-    });
-  }
+  // Sur `astro:page-load` : avec le ClientRouter, un module ne
+  // s'exécute qu'une fois par URL — sans cet évènement, le bouton de
+  // la page suivante resterait sans écouteur.
+  document.addEventListener('astro:page-load', () => {
+    const copyBtn = document.querySelector<HTMLButtonElement>('.copy-btn');
+    if (copyBtn && navigator.clipboard) {
+      copyBtn.addEventListener('click', async () => {
+        const text = copyBtn.dataset.citation || '';
+        try {
+          await navigator.clipboard.writeText(text);
+          const original = copyBtn.textContent;
+          copyBtn.textContent = 'Copié';
+          copyBtn.classList.add('copied');
+          setTimeout(() => {
+            copyBtn.textContent = original;
+            copyBtn.classList.remove('copied');
+          }, 2000);
+        } catch {
+          // Pas de fallback si clipboard refuse — rare en HTTPS, OK en
+          // contexte où l'utilisateur peut sélectionner le texte à la main.
+        }
+      });
+    }
+  });
 </script>

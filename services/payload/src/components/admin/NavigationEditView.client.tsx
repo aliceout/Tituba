@@ -20,9 +20,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import CarnetPage from './CarnetPage';
+import { stripHeroMarkers } from '@/lib/hero-markers';
 
 const NAV_API = '/cms/api/globals/navigation';
-const INDEX_PAGES_API = '/cms/api/globals/index-pages';
+// Les pages fixes sont des documents de `pages` marqués `kind: 'fixe'`
+// depuis la fusion des deux listes — plus de global à interroger.
+const PAGES_FIXES_API = '/cms/api/pages?where[kind][equals]=fixe&limit=10&depth=0';
 const PAGES_API = '/cms/api/pages';
 
 // ─── Types navHeader (un seul bloc) ─────────────────────────────────
@@ -157,7 +160,12 @@ export default function NavigationEditViewClient(): React.ReactElement {
   // Liste des pages éditoriales — sert au <select>. depth=0 pour ne pas
   // hydrater les sections (lourdes et inutiles ici).
   useEffect(() => {
-    fetch(`${PAGES_API}?depth=0&limit=200&sort=title`, { credentials: 'include' })
+    // Pages libres seulement : une page fixe a déjà son entrée câblée
+    // dans le menu, la proposer une seconde fois comme lien éditorial
+    // permettrait de la mettre deux fois dans la même barre.
+    fetch(`${PAGES_API}?where[kind][equals]=libre&depth=0&limit=200&sort=title`, {
+      credentials: 'include',
+    })
       .then((r) => (r.ok ? r.json() : { docs: [] }))
       .then((res: { docs?: Array<{ id: number | string; title?: string; slug?: string }> }) => {
         const docs = (res.docs ?? [])
@@ -170,12 +178,21 @@ export default function NavigationEditViewClient(): React.ReactElement {
       });
   }, []);
 
-  // État `enabled` des pages d'index — pour exclure du sélecteur celles
-  // qui sont désactivées (cf. global IndexPages).
+  // État « affichée » des pages fixes — pour exclure du sélecteur celles
+  // qui sont masquées. Recomposé sous la forme qu'attendait le global
+  // qu'elles remplacent : la source a changé, pas ce qui la lit.
   useEffect(() => {
-    fetch(`${INDEX_PAGES_API}?depth=0`, { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : {}))
-      .then((res: IndexPagesGlobal) => setIndexPages(res ?? {}))
+    fetch(PAGES_FIXES_API, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : { docs: [] }))
+      .then((res: { docs?: { slug?: string; enabled?: boolean }[] }) => {
+        const etat: IndexPagesGlobal = {};
+        for (const d of res.docs ?? []) {
+          if (d.slug === 'archives' || d.slug === 'themes' || d.slug === 'subscribe') {
+            etat[d.slug] = { enabled: d.enabled !== false };
+          }
+        }
+        setIndexPages(etat);
+      })
       .catch(() => {
         /* fallback : toutes considérées actives. */
       });
@@ -415,7 +432,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                         onChange={(e) => applySelect(idx, e.target.value)}
                       >
                         <option value="">— sélectionner —</option>
-                        <optgroup label="Pages principales">
+                        <optgroup label="Pages fixes">
                           {enabledIndexTargets.map((t) => {
                             const key = `index:${t}`;
                             const taken = selectedKeys.includes(key) && key !== currentKey;
@@ -427,13 +444,13 @@ export default function NavigationEditViewClient(): React.ReactElement {
                             );
                           })}
                         </optgroup>
-                        <optgroup label="Pages éditoriales">
+                        <optgroup label="Pages">
                           {pageOptions.map((p) => {
                             const key = `editorial:${p.id}`;
                             const taken = selectedKeys.includes(key) && key !== currentKey;
                             return (
                               <option key={key} value={key} disabled={taken}>
-                                {p.title} (/{p.slug}/)
+                                {stripHeroMarkers(p.title)} (/{p.slug}/)
                                 {taken ? ' — déjà ajoutée' : ''}
                               </option>
                             );

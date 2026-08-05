@@ -10,7 +10,7 @@
 //     Médias         (24)
 //
 //   PAGES
-//     Pages éditoriales
+//     Pages
 //
 //   RÉGLAGES
 //     Utilisateurs    (3)
@@ -23,7 +23,7 @@
 // pathname actif est passé au composant client qui marque l'item.
 
 import React from 'react';
-import { getPayload } from 'payload';
+import { getPayload, type Where } from 'payload';
 import { headers } from 'next/headers';
 
 import config from '@/payload.config';
@@ -38,12 +38,20 @@ async function fetchCount(
     | 'podcasts'
     | 'outils'
     | 'themes'
+    | 'series'
     | 'tags'
     | 'bibliography'
     | 'media'
     | 'users'
     | 'pages'
     | 'subscribers',
+  /**
+   * Filtre optionnel — sert aux séries, qui vivent dans une seule
+   * collection mais s'affichent derrière deux entrées de nav selon leur
+   * format (cf Series.ts). Sans lui, les deux entrées porteraient le
+   * même total et aucune ne dirait la vérité.
+   */
+  where?: Where,
 ): Promise<number> {
   try {
     const res = await payload.find({
@@ -51,6 +59,7 @@ async function fetchCount(
       limit: 1,
       depth: 0,
       overrideAccess: true,
+      ...(where ? { where } : {}),
     });
     return res.totalDocs;
   } catch {
@@ -74,6 +83,8 @@ export default async function Nav(): Promise<React.ReactElement> {
     users,
     pages,
     subscribers,
+    seriesEmissions,
+    seriesTextes,
   ] =
     await Promise.all([
       fetchCount(payload, 'articles'),
@@ -88,6 +99,10 @@ export default async function Nav(): Promise<React.ReactElement> {
       fetchCount(payload, 'users'),
       fetchCount(payload, 'pages'),
       fetchCount(payload, 'subscribers'),
+      fetchCount(payload, 'series', { format: { equals: 'podcasts' } }),
+      // « Séries d'articles » réunit les deux formats de texte : c'est
+      // une seule entrée de nav, elle doit donc compter les deux.
+      fetchCount(payload, 'series', { format: { in: ['articles', 'analyses'] } }),
     ]);
 
   // Pathname courant (server-side via les headers Next) pour l'active state.
@@ -141,6 +156,8 @@ export default async function Nav(): Promise<React.ReactElement> {
         users,
         pages,
         subscribers,
+        seriesEmissions,
+        seriesTextes,
       }}
       version={version}
       initialMe={me}

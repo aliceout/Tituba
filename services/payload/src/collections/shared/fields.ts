@@ -7,9 +7,15 @@
  * bibliographie, et les champs calculés (temps de lecture, zones
  * brouillon).
  *
- * Une publication est identifiée par son id. Il n'y a ni slug ni numéro
- * de série : le premier laissait choisir son URL au coup par coup, le
- * second était un héritage de Carnet sans usage ici.
+ * Une publication est identifiée par son id, jamais par un slug : celui
+ * -ci laissait choisir son URL au coup par coup.
+ *
+ * Le rattachement à une série (`seriesField`, `seriesNumberField`) ne
+ * fait pas partie de ce socle : seuls trois formats sur cinq peuvent
+ * être mis en série, et le constructeur les ajoute à la demande (cf
+ * build-publication, option `series`). Un billet d'actu est ponctuel par
+ * nature, un outil se retrouve par sa thématique — leur formulaire n'a
+ * pas à porter un sélecteur qui ne servira jamais.
  *
  * Déclarer ce socle une fois ici évite de le dupliquer cinq fois et
  * garantit que les cinq collections restent alignées — notamment sur
@@ -91,6 +97,58 @@ export function themesField(): Field {
     label: 'Thèmes',
     admin: {
       description: 'Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.',
+    },
+  };
+}
+
+/**
+ * Rattachement à une série. `filterOptions` restreint le sélecteur aux
+ * séries du bon format : sans lui, on pourrait ranger un épisode dans
+ * une série d'articles, et la page de la série afficherait un billet
+ * qu'elle ne sait pas présenter.
+ *
+ * Facultatif, et il le restera : la plupart des publications ne sont
+ * dans aucune série, et en imposer une obligerait à inventer une série
+ * fourre-tout pour les accueillir.
+ *
+ * @param format Slug de la collection appelante — c'est la valeur que
+ *   doit porter le champ `format` des séries proposées.
+ */
+export function seriesField(format: string): Field {
+  return {
+    name: 'series',
+    type: 'relationship',
+    relationTo: 'series',
+    hasMany: false,
+    required: false,
+    index: true,
+    label: 'Série',
+    filterOptions: () => ({ format: { equals: format } }),
+    admin: {
+      description:
+        'Facultatif. Ne sont proposées que les séries de ce format — une émission pour un podcast, une série d’articles pour un article.',
+    },
+  };
+}
+
+/**
+ * Rang du billet dans sa série. Facultatif : l'ordre retombe alors sur
+ * la date de publication, qui est le bon défaut pour une émission
+ * publiée au fil de l'eau. On ne le renseigne que quand l'ordre de
+ * lecture diffère de l'ordre de parution — un volet écrit après coup
+ * qui vient s'intercaler, un épisode 0 publié en dernier.
+ */
+export function seriesNumberField(): Field {
+  return {
+    name: 'seriesNumber',
+    type: 'number',
+    required: false,
+    min: 0,
+    label: 'Rang dans la série',
+    admin: {
+      condition: (data) => Boolean(data?.series),
+      description:
+        'Laissez vide pour classer par date de publication. Ne le renseignez que si l’ordre de lecture diffère de l’ordre de parution.',
     },
   };
 }

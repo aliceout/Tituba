@@ -28,20 +28,66 @@ interface Props {
   hasFootnotes: boolean;
   hasBiblio: boolean;
   hasCitation: boolean;
+  /** Épisode à télécharger — podcasts seulement. */
+  audioSrc?: string | null;
+  /** Titre de l'épisode, pour nommer le fichier téléchargé. */
+  audioTitle?: string;
+  /** Date de publication — seulement quand la page ne rend pas le
+   *  bandeau de métadonnées, qui la porte déjà. */
+  publishedFr?: string | null;
+  publishedIso?: string;
 }
 
-const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.props;
+const {
+  entries,
+  readingLabel,
+  hasFootnotes,
+  hasBiblio,
+  hasCitation,
+  audioSrc,
+  audioTitle,
+  publishedFr,
+  publishedIso,
+} = Astro.props;
+
+// Nom de fichier proposé au téléchargement — le nom stocké est un
+// identifiant d'export sans intérêt pour qui l'enregistre.
+/**
+ * Rien ne se rend entre les repères chiffrés et les actions : ni
+ * sommaire, ni notes, ni bibliographie, ni bloc de citation. Or le
+ * premier ferme par un filet et les secondes en ouvrent un — collés,
+ * les deux traits se lisent comme une bordure double. On en retire un.
+ */
+const sansIntercalaire =
+  entries.length === 0 && !hasFootnotes && !hasBiblio && !hasCitation;
+
+const nomAudio = `${(audioTitle ?? 'episode').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80).trim()}.mp3`;
 ---
 
 {/* Pas de condition d'affichage ici : c'est PublicationArticle qui
     décide de monter ou non ce composant, et qui pose `no-toc` sur la
     grille en conséquence. Deux conditions séparées finiraient par
     diverger — une colonne réservée sans rien dedans, ou l'inverse. */}
-<aside class="toc" id="toc" aria-label="Sommaire">
-    {readingLabel && (
+<aside class:list={['toc', { 'toc--sans-intercalaire': sansIntercalaire }]} id="toc" aria-label="Sommaire">
+    {/* Repères chiffrés en tête d'aside : combien de temps ça prend, et
+        de quand ça date. La date n'est passée que par les pages dont le
+        hero porte déjà les autres métadonnées et qui ne rendent donc pas
+        le bandeau — sur les autres, elle y figure et la redire ici
+        ferait doublon. */}
+    {(readingLabel || publishedFr) && (
       <div class="duree">
-        <span class="duree-label">{readingLabel.label} : </span>
-        <span class="duree-value">{readingLabel.value}</span>
+        {readingLabel && (
+          <div>
+            <span class="duree-label">{readingLabel.label} : </span>
+            <span class="duree-value">{readingLabel.value}</span>
+          </div>
+        )}
+        {publishedFr && (
+          <div class="duree-ligne">
+            <span class="duree-label">Publié : </span>
+            <time class="duree-value" datetime={publishedIso}>{publishedFr}</time>
+          </div>
+        )}
       </div>
     )}
 
@@ -83,6 +129,23 @@ const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.pr
         </svg>
         Citer cet article
       </button>
+      {/* Les deux téléchargements se suivent : ce sont les seuls gestes
+          du bloc qui font descendre un fichier, et les séparer par
+          « copier » ou « citer » obligeait à les rechercher l'un après
+          l'autre. L'épisode d'abord — c'est le contenu même de la
+          publication, le PDF n'en est qu'une mise en forme.
+          Seul de ce bloc à être réellement câblé pour l'instant, d'où le
+          <a> là où les autres sont des <button>. */}
+      {audioSrc && (
+        <a class="action-btn" href={audioSrc} download={nomAudio}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v11" />
+            <path d="m7.5 10 4.5 4.5 4.5-4.5" />
+            <path d="M4.5 19.5h15" />
+          </svg>
+          Télécharger l'épisode
+        </a>
+      )}
       <button type="button" class="action-btn" aria-label="Télécharger l'article en PDF">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 3v11"/>
@@ -128,6 +191,13 @@ const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.pr
      bloc plutôt qu'en haut : ce sont des gestes secondaires (copier,
      citer, télécharger), qui viennent après s'être repéré (durée) et
      avoir navigué (sommaire), pas avant. */
+  /* Le filet des repères tient alors lieu de séparation à lui seul.
+     L'écart, lui, reste porté par la marge basse des repères. */
+  .toc--sans-intercalaire .actions {
+    border-top: 0;
+    margin-top: 0;
+    padding-top: 0;
+  }
   .actions {
     display: flex;
     flex-direction: column;
@@ -177,8 +247,18 @@ const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.pr
   .duree-value {
     font-weight: 400;
   }
+  /* Même écart que celui qui sépare les blocs de l'aside (18 px), sans
+     le filet : les deux lignes portent sur le même objet, elles n'ont
+     pas à être séparées comme deux sections. */
+  .duree-ligne {
+    margin-top: 18px;
+  }
+  /* 18 px de part et d'autre du filet, comme partout ailleurs dans
+     cet aside : un trait qui sépare deux blocs n'a pas de raison
+     d'avoir plus d'air d'un côté que de l'autre, et l'œil lit
+     l'asymétrie comme un défaut d'alignement. */
   .duree {
-    padding-bottom: 14px;
+    padding-bottom: 18px;
     margin-bottom: 18px;
     border-bottom: 1px solid var(--color-rule);
   }
@@ -211,7 +291,7 @@ const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.pr
      rejoue approximativement le même total en une seule règle. */
   .haut-wrap {
     margin-top: 18px;
-    padding-top: 14px;
+    padding-top: 18px;
     border-top: 1px solid var(--color-rule);
   }
   /* .toc a.haut hérite de .toc a un margin-left/border-left destinés
@@ -219,7 +299,13 @@ const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.pr
      pour retrouver exactement le même modèle de boîte que .action-btn
      (pas de marge ni de bordure, juste le padding), sans quoi son
      icône ne tombe pas à la même colonne que celles des boutons. */
-  .toc a.haut {
+  /* `a.action-btn` tombe dans le même piège : tout <a> du sommaire
+     hérite d'un retrait et d'une bordure gauche destinés au repère de
+     section active. On les annule pour retrouver exactement le modèle
+     de boîte d'un .action-btn <button>, sinon son pictogramme ne tombe
+     pas à la même colonne que les autres. */
+  .toc a.haut,
+  .toc a.action-btn {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -243,11 +329,24 @@ const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.pr
   // `scroll-margin-top: 33vh` posé sur les cibles d'ancre). Évite le bug
   // où #intro (qui contient tous les h2/h3) gagnait en permanence avec
   // IntersectionObserver.
-  (function () {
+  //
+  // Sur `astro:page-load` et non au chargement du module : avec le
+  // ClientRouter, un module ne s'exécute qu'une fois par URL, si bien
+  // qu'après une navigation le sommaire de la nouvelle page resterait
+  // inerte. Cet évènement se déclenche au premier chargement *et* après
+  // chaque échange de document.
+  document.addEventListener('astro:page-load', () => {
     const tocLinks = Array.from(
       document.querySelectorAll<HTMLAnchorElement>('.toc a[data-toc]'),
     );
     if (!tocLinks.length) return;
+
+    // Les écouteurs de défilement portent sur `window`, qui survit à la
+    // navigation : sans révocation il s'en empilerait un par page
+    // visitée, chacun cherchant des sections détruites depuis
+    // longtemps. Le signal les coupe à l'échange de document.
+    const ac = new AbortController();
+    document.addEventListener('astro:before-swap', () => ac.abort(), { once: true });
     const ids = tocLinks.map((a) => a.dataset.toc).filter((id): id is string => !!id);
     const sections = ids
       .map((id) => document.getElementById(id))
@@ -275,8 +374,8 @@ const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.pr
         if (raf) return;
         raf = requestAnimationFrame(updateActive);
       };
-      window.addEventListener('scroll', onScroll, { passive: true });
-      window.addEventListener('resize', onScroll, { passive: true });
+      window.addEventListener('scroll', onScroll, { passive: true, signal: ac.signal });
+      window.addEventListener('resize', onScroll, { passive: true, signal: ac.signal });
       updateActive();
     }
 
@@ -293,5 +392,5 @@ const { entries, readingLabel, hasFootnotes, hasBiblio, hasCitation } = Astro.pr
         }
       });
     }
-  })();
+  });
 </script>

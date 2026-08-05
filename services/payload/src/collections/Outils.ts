@@ -11,7 +11,7 @@ import { makeNotifyNewPublication } from '../hooks/notify-new-post';
  * formation. La ressource elle-même est un fichier ou un lien ; le
  * corps sert à la présenter et reste facultatif.
  *
- * Le socle de champs (numéro, titre/slug, thématiques, auteur·ices,
+ * Le socle de champs (identifiant public, titre, thématiques, auteur·ices,
  * dates, chapô, corps Lexical, bibliographie, champs calculés) vient de
  * `buildPublicationCollection`. Ne figure ici que ce qui distingue ce
  * format des quatre autres.
@@ -57,7 +57,7 @@ export const Outils: CollectionConfig = buildPublicationCollection({
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'publishedAt', 'draft', 'updatedAt'],
-    listSearchableFields: ['title', 'slug', 'lede'],
+    listSearchableFields: ['title', 'publicId', 'lede'],
     components: {
       views: {
         edit: { root: { Component: '@/components/admin/PublicationEditView#default' } },

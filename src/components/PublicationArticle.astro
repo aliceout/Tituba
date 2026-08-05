@@ -34,6 +34,10 @@ import ArticleBibliography from './article/ArticleBibliography.astro';
 import ArticleTags from './article/ArticleTags.astro';
 import ArticleCitationBlock from './article/ArticleCitationBlock.astro';
 import ArticleRelated from './article/ArticleRelated.astro';
+import ActuBrief from './article/ActuBrief.astro';
+import PodcastLaunch from './article/PodcastLaunch.astro';
+import PodcastHero from './article/PodcastHero.astro';
+import FormatIcon from './FormatIcon.astro';
 import {
   PUBLICATIONS,
   fetchRelatedPosts,
@@ -44,7 +48,7 @@ import {
   type PublicationTheme,
   type PublicationTag,
 } from '../lib/publications';
-import { fetchByPublicId, fetchIdentity, fetchSite, uploadedImageUrl } from '../lib/payload';
+import { audioFileUrl, fetchByPublicId, fetchIdentity, fetchSite, uploadedImageUrl } from '../lib/payload';
 import {
   extractToc,
   renderLexicalSidenotes,
@@ -98,9 +102,20 @@ const primaryTheme = themes[0];
 const titleHtml = formatHeroTitle(post.title);
 const titlePlain = stripHeroMarkers(post.title);
 
-// Image de couverture — pour l'instant, seules les analyses portent ce
-// champ. Sans image, le hero reste le bloc pleine largeur d'aujourd'hui.
+// Image de couverture — billets d'analyse et podcasts. Sans image, le
+// hero reste le bloc pleine largeur d'aujourd'hui.
 const coverImageUrl = uploadedImageUrl(post.image);
+
+// Image de la série, quand le billet en a une. Elle sert de fond au hero
+// d'un épisode : au premier plan la couverture de l'épisode, derrière
+// l'identité de l'émission — ce qui fait qu'on reconnaît la seconde
+// avant même d'avoir lu le titre du premier.
+//
+// Sans série, ou sans image sur elle, on retombe sur la couverture de
+// l'épisode : c'est le comportement qui existait avant, et il vaut mieux
+// qu'un hero sans fond.
+const serie = post.series && typeof post.series === 'object' ? post.series : null;
+const serieImageUrl = uploadedImageUrl(serie?.image ?? null);
 const coverImageObj = typeof post.image === 'object' && post.image ? post.image : null;
 const coverImageAlt = coverImageObj?.alt || '';
 // Le hero affiche l'image dans un carré : d'une photo non carrée, il
@@ -149,6 +164,27 @@ const unsplashCredit = coverImageObj?.unsplash?.photographerName
       unsplashUrl: `https://unsplash.com/?${UNSPLASH_UTM}`,
     }
   : null;
+
+// Épisode de podcast — le fichier audio et les personnes reçues. Les
+// deux ne concernent que cette collection : ailleurs, `post.audio` et
+// `post.guests` sont absents et les blocs correspondants ne sont pas
+// montés.
+const audioObj = typeof post.audio === 'object' && post.audio ? post.audio : null;
+const audioSrc = audioFileUrl(audioObj?.filename);
+// Dernière virgule remplacée par « et » : c'est une phrase à lire, pas
+// une liste à dépouiller.
+const guestList = (post.guests ?? []).map((g) => String(g).trim()).filter(Boolean);
+const guestLabel =
+  guestList.length > 1
+    ? `${guestList.slice(0, -1).join(', ')} et ${guestList[guestList.length - 1]}`
+    : guestList[0] ?? '';
+
+// Le lecteur monte dans le hero quand l'épisode a une couverture :
+// l'image, plus haute que le cadre du titre, laisse en dessous de lui un
+// espace vide que le lecteur vient occuper — les deux colonnes se
+// terminent alors à la même ligne. Sans image, il n'y a pas de colonne à
+// remplir : le lecteur reste sous le bandeau de métadonnées.
+const heroPlayer = !!audioSrc && !!coverImageUrl;
 
 const publishedFr = formatDateFr(post.publishedAt);
 const publishedIso = new Date(post.publishedAt).toISOString().slice(0, 10);
@@ -202,12 +238,43 @@ const biblio = (post.bibliography ?? []).filter(
 // quelque chose à offrir » : un billet d'analyse court n'a souvent aucun
 // titre, alors que la durée de lecture, les liens de pied et les actions
 // (copier, citer, télécharger) lui sont tout aussi utiles.
+/**
+ * Un billet d'actu est un format chaud, « volontairement bref, sans
+ * appareil » — ce sont les mots de sa propre collection. Il n'a donc ni
+ * sommaire, ni bouton « Citer cet article », ni export PDF : proposer de
+ * citer un rebond d'actualité d'une minute offre un geste qui n'a pas
+ * lieu d'être, et un sommaire d'une entrée n'aide personne.
+ *
+ * Conséquence à ne pas manquer : sans aside, la colonne de texte hérite
+ * de toute la largeur du gabarit. Les autres formats sont sauvés malgré
+ * eux — l'aside leur prend 300 px et ramène le texte à une largeur
+ * lisible. L'actu doit donc se resserrer elle-même (cf .shell--actu).
+ */
+const estActu = collection === 'actus';
+
 const afficherToc =
-  tocEntries.length > 0 ||
-  !!readingLabel ||
-  !!footnotesHtml ||
-  biblio.length > 0 ||
-  spec.citationType === 'article';
+  !estActu &&
+  (tocEntries.length > 0 ||
+    !!readingLabel ||
+    !!footnotesHtml ||
+    biblio.length > 0 ||
+    spec.citationType === 'article');
+
+/**
+ * Le rappel des faits occupe la colonne latérale d'un billet d'actu, à
+ * la place du sommaire. Il ne s'affiche que s'il a été rédigé : sans
+ * lui, le billet reprend toute la largeur et la colonne ne se monte pas
+ * — c'est ce que fait `no-toc` pour les autres formats.
+ */
+const afficherBrief = estActu && Boolean(post.enBref?.trim());
+
+// Où vit la date de publication : dans l'aside pour les formats qui en
+// ont toujours un, dans le bandeau sinon. Le calcul est fait ici et
+// partagé par les deux composants — sans lui, un format dont l'aside ne
+// se monte pas (un outil sans sommaire ni bibliographie) perdrait sa
+// date sans que rien ne le signale.
+const dateDansAside =
+  afficherToc && (heroPlayer || collection === 'analyses' || collection === 'articles');
 
 const related = await fetchRelatedPosts(collection, primaryTheme?.slug, post.id);
 
@@ -249,6 +316,7 @@ const postTags = (post.tags ?? []).filter(
   title={titlePlain}
   description={post.lede}
   progressBar={true}
+  sansFilet={heroPlayer}
   bodyClass={`justify notes-${notesMode}`}
 >
   <Fragment slot="head">
@@ -257,19 +325,120 @@ const postTags = (post.tags ?? []).filter(
     ))}
   </Fragment>
 
-  <div class:list={['article-shell', { 'no-toc': !afficherToc }]}>
+  <div
+    class:list={[
+      'article-shell',
+      {
+        'no-toc': !afficherToc && !afficherBrief,
+        'shell--phero': heroPlayer,
+        'shell--actu': estActu,
+        'shell--ras': collection === 'analyses' || collection === 'articles' || estActu,
+      },
+    ]}
+  >
 
     <article class="post" id="haut">
-      <div class:list={['hero', { 'has-image': coverImageUrl }]}>
+      {/* Essai en cours sur les épisodes : hero pleine largeur, la
+          couverture en fond flouté et reprise nette en carré à gauche
+          du titre (cf PodcastHero). Les autres formats gardent le hero
+          encadré. */}
+      {heroPlayer && (
+        <PodcastHero
+          titleHtml={titleHtml}
+          titlePlain={titlePlain}
+          lede={post.lede}
+          coverUrl={coverImageUrl!}
+          coverAlt={coverImageAlt}
+          backgroundUrl={serieImageUrl}
+          serieName={serie?.name ?? null}
+          serieSlug={serie?.slug ?? null}
+          formatLabel={spec.labelSingular}
+          collection={collection}
+          audioSrc={audioSrc}
+          durationSeconds={post.durationSeconds}
+          href={Astro.url.pathname}
+          credit={unsplashCredit}
+          authors={displayAuthors}
+          themeName={primaryTheme ? primaryTheme.name : null}
+          themeSlug={primaryTheme ? primaryTheme.slug : null}
+        />
+      )}
+
+      {/* Format en surtitre, sur le gabarit des étiquettes de section de
+          l'accueil (« À la une », « Au sommaire ») : mêmes fonte, corps
+          et interlettrage. C'est la même nature d'objet — un intitulé
+          qui dit ce qu'on regarde avant de le regarder — et deux
+          traitements distincts n'auraient rien apporté. */}
+      {/* Bandeau d'une actu — au-dessus de tout, pleine largeur de la
+          colonne. Pas de cadre à côté du titre comme sur un billet
+          d'analyse : sur un format court, une image qui prend la parole
+          en premier fait ce que fait une photo de presse, elle donne
+          l'objet avant la phrase. */}
+      {estActu && coverImageUrl && (
+        <figure class="actu-banniere">
+          <img src={coverImageUrl} alt={coverImageAlt} />
+          {unsplashCredit && (
+            <figcaption>
+              Photo par{' '}
+              {unsplashCredit.profileUrl ? (
+                <a href={unsplashCredit.profileUrl} rel="noopener">{unsplashCredit.name}</a>
+              ) : (
+                unsplashCredit.name
+              )}
+              {' '}sur <a href={unsplashCredit.unsplashUrl} rel="noopener">Unsplash</a>
+            </figcaption>
+          )}
+        </figure>
+      )}
+
+      {!heroPlayer && (
+      <div class:list={['hero', { 'has-image': coverImageUrl && !estActu, 'has-player': heroPlayer }]}>
         {/* Le crédit vit sous le cadre du titre, pas sous l'image : c'est
             une colonne à part entière du hero, sinon il deviendrait un
             troisième bloc de la rangée flex. */}
         <div class="hero-left">
+          {!heroPlayer && (
+            <p class="hero-format">
+              <FormatIcon collection={collection} />
+              {spec.labelSingular}
+            </p>
+          )}
           <div class="hero-text">
             <PageTitle title={titleHtml} famille="marque" />
-            <p class="deck">{post.lede}</p>
+            {/* Le rond de lecture ouvre le chapô : l'appel à écouter se
+                lit alors dans le même mouvement que la phrase qui dit de
+                quoi parle l'épisode, au lieu d'attendre en bas de
+                colonne. Sans libellé — le rond seul suffit à cet
+                endroit, et « Écouter l'épisode » ne ferait que répéter
+                la page. */}
+            {/* Sur une actu, le chapô ne vit pas ici : il descend en tête
+                de la colonne principale, pour que sa première ligne
+                tombe à la même hauteur que le titre du rappel des faits,
+                dans la colonne d'à côté. Deux blocs qui s'ouvrent
+                ensemble doivent commencer sur la même rangée — le seul
+                moyen d'y parvenir sans caler une marge au pixel. */}
+            {estActu ? null : heroPlayer ? (
+              <div class="hero-amorce">
+                <PodcastLaunch
+                  src={audioSrc}
+                  durationSeconds={post.durationSeconds}
+                  title={titlePlain}
+                  coverUrl={coverImageUrl}
+                  href={Astro.url.pathname}
+                  compact
+                />
+                <p class="deck">{post.lede}</p>
+              </div>
+            ) : (
+              <p class="deck">{post.lede}</p>
+            )}
           </div>
-          {unsplashCredit && (
+          {/* Le crédit vit sous le cadre du titre, pas sous l'image :
+              c'est une colonne à part entière du hero, sinon il
+              deviendrait un troisième bloc de la rangée flex. Même
+              place sur un épisode que sur un billet d'analyse — donc
+              avant le bouton, contre la bordure basse du cadre. */}
+          {unsplashCredit && !estActu && (
             <p class="hero-credit">
               Photo par{' '}
               {unsplashCredit.profileUrl ? (
@@ -281,7 +450,7 @@ const postTags = (post.tags ?? []).filter(
             </p>
           )}
         </div>
-        {coverImageUrl && (
+        {coverImageUrl && !estActu && (
           <figure class="hero-figure">
             <div class:list={['hero-frame', { cropped: !!crop }]}>
               <img class="hero-image" src={coverImageUrl} alt={coverImageAlt} style={cropStyle} />
@@ -289,23 +458,117 @@ const postTags = (post.tags ?? []).filter(
           </figure>
         )}
       </div>
+      )}
 
-      <ArticleMeta
-        authors={displayAuthors}
-        publishedFr={publishedFr}
-        publishedIso={publishedIso}
-        collection={collection}
-        badge={spec.badge}
-        themeName={primaryTheme ? primaryTheme.name : null}
-        themeSlug={primaryTheme ? primaryTheme.slug : null}
-        formatHref={`${spec.routePrefix}/`}
-      />
+      {/* Pas de bandeau sur un épisode : le hero pleine largeur porte
+          déjà la signature, la thématique et la date, et le format en
+          surtitre. Le laisser aurait redit la même chose dix
+          centimètres plus bas.
+
+          Pas de bandeau non plus sur une actu, pour une autre raison :
+          deux valeurs dans une grille encadrée de deux filets, c'est un
+          appareil de publication savante posé sur un rebond d'une
+          minute. Elles se replient en une ligne sous le chapô. */}
+      {!heroPlayer && !estActu && (
+        <ArticleMeta
+          authors={displayAuthors}
+          publishedFr={publishedFr}
+          publishedIso={publishedIso}
+          themes={themes}
+          showPublished={!dateDansAside}
+        />
+      )}
+
+      {/* Épisode sans couverture : le bouton se pose sous le bandeau
+          meta, faute de cadre où se loger (cf heroPlayer). */}
+      {!heroPlayer && audioSrc && (
+        <p class="hors-cadre">
+          <PodcastLaunch
+            src={audioSrc}
+            durationSeconds={post.durationSeconds}
+            title={titlePlain}
+            coverUrl={coverImageUrl}
+            href={Astro.url.pathname}
+          />
+        </p>
+      )}
 
       {/* Hero et bandeau meta courent sur toute la largeur ; c'est ici
           seulement que la page se scinde en deux colonnes, texte et
           aside. */}
       <div class="post-split">
+        {/* Avant la colonne principale dans le document, et pas seulement
+            à gauche à l'écran : une colonne qu'on lit en premier doit
+            être rencontrée en premier au clavier et au lecteur d'écran.
+            Le rappel des faits ouvre la lecture — il précède donc le
+            billet dans les deux ordres. */}
+        {afficherBrief && (
+          <div class="brief-colonne">
+            <ActuBrief texte={post.enBref!} sources={post.sources ?? null} />
+            {/* Le même bloc que les autres formats, monté sans entrées :
+                une actu n'a pas de plan, mais elle a une date, une durée
+                de lecture, une adresse à copier et un PDF à emporter.
+                Le remonter tel quel plutôt que d'en recopier les quatre
+                boutons évite d'avoir un jour deux « copier le lien » qui
+                se comportent différemment. */}
+            <ArticleToc
+              entries={[]}
+              readingLabel={readingLabel}
+              hasFootnotes={!!footnotesHtml}
+              hasBiblio={biblio.length > 0}
+              hasCitation={spec.citationType === 'article'}
+              audioSrc={null}
+              audioTitle={titlePlain}
+              publishedFr={publishedFr}
+              publishedIso={publishedIso}
+            />
+          </div>
+        )}
         <div class="post-main">
+      {/* Générique, en tête des notes et non dans le hero : c'est ce
+          qu'on lit sur l'épisode, pas la carte de visite qui l'annonce.
+          Traité comme les repères de l'aside — intitulé en petites
+          capitales, valeur en corps de lecture — et fermé par un filet
+          qui le sépare du texte : sans lui, la ligne se confondait avec
+          un premier paragraphe très court. */}
+      {guestLabel && (
+        <p class="generique">
+          <span class="generique-lbl">Un épisode avec</span>
+          <span class="generique-noms">{guestLabel}</span>
+        </p>
+      )}
+
+      {/* Chapô et ligne de méta d'une actu — en tête de la colonne
+          principale et non dans le hero, pour partager leur rangée avec
+          le rappel des faits d'à côté (cf ActuBrief). */}
+      {estActu && <p class="deck deck--actu">{post.lede}</p>}
+      {estActu && ((displayAuthors && displayAuthors.length > 0) || primaryTheme) && (
+        <p class="actu-meta">
+          {displayAuthors && displayAuthors.length > 0 && (
+            <span>
+              {displayAuthors.map((a, i) => (
+                <Fragment>
+                  {i > 0 && (i === displayAuthors.length - 1 ? ' et ' : ', ')}
+                  {a.href ? <a href={a.href}>{a.name}</a> : a.name}
+                </Fragment>
+              ))}
+            </span>
+          )}
+          {/* Le point médian sépare deux valeurs — il n'apparaît donc que
+              s'il y en a bien deux. Un billet non signé affichait sinon
+              « · Genre et politiques », une ponctuation ouvrant sur
+              rien. */}
+          {primaryTheme && (
+            <>
+              {displayAuthors && displayAuthors.length > 0 && (
+                <span class="actu-meta-sep" aria-hidden="true">·</span>
+              )}
+              <a href={`/theme/${primaryTheme.slug}/`}>{primaryTheme.name}</a>
+            </>
+          )}
+        </p>
+      )}
+
       <ArticleBody html={bodyHtml} />
 
       {footnotesHtml && <ArticleFootnotes html={footnotesHtml} />}
@@ -336,6 +599,10 @@ const postTags = (post.tags ?? []).filter(
             hasFootnotes={!!footnotesHtml}
             hasBiblio={biblio.length > 0}
             hasCitation={spec.citationType === 'article'}
+            audioSrc={audioSrc}
+            audioTitle={titlePlain}
+            publishedFr={dateDansAside ? publishedFr : null}
+            publishedIso={publishedIso}
           />
         )}
       </div>
@@ -346,6 +613,120 @@ const postTags = (post.tags ?? []).filter(
 <style>
   .article-shell {
     padding-top: 75px;
+  }
+  /* Le hero pleine largeur d'un épisode s'appuie contre le header : la
+     page ne lui ménage donc aucun écart au-dessus, ni celui de <main>
+     (annulé par le composant) ni celui-ci. Les deux existent pour poser
+     un titre dans du blanc — une image qui va jusqu'aux bords n'en a
+     pas besoin.
+     Les billets d'analyse et les articles de recherche s'en passent
+     aussi : leur surtitre de format tient lieu d'entrée en matière, et
+     l'écart de <main> suffit à le décoller du header. */
+  .shell--phero,
+  .shell--ras {
+    padding-top: 0;
+  }
+
+  /* Géométrie de la colonne du rappel des faits, déclarée une fois et
+     lue à deux endroits : la grille du corps, et la largeur du chapô qui
+     doit s'arrêter au même endroit. Deux valeurs recopiées auraient
+     divergé au premier ajustement. */
+  .shell--actu {
+    --brief-col: 440px;
+    --brief-gap: 52px;
+  }
+
+  /* Colonne latérale d'une actu : le rappel des faits, puis les repères
+     et les actions du bloc commun. C'est elle qui colle, et non chacun
+     des deux blocs — imbriqués, deux `sticky` se contraignent l'un
+     l'autre et se figent à contretemps. Même hauteur d'arrêt que le
+     sommaire des autres formats, pour qu'un lecteur passant d'un billet
+     d'analyse à une actu ne voie pas la colonne s'arrêter deux fois au
+     même endroit à des hauteurs différentes. */
+  .brief-colonne {
+    position: sticky;
+    top: 183px;
+  }
+  /* Le bloc commun perd son propre collage et son écart haut : c'est la
+     colonne qui les porte désormais, et il vient se poser sous le
+     résumé plutôt que d'ouvrir la colonne. */
+  .brief-colonne :global(.toc) {
+    position: static;
+    top: auto;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--color-rule);
+  }
+
+  /* Billet d'actu : le rappel des faits occupe la colonne latérale des
+     autres formats (cf .post-split), et le billet la colonne principale.
+     Pas de grille propre à ce format — celle du gabarit existe déjà,
+     avec son comportement collant, et la dupliquer aurait fait deux
+     mécanismes à maintenir pour un seul résultat.
+     Le hero, lui, garde toute la largeur : c'est sous le titre que la
+     page se scinde, comme partout ailleurs. */
+  /* Bandeau d'une actu : pleine largeur de la colonne, au-dessus de
+     tout. En 16/9 imposé — c'est la proportion que le cadrage propose
+     dans l'admin, et laisser l'image dicter sa hauteur ferait sauter le
+     titre d'un billet à l'autre. `object-fit: cover` cadre dedans. */
+  .actu-banniere {
+    margin: 0 0 34px;
+  }
+  .actu-banniere img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--hero-radius, 10px);
+    background: var(--color-rule);
+  }
+  .actu-banniere figcaption {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--color-muted);
+    margin-top: 10px;
+  }
+  .actu-banniere figcaption a {
+    color: inherit;
+    border-bottom: 1px dotted currentColor;
+  }
+  .actu-banniere figcaption a:hover {
+    color: var(--color-ink);
+  }
+
+  /* Signature et thématique en une ligne, à la place du bandeau. Posées
+     sous le chapô et non sous le titre : c'est le chapô qui dit de quoi
+     il s'agit, ces deux valeurs ne font que le situer. */
+  /* En tête de colonne, le chapô n'a plus la marge haute qu'il portait
+     sous le titre : c'est la rangée elle-même qui l'ouvre, et un écart
+     de plus le décalerait du bloc d'à côté. */
+  .deck--actu {
+    margin-top: 0;
+  }
+
+  .actu-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--color-muted);
+    margin: 18px 0 0;
+  }
+  .actu-meta a {
+    color: inherit;
+    border-bottom: 1px solid var(--color-rule);
+    transition: color 0.12s, border-color 0.12s;
+  }
+  .actu-meta a:hover {
+    color: var(--color-ink);
+    border-bottom-color: var(--color-ink);
+  }
+  .actu-meta-sep {
+    margin-inline: 8px;
+    opacity: 0.5;
   }
   /* La scission en deux colonnes ne porte plus sur toute la page mais
      sur le seul corps de l'article : le hero (cadre du titre + image) et
@@ -364,6 +745,18 @@ const postTags = (post.tags ?? []).filter(
          déplacer — il se comporte alors comme un élément statique. */
       align-items: start;
     }
+    /* Deux fois la largeur habituelle pour le rappel des faits d'une
+       actu. La colonne des autres formats porte un sommaire — une liste
+       de titres courts, qui tient dans 220 px. Celle-ci porte des
+       phrases : à la même largeur, elles se hachaient en lignes de six
+       ou sept mots, ce qui se lit mal et fait paraître le bloc plus
+       long qu'il n'est. */
+    .article-shell.shell--actu:not(.no-toc) .post-split {
+      grid-template-columns: var(--brief-col) 1fr;
+      column-gap: var(--brief-gap);
+    }
+    /* Plus de plafond à poser sur le chapô : descendu dans la colonne
+       principale, il en prend la largeur tout seul. */
     .post-main {
       min-width: 0;
     }
@@ -410,7 +803,11 @@ const postTags = (post.tags ?? []).filter(
     .hero.has-image {
       --hero-image-part: 39%;
       display: flex;
-      align-items: center;
+      /* Étirée et non centrée : la colonne de gauche prend ainsi la
+         hauteur de la rangée, celle de l'image. Le cadre du titre y
+         reste centré par sa propre justification, et le surtitre peut
+         se caler sur le haut réel de la photo — qui déborde le cadre. */
+      align-items: stretch;
       /* Pas d'écart : l'image est collée au cadre du titre, et c'est sa
          bordure gauche qui vient fermer le rectangle resté ouvert de ce
          côté. Un `gap` séparerait les deux blocs et laisserait le cadre
@@ -419,8 +816,62 @@ const postTags = (post.tags ?? []).filter(
       margin-bottom: 40px;
     }
     .hero-left {
+      position: relative;
       flex: 1 1 auto;
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    /* Deux repères d'origines différentes, d'où la position absolue dans
+       la colonne : en vertical le haut de celle-ci — étirée à la hauteur
+       de l'image, c'est donc le haut de la photo ; en horizontal la
+       verticale du texte du titre, soit le trait du cadre plus son
+       retrait. Le cadre, lui, reste centré sur la photo et commence donc
+       plus bas : les deux repères ne pouvaient pas venir du même
+       élément. */
+    .hero.has-image .hero-format {
+      position: absolute;
+      top: 0;
+      left: calc(var(--hero-pad) + 1px);
+      margin: 0;
+    }
+    /* Le rond et le chapô sur une même rangée. Alignés par le haut et
+       non centrés : le rond se cale sur la première ligne du chapô, quel
+       que soit le nombre de lignes qui suivent — centré, il descendrait
+       au milieu d'un chapô long et cesserait d'ouvrir la phrase. */
+    .hero-amorce {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--amorce-gap);
+    }
+    .hero-amorce :global(.lancer) {
+      flex: 0 0 auto;
+      /* L'anneau s'écarte un peu plus du disque à cette taille : le
+         même jeu de 5 px se lirait comme un liseré collé sur un rond
+         de 57. */
+      --anneau-ecart: 7px;
+    }
+    /* Le rond couvre exactement la hauteur des deux premières lignes,
+       calé sur le haut de la première. */
+    .hero-amorce :global(.rond) {
+      width: var(--rond-amorce);
+      height: var(--rond-amorce);
+    }
+    .hero-amorce :global(.rond svg) {
+      width: 26px;
+      height: 26px;
+    }
+    .hero-amorce .deck {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    /* Alignée sur le chapô et non sur le retrait du cadre : le chapô est
+       lui-même décalé par le rond qui l'ouvre, et une ligne calée plus à
+       gauche que lui ferait ressortir un alinéa qui n'existe pas. Même
+       retrait, donc, calculé depuis le rond et son écart. */
+    .hero-text .guests {
+      padding-left: calc(var(--rond-amorce) + var(--amorce-gap));
     }
     .hero-figure {
       flex: 0 0 var(--hero-image-part);
@@ -434,6 +885,30 @@ const postTags = (post.tags ?? []).filter(
       margin-bottom: 0;
     }
   }
+  /* Surtitre de format. Reprend les valeurs de l'étiquette de section de
+     l'accueil (cf FeaturedPublication .head) — mono 11 px, 0,16 em,
+     capitales. Le blanc dessous, lui, s'en écarte : 60 px et non 24,
+     parce qu'ici le surtitre précède un titre d'affichage de 60 px et
+     non une rangée de cartes. À 24 px il se lisait comme une ligne du
+     titre plutôt que comme l'étiquette qui l'annonce.
+     Sans effet sur les heros à image : le surtitre y est positionné en
+     absolu, calé sur le haut de la photo (cf .hero.has-image
+     .hero-format), et sa marge n'y joue plus. En couleur de marque
+     comme le surlignage du titre juste en dessous, plutôt qu'en couleur
+     de famille : sur la page d'une publication, c'est la marque qui
+     donne le ton, pas la rubrique. */
+  .hero-format {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin: 0 0 60px;
+  }
+
   .hero-figure {
     margin: 0;
   }
@@ -441,10 +916,27 @@ const postTags = (post.tags ?? []).filter(
      Le trait reprend celui des filets du bandeau meta (cf ArticleMeta),
      pour que les trois se lisent comme une même famille plutôt que
      comme trois objets distincts. */
+  /* Rayon commun au cadre du titre et à la fenêtre de l'image. Nommé
+     plutôt que répété : les deux doivent s'accorder au pixel près. */
+  .hero {
+    --hero-radius: 10px;
+    /* Diamètre du rond de lecture = deux lignes de chapô, reprises de
+       .deck plus bas : 19 px de corps sur 1,5 d'interligne. Écrit en
+       calcul plutôt qu'en valeur figée pour qu'il suive si l'un des deux
+       change — sinon il finirait par déborder ou flotter. Avec l'écart
+       qui le sépare du texte, il donne aussi le retrait sur lequel se
+       cale la ligne des invité·es, sous le chapô. */
+    --rond-amorce: calc(19px * 1.5 * 2);
+    --amorce-gap: 18px;
+    /* Retrait intérieur du cadre. Nommé parce que la ligne des
+       invité·es s'en sert pour venir se caler contre la bordure basse :
+       les deux valeurs doivent rester d'accord. */
+    --hero-pad: 32px;
+  }
   .hero.has-image .hero-text,
   .hero-frame {
     border: 1px solid var(--color-rule);
-    border-radius: 10px;
+    border-radius: var(--hero-radius);
   }
   /* Le cadre du titre reste ouvert à droite : l'image y est collée, et
      c'est sa propre bordure gauche qui ferme le rectangle. Sans ça, les
@@ -453,8 +945,8 @@ const postTags = (post.tags ?? []).filter(
      raison — un arrondi laisserait une encoche au raccord. */
   .hero.has-image .hero-text {
     border-right: 0;
-    border-radius: 10px 0 0 10px;
-    padding: 32px;
+    border-radius: var(--hero-radius) 0 0 var(--hero-radius);
+    padding: var(--hero-pad);
   }
   /* Fenêtre carrée de la couverture. width:100% + aspect-ratio : la
      largeur vient de la colonne, la hauteur s'en déduit. Sans width
@@ -470,7 +962,7 @@ const postTags = (post.tags ?? []).filter(
        l'image dépasse largement le cadre en haut et en bas, les
        bordures de celui-ci la rejoignent donc sur sa partie droite,
        loin de ses angles. */
-    border-radius: 10px;
+    border-radius: var(--hero-radius);
   }
   /* Crédit photo sous le cadre du titre, aligné à droite — contre sa
      bordure basse, et non sous l'image où il se lisait comme une
@@ -539,6 +1031,56 @@ const postTags = (post.tags ?? []).filter(
     text-align: justify;
     hyphens: manual;
     -webkit-hyphens: manual;
+  }
+
+  /* Ligne des personnes reçues, juste sous le bandeau meta. Même
+     famille que les libellés de ce bandeau — elle en prolonge la
+     signalétique plutôt que d'ouvrir le corps de la page. */
+  .guests {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--color-muted);
+    margin: -12px 0 20px;
+  }
+  /* Dans le cadre, calée contre sa bordure basse par l'intérieur : la
+     marge négative reprend le retrait du cadre pour n'en laisser que
+     l'air nécessaire à ne pas toucher le trait. Exprimée à partir de
+     --hero-pad plutôt qu'en valeur figée, sinon changer le retrait du
+     cadre décollerait la ligne sans qu'on s'en aperçoive. */
+  .hero-text .guests {
+    margin: 26px 0 calc(10px - var(--hero-pad));
+  }
+  /* Épisode sans couverture : le bouton n'a pas de cadre où se loger et
+     se pose seul sous le bandeau meta. */
+  .hors-cadre {
+    margin: 0 0 40px;
+  }
+
+  /* Générique en tête des notes. Traité comme les repères de l'aside —
+     intitulé en petites capitales, valeur en corps de lecture — et
+     fermé par un filet : sans lui, la ligne se lisait comme un premier
+     paragraphe très court, collé à la lettrine du vrai premier. */
+  .generique {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    margin: 0 0 34px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .generique-lbl {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .generique-noms {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    color: var(--color-ink);
   }
 
   .tail {

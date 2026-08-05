@@ -59,10 +59,56 @@ export type PublicationPost = {
   readingTime?: number | null;
   /** Durée d'écoute, pour les podcasts. */
   durationSeconds?: number | null;
-  /** Image de couverture — pour l'instant, seules les analyses portent
-   *  ce champ (cf Analyses.ts → extraFields). `unsplash` n'est rempli
-   *  que pour une image importée via le picker (cf Media.ts) — absent
-   *  pour un upload manuel, donc pas de crédit à afficher dans ce cas. */
+  /** Épisode auto-hébergé — podcasts uniquement (cf Podcasts.ts). Le
+   *  document est peuplé au fetch (depth ≥ 1) ; `filesize` et `mimeType`
+   *  ne servent pas au lecteur mais à l'`enclosure` du flux podcast, que
+   *  les applications d'écoute exigent renseignée. */
+  audio?:
+    | {
+        filename?: string;
+        filesize?: number | null;
+        mimeType?: string | null;
+      }
+    | number
+    | string
+    | null;
+  /** Personnes reçues dans l'épisode — podcasts uniquement. Distinct
+   *  des auteur·ices, qui signent la production. */
+  guests?: string[] | null;
+  /**
+   * Série de rattachement — articles de recherche, billets d'analyse et
+   * podcasts (où elle s'appelle une émission). Peuplée au fetch
+   * (depth ≥ 2, pour que son image le soit aussi).
+   *
+   * Son image sert de fond au hero de ses billets : c'est l'identité de
+   * la série qu'on voit derrière, celle de l'épisode restant dans le
+   * carré au premier plan.
+   */
+  series?:
+    | {
+        name?: string;
+        slug?: string;
+        lede?: string | null;
+        image?: { filename?: string } | number | string | null;
+      }
+    | number
+    | string
+    | null;
+  /** Rang dans la série. Absent = ordre de parution. */
+  seriesNumber?: number | null;
+  /**
+   * Le fait dont part un billet d'actu, résumé en quelques phrases —
+   * actus uniquement. Rendu en colonne latérale, à la place du sommaire
+   * des autres formats : une analyse suppose l'actualité connue, un
+   * billet d'actu ne le peut pas.
+   */
+  enBref?: string | null;
+  /** Liens permettant de vérifier ce fait — distincts de la bibliographie. */
+  sources?: { label?: string | null; url?: string | null }[] | null;
+  /** Image de couverture — portée par les billets d'analyse et les
+   *  podcasts (cf leurs extraFields). `unsplash` n'est rempli que pour
+   *  une image importée via le picker (cf Media.ts) — absent pour un
+   *  upload manuel, donc pas de crédit à afficher dans ce cas. */
   image?:
     | {
         filename?: string;
@@ -113,6 +159,12 @@ export type PublicationSpec = {
    * tel ferait importer l'épisode comme article de revue dans Zotero.
    */
   citationType: 'article' | 'misc' | 'sound' | 'generic';
+  /**
+   * Verbe de l'appel à l'action, sur les cartes et vignettes. On ne lit
+   * pas un épisode de podcast — et c'est la seule promesse que fait ce
+   * lien, autant qu'elle soit juste.
+   */
+  actionLabel: string;
 };
 
 export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
@@ -126,6 +178,7 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
       'Travaux de fond, avec notes et bibliographie. Citables et exportables aux formats BibTeX et RIS.',
     readingLabel: 'minutes',
     citationType: 'article',
+    actionLabel: 'Lire',
   },
   analyses: {
     collection: 'analyses',
@@ -137,6 +190,7 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
       "Textes qui prennent le temps d'argumenter, sans l'appareil formel d'un article de recherche.",
     readingLabel: 'minutes',
     citationType: 'article',
+    actionLabel: 'Lire',
   },
   actus: {
     collection: 'actus',
@@ -148,6 +202,7 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
       "Rebonds courts sur l'actualité, publiés pendant qu'elle est encore vive.",
     readingLabel: 'minutes',
     citationType: 'misc',
+    actionLabel: 'Lire',
   },
   podcasts: {
     collection: 'podcasts',
@@ -159,6 +214,7 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
       'Conversations et lectures, en voix. Avec celles et ceux qui pensent depuis le terrain.',
     readingLabel: 'duration',
     citationType: 'sound',
+    actionLabel: 'Écouter',
   },
   outils: {
     collection: 'outils',
@@ -170,6 +226,7 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
       "Ressources à réutiliser : guides, kits d'animation, supports de formation. En accès libre.",
     readingLabel: 'none',
     citationType: 'generic',
+    actionLabel: 'Lire',
   },
 };
 

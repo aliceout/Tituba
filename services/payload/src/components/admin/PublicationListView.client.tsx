@@ -19,6 +19,7 @@ import Link from 'next/link';
 
 import CarnetPage from './CarnetPage';
 import { getPublicationSpec } from './publications/registry';
+import { stripHeroMarkers } from '@/lib/hero-markers';
 
 const PER_PAGE = 25;
 
@@ -376,7 +377,7 @@ export default function PublicationListViewClient({
                 role="row"
               >
                 <div role="cell" className="title">
-                  {p.title}
+                  {stripHeroMarkers(p.title)}
                 </div>
                 {scope === 'all' && (
                   <div role="cell" className="authors">
@@ -410,7 +411,7 @@ export default function PublicationListViewClient({
                   <button
                     type="button"
                     className="row-delete"
-                    aria-label={`Supprimer ${p.title}`}
+                    aria-label={`Supprimer ${stripHeroMarkers(p.title)}`}
                     title="Supprimer ce billet"
                     onClick={(e) => {
                       e.preventDefault();
@@ -498,7 +499,7 @@ export default function PublicationListViewClient({
 
             <div className="tituba-modal__body">
               <p>
-                «&nbsp;{deleteTarget.title}&nbsp;» sera définitivement supprimé. Cette action est irréversible.
+                «&nbsp;{stripHeroMarkers(deleteTarget.title)}&nbsp;» sera définitivement supprimé. Cette action est irréversible.
               </p>
             </div>
 

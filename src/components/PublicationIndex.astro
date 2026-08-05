@@ -107,6 +107,18 @@ const LEDES: Record<PublicationCollection, string> = {
     />
   </Fragment>
 
+  {/* Seul format à porter un flux propre : un podcast s'écoute
+      d'abord dans une application, et sans ce lien rien sur le site
+      n'indiquerait qu'on peut s'y abonner. */}
+  {collection === 'podcasts' && (
+    <p class="abo">
+      <a href="/podcasts/rss.xml">S'abonner au podcast</a>
+      <span class="abo-aide">
+        — collez cette adresse dans votre application d'écoute.
+      </span>
+    </p>
+  )}
+
   <section class="feed">
     {docs.length === 0 ? (
       <p class="empty">
@@ -134,6 +146,19 @@ const LEDES: Record<PublicationCollection, string> = {
   .feed {
     padding-top: 24px;
     padding-bottom: 40px;
+  }
+  .abo {
+    margin: 24px 0 0;
+    font-family: var(--font-sans);
+    font-size: 13px;
+  }
+  .abo a {
+    color: var(--color-accent);
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 1px;
+  }
+  .abo-aide {
+    color: var(--color-muted);
   }
   .feed .empty {
     padding: 64px 0;

@@ -1,7 +1,10 @@
 import React from 'react';
 
 import SubscribersListViewClient from './SubscribersListView.client';
+import AccesReserve, { estAdministratrice } from './AccesReserve';
 
-export default function SubscribersListView(): React.ReactElement {
+export default async function SubscribersListView(): Promise<React.ReactElement> {
+  if (!(await estAdministratrice())) return <AccesReserve titre="Abonné·es" />;
+
   return <SubscribersListViewClient />;
 }

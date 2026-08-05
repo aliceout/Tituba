@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import CarnetPage from './CarnetPage';
+import { stripHeroMarkers } from '@/lib/hero-markers';
 
 const PER_PAGE = 25;
 
@@ -11,6 +12,10 @@ type Page = {
   id: number | string;
   title: string;
   slug: string;
+  /** « libre » = page composée ici ; « fixe » = en-tête d'une route du site. */
+  kind?: string | null;
+  /** Affichage au menu — propre aux pages fixes. */
+  enabled?: boolean;
   updatedAt: string;
 };
 
@@ -71,7 +76,7 @@ export default function PagesListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="pages"
-      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Pages éditoriales' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Pages' }]}
       topbarActions={
         <Link
           href="/cms/admin/collections/pages/create"
@@ -101,6 +106,7 @@ export default function PagesListViewClient(): React.ReactElement {
         <div className="tituba-listview__row tituba-listview__row--head" role="row">
           <div role="columnheader">Titre</div>
           <div role="columnheader">Slug</div>
+          <div role="columnheader">Nature</div>
           <div role="columnheader">Mise à jour</div>
         </div>
 
@@ -117,10 +123,20 @@ export default function PagesListViewClient(): React.ReactElement {
               role="row"
             >
               <div role="cell" className="title">
-                {p.title}
+                {stripHeroMarkers(p.title)}
               </div>
               <div role="cell" className="slug">
                 {p.slug}
+              </div>
+              {/* Ce que la ligne ne dirait pas autrement : une page fixe
+                  titre une route du site, ne se supprime pas et n'a pas
+                  de corps. On ne le découvrait qu'en l'ouvrant. */}
+              <div
+                role="cell"
+                className={p.kind === 'fixe' ? 'nature nature--fixe' : 'nature'}
+              >
+                {p.kind === 'fixe' ? 'Page fixe' : 'Page libre'}
+                {p.kind === 'fixe' && p.enabled === false && <small>masquée du menu</small>}
               </div>
               <div role="cell" className="date">
                 {isoDate(p.updatedAt)}

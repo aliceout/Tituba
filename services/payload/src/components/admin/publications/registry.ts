@@ -30,14 +30,50 @@ export type FieldSpec = {
   /** Aide affichée sous le champ. */
   help?: string;
   placeholder?: string;
+  /**
+   * Colonne où rendre le champ. Par défaut la barre latérale, qui
+   * accueille les réglages d'un billet. `main` le place dans la colonne
+   * centrale, en panneau propre entre le corps et les notes — pour ce
+   * qui n'est pas un réglage mais le contenu lui-même : le fichier d'un
+   * épisode de podcast n'est pas une métadonnée, c'est ce qu'on vient
+   * publier.
+   */
+  zone?: 'sidebar' | 'main';
+  /**
+   * Champ enregistré mais jamais affiché. Réservé aux valeurs dérivées
+   * — la durée d'un épisode est lue dans le fichier au dépôt, la
+   * montrer en saisie ne proposerait qu'une occasion de la fausser.
+   *
+   * Il reste déclaré ici, et non retiré du registre : c'est de cette
+   * liste que `pickExtraValues` tire le corps de la requête de
+   * sauvegarde. L'en retirer ne l'aurait pas caché, l'aurait
+   * silencieusement cessé d'enregistrer.
+   */
+  hidden?: boolean;
 } & (
   | { type: 'text' | 'url' | 'textarea' }
   | { type: 'number'; min?: number; max?: number }
   | { type: 'select'; options: { label: string; value: string }[] }
   | { type: 'checkbox' }
   /** Relation vers `media` (id). Rendu par UnsplashImagePicker, pas un
-   *  <input> — cf branche dédiée dans PublicationEditView.client.tsx. */
-  | { type: 'upload' }
+   *  <input> — cf branche dédiée dans PublicationEditView.client.tsx.
+   *  `aspect` est la proportion de l'emplacement qui recevra l'image
+   *  (largeur / hauteur), qui pilote le cadrage proposé : 1 par défaut,
+   *  car le hero d'un billet montre un carré. Une actu, elle, l'affiche
+   *  en bandeau — cadrer en carré ce qui sortira en 16/9 ne montrerait
+   *  pas ce qui est gardé. */
+  | { type: 'upload'; aspect?: number }
+  /** Relation vers `audio` (id). Rendu par AudioUploadField — même
+   *  principe que `upload`, mais un fichier audio ne se cherche pas
+   *  chez un tiers et se contrôle à l'oreille : dépôt et écoute sur
+   *  place, plus la durée lue dans le fichier. */
+  | { type: 'audio' }
+  /** Liste de valeurs libres, saisies une par une (Entrée) et rendues
+   *  en pastilles — cf ChipsInput. Stockée en `hasMany` côté Payload,
+   *  donc un vrai tableau : une chaîne à virgules obligerait chaque
+   *  lecteur à la redécouper, et se casserait sur un nom qui en
+   *  contient une. */
+  | { type: 'list' }
 );
 
 /** Comment présenter la durée d'une publication. */
@@ -57,6 +93,17 @@ export type PublicationSpec = {
    * les collections Tituba : le format est porté par la collection.
    */
   subtypes?: { options: { label: string; value: string }[]; defaultValue: string };
+  /**
+   * Le format se met-il en série ? Doit rester aligné sur l'option
+   * `series` du constructeur de collection (cf build-publication) : le
+   * champ n'existe côté base que pour les formats qui l'activent, et le
+   * proposer ailleurs enverrait une valeur que l'API ignore.
+   *
+   * Hors `extraFields` : la série n'est pas un champ propre à un format
+   * mais un rattachement partagé par trois d'entre eux, de même nature
+   * que les thématiques — et c'est à côté d'elles qu'elle se rend.
+   */
+  series?: boolean;
   /** Champs propres au format. Cf. l'avertissement en tête de fichier. */
   extraFields: FieldSpec[];
   /** Champs obligatoires vérifiés côté client avant l'envoi. */
@@ -73,6 +120,7 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
     routePrefix: '/articles',
     labelSingular: 'Article de recherche',
     labelPlural: 'Articles de recherche',
+    series: true,
     extraFields: [
       {
         name: 'doi',
@@ -91,6 +139,7 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
     routePrefix: '/analyses',
     labelSingular: "Billet d'analyse",
     labelPlural: "Billets d'analyse",
+    series: true,
     extraFields: [
       {
         name: 'image',
@@ -107,7 +156,15 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
     routePrefix: '/actus',
     labelSingular: "Billet d'actu",
     labelPlural: "Billets d'actu",
-    extraFields: [],
+    extraFields: [
+      {
+        name: 'image',
+        type: 'upload',
+        label: 'Image',
+        aspect: 16 / 9,
+        help: 'Facultative. En bandeau au-dessus du titre, et en vignette dans les listes.',
+      },
+    ],
     required: BASE_REQUIRED,
     readingLabel: 'minutes',
   },
@@ -117,31 +174,39 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
     routePrefix: '/podcasts',
     labelSingular: 'Podcast',
     labelPlural: 'Podcasts',
+    series: true,
     extraFields: [
       {
-        name: 'audioUrl',
-        type: 'url',
-        label: 'Lien du fichier audio',
-        placeholder: 'https://…/episode-03.mp3',
-        help: "URL directe du fichier ou de la page d'écoute. C'est ce lien qui alimente le lecteur côté site.",
+        name: 'audio',
+        type: 'audio',
+        label: 'Fichier audio',
+        zone: 'main',
+      },
+      // En barre latérale, comme sur les billets d'analyse : le fichier
+      // est le contenu de l'épisode, sa couverture reste un habillage.
+      {
+        name: 'image',
+        type: 'upload',
+        label: 'Image de couverture',
       },
       {
         name: 'durationSeconds',
         type: 'number',
         min: 0,
-        label: 'Durée (secondes)',
-        help: 'Affichée en « 42 min ». Remplace le temps de lecture, sans objet pour de l’audio.',
+        label: 'Durée',
+        hidden: true,
       },
       {
         name: 'guests',
-        type: 'text',
+        type: 'list',
         label: 'Invité·es',
-        help: 'Séparées par des virgules. Distinct des auteur·ices, qui signent la production.',
+        placeholder: 'Un nom, Entrée pour ajouter…',
+        help: 'Les personnes reçues dans l’épisode. Distinct des auteur·ices, qui signent la production.',
       },
     ],
     // Un épisode n'a pas forcément de corps rédigé : l'audio est le
     // contenu, le corps ne sert qu'aux notes d'épisode.
-    required: ['title', 'lede', 'audioUrl'],
+    required: ['title', 'lede', 'audio'],
     readingLabel: 'duration',
   },
   outils: {
@@ -202,8 +267,10 @@ export function emptyExtraValues(spec: PublicationSpec): Record<string, unknown>
   const out: Record<string, unknown> = {};
   for (const f of spec.extraFields) {
     out[f.name] =
-      f.type === 'number' || f.type === 'upload'
+      f.type === 'number' || f.type === 'upload' || f.type === 'audio'
         ? null
+        : f.type === 'list'
+        ? []
         : f.type === 'checkbox'
         ? false
         : f.type === 'select'
@@ -230,10 +297,17 @@ export function pickExtraValues(
     } else if (f.type === 'number') {
       const n = typeof raw === 'string' ? Number.parseInt(raw, 10) : raw;
       out[f.name] = typeof n === 'number' && Number.isFinite(n) ? n : null;
-    } else if (f.type === 'upload') {
+    } else if (f.type === 'list') {
+      // Les entrées vides sont écartées ici plutôt qu'à la saisie : on
+      // n'interrompt pas quelqu'un qui tape, mais on n'enregistre pas
+      // une pastille sans nom.
+      out[f.name] = Array.isArray(raw)
+        ? raw.map((v) => String(v).trim()).filter(Boolean)
+        : [];
+    } else if (f.type === 'upload' || f.type === 'audio') {
       // La valeur peut être un id brut (déjà sélectionné puis re-tapé
-      // via patch()) ou l'objet media peuplé par depth>0 au chargement
-      // du doc — dans les deux cas on ne sauvegarde que l'id.
+      // via patch()) ou le document lié peuplé par depth>0 au
+      // chargement — dans les deux cas on ne sauvegarde que l'id.
       out[f.name] =
         raw && typeof raw === 'object' && 'id' in (raw as Record<string, unknown>)
           ? (raw as { id: unknown }).id

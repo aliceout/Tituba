@@ -4,7 +4,7 @@
 // (Pages éditoriales : À propos, Colophon, Mentions légales…). Layout
 // aligné sur BibliographyEditView :
 //
-//   CarnetTopbar : crumbs Tituba / Pages éditoriales / [slug] +
+//   CarnetTopbar : crumbs Tituba / Pages / [slug] +
 //                  Supprimer + Sauvegarder
 //   tituba-editview__hero : h1 « Page éditoriale » + « clé : <slug> »
 //   section Identification : Titre · Slug
@@ -58,6 +58,14 @@ type Page = {
   id?: number | string;
   title: string;
   slug: string;
+  /**
+   * « libre » — page composée ici, créable et supprimable.
+   * « fixe »  — en-tête d'une route du site (accueil, archives, thèmes,
+   *   abonnement) : ni slug modifiable, ni suppression, ni sections.
+   */
+  kind?: 'libre' | 'fixe';
+  /** Affichage au menu — n'a de sens que pour une page fixe. */
+  enabled?: boolean;
   description?: string;
   noindex?: boolean;
   eyebrow?: string;
@@ -68,6 +76,8 @@ type Page = {
 const EMPTY: Page = {
   title: '',
   slug: '',
+  kind: 'libre',
+  enabled: true,
   description: '',
   noindex: false,
   eyebrow: '',
@@ -191,6 +201,14 @@ export default function PageEditViewClient({
   }, [docId]);
 
   const dirty = JSON.stringify(data) !== initial;
+  /**
+   * Page fixe : elle titre une route du site plutôt que d'en composer
+   * une. Trois choses s'en déduisent — slug verrouillé, pas de
+   * suppression, pas d'éditeur de sections — et la collection fait
+   * respecter les trois côté API (cf Pages.ts), ce qu'on ne fait ici
+   * que rendre visible.
+   */
+  const estFixe = data.kind === 'fixe';
 
   function patch<K extends keyof Page>(key: K, value: Page[K]) {
     setData((d) => ({ ...d, [key]: value }));
@@ -346,7 +364,7 @@ export default function PageEditViewClient({
       modifier="page"
       crumbs={[
         { href: '/cms/admin', label: 'Tituba' },
-        { href: '/cms/admin/collections/pages', label: 'Pages éditoriales' },
+        { href: '/cms/admin/collections/pages', label: 'Pages' },
         { label: data.slug || (docId ? '—' : 'nouvelle') },
       ]}
       suppressHydrationWarningOnActions
@@ -388,7 +406,7 @@ export default function PageEditViewClient({
           }}
         >
           <div className="tituba-editview__hero">
-            <h1 className="tituba-h1">Page éditoriale</h1>
+            <h1 className="tituba-h1">{estFixe ? 'Page fixe du site' : 'Page éditoriale'}</h1>
             {data.slug && (
               <p className="tituba-editview__hero-key">
                 clé : <span className="mono">{data.slug}</span>
@@ -399,6 +417,14 @@ export default function PageEditViewClient({
           <section className="tituba-editview__section">
             <h2 className="tituba-editview__section-title">Identification</h2>
 
+            {estFixe && (
+              <p className="tituba-editview__section-help">
+                Cette page titre une route qui existe déjà dans le site — son écran est composé
+                par le code, pas ici. Vous en réglez le titre, le chapô et l’affichage au menu.
+                Elle ne peut être ni renommée ni supprimée.
+              </p>
+            )}
+
             <label className="tituba-editview__field">
               <span className="lbl">Titre de la page</span>
               <input
@@ -407,6 +433,11 @@ export default function PageEditViewClient({
                 onChange={(e) => patch('title', e.target.value)}
                 required
               />
+              {estFixe && (
+                <span className="hint">
+                  Les *astérisques* surlignent un mot dans le hero, comme sur un titre de billet.
+                </span>
+              )}
             </label>
 
             <label className="tituba-editview__field">
@@ -416,12 +447,33 @@ export default function PageEditViewClient({
                 value={data.slug}
                 onChange={(e) => patch('slug', e.target.value)}
                 required
+                // Verrouillé sur une page fixe : le slug est ce qui la
+                // relie à sa route. La collection refuse d'ailleurs de
+                // le changer côté API — le champ grisé ne fait que le
+                // rendre visible.
+                disabled={estFixe}
               />
               <span className="hint">
-                URL-safe, ex&nbsp;: « about », « colophon », « mentions-legales ». Sert
-                de match de route Astro.
+                {estFixe
+                  ? 'Fixé par la route du site. Non modifiable.'
+                  : 'URL-safe, ex : « about », « colophon », « mentions-legales ». Sert de match de route Astro.'}
               </span>
             </label>
+
+            {estFixe && (
+              <label className="tituba-editview__field tituba-editview__field--toggle">
+                <input
+                  type="checkbox"
+                  checked={data.enabled !== false}
+                  onChange={(e) => patch('enabled', e.target.checked)}
+                />
+                <span className="lbl">Affichée au menu</span>
+                <span className="hint">
+                  Décochée, la page disparaît du menu du site. Sa route continue d’exister — c’est
+                  le lien qui s’en va, pas la page.
+                </span>
+              </label>
+            )}
           </section>
 
           <section className="tituba-editview__section">
@@ -476,6 +528,11 @@ export default function PageEditViewClient({
             </label>
           </section>
 
+          {/* Pas de corps sur une page fixe : son écran est composé par
+              le site — une liste d'archives, une grille de thématiques.
+              Laisser l'éditeur visible aurait promis un contenu que rien
+              n'affiche. */}
+          {!estFixe && (
           <section className="tituba-editview__section">
             <h2 className="tituba-editview__section-title">Sections de la page</h2>
             <p className="tituba-editview__section-help">
@@ -613,8 +670,9 @@ export default function PageEditViewClient({
               </div>
             </div>
           </section>
+          )}
 
-          {data.id != null && (
+          {data.id != null && !estFixe && (
             <section className="tituba-editview__section tituba-editview__section--danger">
               <button
                 type="button"

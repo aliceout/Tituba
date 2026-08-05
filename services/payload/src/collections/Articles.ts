@@ -11,7 +11,7 @@ import { makeNotifyNewPublication } from '../hooks/notify-new-post';
  * bibliographie, exports BibTeX/RIS. C'est le seul format à porter un
  * DOI, quand l'article est aussi déposé ailleurs.
  *
- * Le socle de champs (numéro, titre/slug, thématiques, auteur·ices,
+ * Le socle de champs (identifiant public, titre, thématiques, auteur·ices,
  * dates, chapô, corps Lexical, bibliographie, champs calculés) vient de
  * `buildPublicationCollection`. Ne figure ici que ce qui distingue ce
  * format des quatre autres.
@@ -19,6 +19,8 @@ import { makeNotifyNewPublication } from '../hooks/notify-new-post';
 export const Articles: CollectionConfig = buildPublicationCollection({
   slug: 'articles',
   labels: { singular: 'Article de recherche', plural: 'Articles de recherche' },
+  // Une enquête longue peut paraître en plusieurs volets.
+  series: true,
   extraFields: [
     {
       name: 'doi',
@@ -43,7 +45,7 @@ export const Articles: CollectionConfig = buildPublicationCollection({
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'publishedAt', 'draft', 'updatedAt'],
-    listSearchableFields: ['title', 'slug', 'lede'],
+    listSearchableFields: ['title', 'publicId', 'lede'],
     components: {
       views: {
         edit: { root: { Component: '@/components/admin/PublicationEditView#default' } },

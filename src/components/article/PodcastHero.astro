@@ -1,0 +1,407 @@
+---
+/**
+ * Hero d'épisode pleine largeur — essai sur le parti d'ARTE Radio.
+ *
+ * Deux images superposées : celle de l'émission en fond, débordant la
+ * colonne de texte jusqu'aux bords de la fenêtre, floutée et assombrie ;
+ * celle de l'épisode par-dessus, nette et carrée, à gauche du titre. On
+ * reconnaît ainsi l'émission avant d'avoir lu le titre, et l'épisode se
+ * distingue à l'intérieur d'elle.
+ *
+ * Un épisode sans émission — ou dont l'émission n'a pas d'image —
+ * retombe sur sa propre couverture pour les deux rôles : c'est ce que
+ * faisait le hero avant l'existence des séries, et ça vaut mieux qu'un
+ * fond vide.
+ *
+ * Le flou n'est pas décoratif : une photo nette sous du texte le rend
+ * illisible dès qu'elle porte du détail, et aucun voile assez léger pour
+ * laisser voir l'image ne suffit à garantir le contraste. Flouter règle
+ * les deux — l'image reste reconnaissable comme ambiance, le texte
+ * repasse sur un aplat.
+ *
+ * Composant à part et non variante de PublicationArticle : c'est un
+ * essai, et il doit pouvoir être retiré d'une ligne.
+ */
+import type { DisplayAuthor } from '../../lib/site';
+
+import type { PublicationCollection } from '../../lib/publications';
+
+import FormatIcon from '../FormatIcon.astro';
+import PodcastLaunch from './PodcastLaunch.astro';
+
+export interface Props {
+  /** Titre, HTML autorisé (astérisques déjà converties). */
+  titleHtml: string;
+  /** Titre en texte brut — nom du fichier téléchargé, libellés. */
+  titlePlain: string;
+  lede: string;
+  coverUrl: string;
+  coverAlt?: string;
+  /**
+   * Fond du hero — l'image de l'émission. Le carré au premier plan reste
+   * celui de l'épisode : on reconnaît l'émission avant d'avoir lu le
+   * titre, et l'épisode se distingue à l'intérieur d'elle.
+   *
+   * Absent, on retombe sur la couverture de l'épisode, qui sert alors
+   * les deux rôles. C'est le comportement d'avant les séries, et il vaut
+   * mieux qu'un hero sans fond.
+   */
+  backgroundUrl?: string | null;
+  /** Nom de l'émission, si le billet en a une. */
+  serieName?: string | null;
+  serieSlug?: string | null;
+  /** Intitulé du format, en surtitre. */
+  formatLabel: string;
+  /** Collection du billet — pilote le pictogramme du surtitre. */
+  collection: PublicationCollection;
+  audioSrc?: string | null;
+  durationSeconds?: number | null;
+  href: string;
+  credit?: { name: string; profileUrl: string | null; unsplashUrl: string } | null;
+  /** Signature — interne = lien vers la page auteur·ice, externe = texte. */
+  authors?: DisplayAuthor[];
+  themeName?: string | null;
+  themeSlug?: string | null;
+}
+
+const {
+  titleHtml,
+  titlePlain,
+  lede,
+  coverUrl,
+  coverAlt = '',
+  backgroundUrl = null,
+  serieName = null,
+  serieSlug = null,
+  formatLabel,
+  collection,
+  audioSrc,
+  durationSeconds,
+  href,
+  credit,
+  authors,
+  themeName,
+  themeSlug,
+} = Astro.props as Props;
+
+// Le fond retombe sur la couverture de l'épisode si l'émission n'a pas
+// d'image — ou si l'épisode n'appartient à aucune émission.
+const fondUrl = backgroundUrl || coverUrl;
+---
+
+<section class="phero">
+  {/* Fond porté par un élément à part et non par la section : le flou
+      d'un `filter` s'appliquerait à tout ce qu'elle contient, texte
+      compris. Mis à l'échelle au-delà de ses bords, sinon le flou
+      délave les bordures et laisse un liseré clair tout autour. */}
+  <div class="phero-fond" style={`background-image:url(${fondUrl})`} aria-hidden="true"></div>
+
+  <div class="phero-in">
+    {/* Le crédit vit sous la photo qu'il crédite, en légende de la
+        figure — dans la colonne de texte, il se lisait comme une note de
+        l'épisode. Le carré est enveloppé d'un bloc à part : c'est lui
+        qui porte le rognage et l'arrondi, et une légende posée dans le
+        même bloc aurait été coupée avec eux. */}
+    <figure class="phero-cover">
+      <div class="phero-cover-img">
+        <img src={coverUrl} alt={coverAlt} />
+      </div>
+      {credit && (
+        <figcaption class="phero-credit">
+          Photo par{' '}
+          {credit.profileUrl ? (
+            <a href={credit.profileUrl} rel="noopener">{credit.name}</a>
+          ) : (
+            credit.name
+          )}
+          {' '}sur <a href={credit.unsplashUrl} rel="noopener">Unsplash</a>
+        </figcaption>
+      )}
+    </figure>
+
+    <div class="phero-texte">
+      {/* L'émission prolonge le surtitre plutôt que d'ouvrir une ligne à
+          elle : « PODCAST · VOIX DE LA MER » se lit d'un trait, et c'est
+          bien la même information — de quelle nature est ce billet, et
+          d'où il vient. */}
+      <p class="phero-format">
+        <FormatIcon collection={collection} />{formatLabel}
+        {serieName && serieSlug && (
+          <>
+            <span class="phero-sep" aria-hidden="true">·</span>
+            <a href={`/series/${serieSlug}/`}>{serieName}</a>
+          </>
+        )}
+      </p>
+      <h1 set:html={titleHtml}></h1>
+      <p class="phero-deck">{lede}</p>
+
+      {/* Signature et thématique — remontées ici depuis le bandeau de
+          métadonnées, qui n'est plus rendu sur un épisode. En une ligne
+          et non en colonnes étiquetées : sur un fond d'image, une grille
+          de libellés ferait un second bloc à lire, là où deux valeurs
+          séparées d'un point médian se parcourent d'un regard. Le
+          format est déjà en surtitre, et la date rejoint le temps
+          d'écoute dans l'aside — deux repères chiffrés qui vont
+          ensemble.
+          Les valeurs absentes sont omises plutôt que remplacées par un
+          tiret : un tiret sur fond sombre se lit comme une erreur. */}
+      {((authors && authors.length > 0) || (themeName && themeSlug)) && (
+        <p class="phero-meta">
+          {authors && authors.length > 0 && (
+            <span>
+              {authors.map((a, i) => (
+                <Fragment>
+                  {i > 0 && (i === authors.length - 1 ? ' et ' : ', ')}
+                  {a.href ? <a href={a.href}>{a.name}</a> : a.name}
+                </Fragment>
+              ))}
+            </span>
+          )}
+          {themeName && themeSlug && (
+            <a href={`/theme/${themeSlug}/`}>{themeName}</a>
+          )}
+        </p>
+      )}
+
+      {audioSrc && (
+        <div class="phero-action">
+          <PodcastLaunch
+            src={audioSrc}
+            durationSeconds={durationSeconds}
+            title={titlePlain}
+            coverUrl={coverUrl}
+            href={href}
+          />
+        </div>
+      )}
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Pleine largeur : la section sort de la gouttière et de la largeur
+     maximale de <main> en tirant ses marges jusqu'aux bords de la
+     fenêtre. `overflow-x: clip` est posé sur <main> (cf Layout) — et
+     non `hidden`, qui ferait de lui un conteneur de défilement et
+     casserait le `position: sticky` de l'aside. */
+  .phero {
+    position: relative;
+    margin-inline: calc(50% - 50vw);
+    padding-inline: calc(50vw - 50%);
+    /* Annule l'écart que <main> ménage entre le header et le premier
+       bloc : une image pleine largeur ne se pose pas *sous* le header,
+       elle vient s'y appuyer — un liseré de fond clair entre les deux
+       la ferait lire comme une illustration flottante. */
+    margin-top: calc(-1 * var(--page-pad-top));
+    /* Le fond doit être rogné à ses propres bords : le flou déborde. */
+    overflow: hidden;
+    margin-bottom: 40px;
+  }
+
+  .phero-fond {
+    position: absolute;
+    /* Débordement volontaire : un flou appliqué jusqu'au bord délave
+       celui-ci et laisse un halo clair. On floute au-delà, on rogne. */
+    inset: -60px;
+    background-size: cover;
+    background-position: center;
+    /* Assez flou pour ne pas concurrencer le texte, assez clair pour
+       qu'on reconnaisse l'image de l'émission. Le réglage d'origine —
+       38 px de flou et 42 % de luminosité, sous un voile allant jusqu'à
+       42 % de noir — ramenait la zone à une moyenne de 47/255 : plus un
+       fond sombre qu'une photo, et on ne distinguait plus quelle image
+       était là.
+       À 10 px, l'image est franchement identifiable — on distingue
+       l'horizon, le dégradé de ciel, la matière de l'eau. C'est le
+       plancher raisonnable sans contrepartie : en dessous, le détail
+       passe sous le chapô, et il faudrait alors renforcer le voile
+       derrière la seule colonne de texte pour garder l'image nette sur
+       les côtés. */
+    filter: blur(10px) brightness(0.66) saturate(1.15);
+  }
+  /* Voile supplémentaire, dégradé plutôt qu'uniforme : la partie basse
+     porte le bouton et le crédit, qui demandent plus de contraste que
+     le haut. Allégé d'autant que le filtre : les deux se cumulaient. */
+  .phero-fond::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.3));
+  }
+
+  /* Alignés par le haut : c'est le titre qui doit partir à la même
+     hauteur que la photo, le surtitre débordant au-dessus (cf
+     .phero-format). */
+  .phero-in {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: 48px;
+    padding-block: 72px;
+  }
+
+  /* Carré net par-dessus le fond flou : c'est la même image, et c'est
+     ce qui fait tenir la composition — l'œil relie les deux sans qu'on
+     ait à le dire. */
+  /* Calé en haut et non étiré : la colonne de texte fixe la hauteur de
+     la rangée, et s'y accrocher transformait le carré en portrait dès
+     que le chapô dépassait quelques lignes. Sans étirement, la figure
+     fait la hauteur de son image — ce qui remet du même coup le crédit
+     photo juste sous elle (cf .phero-credit, ancré à `top: 100%`). */
+  .phero-cover {
+    position: relative;
+    flex: 0 0 340px;
+    align-self: flex-start;
+    margin: 0;
+    display: flex;
+  }
+  /* Carré, quoi qu'il arrive : c'est la proportion d'une pochette, et
+     c'est aussi ce qu'attendent les applications d'écoute. `object-fit:
+     cover` cadre à l'intérieur, sans jamais déformer. */
+  .phero-cover-img {
+    flex: none;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.55);
+  }
+  .phero-cover img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .phero-texte {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: #fff;
+  }
+
+  /* Le surtitre déborde au-dessus de la rangée : sa marge haute négative
+     vaut exactement ce qu'il occupe — sa propre hauteur de ligne plus
+     l'écart qui le sépare du titre. Le haut du titre tombe alors sur le
+     haut de la photo, et le format reste seul au-dessus de cette ligne.
+     Exprimée en `lh` plutôt qu'en pixels : le jour où le corps ou
+     l'interligne du surtitre change, le calage suit au lieu de dériver
+     de quelques pixels. */
+  .phero-format {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgb(255 255 255 / 0.72);
+    margin: calc(-1 * (1lh + 18px)) 0 18px;
+  }
+  .phero-format a {
+    color: inherit;
+    border-bottom: 1px solid rgb(255 255 255 / 0.3);
+  }
+  .phero-format a:hover {
+    color: #fff;
+    border-bottom-color: #fff;
+  }
+  /* Point médian en retrait : c'est une ponctuation entre deux valeurs,
+     pas une troisième valeur. */
+  .phero-sep {
+    color: rgb(255 255 255 / 0.4);
+  }
+
+  .phero-texte h1 {
+    font-family: var(--font-serif);
+    font-size: var(--t-display-long);
+    font-weight: var(--w-display);
+    line-height: var(--lh-display);
+    letter-spacing: var(--ls-display);
+    color: #fff;
+    margin: 0 0 20px;
+  }
+  /* Le surlignage au marqueur du titre ne tient pas sur un fond sombre :
+     le trait pâle y disparaît. Les mots marqués passent en italique,
+     seule accentuation qui garde sa force sur n'importe quel fond. */
+  .phero-texte h1 :global(em) {
+    font-style: italic;
+    background: none;
+    color: inherit;
+  }
+
+  .phero-deck {
+    font-family: var(--font-serif);
+    font-size: 19px;
+    line-height: 1.5;
+    color: rgb(255 255 255 / 0.86);
+    margin: 0 0 14px;
+    max-width: 62ch;
+  }
+
+
+  /* Le bouton hérite des couleurs de la page, pensées pour un fond
+     clair : sur le fond sombre, son cerne et son libellé passent au
+     blanc. Redéfinir les variables plutôt que les règles évite d'avoir
+     à connaître la structure interne du composant. */
+  .phero-action :global(.lancer) {
+    --color-ink: #fff;
+    --color-rule: rgb(255 255 255 / 0.4);
+    color: #fff;
+  }
+
+  /* Signature et thématique sur deux lignes : ce sont deux
+     renseignements de nature différente — qui signe, et de quoi ça
+     parle. Sur une seule ligne séparée d'un point médian, ils se
+     lisaient comme une énumération d'un même ordre. */
+  .phero-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: rgb(255 255 255 / 0.8);
+    margin: 0 0 14px;
+  }
+  .phero-meta a {
+    color: inherit;
+    border-bottom: 1px solid rgb(255 255 255 / 0.35);
+  }
+  .phero-meta a:hover {
+    color: #fff;
+    border-bottom-color: #fff;
+  }
+
+  .phero-credit {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    line-height: 1.45;
+    color: rgb(255 255 255 / 0.55);
+    margin: 12px 0 0;
+  }
+  .phero-credit a {
+    color: inherit;
+    border-bottom: 1px dotted currentColor;
+  }
+  .phero-credit a:hover {
+    color: #fff;
+  }
+
+  @media (max-width: 900px) {
+    .phero-in {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 28px;
+      padding-block: 40px;
+    }
+    .phero-cover {
+      flex: 0 0 auto;
+      width: min(280px, 70%);
+    }
+  }
+</style>

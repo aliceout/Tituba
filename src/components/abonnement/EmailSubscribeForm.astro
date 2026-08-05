@@ -123,63 +123,68 @@ import Field from '../ui/Field.astro';
   // subscribers n'a pas de champ pour le distinguer, les deux
   // inscriptions atterrissent pour l'instant sur la même liste.
   // L'interface est prête, le branchement reste à faire.
-  for (const form of document.querySelectorAll<HTMLFormElement>('.subscribe-form')) {
-    const status = form.querySelector('[data-status]') as HTMLElement;
-    const input = form.querySelector('input[name="email"]') as HTMLInputElement;
-    const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+  // Sur `astro:page-load` : avec le ClientRouter, un module ne
+  // s'exécute qu'une fois par URL — le formulaire de la page suivante
+  // repartirait en soumission classique, donc en rechargement.
+  document.addEventListener('astro:page-load', () => {
+    for (const form of document.querySelectorAll<HTMLFormElement>('.subscribe-form')) {
+      const status = form.querySelector('[data-status]') as HTMLElement;
+      const input = form.querySelector('input[name="email"]') as HTMLInputElement;
+      const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement;
 
-    function kindOf(f: HTMLFormElement): string {
-      const coche = f.querySelector<HTMLInputElement>('input[name="kind"]:checked');
-      return coche?.value ?? 'newsletter';
-    }
-
-    function setStatus(text: string, kind: 'ok' | 'err' | '' = ''): void {
-      status.textContent = text;
-      status.className = kind ? `status status--${kind}` : 'status';
-    }
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = input.value.trim();
-      if (!email) {
-        setStatus('Saisissez une adresse mail.', 'err');
-        input.focus();
-        return;
+      function kindOf(f: HTMLFormElement): string {
+        const coche = f.querySelector<HTMLInputElement>('input[name="kind"]:checked');
+        return coche?.value ?? 'newsletter';
       }
-      submit.disabled = true;
-      setStatus('Envoi en cours…');
 
-      try {
-        const res = await fetch('/api/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, kind: kindOf(form) }),
-        });
-        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string };
+      function setStatus(text: string, kind: 'ok' | 'err' | '' = ''): void {
+        status.textContent = text;
+        status.className = kind ? `status status--${kind}` : 'status';
+      }
 
-        if (res.ok && body.ok) {
-          setStatus(
-            "C'est noté. Un mail de confirmation vient de partir vers " +
-              email +
-              ' — cliquez sur le lien qui s\'y trouve pour finaliser l\'inscription.',
-            'ok',
-          );
-          input.value = '';
-        } else if (res.status === 429) {
-          setStatus('Trop de tentatives sur cet appareil. Réessayez dans quelques minutes.', 'err');
-        } else if (body.code === 'invalid_email') {
-          setStatus('Adresse mail invalide.', 'err');
-        } else if (body.code === 'disabled') {
-          setStatus("Les alertes mail sont temporairement désactivées. Réessayez plus tard.", 'err');
-        } else {
-          setStatus("Une erreur est survenue. Réessayez plus tard.", 'err');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = input.value.trim();
+        if (!email) {
+          setStatus('Saisissez une adresse mail.', 'err');
+          input.focus();
+          return;
         }
-      } catch (err) {
-        console.warn('subscribe:', err);
-        setStatus('Erreur réseau. Réessayez plus tard.', 'err');
-      } finally {
-        submit.disabled = false;
-      }
-    });
-  }
+        submit.disabled = true;
+        setStatus('Envoi en cours…');
+
+        try {
+          const res = await fetch('/api/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, kind: kindOf(form) }),
+          });
+          const body = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string };
+
+          if (res.ok && body.ok) {
+            setStatus(
+              "C'est noté. Un mail de confirmation vient de partir vers " +
+                email +
+                ' — cliquez sur le lien qui s\'y trouve pour finaliser l\'inscription.',
+              'ok',
+            );
+            input.value = '';
+          } else if (res.status === 429) {
+            setStatus('Trop de tentatives sur cet appareil. Réessayez dans quelques minutes.', 'err');
+          } else if (body.code === 'invalid_email') {
+            setStatus('Adresse mail invalide.', 'err');
+          } else if (body.code === 'disabled') {
+            setStatus("Les alertes mail sont temporairement désactivées. Réessayez plus tard.", 'err');
+          } else {
+            setStatus("Une erreur est survenue. Réessayez plus tard.", 'err');
+          }
+        } catch (err) {
+          console.warn('subscribe:', err);
+          setStatus('Erreur réseau. Réessayez plus tard.', 'err');
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    }
+  });
 </script>

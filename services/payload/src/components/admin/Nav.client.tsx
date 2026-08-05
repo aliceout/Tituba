@@ -49,7 +49,16 @@ type Counts = {
   themes: number;
   tags: number;
   bibliography: number;
+  /** Images et fichiers audio confondus depuis la fusion des deux collections. */
   media: number;
+  /**
+   * Les séries sont comptées en deux fois, une par porte de la nav :
+   * elles vivent dans une seule collection, distinguée par son champ
+   * `format` (cf Series.ts). Un compte global n'aurait rien voulu dire
+   * à côté d'une entrée qui n'en montre qu'une partie.
+   */
+  seriesEmissions: number;
+  seriesTextes: number;
   users: number;
   pages: number;
   subscribers: number;
@@ -187,19 +196,28 @@ export default function NavClient({ activePath: serverActive, counts, version, i
   };
   const userRole = ROLE_LABEL[rawRole] ?? rawRole;
 
-  // Accès aux sections Config + Utilisateur·ices : réservés aux rôles
-  // qui peuvent gérer le site (admin/root). Un editor ne voit que
-  // Contenu + Mon compte.
+  // Accès aux sections Config site + Gestion : réservés aux rôles qui
+  // peuvent gérer le site (admin/root). Un editor ne voit que ce qui
+  // touche à la publication et à son propre compte.
   const isPrivileged = rawRole === 'admin' || rawRole === 'root';
 
+  /**
+   * La nav suit ce qu'on vient y faire, pas la liste des collections.
+   *
+   * « Contenu » ne porte que les cinq formats : ce sont les seules
+   * entrées qu'on ouvre pour écrire. Tout ce qui les outille — la
+   * taxonomie, les fichiers, les séries — descend dans « Config
+   * contenu » : on y va pour ranger, rarement, et sa présence en tête
+   * noyait les cinq formats dans une liste de onze.
+   *
+   * La bibliographie rejoint « Mes espaces » et non la configuration :
+   * elle est synchronisée depuis le compte Zotero de chacun·e, c'est
+   * donc un espace personnel et non un réglage partagé.
+   */
   const sections: NavSection[] = [
     {
       label: 'Contenu',
       items: [
-        // Les cinq formats de publication, dans l'ordre éditorial.
-        // Ils poussent le reste du menu vers le bas : on les garde
-        // groupés en tête de « Contenu » pour que la hiérarchie reste
-        // lisible.
         {
           label: 'Articles de recherche',
           href: `${ADMIN}/collections/articles`,
@@ -209,32 +227,70 @@ export default function NavClient({ activePath: serverActive, counts, version, i
         { label: "Billets d'actu", href: `${ADMIN}/collections/actus`, count: counts.actus },
         { label: 'Podcasts', href: `${ADMIN}/collections/podcasts`, count: counts.podcasts },
         { label: 'Outils', href: `${ADMIN}/collections/outils`, count: counts.outils },
+      ],
+    },
+    {
+      label: 'Config contenu',
+      items: [
         { label: 'Thèmes', href: `${ADMIN}/collections/themes`, count: counts.themes },
-        { label: 'Bibliographie', href: `${ADMIN}/collections/bibliography`, count: counts.bibliography },
         { label: 'Tags', href: `${ADMIN}/collections/tags`, count: counts.tags },
+        // Une seule entrée pour tous les fichiers, images comme
+        // épisodes : c'est « où est mon fichier » qu'on se demande, pas
+        // « dans quelle collection l'ai-je rangé ». Le tri par type se
+        // fait dans la liste elle-même.
         { label: 'Médias', href: `${ADMIN}/collections/media`, count: counts.media },
-        { label: 'Pages éditoriales', href: `${ADMIN}/collections/pages`, count: counts.pages },
+        // Deux portes sur une seule collection, distinguées par le
+        // paramètre `format` que la vue de liste lit dans l'URL : le
+        // vocabulaire et le travail diffèrent (une émission porte un
+        // flux RSS, une série d'articles non), l'objet est le même.
+        {
+          label: 'Émissions',
+          href: `${ADMIN}/collections/series?format=podcasts`,
+          count: counts.seriesEmissions,
+        },
+        {
+          label: "Séries d'articles",
+          href: `${ADMIN}/collections/series?format=textes`,
+          count: counts.seriesTextes,
+        },
+      ],
+    },
+    {
+      label: 'Mes espaces',
+      items: [
+        { label: 'Bibliographie', href: `${ADMIN}/collections/bibliography`, count: counts.bibliography },
+        { label: 'Mon compte', href: `${ADMIN}/account` },
       ],
     },
     ...(isPrivileged
       ? [
           {
-            label: 'Config',
+            label: 'Config site',
             items: [
               { label: 'Identité', href: `${ADMIN}/globals/identity` },
               { label: 'Options', href: `${ADMIN}/globals/site` },
               { label: 'Abonnements', href: `${ADMIN}/globals/subscriptions` },
-              { label: 'Pages principales', href: `${ADMIN}/globals/index-pages` },
+              // Une seule entrée pour toutes les pages du site. Les
+              // quatre pages fixes (accueil, archives, thèmes,
+              // abonnement) y figurent parmi les autres, distinguées
+              // par leur nature — elles ne se créent ni ne se
+              // suppriment, la collection le fait respecter (cf
+              // Pages.ts). Deux entrées aux noms voisins ne disaient pas
+              // laquelle était laquelle.
+              { label: 'Pages', href: `${ADMIN}/collections/pages`, count: counts.pages },
               { label: 'Navigation', href: `${ADMIN}/globals/navigation` },
             ],
           },
         ]
       : []),
-    {
-      label: 'Réglages',
-      items: [
-        ...(isPrivileged
-          ? [
+    // Section entièrement réservée, et non simplement vidée de ses
+    // entrées : un titre « Gestion » seul sous lequel rien n'apparaît
+    // se lit comme une panne.
+    ...(isPrivileged
+      ? [
+          {
+            label: 'Gestion',
+            items: [
               {
                 label: 'Utilisateur·ices',
                 href: `${ADMIN}/collections/users`,
@@ -245,11 +301,10 @@ export default function NavClient({ activePath: serverActive, counts, version, i
                 href: `${ADMIN}/collections/subscribers`,
                 count: counts.subscribers,
               },
-            ]
-          : []),
-        { label: 'Mon compte', href: `${ADMIN}/account` },
-      ],
-    },
+            ],
+          },
+        ]
+      : []),
   ];
 
   function isActive(href: string): boolean {

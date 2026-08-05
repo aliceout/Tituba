@@ -313,6 +313,11 @@ const signature =
   .read {
     margin-left: auto;
     color: var(--c-une-fg);
+    /* Le corps de la signature posée juste à gauche, et non les 16 px
+       hérités du corps de texte : l'appel appartient au pied de bloc, il
+       en prend l'échelle. Même valeur dans le carré podcast, pour que
+       les deux appels de l'accueil pèsent pareil. */
+    font-size: 12px;
     border-bottom: 1px solid currentColor;
     padding-bottom: 1px;
     white-space: nowrap;

@@ -129,7 +129,11 @@ const { dimension, label, options, total } = Astro.props as Props;
   // Filtrage client des cartes. Générique : la dimension filtrée est
   // portée par `data-dimension`, et `data-themes` est multivalué là où
   // `data-type` ne l'est pas — d'où la distinction ci-dessous.
-  (function () {
+  //
+  // Sur `astro:page-load` : avec le ClientRouter, un module ne s'exécute
+  // qu'une fois par URL — la barre de la page suivante resterait sans
+  // écouteur, et les cartes sans filtre.
+  document.addEventListener('astro:page-load', () => {
     const barEl = document.querySelector<HTMLElement>('[data-card-filters]');
     if (!barEl) return;
     const bar = barEl;
@@ -182,5 +186,5 @@ const { dimension, label, options, total } = Astro.props as Props;
     const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get(dimension);
     if (fromHash) current = fromHash;
     apply();
-  })();
+  });
 </script>

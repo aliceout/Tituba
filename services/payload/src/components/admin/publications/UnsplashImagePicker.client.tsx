@@ -369,32 +369,43 @@ function UnsplashSearchModal({
 type Crop = { x: number; y: number; w: number; h: number };
 
 /**
- * Le hero d'un billet affiche l'image dans un carré : il n'en montre
- * qu'une partie. Ce sélecteur laisse choisir laquelle, sur l'image
- * entière plutôt que sur un aperçu déjà rogné — on voit ce qu'on écarte.
+ * L'emplacement qui recevra l'image n'en montre qu'une partie : ce
+ * sélecteur laisse choisir laquelle, sur l'image entière plutôt que sur
+ * un aperçu déjà rogné — on voit ce qu'on écarte.
  *
- * La zone est carrée en pixels réels, donc pas en pourcentages : sur une
+ * La proportion de la zone est celle de l'emplacement, et non un carré
+ * pour tout le monde : le hero d'un billet montre un carré, le fond d'un
+ * hero d'émission une bande large. Cadrer en carré ce qui s'affichera en
+ * bandeau ne donne aucune idée de ce qui sera gardé.
+ *
+ * Elle s'exprime en pixels réels, donc pas en pourcentages : sur une
  * image 1600×820, 100 % de la hauteur ne valent que 51 % de la largeur.
  * D'où les conversions permanentes entre les deux axes.
  *
- * Par défaut, le plus grand carré possible, centré : toute la hauteur
- * d'une image paysage, toute la largeur d'une portrait. On peut ensuite
- * le resserrer (poignée d'angle) ou le déplacer (glisser dedans).
+ * Par défaut, la plus grande zone possible à cette proportion, centrée.
+ * On peut ensuite la resserrer (poignée d'angle) ou la déplacer.
+ *
+ * @param aspect Largeur / hauteur de l'emplacement. 1 = carré.
  */
 function CropModal({
   doc,
+  aspect,
   onDone,
   onCancel,
 }: {
   doc: NonNullable<MediaValue>;
+  aspect: number;
   onDone: (crop: Crop) => void;
   onCancel: () => void;
 }): React.ReactElement {
   const iw = doc.width ?? 1;
   const ih = doc.height ?? 1;
-  // Côté du plus grand carré possible, exprimé sur chaque axe.
-  const maxW = ih < iw ? (ih / iw) * 100 : 100;
-  const maxH = iw < ih ? (iw / ih) * 100 : 100;
+  // Plus grande zone à la bonne proportion tenant dans l'image : on est
+  // limité par la hauteur si l'image est plus large que l'emplacement,
+  // par la largeur sinon.
+  const limiteHauteur = iw / ih > aspect;
+  const maxW = limiteHauteur ? ((aspect * ih) / iw) * 100 : 100;
+  const maxH = limiteHauteur ? 100 : (iw / (aspect * ih)) * 100;
 
   const [crop, setCrop] = useState<Crop>(() => {
     const c = doc.crop;
@@ -442,19 +453,27 @@ function CropModal({
       return;
     }
 
-    // Redimension par le coin bas-droit. La zone reste carrée : on
-    // arbitre en pixels réels, puis on reporte le côté sur les deux axes.
+    // Redimension par le coin bas-droit. La zone garde sa proportion :
+    // on arbitre en pixels réels sur la largeur, puis on en déduit la
+    // hauteur — les deux axes ne peuvent pas être libres à la fois.
     setCrop((c) => {
-      const wVoulu = Math.max(0, p.x - c.x);
-      const hVoulu = Math.max(0, p.y - c.y);
-      const cote = Math.max((wVoulu * iw) / 100, (hVoulu * ih) / 100);
-      // Plancher à 10 % du plus petit côté : en dessous, le cadrage
-      // devient un zoom extrême sur une zone illisible.
-      const plancher = Math.min(iw, ih) * 0.1;
-      // Plafond : ce qui reste jusqu'au bord droit et au bord bas.
-      const plafond = Math.min(iw - (c.x * iw) / 100, ih - (c.y * ih) / 100);
-      const px = Math.max(plancher, Math.min(cote, plafond));
-      return { ...c, w: (px / iw) * 100, h: (px / ih) * 100 };
+      const wVoulu = ((p.x - c.x) * iw) / 100;
+      const hVoulu = ((p.y - c.y) * ih) / 100;
+      // Le geste peut tirer surtout en largeur ou surtout en hauteur :
+      // on retient le plus exigeant des deux, ramené à une largeur.
+      const largeur = Math.max(wVoulu, hVoulu * aspect, 0);
+      // Plancher à 10 % de ce que l'image peut donner à cette
+      // proportion : en dessous, le cadrage devient un zoom extrême sur
+      // une zone illisible.
+      const plancher = Math.min(iw, ih * aspect) * 0.1;
+      // Plafond : ce qui reste jusqu'au bord droit et au bord bas, ce
+      // dernier converti en largeur pour rester comparable.
+      const plafond = Math.min(
+        iw - (c.x * iw) / 100,
+        (ih - (c.y * ih) / 100) * aspect,
+      );
+      const px = Math.max(plancher, Math.min(largeur, plafond));
+      return { ...c, w: (px / iw) * 100, h: (px / aspect / ih) * 100 };
     });
   }
 
@@ -595,9 +614,17 @@ function CropModal({
 export default function UnsplashImagePicker({
   value,
   onChange,
+  aspect = 1,
 }: {
   value: MediaValue | number | string | null;
   onChange: (mediaId: number | string | null, mediaDoc: MediaValue) => void;
+  /**
+   * Proportion de l'emplacement qui recevra l'image, largeur / hauteur.
+   * Défaut 1 : le hero d'un billet montre un carré, et c'était le seul
+   * appelant à l'origine. Le fond d'un hero d'émission, lui, est une
+   * bande large — d'où le paramètre plutôt qu'un carré imposé à tous.
+   */
+  aspect?: number;
 }): React.ReactElement {
   // `value` arrive soit comme id brut (juste choisi), soit comme objet
   // media peuplé (depth du fetch initial du billet) — normalisé ici en
@@ -617,19 +644,23 @@ export default function UnsplashImagePicker({
     if (value == null) setResolved(null);
   }, [value]);
 
-  // Une photo non carrée sera rognée par le hero du billet : on ouvre
-  // aussitôt le choix de la zone visible, plutôt que de laisser
-  // découvrir le recadrage centré par défaut une fois l'article publié.
+  // Une photo dont la proportion diffère de celle de l'emplacement sera
+  // rognée : on ouvre aussitôt le choix de la zone visible, plutôt que
+  // de laisser découvrir le recadrage centré par défaut une fois le
+  // billet publié. Comparaison avec une tolérance de 1 % : une photo
+  // 1600×1601 est carrée pour ce qui nous occupe, et ouvrir une fenêtre
+  // de cadrage pour un pixel d'écart serait du bruit.
   const retenir = useCallback(
     (doc: MediaValue) => {
       setResolved(doc);
       onChange(doc?.id ?? null, doc);
       setModalOpen(false);
-      if (doc && doc.width && doc.height && doc.width !== doc.height) {
-        setCropDoc(doc);
+      if (doc && doc.width && doc.height) {
+        const ecart = Math.abs(doc.width / doc.height - aspect) / aspect;
+        if (ecart > 0.01) setCropDoc(doc);
       }
     },
-    [onChange],
+    [onChange, aspect],
   );
 
   async function uploadFile(file: File) {
@@ -655,12 +686,43 @@ export default function UnsplashImagePicker({
 
   const img = previewUrl(resolved);
 
+  /**
+   * Reproduit dans l'aperçu le cadrage enregistré, exactement comme le
+   * site (cf PublicationArticle, `cropStyle`) : montrer une zone large
+   * de `w` % revient à afficher l'image à `100 / w × 100` % de la
+   * taille du cadre, décalée du coin retenu.
+   *
+   * Sans ça, l'aperçu affichait le fichier brut centré dans une case
+   * carrée : on venait de choisir une zone, et rien de ce qu'on voyait
+   * ensuite ne la reflétait.
+   */
+  const c = resolved?.crop;
+  const cadree =
+    c && typeof c.w === 'number' && c.w > 0 && typeof c.h === 'number' && c.h > 0
+      ? { x: c.x ?? 0, y: c.y ?? 0, w: c.w, h: c.h }
+      : null;
+  const styleCadrage = cadree
+    ? {
+        width: `${(100 / cadree.w) * 100}%`,
+        height: `${(100 / cadree.h) * 100}%`,
+        left: `${(-cadree.x / cadree.w) * 100}%`,
+        top: `${(-cadree.y / cadree.h) * 100}%`,
+      }
+    : undefined;
+
   return (
     <div className="img-block">
       <div className="img-block__body">
         {resolved ? (
           <div className="img-block__current">
-            {img && <img src={img} alt={resolved.alt ?? ''} />}
+            {img && (
+              <div
+                className={`img-block__cadre${cadree ? ' img-block__cadre--cadree' : ''}`}
+                style={{ aspectRatio: String(aspect) }}
+              >
+                <img src={img} alt={resolved.alt ?? ''} style={styleCadrage} />
+              </div>
+            )}
             {/* Ni nom de fichier ni crédit : l'aperçu montre déjà quelle
                 image est en place, et le nom généré à l'import
                 (« unsplash-GHZhwTiO0y4.jpg ») n'apprend rien. Le crédit
@@ -669,9 +731,12 @@ export default function UnsplashImagePicker({
               <div className="img-block__links">
                 {/* Rouvrir le cadrage sans repasser par une sélection —
                     l'image en place peut avoir été choisie avant, ou son
-                    cadrage jugé insatisfaisant après coup. Masqué pour une
-                    image déjà carrée : il n'y aurait rien à y régler. */}
-                {resolved.width && resolved.height && resolved.width !== resolved.height && (
+                    cadrage jugé insatisfaisant après coup. Masqué quand
+                    l'image est déjà à la proportion de l'emplacement :
+                    il n'y aurait rien à y régler. */}
+                {resolved.width &&
+                  resolved.height &&
+                  Math.abs(resolved.width / resolved.height - aspect) / aspect > 0.01 && (
                   <button
                     type="button"
                     className="img-block__link"
@@ -734,6 +799,7 @@ export default function UnsplashImagePicker({
       {cropDoc && (
         <CropModal
           doc={cropDoc}
+          aspect={aspect}
           onDone={(crop) => {
             // Reflète le cadrage sur l'état local : rouvrir la fenêtre
             // repartirait sinon de la zone d'avant.

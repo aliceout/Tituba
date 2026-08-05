@@ -69,7 +69,14 @@
   // Flip data-theme sur <html>, persiste dans localStorage. Le script
   // anti-FOUC du Layout.astro pose le data-theme initial avant le
   // premier paint, donc ici on se contente de réagir aux clics.
-  (function () {
+  //
+  // Sur `astro:page-load` : avec le ClientRouter, un module ne s'exécute
+  // qu'une fois par URL, et le bouton du header — reconstruit à chaque
+  // échange de document — se retrouverait sans écouteur dès la deuxième
+  // page. La réapplication du thème après échange, elle, vit dans le
+  // script anti-FOUC du Layout : elle doit courir avant le premier
+  // rendu, ce que cet évènement-ci ne garantit pas.
+  document.addEventListener('astro:page-load', function () {
     const btn = document.querySelector('[data-theme-toggle]');
     if (!btn) return;
     btn.addEventListener('click', function () {
@@ -82,5 +89,5 @@
         /* private mode — pas grave, le toggle marche pour cette session */
       }
     });
-  })();
+  });
 </script>

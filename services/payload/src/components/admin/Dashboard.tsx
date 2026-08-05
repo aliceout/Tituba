@@ -13,6 +13,7 @@ import { getPayload } from 'payload';
 
 import config from '@/payload.config';
 import NavBurger from './NavBurger.client';
+import { stripHeroMarkers } from '@/lib/hero-markers';
 
 type Props = {
   // Payload v3 fournit user + permissions + initPageResult au server view.
@@ -195,7 +196,7 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
                     {d.numero !== undefined && (
                       <span className="tituba-mono">n° {String(d.numero).padStart(3, '0')}</span>
                     )}
-                    <span className="t">{d.title}</span>
+                    <span className="t">{stripHeroMarkers(d.title)}</span>
                   </a>
                 </li>
               ))}
@@ -215,7 +216,7 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
                     {s.numero !== undefined && (
                       <span className="tituba-mono">n° {String(s.numero).padStart(3, '0')}</span>
                     )}
-                    <span className="t">{s.title}</span>
+                    <span className="t">{stripHeroMarkers(s.title)}</span>
                   </a>
                 </li>
               ))}

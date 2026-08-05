@@ -13,13 +13,13 @@ import { Actus } from './collections/Actus';
 import { Podcasts } from './collections/Podcasts';
 import { Outils } from './collections/Outils';
 import { Themes } from './collections/Themes';
+import { Series } from './collections/Series';
 import { Tags } from './collections/Tags';
 import { Bibliography } from './collections/Bibliography';
 import { Pages } from './collections/Pages';
 import { Subscribers } from './collections/Subscribers';
 import { Site } from './globals/Site';
 import { Navigation } from './globals/Navigation';
-import { IndexPages } from './globals/IndexPages';
 import { Identity } from './globals/Identity';
 import { Subscriptions } from './globals/Subscriptions';
 import { authEndpoints } from './auth/endpoints';
@@ -137,6 +137,7 @@ export default buildConfig({
     Podcasts,
     Outils,
     Themes,
+    Series,
     Tags,
     Bibliography,
     Pages,
@@ -144,7 +145,7 @@ export default buildConfig({
     Media,
     SubscribersWithEndpoints,
   ],
-  globals: [Site, Navigation, IndexPages, Identity, Subscriptions],
+  globals: [Site, Navigation, Identity, Subscriptions],
   // Endpoints montés à la racine et non sur une collection : ils
   // portent tous les trois sur les cinq formats à la fois. Les
   // rattacher à l'un d'eux donnerait des URLs trompeuses — un

@@ -11,7 +11,7 @@ import { makeNotifyNewPublication } from '../hooks/notify-new-post';
  * formel d'un article de recherche. Les notes et la bibliographie
  * restent disponibles, mais ne sont pas attendues.
  *
- * Le socle de champs (numéro, titre/slug, thématiques, auteur·ices,
+ * Le socle de champs (identifiant public, titre, thématiques, auteur·ices,
  * dates, chapô, corps Lexical, bibliographie, champs calculés) vient de
  * `buildPublicationCollection`. Ne figure ici que ce qui distingue ce
  * format des quatre autres.
@@ -19,6 +19,8 @@ import { makeNotifyNewPublication } from '../hooks/notify-new-post';
 export const Analyses: CollectionConfig = buildPublicationCollection({
   slug: 'analyses',
   labels: { singular: "Billet d'analyse", plural: "Billets d'analyse" },
+  // Une suite de billets qui se répondent au fil d'un même dossier.
+  series: true,
   extraFields: [
     {
       name: 'image',
@@ -43,7 +45,7 @@ export const Analyses: CollectionConfig = buildPublicationCollection({
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'publishedAt', 'draft', 'updatedAt'],
-    listSearchableFields: ['title', 'slug', 'lede'],
+    listSearchableFields: ['title', 'publicId', 'lede'],
     components: {
       views: {
         edit: { root: { Component: '@/components/admin/PublicationEditView#default' } },

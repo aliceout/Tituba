@@ -54,8 +54,27 @@ import {
   pickExtraValues,
 } from './publications/registry';
 import UnsplashImagePicker from './publications/UnsplashImagePicker.client';
+import AudioUploadField from './publications/AudioUploadField.client';
 
 type PostType = string;
+
+type Serie = { id: number | string; name: string };
+
+/**
+ * Identifiant de relation dans le type qu'attend la base.
+ *
+ * Payload valide les relations par le **type** de l'identifiant, pas par
+ * sa valeur : sur Postgres il exige un nombre, et rejette la chaîne
+ * « 1 » que rend nécessairement un `<select>` HTML. L'erreur est en plus
+ * illisible — « invalid relationships: 1 0 », où le 0 est un indice de
+ * tableau qu'un bug de formatage de Payload affiche comme une valeur.
+ *
+ * On ne convertit que ce qui est entièrement numérique : une base à
+ * identifiants textuels garderait les siens intacts.
+ */
+function idRelation(valeur: string): number | string {
+  return /^\d+$/.test(valeur) ? Number(valeur) : valeur;
+}
 
 type Theme = { id: number | string; slug: string; name: string };
 type Tag = { id: number | string; slug: string; name: string };
@@ -101,6 +120,10 @@ type Post = {
   title: string;
   type: PostType;
   themes?: (Theme | number | string)[] | null;
+  /** Série de rattachement — trois formats sur cinq (cf registry, ). */
+  series?: Serie | number | string | null;
+  /** Rang dans la série. Vide = ordre de parution. */
+  seriesNumber?: number | null;
   tags?: (Tag | number | string)[] | null;
   authors?: PostAuthor[] | null;
   publishedAt: string;
@@ -171,6 +194,8 @@ export default function PublicationEditViewClient({
       title: '',
       type: spec.subtypes?.defaultValue ?? '',
       themes: [],
+      series: null,
+      seriesNumber: null,
       tags: [],
       authors: [],
       publishedAt: new Date().toISOString().slice(0, 10),
@@ -188,6 +213,8 @@ export default function PublicationEditViewClient({
   );
   const [initialJson, setInitialJson] = useState<string>(() => JSON.stringify(EMPTY_DRAFT));
   const [themes, setThemes] = useState<Theme[]>([]);
+  /** Séries du format courant — le sélecteur ne propose qu elles. */
+  const [series, setSeries] = useState<Serie[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [allUsers, setAllUsers] = useState<CarnetUser[]>([]);
   const [biblioOptions, setBiblioOptions] = useState<BibEntry[]>([]);
@@ -230,6 +257,20 @@ export default function PublicationEditViewClient({
       .then((r) => r.json())
       .then((data: { docs: Theme[] }) => setThemes(data.docs ?? []))
       .catch(() => setThemes([]));
+    // Séries du format courant seulement : une émission n'accueille que
+    // des épisodes, et proposer les autres n'ouvrirait que la porte à un
+    // rattachement que la collection refuse (cf seriesField,
+    // `filterOptions`). Les brouillons sont exclus — on ne range pas un
+    // billet publié dans une série qui n'existe pas encore côté public.
+    if (spec.series) {
+      fetch(
+        `/cms/api/series?where[format][equals]=${collectionSlug}&where[draft][not_equals]=true&limit=100&depth=0&sort=name`,
+        { credentials: 'include' },
+      )
+        .then((r) => (r.ok ? r.json() : { docs: [] }))
+        .then((data: { docs?: Serie[] }) => setSeries(data.docs ?? []))
+        .catch(() => setSeries([]));
+    }
     const tagsP = fetch('/cms/api/tags?limit=500&depth=0&sort=name', {
       credentials: 'include',
     })
@@ -300,6 +341,8 @@ export default function PublicationEditViewClient({
         const norm: Post = {
           ...doc,
           themes: Array.isArray(doc.themes) ? doc.themes : [],
+          series: doc.series ?? null,
+          seriesNumber: doc.seriesNumber ?? null,
           tags: Array.isArray(doc.tags) ? doc.tags : [],
           authors: Array.isArray(doc.authors) ? doc.authors : [],
           bibliography: Array.isArray(doc.bibliography) ? doc.bibliography : [],
@@ -550,6 +593,21 @@ export default function PublicationEditViewClient({
         // silencieusement absente de la requête, donc jamais persistée.
         ...pickExtraValues(spec, post as Record<string, unknown>),
         themes: (post.themes ?? []).map((t) => (typeof t === 'object' ? t.id : t)),
+        // L API attend un identifiant, pas le document peuplé.
+        ...(spec.series
+          ? {
+              // Second filet : la valeur peut aussi venir d'un document
+              // peuplé par le fetch, ou d'une chaîne restée d'un état
+              // antérieur. On la ramène au type attendu dans tous les cas.
+              series:
+                post.series && typeof post.series === 'object'
+                  ? post.series.id
+                  : typeof post.series === 'string'
+                    ? idRelation(post.series)
+                    : (post.series ?? null),
+              seriesNumber: post.seriesNumber ?? null,
+            }
+          : {}),
         tags: (post.tags ?? []).map((t) => (typeof t === 'object' ? t.id : t)),
         // authors : on remappe l'objet user populé en simple ID pour le PATCH
         // (Payload accepte les deux mais l'ID est plus propre côté wire).
@@ -599,6 +657,8 @@ export default function PublicationEditViewClient({
       const norm: Post = {
         ...fresh,
         themes: Array.isArray(fresh.themes) ? fresh.themes : [],
+        series: fresh.series ?? null,
+        seriesNumber: fresh.seriesNumber ?? null,
         tags: Array.isArray(fresh.tags) ? fresh.tags : [],
         authors: Array.isArray(fresh.authors) ? fresh.authors : [],
         bibliography: Array.isArray(fresh.bibliography) ? fresh.bibliography : [],
@@ -692,6 +752,84 @@ export default function PublicationEditViewClient({
   // Rafraîchit l'affichage relatif "il y a X min" (now est l'horloge)
   void now;
   const savedLabel = savedAt ? `Sauvegardé ${relativeSavedAt(savedAt)}` : '';
+
+  // Champs propres au format : mêmes déclarations, deux emplacements.
+  // Ce qui n'est pas un réglage mais le contenu même de la publication —
+  // le fichier d'un épisode — va dans la colonne centrale ; le reste
+  // reste dans la barre latérale.
+  const mainFields = spec.extraFields.filter((f) => f.zone === 'main' && !f.hidden);
+  const sidebarFields = spec.extraFields.filter((f) => f.zone !== 'main' && !f.hidden);
+
+  /**
+   * Rendu d'un champ de format. Extrait de la boucle pour que les deux
+   * colonnes partagent exactement le même code : dupliquer ce bloc
+   * serait le meilleur moyen d'ajouter un jour un type de champ d'un
+   * seul côté et de le voir disparaître silencieusement de l'autre.
+   */
+  function renderExtraField(f: (typeof spec.extraFields)[number]) {
+    return (
+      <div key={f.name} className={`field${fieldErrors[f.name] ? ' field--invalid' : ''}`}>
+        <label>{f.label}</label>
+        {f.type === 'list' ? (
+          <ChipsInput
+            values={
+              Array.isArray((post as WithExtras)[f.name])
+                ? ((post as WithExtras)[f.name] as string[])
+                : []
+            }
+            placeholder={f.placeholder}
+            onChange={(vals) => patch(f.name as keyof Post, vals as never)}
+          />
+        ) : f.type === 'select' ? (
+          <select
+            value={String((post as WithExtras)[f.name] ?? '')}
+            onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+          >
+            {f.options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        ) : f.type === 'textarea' ? (
+          <textarea
+            value={String((post as WithExtras)[f.name] ?? '')}
+            placeholder={f.placeholder}
+            onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+          />
+        ) : f.type === 'upload' ? (
+          <UnsplashImagePicker
+            value={(post as WithExtras)[f.name] as never}
+            onChange={(id) => patch(f.name as keyof Post, id as never)}
+            // Carré par défaut (le hero d'un billet en montre un), sauf
+            // là où le registre déclare autre chose — une actu affiche
+            // son image en bandeau.
+            aspect={f.aspect ?? 1}
+          />
+        ) : f.type === 'audio' ? (
+          <AudioUploadField
+            value={(post as WithExtras)[f.name] as never}
+            onChange={(id) => patch(f.name as keyof Post, id as never)}
+            // La durée est lue dans le fichier au dépôt (cf
+            // AudioUploadField) : le champ « Durée » à côté se remplit
+            // tout seul, sans cesser d'être corrigeable à la main.
+            onDuration={(sec) => patch('durationSeconds' as keyof Post, sec as never)}
+          />
+        ) : (
+          <input
+            type={f.type === 'number' ? 'number' : f.type === 'url' ? 'url' : 'text'}
+            value={String((post as WithExtras)[f.name] ?? '')}
+            placeholder={f.placeholder}
+            min={f.type === 'number' ? f.min : undefined}
+            max={f.type === 'number' ? f.max : undefined}
+            onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+          />
+        )}
+        {f.help && <div className="hint">{f.help}</div>}
+        {fieldErrors[f.name] && <div className="err">{fieldErrors[f.name]}</div>}
+      </div>
+    );
+  }
 
   const themeIds = (post.themes ?? []).map((t) => (typeof t === 'object' ? t.id : t));
   const tagIds = (post.tags ?? []).map((t) => (typeof t === 'object' ? t.id : t));
@@ -929,6 +1067,21 @@ export default function PublicationEditViewClient({
               />
             </div>
 
+            {/* Panneau des champs de format placés en colonne centrale
+                (cf FieldSpec.zone). Rendu seulement s'il y en a : les
+                quatre autres formats n'en déclarent aucun et n'ont donc
+                pas de panneau vide. */}
+            {mainFields.length > 0 && (
+              <div className="ep-block">
+                <div className="ep-block__h">
+                  <span>Épisode</span>
+                </div>
+                <div className="ep-block__body">
+                  {mainFields.map((f) => renderExtraField(f))}
+                </div>
+              </div>
+            )}
+
             <div className="fn-block">
               <div className="fn-block__h">
                 <span>Notes de bas de page ({footnotes.length})</span>
@@ -1130,6 +1283,86 @@ export default function PublicationEditViewClient({
                   Retrait d'un thème = ouvrir le multi-select et décocher. */}
             </div>
 
+            {/* Rattachement à une série — à côté de la taxonomie, dont il
+                a la nature : il situe le billet parmi les autres. Rendu
+                seulement pour les trois formats qui se mettent en série
+                (cf registry, `series`) ; ailleurs le champ n'existe pas
+                en base. */}
+            {spec.series && (
+              <div className="field">
+                <label>{collectionSlug === 'podcasts' ? 'Émission' : 'Série'}</label>
+                <select
+                  value={
+                    post.series && typeof post.series === 'object'
+                      ? String(post.series.id)
+                      : post.series != null
+                        ? String(post.series)
+                        : ''
+                  }
+                  onChange={(e) =>
+                    setPost((p) => ({
+                      ...p,
+                      // Converti en nombre : un <select> ne rend que des
+                      // chaînes, et Payload valide les identifiants de
+                      // relation par leur type — sur Postgres, une
+                      // chaîne « 1 » est rejetée là où 1 passe. La
+                      // conversion n'a lieu que si la valeur est
+                      // entièrement numérique, pour ne pas casser une
+                      // base à identifiants textuels.
+                      series: e.target.value === '' ? null : idRelation(e.target.value),
+                      // Un billet retiré de sa série garde sinon un rang
+                      // qui ne renvoie plus à rien.
+                      seriesNumber: e.target.value === '' ? null : p.seriesNumber,
+                    }))
+                  }
+                >
+                  <option value="">
+                    {collectionSlug === 'podcasts' ? '— hors émission —' : '— hors série —'}
+                  </option>
+                  {series.map((s) => (
+                    <option key={s.id} value={String(s.id)}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="hint">
+                  {series.length === 0
+                    ? collectionSlug === 'podcasts'
+                      ? 'Aucune émission publiée pour l’instant — à créer dans Config contenu › Émissions.'
+                      : 'Aucune série publiée pour ce format — à créer dans Config contenu › Séries d’articles.'
+                    : 'Facultatif. La plupart des billets n’appartiennent à aucune série.'}
+                </div>
+              </div>
+            )}
+
+            {/* Le rang n'a de sens qu'une fois la série choisie. Laissé
+                vide, l'ordre de la série retombe sur la date de
+                publication — ce qui convient à une émission publiée au
+                fil de l'eau. */}
+            {spec.series && post.series != null && (
+              <div className="field">
+                <label>
+                  {collectionSlug === 'podcasts' ? 'Numéro d’épisode' : 'Rang dans la série'}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={post.seriesNumber ?? ''}
+                  onChange={(e) =>
+                    setPost((p) => ({
+                      ...p,
+                      seriesNumber: e.target.value === '' ? null : Number(e.target.value),
+                    }))
+                  }
+                  placeholder="ordre de parution"
+                />
+                <div className="hint">
+                  Laissez vide pour classer par date de publication. À renseigner seulement si
+                  l’ordre de lecture diffère de l’ordre de parution.
+                </div>
+              </div>
+            )}
+
             <div className="field">
               <label>Tags</label>
               <TagsPicker
@@ -1248,53 +1481,11 @@ export default function PublicationEditViewClient({
             </div>
 
 
-            {/* Champs propres au format, rendus depuis le registre.
-                Leur sérialisation est prise en charge par
-                pickExtraValues() dans save() — les deux dérivent de la
-                même déclaration, donc ils ne peuvent pas diverger. */}
-            {spec.extraFields.map((f) => (
-              <div
-                key={f.name}
-                className={`field${fieldErrors[f.name] ? ' field--invalid' : ''}`}
-              >
-                <label>{f.label}</label>
-                {f.type === 'select' ? (
-                  <select
-                    value={String((post as WithExtras)[f.name] ?? '')}
-                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
-                  >
-                    {f.options.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : f.type === 'textarea' ? (
-                  <textarea
-                    value={String((post as WithExtras)[f.name] ?? '')}
-                    placeholder={f.placeholder}
-                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
-                  />
-                ) : f.type === 'upload' ? (
-                  <UnsplashImagePicker
-                    value={(post as WithExtras)[f.name] as never}
-                    onChange={(id) => patch(f.name as keyof Post, id as never)}
-                  />
-                ) : (
-                  <input
-                    type={f.type === 'number' ? 'number' : f.type === 'url' ? 'url' : 'text'}
-                    value={String((post as WithExtras)[f.name] ?? '')}
-                    placeholder={f.placeholder}
-                    min={f.type === 'number' ? f.min : undefined}
-                    max={f.type === 'number' ? f.max : undefined}
-                    onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
-                  />
-                )}
-                {f.help && <div className="hint">{f.help}</div>}
-                {fieldErrors[f.name] && <div className="err">{fieldErrors[f.name]}</div>}
-              </div>
-            ))}
-
+            {/* Champs propres au format destinés à la barre latérale.
+                Ceux marqués `zone: 'main'` sont rendus plus haut, dans
+                la colonne centrale — même fonction de rendu pour les
+                deux, seul l'emplacement change. */}
+            {sidebarFields.map((f) => renderExtraField(f))}
 
             <hr />
             <h3>Calendrier</h3>
@@ -1512,6 +1703,80 @@ function BiblioSearchPicker({
 }
 
 // ─── TagsPicker ─────────────────────────────────────────────────
+// Saisie d'une liste de valeurs libres (cf FieldSpec type 'list') :
+// on tape, Entrée valide, la valeur devient une pastille. Même geste
+// que le champ Tags, mais sans collection derrière — rien à
+// rapprocher d'existant, rien à créer en base, donc ni autocomplétion
+// ni menu.
+//
+// Retour arrière sur un champ vide retire la dernière pastille : c'est
+// le comportement attendu de toute saisie en pastilles, et sans lui il
+// faudrait viser une croix à la souris pour défaire une frappe.
+
+function ChipsInput({
+  values,
+  placeholder,
+  onChange,
+}: {
+  values: string[];
+  placeholder?: string;
+  onChange: (values: string[]) => void;
+}): React.ReactElement {
+  const [query, setQuery] = useState('');
+
+  function ajouter() {
+    const v = query.trim();
+    if (!v) return;
+    // Doublon ignoré silencieusement : signaler une erreur pour un nom
+    // saisi deux fois serait disproportionné, et le champ vidé suffit à
+    // montrer que la frappe a été prise en compte.
+    if (!values.some((x) => x.toLowerCase() === v.toLowerCase())) {
+      onChange([...values, v]);
+    }
+    setQuery('');
+  }
+
+  return (
+    <div className="chips-input">
+      <input
+        type="text"
+        className="chips-input__field"
+        value={query}
+        placeholder={placeholder ?? 'Entrée pour ajouter…'}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            ajouter();
+          }
+          if (e.key === 'Backspace' && query === '' && values.length > 0) {
+            onChange(values.slice(0, -1));
+          }
+        }}
+        // Une valeur laissée dans le champ au moment où l'on clique
+        // ailleurs est validée plutôt que perdue : c'est presque
+        // toujours un oubli d'appuyer sur Entrée, jamais une hésitation.
+        onBlur={ajouter}
+      />
+      {values.length > 0 && (
+        <div className="chips-input__list">
+          {values.map((v, i) => (
+            <button
+              key={`${v}-${i}`}
+              type="button"
+              className="tag-chip"
+              onClick={() => onChange(values.filter((_, j) => j !== i))}
+              title="Retirer"
+            >
+              {v} <span aria-hidden="true">×</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Petit composant : input qui filtre les tags existants en
 // autocomplétion + propose « Créer ce tag » si la saisie ne matche
 // aucun tag. Les tags attachés sont rendus sous l'input en chips
