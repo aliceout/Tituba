@@ -1,0 +1,532 @@
+---
+/**
+ * Formulaire de contact — /contact/
+ *
+ * Les messages ne sont pas stockés : ils partent par mail vers
+ * l'adresse configurée dans Identité → « Adresse de réception ». Celle-ci
+ * n'apparaît nulle part sur le site, ce qui est la raison d'être du
+ * formulaire — une adresse publiée est une adresse moissonnée.
+ *
+ * DEUX CHEMINS D'ENVOI, un seul endpoint.
+ *
+ *  - Avec JavaScript : le script résout la preuve de travail pendant
+ *    que vous rédigez, puis poste en fetch et affiche le résultat sans
+ *    recharger.
+ *  - Sans JavaScript : le <form> porte un `action` et un `method`, la
+ *    soumission native revient ici en POST, et ce frontmatter la relaie
+ *    à Payload avec `solution: null`. Les quatre autres protections
+ *    (jeton signé, pot de miel, piège temporel, limitation de débit)
+ *    s'appliquent identiquement ; seule la preuve de travail saute,
+ *    puisqu'elle a besoin de `crypto.subtle`.
+ *
+ * L'`action` et le `method` ne sont pas décoratifs : le formulaire
+ * d'abonnement du site n'en a pas, si bien que sans JavaScript il part
+ * en GET sur l'URL courante et écrit l'adresse e-mail saisie dans
+ * l'historique du navigateur et dans les journaux du serveur. À ne pas
+ * reproduire ici.
+ *
+ * MISE EN CACHE — la page porte un défi à usage unique dans son HTML.
+ * Servie depuis un cache, elle donnerait le même défi à tout le monde :
+ * la première personne enverrait son message, toutes les suivantes
+ * seraient refusées pour « défi déjà consommé », et rien côté serveur
+ * ne signalerait la panne. D'où le `no-store` ci-dessous, qui n'est pas
+ * une précaution mais une condition de fonctionnement.
+ */
+import PageShell from '../components/ui/PageShell.astro';
+import { getPayloadRaw, postPayload } from '../lib/payload';
+import { entetesContact, messageErreur } from '../lib/contact';
+import { formatHeroTitle } from '../lib/site';
+
+// Cf. le commentaire d'en-tête : condition de fonctionnement.
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+
+type ReponseDefi = { ok?: boolean; jeton?: string; sel?: string; cible?: string; max?: number };
+type ReponseEnvoi = { ok?: boolean; code?: string };
+
+/** Valeurs à réafficher après un POST natif raté — perdre un long
+ *  message sur une erreur serait l'échec le plus grave de cette page. */
+let saisie = { nom: '', email: '', objet: '', message: '' };
+let envoye = false;
+let erreur: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  try {
+    const form = await Astro.request.formData();
+    const lire = (c: string) => String(form.get(c) ?? '').trim();
+    saisie = {
+      nom: lire('nom'),
+      email: lire('email'),
+      objet: lire('objet'),
+      message: lire('message'),
+    };
+    const { body } = await postPayload<ReponseEnvoi>(
+      '/contact',
+      {
+        ...saisie,
+        reference: lire('reference'),
+        jeton: lire('jeton'),
+        // Sans JavaScript, pas de preuve de travail — cf. en-tête.
+        solution: null,
+      },
+      entetesContact(Astro.request, Astro.clientAddress),
+    );
+    if (body?.ok) {
+      envoye = true;
+      saisie = { nom: '', email: '', objet: '', message: '' };
+    } else {
+      erreur = messageErreur(body?.code);
+    }
+  } catch (err) {
+    console.warn('[contact] envoi natif impossible :', (err as Error).message);
+    erreur = messageErreur('proxy_error');
+  }
+}
+
+/**
+ * Défi du rendu courant. Tiré même après un envoi réussi : la page
+ * réaffichée doit rester utilisable pour écrire un second message.
+ */
+let defi: ReponseDefi = {};
+try {
+  const { body } = await getPayloadRaw<ReponseDefi>(
+    '/contact-challenge',
+    entetesContact(Astro.request, Astro.clientAddress),
+  );
+  if (body?.ok) defi = body;
+} catch (err) {
+  console.warn('[contact] tirage du défi impossible :', (err as Error).message);
+}
+
+// Sans jeton, le formulaire ne peut rien envoyer : mieux vaut le dire
+// que présenter des champs qui échoueront à la soumission.
+const indisponible = !defi.jeton;
+---
+
+<PageShell
+  documentTitle="Nous écrire"
+  description="Écrire au collectif Tituba — une question, une proposition, un obstacle rencontré sur le site."
+  title={formatHeroTitle('Nous *écrire*.')}
+  lede="Une question, une proposition, une erreur repérée dans un texte, un obstacle rencontré sur le site : ce formulaire arrive directement dans notre boîte."
+  famille="vert"
+>
+  <div class="contact">
+    {envoye && (
+      <p class="contact-ok" role="status">
+        <strong>Message envoyé.</strong> Nous vous répondrons à l’adresse indiquée. Merci d’avoir
+        pris le temps de nous écrire.
+      </p>
+    )}
+
+    {erreur && (
+      <p class="contact-erreur" role="alert">{erreur}</p>
+    )}
+
+    {indisponible ? (
+      <p class="contact-erreur" role="alert">
+        Le formulaire est momentanément indisponible. Réessayez dans quelques minutes.
+      </p>
+    ) : (
+      <form
+        class="contact-form"
+        method="post"
+        action="/contact/"
+        novalidate
+        data-contact-form
+        data-max={String(defi.max ?? 0)}
+        data-sel={defi.sel}
+        data-cible={defi.cible}
+      >
+        <input type="hidden" name="jeton" value={defi.jeton} />
+        {/* Rempli par le script quand la preuve de travail a abouti.
+            Laissé vide sans JavaScript : le serveur l'accepte. */}
+        <input type="hidden" name="solution" value="" data-contact-solution />
+
+        {/*
+          Pot de miel. `display: none` et non l'utilitaire de lecture
+          d'écran du site : celui-ci procède par découpe, donc le champ
+          resterait annoncé par un lecteur d'écran, quelqu'un le
+          remplirait de bonne foi et son message serait jeté sans le
+          moindre signal. `display: none` le retire de l'arbre
+          d'accessibilité pour toutes les technologies d'assistance, et
+          dissuade au passage le remplissage automatique du navigateur.
+          Ne jamais « corriger » ceci vers .visually-hidden.
+        */}
+        <div class="contact-pot" aria-hidden="true">
+          <label for="ct-reference">Référence</label>
+          <input id="ct-reference" name="reference" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <div class="contact-ligne">
+          <label class="contact-champ">
+            <span class="lbl">Votre nom <span class="req" aria-hidden="true">*</span></span>
+            <input
+              type="text"
+              name="nom"
+              required
+              maxlength="120"
+              autocomplete="name"
+              value={saisie.nom}
+            />
+          </label>
+
+          <label class="contact-champ">
+            <span class="lbl">Votre adresse e-mail <span class="req" aria-hidden="true">*</span></span>
+            <input
+              type="email"
+              name="email"
+              required
+              maxlength="254"
+              autocomplete="email"
+              value={saisie.email}
+            />
+            <span class="hint">Elle ne sert qu’à vous répondre.</span>
+          </label>
+        </div>
+
+        <label class="contact-champ">
+          <span class="lbl">Objet</span>
+          <input type="text" name="objet" maxlength="200" value={saisie.objet} />
+        </label>
+
+        <label class="contact-champ">
+          <span class="lbl">Votre message <span class="req" aria-hidden="true">*</span></span>
+          <textarea name="message" rows={10} required maxlength="5000" set:text={saisie.message} />
+        </label>
+
+        <p class="contact-obligatoire">
+          Les champs marqués d’une <span aria-hidden="true">*</span
+          ><span class="sr-only">astérisque</span> sont obligatoires.
+        </p>
+
+        <div class="contact-pied">
+          <button type="submit" class="contact-envoyer">Envoyer</button>
+          {/* Région live : c'est par elle qu'un lecteur d'écran apprend
+              que l'envoi est en cours, a réussi ou a échoué. */}
+          <p class="contact-statut" role="status" aria-live="polite" data-contact-statut></p>
+        </div>
+      </form>
+    )}
+
+    <p class="contact-note">
+      Vos coordonnées ne servent qu’à vous répondre. Elles ne sont pas conservées sur le site :
+      le message part directement dans notre boîte mail.
+    </p>
+  </div>
+</PageShell>
+
+<style>
+  .contact {
+    max-width: 46rem;
+  }
+  .contact-pot {
+    display: none;
+  }
+
+  .contact-form {
+    display: grid;
+    gap: 20px;
+    margin-top: 8px;
+  }
+  /* Deux colonnes tant que la place le permet : nom et adresse sont
+     courts, les empiler étirerait le formulaire sans rien gagner. */
+  .contact-ligne {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 640px) {
+    .contact-ligne {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .contact-champ {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .contact-champ .lbl {
+    font-family: var(--font-sans);
+    font-size: calc(12px * var(--a11y-echelle));
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .contact-champ .req {
+    color: var(--c-vert-deep);
+  }
+  .contact-champ .hint {
+    font-family: var(--font-sans);
+    font-size: calc(11.5px * var(--a11y-echelle));
+    color: var(--color-muted);
+  }
+  .contact-champ input,
+  .contact-champ textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--color-paper);
+    border: 1px solid var(--color-rule);
+    border-radius: 2px;
+    font-family: var(--font-serif);
+    font-size: calc(16px * var(--a11y-echelle));
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+  .contact-champ textarea {
+    resize: vertical;
+    min-height: 160px;
+  }
+  .contact-champ input:focus-visible,
+  .contact-champ textarea:focus-visible {
+    outline: 2px solid var(--c-vert-deep);
+    outline-offset: 1px;
+  }
+  /* Marqué par le script quand un champ obligatoire est vide. */
+  .contact-champ input[aria-invalid='true'],
+  .contact-champ textarea[aria-invalid='true'] {
+    border-color: #b63a3a;
+  }
+
+  .contact-obligatoire {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: calc(11.5px * var(--a11y-echelle));
+    color: var(--color-muted);
+  }
+
+  .contact-pied {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .contact-envoyer {
+    background: var(--c-vert-fill);
+    color: var(--c-vert-on);
+    border: 0;
+    border-radius: 2px;
+    padding: 12px 28px;
+    font-family: var(--font-sans);
+    font-size: calc(14px * var(--a11y-echelle));
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.12s;
+  }
+  .contact-envoyer:hover {
+    opacity: 0.88;
+  }
+  .contact-envoyer[disabled] {
+    opacity: 0.55;
+    cursor: progress;
+  }
+  .contact-statut {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: calc(13px * var(--a11y-echelle));
+    color: var(--color-muted);
+  }
+
+  .contact-ok,
+  .contact-erreur {
+    margin: 0 0 24px;
+    padding: 14px 18px;
+    border-left: 3px solid;
+    font-family: var(--font-serif);
+    font-size: calc(16px * var(--a11y-echelle));
+    line-height: 1.55;
+  }
+  .contact-ok {
+    border-color: var(--c-vert);
+    background: var(--c-vert-tint);
+    color: var(--color-ink);
+  }
+  .contact-erreur {
+    border-color: #b63a3a;
+    background: color-mix(in srgb, #b63a3a 8%, var(--color-bg));
+    color: var(--color-ink);
+  }
+
+  .contact-note {
+    margin: 32px 0 0;
+    font-family: var(--font-sans);
+    font-size: calc(12px * var(--a11y-echelle));
+    line-height: 1.5;
+    color: var(--color-muted);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
+
+<script>
+  /**
+   * Amélioration progressive du formulaire de contact.
+   *
+   * Sans ce script la page fonctionne : le <form> a un `action` et un
+   * `method`, la soumission native part en POST et le frontmatter la
+   * traite. Ce script ajoute deux choses — la preuve de travail, et
+   * l'envoi sans rechargement.
+   *
+   * La preuve de travail démarre au premier focus dans un champ, pas au
+   * chargement : inutile de faire chauffer le processeur de tous les
+   * gens qui passent sans écrire. Comme il faut ensuite plusieurs
+   * dizaines de secondes pour rédiger, elle est prête bien avant
+   * l'envoi et ne coûte rien d'attendre.
+   */
+  document.addEventListener('astro:page-load', function () {
+    const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+    if (!form) return;
+
+    const champSolution = form.querySelector<HTMLInputElement>('[data-contact-solution]');
+    const statut = form.querySelector<HTMLElement>('[data-contact-statut]');
+    const bouton = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+    const sel = form.dataset.sel ?? '';
+    const cible = form.dataset.cible ?? '';
+    const max = Number(form.dataset.max ?? 0);
+
+    /** Résolution en cours ou terminée. `null` = pas encore lancée. */
+    let resolution: Promise<number | null> | null = null;
+
+    function hex(buf: ArrayBuffer): string {
+      return Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    /**
+     * Cherche le nombre dont le haché vaut la cible.
+     *
+     * Recherche bornée : au pire `max` hachés, jamais plus. C'est ce
+     * qui rend le temps d'attente prévisible, là où une recherche de
+     * zéros en tête peut s'éterniser sans plafond sur un appareil lent.
+     *
+     * Pas de Web Worker : `crypto.subtle.digest` est asynchrone, chaque
+     * `await` rend la main à la boucle d'évènements, donc l'interface
+     * ne gèle pas pendant le calcul.
+     */
+    async function resoudre(): Promise<number | null> {
+      if (!sel || !cible || !max || !globalThis.crypto?.subtle) return null;
+      const encodeur = new TextEncoder();
+      const debut = performance.now();
+      for (let n = 0; n <= max; n += 1) {
+        const h = hex(await crypto.subtle.digest('SHA-256', encodeur.encode(sel + n)));
+        if (h === cible) return n;
+        // Garde-fou : sur un appareil très lent ou une implémentation
+        // pathologique, on abandonne plutôt que de bloquer l'envoi. Le
+        // serveur accepte un envoi sans preuve.
+        if (n % 2000 === 0 && performance.now() - debut > 15000) return null;
+      }
+      return null;
+    }
+
+    function lancer(): void {
+      if (!resolution) resolution = resoudre();
+    }
+    form.addEventListener('focusin', lancer, { once: true });
+
+    form.addEventListener('submit', async function (e) {
+      // `crypto.subtle` n'existe pas hors contexte sécurisé : on laisse
+      // alors la soumission native faire son travail.
+      if (!globalThis.crypto?.subtle || !globalThis.fetch) return;
+      e.preventDefault();
+
+      const donnees = new FormData(form);
+      const lire = (c: string) => String(donnees.get(c) ?? '').trim();
+
+      // Validation côté client, pour éviter un aller-retour inutile —
+      // le serveur revérifie tout de toute façon.
+      const manquant = (['nom', 'email', 'message'] as const).find((c) => !lire(c));
+      if (manquant) {
+        const champ = form.querySelector<HTMLElement>(`[name="${manquant}"]`);
+        champ?.setAttribute('aria-invalid', 'true');
+        champ?.focus();
+        if (statut) statut.textContent = 'Merci de remplir les champs obligatoires.';
+        return;
+      }
+      form.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
+
+      if (bouton) bouton.disabled = true;
+      lancer();
+      if (statut) statut.textContent = 'Vérification puis envoi…';
+
+      const solution = await resolution;
+      if (champSolution) champSolution.value = solution === null ? '' : String(solution);
+
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nom: lire('nom'),
+            email: lire('email'),
+            objet: lire('objet'),
+            message: lire('message'),
+            reference: lire('reference'),
+            jeton: lire('jeton'),
+            solution,
+          }),
+        });
+        const corps = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string };
+        if (corps.ok) {
+          // Le formulaire disparaît au profit de la confirmation : le
+          // laisser en place inviterait à renvoyer le même message, que
+          // le défi consommé ferait de toute façon échouer.
+          const ok = document.createElement('p');
+          ok.className = 'contact-ok';
+          ok.setAttribute('role', 'status');
+          ok.innerHTML =
+            '<strong>Message envoyé.</strong> Nous vous répondrons à l’adresse indiquée. Merci d’avoir pris le temps de nous écrire.';
+          form.replaceWith(ok);
+          ok.focus?.();
+          return;
+        }
+        if (statut) statut.textContent = messageErreur(corps.code);
+      } catch {
+        if (statut) {
+          statut.textContent =
+            'L’envoi a échoué — vérifiez votre connexion. Votre message est toujours là.';
+        }
+      } finally {
+        if (bouton) bouton.disabled = false;
+      }
+    });
+
+    /** Doublon volontaire de src/lib/contact.ts : ce script est envoyé
+     *  au navigateur, il ne peut pas importer un module serveur. */
+    function messageErreur(code: string | undefined): string {
+      const table: Record<string, string> = {
+        rate_limited:
+          'Vous avez déjà envoyé plusieurs messages récemment. Réessayez dans une heure — nous avons bien reçu les précédents.',
+        saturated:
+          'Le formulaire reçoit trop de messages en ce moment et s’est mis en pause. Réessayez dans une heure.',
+        too_fast: 'Le formulaire a été envoyé trop vite. Patientez un instant et réessayez.',
+        expired_token:
+          'Le formulaire est resté ouvert trop longtemps. Rechargez la page — votre message est toujours affiché, vous pourrez le recoller.',
+        already_used: 'Ce message a déjà été envoyé.',
+        invalid_token: 'Le formulaire n’est plus valide. Rechargez la page et réessayez.',
+        invalid_proof: 'La vérification anti-robot a échoué. Rechargez la page et réessayez.',
+        invalid_nom: 'Merci d’indiquer votre nom.',
+        invalid_email: 'Cette adresse e-mail ne semble pas valide.',
+        invalid_message: 'Votre message doit faire au moins dix caractères.',
+        send_failed:
+          'Le message n’a pas pu être envoyé — c’est notre serveur de courrier, pas vous. Réessayez dans quelques minutes.',
+        no_recipient:
+          'Le formulaire n’est pas encore configuré de notre côté. Réessayez plus tard.',
+      };
+      return (
+        (code && table[code]) || 'Le message n’a pas pu être envoyé. Réessayez dans quelques minutes.'
+      );
+    }
+  });
+</script>

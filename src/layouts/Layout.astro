@@ -4,6 +4,11 @@
  * Réf design : design_handoff_tituba/Tituba B.html (header.site, footer.site).
  */
 import '../styles/global.css';
+// Réglages d'accessibilité : toute la mise en œuvre des options du
+// panneau, pilotée par des attributs posés sur <html>. Chargée pour
+// tout le monde, y compris quand aucun réglage n'est actif — c'est une
+// feuille de règles conditionnelles, pas un thème à activer.
+import '../styles/accessibilite.css';
 
 // Polices self-hostées via @fontsource — Vite résout les fichiers WOFF2
 // depuis node_modules au build, pas de fetch externe à l'exécution.
@@ -18,12 +23,21 @@ import '@fontsource-variable/fraunces/opsz-italic.css';
 import '@fontsource-variable/bricolage-grotesque/opsz.css';
 import '@fontsource/dm-mono/400.css';
 import '@fontsource/dm-mono/500.css';
+// Police du réglage « dyslexie » du panneau d'accessibilité. Importer
+// sa feuille ne télécharge rien : un @font-face ne déclenche le
+// chargement du fichier que si une règle finit par employer la
+// famille — ici, seulement si quelqu'un choisit l'option. La Luciole,
+// elle, n'existe pas sur @fontsource : ses fichiers sont versionnés
+// dans public/fonts/luciole/ et déclarés dans accessibilite.css.
+import '@fontsource/opendyslexic/400.css';
+import '@fontsource/opendyslexic/700.css';
 
 import { ClientRouter } from 'astro:transitions';
 
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import PodcastDock from '../components/article/PodcastDock.astro';
+import A11yPanel from '../components/A11yPanel.astro';
 import { fetchIdentity, fetchSite, fetchSubscriptions } from '../lib/payload';
 
 interface Props {
@@ -197,6 +211,53 @@ const fullTitle = pageTitle
         }
       });
     </script>
+    {/*
+      Réglages d'accessibilité — même principe que le thème, et pour la
+      même raison : quelqu'un qui a demandé un texte à 130 % ou un
+      contraste renforcé ne doit pas voir la page s'afficher d'abord
+      sans, puis se réorganiser sous ses yeux. Les attributs sont donc
+      posés sur <html> avant le premier paint, et non par le script du
+      panneau, qui ne court qu'une fois la page rendue.
+
+      Réappliqués après chaque échange de document pour la même raison
+      que le thème : le ClientRouter recopie les attributs du <html>
+      entrant, qui sort du serveur sans aucun d'eux.
+    */}
+    <script is:inline>
+      (function () {
+        var DEFAUTS = {
+          taille: '100',
+          espacement: 'normal',
+          police: 'defaut',
+          contraste: 'normal',
+          couleurs: 'normal',
+          liens: 'normal',
+          animations: 'normal',
+          guide: 'off',
+        };
+        function poser() {
+          try {
+            var brut = localStorage.getItem('a11y');
+            var r = brut ? JSON.parse(brut) : {};
+            if (!r || typeof r !== 'object') r = {};
+            for (var cle in DEFAUTS) {
+              var attr = 'data-a11y-' + cle;
+              var val = r[cle];
+              if (val && val !== DEFAUTS[cle]) {
+                document.documentElement.setAttribute(attr, val);
+              } else {
+                document.documentElement.removeAttribute(attr);
+              }
+            }
+          } catch (_) {
+            /* localStorage indisponible — le site s'affiche dans ses
+               réglages par défaut, ce qui reste un site lisible. */
+          }
+        }
+        poser();
+        document.addEventListener('astro:after-swap', poser);
+      })();
+    </script>
     {/* Slot optionnel pour injecter des balises additionnelles dans
         <head> (ex. métadonnées Highwire/Zotero sur la page article).
         Vide par défaut — les pages qui n'en ont pas besoin n'ont rien
@@ -226,6 +287,13 @@ const fullTitle = pageTitle
         l'épisode : c'est ce qui lui permet de survivre à la navigation
         (cf PodcastDock). Masquée tant que rien n'a été lancé. */}
     <PodcastDock />
+
+    {/* Panneau d'accessibilité — rendu à la racine du <body> et non
+        dans le header, dont le `z-index` créerait un contexte
+        d'empilement duquel ni le tiroir ni le guide de lecture ne
+        pourraient sortir. Le bouton du header le désigne par
+        `aria-controls`. */}
+    <A11yPanel />
 
     <style>
       main {

@@ -1,7 +1,8 @@
 'use client';
 
 // IdentityEditView (client) — vue Édition custom du global Identity.
-// Quatre champs simples (siteName, authorName, baseline, copyrightLine)
+// Cinq champs simples (siteName, authorName, baseline, copyrightLine,
+// contactEmail)
 // dans une section unique « Identité ».
 //
 // Fetch via /cms/api/globals/identity (cookies de session). Save via
@@ -18,6 +19,7 @@ type IdentityData = {
   authorName?: string;
   baseline?: string;
   copyrightLine?: string;
+  contactEmail?: string;
 };
 
 const EMPTY: IdentityData = {
@@ -25,6 +27,7 @@ const EMPTY: IdentityData = {
   authorName: '',
   baseline: '',
   copyrightLine: '',
+  contactEmail: '',
 };
 
 function normalize(doc: IdentityData): IdentityData {
@@ -33,6 +36,7 @@ function normalize(doc: IdentityData): IdentityData {
     authorName: doc.authorName ?? '',
     baseline: doc.baseline ?? '',
     copyrightLine: doc.copyrightLine ?? '',
+    contactEmail: doc.contactEmail ?? '',
   };
 }
 
@@ -194,6 +198,20 @@ export default function IdentityEditViewClient(): React.ReactElement {
                 onChange={(e) => update('copyrightLine', e.target.value)}
               />
               <span className="hint">Affichée en mono sous la baseline.</span>
+            </label>
+
+            <label className="tituba-editview__field">
+              <span className="lbl">Adresse de réception</span>
+              <input
+                type="email"
+                value={data.contactEmail ?? ''}
+                onChange={(e) => update('contactEmail', e.target.value)}
+                placeholder="contact@exemple.org"
+              />
+              <span className="hint">
+                Destinataire des messages du formulaire de contact. Elle n’apparaît jamais sur le
+                site. Vide, les messages partent vers l’adresse d’expédition du serveur.
+              </span>
             </label>
           </section>
         </form>

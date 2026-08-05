@@ -4,7 +4,9 @@
  * Usage : `pnpm seed:dev` (depuis services/payload/) ou directement
  *         `pnpm --dir services/payload seed:dev` depuis la racine.
  *
- * Idempotent : skip les entrées qui existent déjà (matching par slug).
+ * Idempotent : skip les entrées qui existent déjà — par slug pour les
+ * thèmes, la bibliographie et les pages, par titre pour les publications
+ * (elles n'ont plus de slug depuis les identifiants publics opaques).
  * Avec flag `--reset` : wipe les collections Posts/Themes/Bibliography/Pages
  * avant d'insérer, pour repartir d'un état propre.
  *
@@ -142,7 +144,6 @@ const BIBLIOGRAPHY: BiblioSeed[] = [
 ];
 
 type SeedPost = {
-  numero: number;
   slug: string;
   title: string;
   type: 'analyse' | 'note' | 'fiche';
@@ -172,7 +173,6 @@ type BodyNode =
 
 const POSTS: SeedPost[] = [
   {
-    numero: 42,
     slug: 'homonationalisme-diplomatie',
     title: "L'homonationalisme a-t-il une diplomatie ? Retour sur dix ans de discours sur les droits LGBTQI+ aux Nations unies",
     type: 'analyse',
@@ -281,7 +281,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 41,
     slug: 'directive-2024-1346',
     title: "Sortir de l'« exception » : le statut de réfugié·e LGBTQI+ après la directive 2024/1346",
     type: 'analyse',
@@ -294,7 +293,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 9,
     slug: 'pinkwashing',
     title: 'Pinkwashing : généalogie, usages, contre-usages',
     type: 'fiche',
@@ -308,7 +306,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 17,
     slug: 'farris-relecture',
     title: "Sara R. Farris, In the Name of Women's Rights (Duke UP, 2017) — relecture",
     type: 'note',
@@ -322,7 +319,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 40,
     slug: 'wps-1325',
     title: 'Femmes, paix, sécurité : la résolution 1325 a vingt-cinq ans, et après ?',
     type: 'analyse',
@@ -335,7 +331,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 16,
     slug: 'puar-vingt-ans',
     title: 'Jasbir K. Puar, Terrorist Assemblages, vingt ans après',
     type: 'note',
@@ -349,7 +344,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 7,
     slug: 'persecution-genre',
     title: 'Persécution liée au genre : cadres juridiques internationaux',
     type: 'fiche',
@@ -363,7 +357,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 39,
     slug: 'centrafrique-terrains',
     title: "Centrafrique 2014–2018 : terrains d'une humanitaire qui ne savait pas encore",
     type: 'analyse',
@@ -376,7 +369,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 15,
     slug: 'massoumi',
     title: 'Massoumi & al., Islamophobia, Race and Global Politics (2020)',
     type: 'note',
@@ -389,7 +381,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 38,
     slug: 'ukraine-marges',
     title: 'Quand les marges remontent au centre : minorités de genre dans la guerre russo-ukrainienne',
     type: 'analyse',
@@ -402,7 +393,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 14,
     slug: 'palomares',
     title: 'Élise Palomares & Aurélie Damamme dir., Genre et migrations (PUR, 2025)',
     type: 'note',
@@ -415,7 +405,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 6,
     slug: 'wps-chronologie',
     title: 'Femmes, paix, sécurité — chronologie des résolutions onusiennes',
     type: 'fiche',
@@ -428,7 +417,6 @@ const POSTS: SeedPost[] = [
     ],
   },
   {
-    numero: 37,
     slug: 'antigenre-international',
     title: "L'« anti-genre » a une diplomatie : du Vatican à Budapest, en passant par Genève",
     type: 'analyse',
@@ -722,6 +710,35 @@ async function findBySlug(payload: Awaited<ReturnType<typeof getPayload>>, colle
   return res.docs[0];
 }
 
+/**
+ * Repère une publication déjà semée.
+ *
+ * Par le titre, et non par un slug : une publication n'a plus de slug
+ * depuis le passage aux identifiants publics opaques — elle est
+ * identifiée par son id, et son adresse est dérivée de `publicId`. Le
+ * `slug` que porte encore le jeu de données ci-dessus n'est plus qu'une
+ * clé locale, servant à relier POSTS et POST_AUTHORS entre eux ; il
+ * n'est plus écrit en base.
+ *
+ * Le titre suffit à un script de démonstration : deux billets de même
+ * titre dans un jeu de données de développement seraient de toute façon
+ * une erreur de saisie.
+ */
+async function findByTitle(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  collection: string,
+  title: string,
+) {
+  const res = await payload.find({
+    collection: collection as never,
+    where: { title: { equals: title } },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  });
+  return res.docs[0];
+}
+
 async function wipeCollection(payload: Awaited<ReturnType<typeof getPayload>>, collection: string) {
   const res = await payload.find({
     collection: collection as never,
@@ -819,7 +836,7 @@ async function main() {
   // 3. Posts
   for (const post of POSTS) {
     const collection = TYPE_TO_COLLECTION[post.type] ?? 'analyses';
-    const existing = await findBySlug(payload, collection, post.slug);
+    const existing = await findByTitle(payload, collection, post.title);
     if (existing) {
       console.log(`[seed-dev] SKIP ${collection} ${post.slug} (existe)`);
       continue;
@@ -833,8 +850,6 @@ async function main() {
     await payload.create({
       collection,
       data: {
-        numero: post.numero,
-        slug: post.slug,
         title: post.title,
         themes: themeIds as number[],
         publishedAt: post.publishedAt,
@@ -845,7 +860,7 @@ async function main() {
       },
       overrideAccess: true,
     });
-    console.log(`[seed-dev] +${collection} n°${post.numero} ${post.slug}`);
+    console.log(`[seed-dev] +${collection} ${post.slug}`);
   }
 
   // 3bis. Rattache les auteur·ices de POST_AUTHORS aux billets déjà
@@ -853,16 +868,19 @@ async function main() {
   // Posts ci-dessus les SKIP sans toucher `authors`). Ne touche que les
   // billets dont `authors` est encore vide, pour ne jamais écraser une
   // édition faite depuis l'admin après un premier seed.
-  const slugToCollection = new Map(
-    POSTS.map((p) => [p.slug, TYPE_TO_COLLECTION[p.type] ?? 'analyses'] as const),
+  const parSlug = new Map(
+    POSTS.map(
+      (p) => [p.slug, { collection: TYPE_TO_COLLECTION[p.type] ?? 'analyses', title: p.title }] as const,
+    ),
   );
   for (const [slug, entries] of Object.entries(POST_AUTHORS)) {
-    const collection = slugToCollection.get(slug);
-    if (!collection) {
+    const ref = parSlug.get(slug);
+    if (!ref) {
       console.warn(`[seed-dev] POST_AUTHORS: slug ${slug} absent de POSTS, ignoré`);
       continue;
     }
-    const existing = await findBySlug(payload, collection, slug);
+    const { collection, title } = ref;
+    const existing = await findByTitle(payload, collection, title);
     if (!existing) {
       console.warn(`[seed-dev] POST_AUTHORS: ${collection}/${slug} introuvable en base, ignoré`);
       continue;
@@ -880,7 +898,7 @@ async function main() {
     await payload.update({
       collection: collection as never,
       id: (existing as { id: number | string }).id,
-      data: { authors },
+      data: { authors } as never,
       overrideAccess: true,
     });
     console.log(`[seed-dev] +authors ${collection}/${slug} (${authors.length})`);

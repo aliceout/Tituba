@@ -25,33 +25,79 @@ const spec = PUBLICATIONS.podcasts;
 const emissions: Serie[] = await fetchSeries('podcasts');
 
 type Episode = FeedDoc & { series?: number | string | { id: number | string } | null };
-let episodes: Episode[] = [];
-try {
-  episodes = await fetchCollection<Episode>('podcasts', {
-    depth: 1,
-    limit: 30,
-    sort: '-publishedAt',
-    where: publishedOnly(),
-  });
-} catch (err) {
-  console.warn('[podcasts] fetchCollection failed:', (err as Error).message);
-}
 
 /**
- * Nombre d'épisodes publiés par émission, pour l'annoncer sur sa carte.
- * Compté sur les épisodes déjà chargés plutôt qu'en interrogeant l'API
- * une fois par émission : c'est la même donnée, et une requête par carte
- * multiplierait les allers-retours pour un chiffre d'appoint.
+ * Rattachements de tous les épisodes publiés, pour compter ceux de
+ * chaque émission.
+ *
+ * Requête séparée de celle qui alimente les listes, et volontairement :
+ * elle ne rapporte qu'un champ, à profondeur nulle, ce qui la rend
+ * assez légère pour couvrir tout le catalogue. Le compte était jusqu'ici
+ * dérivé des trente épisodes affichés — au-delà, une émission de
+ * quarante épisodes s'en annonçait trente, sans que rien ne signale que
+ * le chiffre était tronqué. Un compteur faux est pire qu'un compteur
+ * absent : celui-ci ne prévient pas.
  */
+let rattachements: Episode[] = [];
+try {
+  rattachements = await fetchCollection<Episode>('podcasts', {
+    depth: 0,
+    limit: 1000,
+    where: publishedOnly(),
+    select: ['series'],
+  });
+} catch (err) {
+  console.warn('[podcasts] comptage failed:', (err as Error).message);
+}
+
 const idDe = (v: unknown): string =>
   v && typeof v === 'object' && 'id' in (v as Record<string, unknown>)
     ? String((v as { id: unknown }).id)
     : String(v ?? '');
 
 const comptes = new Map<string, number>();
-for (const e of episodes) {
+for (const e of rattachements) {
   const k = idDe(e.series);
   if (k) comptes.set(k, (comptes.get(k) ?? 0) + 1);
+}
+
+/**
+ * Épisodes rattachés à aucune émission. Le rattachement est facultatif,
+ * donc ce cas est normal — mais depuis que la page liste les émissions
+ * plutôt que les épisodes, ces enregistrements n'étaient plus atteignables
+ * depuis aucun index : publiés, servis à leur adresse, et introuvables
+ * en naviguant.
+ *
+ * Filtre posé côté requête (`exists=false`) plutôt qu'après coup : un
+ * tri local laisserait les épisodes rattachés consommer la limite, et la
+ * liste des orphelins rétrécirait à mesure que le catalogue grossit.
+ */
+let orphelins: Episode[] = [];
+try {
+  orphelins = await fetchCollection<Episode>('podcasts', {
+    depth: 1,
+    limit: 60,
+    sort: '-publishedAt',
+    where: [...publishedOnly(), { field: 'series', operator: 'exists', value: false }],
+  });
+} catch (err) {
+  console.warn('[podcasts] orphelins failed:', (err as Error).message);
+}
+
+// Liste de repli, montrée seulement quand il n'y a aucune émission —
+// sinon la page n'aurait rien à afficher.
+let episodes: Episode[] = [];
+if (emissions.length === 0) {
+  try {
+    episodes = await fetchCollection<Episode>('podcasts', {
+      depth: 1,
+      limit: 30,
+      sort: '-publishedAt',
+      where: publishedOnly(),
+    });
+  } catch (err) {
+    console.warn('[podcasts] fetchCollection failed:', (err as Error).message);
+  }
 }
 ---
 
@@ -84,6 +130,31 @@ for (const e of episodes) {
           </a>
         );
       })}
+    </section>
+  )}
+
+  {/* Les épisodes rattachés à aucune émission, qui n'auraient sinon
+      aucune porte d'entrée. Sous les pochettes et sous leur propre
+      titre : ce sont des enregistrements à part entière, pas un fond
+      de tiroir — mais ils ne suivent aucun fil, et l'annoncer évite de
+      chercher l'émission dont ils feraient partie. */}
+  {emissions.length > 0 && orphelins.length > 0 && (
+    <section class="hors-serie" aria-labelledby="hors-serie-titre">
+      <h2 class="derniers-titre" id="hors-serie-titre">Épisodes hors émission</h2>
+      <div class="feed">
+        {orphelins.map((d) => (
+          <PublicationCard
+            collection="podcasts"
+            docId={d.publicId}
+            title={d.title}
+            themeSlugs={d.themeSlugs}
+            publishedAt={d.publishedAt}
+            lede={d.lede}
+            readingTime={d.readingTime}
+            durationSeconds={d.durationSeconds}
+          />
+        ))}
+      </div>
     </section>
   )}
 
@@ -154,7 +225,7 @@ for (const e of episodes) {
   }
   .em-texte h2 {
     font-family: var(--font-serif);
-    font-size: 21px;
+    font-size: calc(21px * var(--a11y-echelle));
     font-weight: 400;
     line-height: 1.2;
     margin: 0 0 8px;
@@ -163,7 +234,7 @@ for (const e of episodes) {
     white-space: pre-line;
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 14px;
+    font-size: calc(14px * var(--a11y-echelle));
     line-height: 1.5;
     color: var(--color-muted);
     margin: 0 0 10px;
@@ -175,7 +246,7 @@ for (const e of episodes) {
   }
   .em-compte {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--color-muted);
@@ -184,7 +255,7 @@ for (const e of episodes) {
 
   .derniers-titre {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     font-weight: 500;
     letter-spacing: 0.16em;
     text-transform: uppercase;

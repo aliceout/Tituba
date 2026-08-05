@@ -21,7 +21,7 @@ const { html } = Astro.props;
   }
   .footnotes-wrap :global(.footnotes-classic h3) {
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: calc(13px * var(--a11y-echelle));
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -30,7 +30,7 @@ const { html } = Astro.props;
   }
   .footnotes-wrap :global(.footnotes-classic ol) {
     font-family: var(--font-serif);
-    font-size: 14px;
+    font-size: calc(14px * var(--a11y-echelle));
     line-height: 1.65;
     color: var(--color-body-soft);
     padding-left: 22px;

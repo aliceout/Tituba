@@ -94,7 +94,7 @@ const {
     border-top: 1px solid var(--color-rule);
     border-bottom: 1px solid var(--color-rule);
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--color-muted);
     margin-bottom: 48px;
   }
@@ -106,7 +106,7 @@ const {
   .meta-strip .lbl {
     color: color-mix(in srgb, var(--color-accent) 85%, white);
     font-weight: 600;
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 4px;

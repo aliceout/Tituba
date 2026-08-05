@@ -18,6 +18,7 @@ import * as migration_20260804_153717_series_themes from './20260804_153717_seri
 import * as migration_20260804_165235_actus_image from './20260804_165235_actus_image';
 import * as migration_20260805_091529_actus_en_bref from './20260805_091529_actus_en_bref';
 import * as migration_20260805_130139_auteurice_profil from './20260805_130139_auteurice_profil';
+import * as migration_20260805_223955_auto_20260806_003740 from './20260805_223955_auto_20260806_003740';
 
 export const migrations = [
   {
@@ -118,6 +119,11 @@ export const migrations = [
   {
     up: migration_20260805_130139_auteurice_profil.up,
     down: migration_20260805_130139_auteurice_profil.down,
-    name: '20260805_130139_auteurice_profil'
+    name: '20260805_130139_auteurice_profil',
+  },
+  {
+    up: migration_20260805_223955_auto_20260806_003740.up,
+    down: migration_20260805_223955_auto_20260806_003740.down,
+    name: '20260805_223955_auto_20260806_003740'
   },
 ];

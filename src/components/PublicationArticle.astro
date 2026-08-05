@@ -682,7 +682,7 @@ const postTags = (post.tags ?? []).filter(
   }
   .actu-banniere figcaption {
     font-family: var(--font-sans);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     line-height: 1.45;
     color: var(--color-muted);
     margin-top: 10px;
@@ -711,7 +711,7 @@ const postTags = (post.tags ?? []).filter(
     align-items: baseline;
     gap: 2px;
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: calc(14px * var(--a11y-echelle));
     color: var(--color-muted);
     margin: 18px 0 0;
   }
@@ -902,7 +902,7 @@ const postTags = (post.tags ?? []).filter(
     align-items: center;
     gap: 7px;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--color-accent);
@@ -974,7 +974,7 @@ const postTags = (post.tags ?? []).filter(
     padding-right: 14px;
     text-align: right;
     font-family: var(--font-sans);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     color: var(--color-muted);
   }
   .hero-credit a {
@@ -1017,7 +1017,7 @@ const postTags = (post.tags ?? []).filter(
     /* Même corps que le texte de l'article (cf ArticleBody) : le chapô
        n'est pas un titre secondaire, c'est déjà de la lecture. Sa
        distinction tient à la couleur et au cadre, pas à la taille. */
-    font-size: 19px;
+    font-size: calc(19px * var(--a11y-echelle));
     line-height: 1.5;
     color: var(--color-muted);
     margin: 0 0 32px;
@@ -1038,7 +1038,7 @@ const postTags = (post.tags ?? []).filter(
      signalétique plutôt que d'ouvrir le corps de la page. */
   .guests {
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: calc(13px * var(--a11y-echelle));
     color: var(--color-muted);
     margin: -12px 0 20px;
   }
@@ -1071,7 +1071,7 @@ const postTags = (post.tags ?? []).filter(
   }
   .generique-lbl {
     font-family: var(--font-sans);
-    font-size: 10px;
+    font-size: calc(10px * var(--a11y-echelle));
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -1079,7 +1079,7 @@ const postTags = (post.tags ?? []).filter(
   }
   .generique-noms {
     font-family: var(--font-serif);
-    font-size: 16px;
+    font-size: calc(16px * var(--a11y-echelle));
     color: var(--color-ink);
   }
 

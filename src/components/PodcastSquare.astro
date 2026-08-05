@@ -115,7 +115,7 @@ const duree =
     justify-content: space-between;
     gap: 12px;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--c-podcast-accent);
@@ -137,7 +137,7 @@ const duree =
        valeurs montent ensemble d'un point : ne relever que le plafond
        aurait laissé le titre inchangé partout sauf au-delà de 1530 px,
        où seul ce plafond s'applique. */
-    font-size: clamp(20px, 1.75vw, 26px);
+    font-size: calc(clamp(20px, 1.75vw, 26px) * var(--a11y-echelle));
     line-height: 1.15;
     letter-spacing: -0.01em;
     margin: 0;
@@ -162,7 +162,7 @@ const duree =
     font-family: var(--font-serif);
     font-style: italic;
     font-weight: 300;
-    font-size: 16px;
+    font-size: calc(16px * var(--a11y-echelle));
     line-height: 1.5;
     color: color-mix(in srgb, var(--c-podcast-fg) 72%, transparent);
     margin: 0;
@@ -190,7 +190,7 @@ const duree =
     align-items: center;
     gap: 12px;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
   }
   .duree {
     color: var(--c-podcast-accent);
@@ -203,7 +203,7 @@ const duree =
     /* Le corps de la signature de la une, comme l'appel qui s'y trouve :
        à peine au-dessus des 11 px du pied, assez pour ne plus se
        confondre avec la durée posée à côté. */
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     border-bottom: 1px solid currentColor;
     padding-bottom: 1px;
     white-space: nowrap;

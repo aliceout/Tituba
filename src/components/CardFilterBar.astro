@@ -61,7 +61,7 @@ const { dimension, label, options, total } = Astro.props as Props;
     padding: 18px 0;
     border-bottom: 1px solid var(--color-rule);
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: calc(13px * var(--a11y-echelle));
   }
   .filters .row {
     display: flex;

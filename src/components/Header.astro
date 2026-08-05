@@ -101,10 +101,11 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
     <div class="actions">
       <SearchLink active={nav.searchActive} />
       <ThemeToggle />
-      {/* Ouvrira un panneau de réglages d'accessibilité. Le panneau
-          n'existe pas encore : le bouton est donc inerte, et c'est
-          assumé le temps de le construire. Les attributs ARIA sont déjà
-          posés — le jour où il arrive, il n'y a qu'à s'y brancher. */}
+      {/* Ouvre le panneau de réglages d'accessibilité. Celui-ci est
+          rendu par le Layout et non ici : le header porte un
+          `z-index`, donc un contexte d'empilement dont un tiroir posé
+          à l'intérieur ne pourrait pas sortir. Le lien entre les deux
+          passe par `aria-controls`. */}
       <button
         type="button"
         class="cta-link--primary"
@@ -224,7 +225,7 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
   header.site .brand {
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 24px;
+    font-size: calc(24px * var(--a11y-echelle));
     font-weight: 400;
     text-transform: lowercase;
     letter-spacing: -0.01em;
@@ -243,7 +244,7 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
     font-style: normal;
   }
   header.site.is-scrolled .brand {
-    font-size: 20px;
+    font-size: calc(20px * var(--a11y-echelle));
   }
   header.site .lead {
     display: flex;
@@ -262,7 +263,7 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
     padding: 0;
     cursor: pointer;
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: calc(14px * var(--a11y-echelle));
     font-weight: 500;
     white-space: nowrap;
     color: var(--color-ink);
@@ -285,7 +286,7 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
        baseline texte se retrouverait 2-3px plus haut sinon. */
     align-items: center;
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: calc(14px * var(--a11y-echelle));
     font-weight: 500;
   }
   header.site nav a {

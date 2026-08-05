@@ -27,6 +27,22 @@ export const RATE_PROFILES = {
   // Anti-flood du formulaire /abonnement/ sans bloquer l'utilisatrice
   // qui ressaisit une typo dans son email.
   subscribe: { name: 'subscribe', max: 5, windowMs: 15 * 60 * 1000 },
+  // Formulaire de contact public. Trois profils, qui ne protègent pas
+  // la même chose :
+  //  - contact      : envois aboutis, par IP. Trois messages par heure
+  //                   depuis une même adresse suffisent largement à
+  //                   quelqu'un de bonne foi.
+  //  - contactDefi  : tirages de défi, par IP. Plus haut, parce qu'un
+  //                   défi est tiré à chaque affichage de la page et à
+  //                   chaque renouvellement, sans qu'un message soit
+  //                   forcément envoyé.
+  //  - contactFlood : coupe-circuit, clé fixe. C'est le SEUL plafond
+  //                   qu'une inondation ne contourne pas en changeant
+  //                   d'IP, donc la seule barrière réellement dure du
+  //                   dispositif. Le reste filtre le volume ordinaire.
+  contact: { name: 'contact', max: 3, windowMs: 60 * 60 * 1000 },
+  contactDefi: { name: 'contactDefi', max: 30, windowMs: 10 * 60 * 1000 },
+  contactFlood: { name: 'contactFlood', max: 30, windowMs: 60 * 60 * 1000 },
 } as const satisfies Record<string, RateProfile>;
 
 const buckets = new Map<string, Bucket>();

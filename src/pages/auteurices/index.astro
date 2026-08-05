@@ -90,7 +90,7 @@ const sorted = authors.slice().sort((a, b) => {
   }
   .author-card .t {
     font-family: var(--font-serif);
-    font-size: 24px;
+    font-size: calc(24px * var(--a11y-echelle));
     line-height: 1.2;
     font-weight: var(--w-heading);
     margin: 0;
@@ -99,7 +99,7 @@ const sorted = authors.slice().sort((a, b) => {
   }
   .author-card .right {
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: calc(14px * var(--a11y-echelle));
     color: var(--color-muted);
     text-align: right;
   }

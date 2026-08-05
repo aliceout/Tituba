@@ -83,7 +83,7 @@ function jourMois(iso: string | null): string {
     padding-bottom: 14px;
     border-bottom: 1px solid color-mix(in srgb, var(--c-sommaire-accent) 22%, transparent);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.2em;
     text-transform: uppercase;
   }
@@ -130,7 +130,7 @@ function jourMois(iso: string | null): string {
   .duree,
   .date {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     color: var(--c-panel-mute);
   }
   .fmt {
@@ -152,7 +152,7 @@ function jourMois(iso: string | null): string {
 
   .titre {
     font-family: var(--font-serif);
-    font-size: 20px;
+    font-size: calc(20px * var(--a11y-echelle));
     font-weight: 400;
     line-height: 1.2;
     letter-spacing: -0.01em;
@@ -177,7 +177,7 @@ function jourMois(iso: string | null): string {
     }
     .titre {
       grid-column: 1 / -1;
-      font-size: 17px;
+      font-size: calc(17px * var(--a11y-echelle));
     }
     .duree,
     .date {

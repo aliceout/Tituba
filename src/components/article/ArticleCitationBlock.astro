@@ -104,12 +104,12 @@ const { authorCitation, title, publishedFr, articleUrl, citationText, routePrefi
   }
   .body {
     font-family: var(--font-serif);
-    font-size: 15px;
+    font-size: calc(15px * var(--a11y-echelle));
     line-height: 1.55;
   }
   .body .url {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
   }
   .acts {
     display: flex;
@@ -123,7 +123,7 @@ const { authorCitation, title, publishedFr, articleUrl, citationText, routePrefi
   }
   .download-link {
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--accent);
     border-bottom: 1px solid var(--accent);
   }

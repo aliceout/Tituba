@@ -191,7 +191,7 @@
   .dock-titre {
     display: block;
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--color-muted);
     margin-bottom: 5px;
     overflow: hidden;
@@ -281,7 +281,7 @@
     justify-content: space-between;
     margin-top: 6px;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     color: var(--color-muted);
     /* Chiffres à chasse fixe : sans ça, le compteur qui défile fait
        osciller la ligne à chaque seconde. */
@@ -302,7 +302,7 @@
     background: transparent;
     border: 0;
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--color-muted);
     cursor: pointer;
     transition: color 0.12s;

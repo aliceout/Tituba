@@ -74,23 +74,23 @@
      faisait que « S'abonner aux billets » et le titre de l'accueil ne
      s'écrivaient pas pareil. Une option de personnalisation dans un
      token partagé, c'est la divergence garantie. */
-  --t-display: clamp(32px, 5.2vw, 76px);
+  --t-display: calc(clamp(32px, 5.2vw, 76px) * var(--a11y-echelle));
   /* Échelle réduite pour les titres longs et descriptifs (typiquement
      un titre d'article de recherche) — au-delà d'un certain nombre de
      signes, --t-display les ferait courir sur trop de lignes. Le seuil
      et la bascule vivent dans PageTitle, pas ici : ce token n'est que
      la valeur d'arrivée. */
-  --t-display-long: clamp(28px, 3.6vw, 48px);
-  --t-h2: 30px;
-  --t-h3: 21px;
+  --t-display-long: calc(clamp(28px, 3.6vw, 48px) * var(--a11y-echelle));
+  --t-h2: calc(30px * var(--a11y-echelle));
+  --t-h3: calc(21px * var(--a11y-echelle));
   /* Trois registres, trois crans. Le chapo de page et celui d une
      section etaient au meme corps : deux niveaux de hierarchie pour
      une seule taille. */
-  --t-lede: 18px;
-  --t-sublede: 16px;
-  --t-body: 17px;
-  --t-meta: 12px;
-  --t-label: 11px;
+  --t-lede: calc(18px * var(--a11y-echelle));
+  --t-sublede: calc(16px * var(--a11y-echelle));
+  --t-body: calc(17px * var(--a11y-echelle));
+  --t-meta: calc(12px * var(--a11y-echelle));
+  --t-label: calc(11px * var(--a11y-echelle));
 
   --w-display: 300;
   --w-heading: 400;

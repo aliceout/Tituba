@@ -98,7 +98,7 @@ const { feedUrl } = Astro.props;
   }
   .url-row code {
     font-family: var(--font-mono);
-    font-size: 14px;
+    font-size: calc(14px * var(--a11y-echelle));
     color: var(--color-ink);
     word-break: break-all;
     flex: 1 1 280px;
@@ -112,7 +112,7 @@ const { feedUrl } = Astro.props;
      fond de page, et tombe à 4,24:1 sur une teinte de panneau. */
   .hint {
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--c-panel-mute);
     margin: 14px 0 0;
   }
@@ -128,7 +128,7 @@ const { feedUrl } = Astro.props;
   }
   .readers-accordion summary {
     font-family: var(--font-serif);
-    font-size: 20px;
+    font-size: calc(20px * var(--a11y-echelle));
     font-weight: 600;
     padding: 16px 0;
     cursor: pointer;
@@ -144,7 +144,7 @@ const { feedUrl } = Astro.props;
   .readers-accordion summary::before {
     content: '+';
     font-family: var(--font-mono);
-    font-size: 18px;
+    font-size: calc(18px * var(--a11y-echelle));
     font-weight: 400;
     color: var(--c-vert-deep);
     width: 1ch;
@@ -164,7 +164,7 @@ const { feedUrl } = Astro.props;
 
   .readers {
     font-family: var(--font-serif);
-    font-size: 16px;
+    font-size: calc(16px * var(--a11y-echelle));
     line-height: 1.6;
     color: var(--color-body);
     list-style: none;
@@ -184,7 +184,7 @@ const { feedUrl } = Astro.props;
   .readers .oss {
     display: inline-block;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: calc(10px * var(--a11y-echelle));
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--c-vert-deep);
@@ -198,7 +198,7 @@ const { feedUrl } = Astro.props;
 
   .footnote {
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: calc(13px * var(--a11y-echelle));
     color: var(--color-muted);
     margin: 0;
   }

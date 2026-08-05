@@ -96,12 +96,51 @@ async function fetchPayload<T>(path: string): Promise<T> {
 export async function postPayload<T = unknown>(
   path: string,
   body: unknown,
+  /**
+   * En-têtes supplémentaires transmis à Payload.
+   *
+   * Existe pour une raison précise : sans eux, aucune information sur
+   * l'appelant ne franchit ce proxy, et les endpoints protégés par une
+   * limitation « par IP » voient tous leurs appels arriver de la même
+   * origine inconnue. Leur plafond devient alors GLOBAL au site entier
+   * — c'est le cas de l'inscription aux alertes depuis toujours (cinq
+   * inscriptions par quart d'heure pour toute la planète), et ce serait
+   * arrivé au formulaire de contact. Facultatif, donc sans effet sur
+   * les appels existants.
+   */
+  headers?: Record<string, string>,
 ): Promise<{ status: number; body: T }> {
   const url = `${API_BASE}${path}`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...headers },
     body: JSON.stringify(body),
+  });
+  let parsed: T;
+  try {
+    parsed = (await res.json()) as T;
+  } catch {
+    parsed = {} as T;
+  }
+  return { status: res.status, body: parsed };
+}
+
+/**
+ * Jumeau GET de `postPayload` : même contrat de retour, mêmes en-têtes
+ * transmissibles, et surtout la même absence d'exception sur une
+ * réponse d'erreur — l'appelant lit le statut et décide.
+ *
+ * `fetchPayload` ne convient pas ici : il lève dès que la réponse n'est
+ * pas 2xx, alors que le tirage d'un défi de contact doit pouvoir
+ * distinguer un 429 d'une panne.
+ */
+export async function getPayloadRaw<T = unknown>(
+  path: string,
+  headers?: Record<string, string>,
+): Promise<{ status: number; body: T }> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json', ...headers },
   });
   let parsed: T;
   try {

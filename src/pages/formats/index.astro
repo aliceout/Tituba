@@ -161,14 +161,14 @@ function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
     display: flex;
     align-items: center;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     color: var(--fam);
     margin-bottom: 8px;
     letter-spacing: 0.04em;
   }
   .format-card .t {
     font-family: var(--font-serif);
-    font-size: 24px;
+    font-size: calc(24px * var(--a11y-echelle));
     line-height: 1.2;
     font-weight: var(--w-heading);
     letter-spacing: -0.02em;
@@ -177,21 +177,21 @@ function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
   }
   .format-card .desc {
     font-family: var(--font-serif);
-    font-size: 15px;
+    font-size: calc(15px * var(--a11y-echelle));
     line-height: 1.55;
     color: var(--color-muted);
     margin: 0;
   }
   .format-card .right {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--color-muted);
     text-align: right;
   }
 
   .total {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--color-muted);
     margin: 28px 0 0;
   }

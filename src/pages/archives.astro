@@ -122,14 +122,14 @@ const heroLedeHtml = formatHeroLede(
   }
   .arch-year h2 {
     font-family: var(--font-serif);
-    font-size: 48px;
+    font-size: calc(48px * var(--a11y-echelle));
     font-weight: var(--w-heading);
     letter-spacing: -0.02em;
     margin: 0 0 24px;
   }
   .arch-year h2 .count {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: calc(13px * var(--a11y-echelle));
     color: var(--color-muted);
     font-weight: 400;
     letter-spacing: 0;
@@ -149,33 +149,33 @@ const heroLedeHtml = formatHeroLede(
   }
   .arch-row .d {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--color-muted);
   }
   .arch-row .ty {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--c-bleu-deep);
   }
   .arch-row .t {
     font-family: var(--font-serif);
-    font-size: 18px;
+    font-size: calc(18px * var(--a11y-echelle));
     line-height: 1.35;
     font-weight: 400;
     transition: color 0.12s;
   }
   .arch-row .p {
     font-family: var(--font-sans);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     color: var(--color-muted);
     text-align: right;
   }
 
   @media (max-width: 900px) {
     .arch-year h2 {
-      font-size: 32px;
+      font-size: calc(32px * var(--a11y-echelle));
     }
     .arch-row {
       grid-template-columns: 100px 1fr;

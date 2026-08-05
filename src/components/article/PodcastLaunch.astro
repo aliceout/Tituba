@@ -89,7 +89,7 @@ const duree = chrono(durationSeconds);
     border-radius: 999px;
     background: transparent;
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: calc(14px * var(--a11y-echelle));
     color: var(--color-ink);
     cursor: pointer;
     transition: border-color 0.12s, color 0.12s, background 0.12s;
@@ -192,7 +192,7 @@ const duree = chrono(durationSeconds);
   }
   .duree {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     color: var(--color-muted);
     font-variant-numeric: tabular-nums;
   }

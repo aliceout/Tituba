@@ -1,0 +1,715 @@
+---
+/**
+ * Panneau de réglages d'accessibilité — tiroir latéral droit, ouvert
+ * par le bouton « Accessibilité » du header.
+ *
+ * Rendu depuis Layout et non depuis Header, pour une raison de plans :
+ * le header porte `z-index: 10`, ce qui crée un contexte d'empilement
+ * dont rien à l'intérieur ne peut sortir. Le tiroir et le guide de
+ * lecture doivent passer au-dessus de toute la page, guide compris —
+ * ils vivent donc à la racine du <body>.
+ *
+ * Le panneau ne fait qu'écrire des attributs sur <html> et les
+ * enregistrer dans localStorage. Tout l'effet visible est en CSS
+ * (styles/accessibilite.css) : si ce script échoue, les réglages déjà
+ * enregistrés s'appliquent quand même, puisqu'ils sont réappliqués
+ * avant le premier paint par le script d'amorçage du Layout.
+ *
+ * Non modal, volontairement : on règle en regardant l'effet sur la
+ * page. Une modale voilée cacherait précisément ce qu'on est en train
+ * d'ajuster. D'où l'absence de piège à focus — mais Échap ferme, et le
+ * focus revient au bouton.
+ */
+---
+
+<div
+  class="a11y"
+  id="panneau-accessibilite"
+  role="dialog"
+  aria-labelledby="a11y-titre"
+  aria-hidden="true"
+  hidden
+>
+  <div class="a11y__tete">
+    <h2 id="a11y-titre">Accessibilité</h2>
+    <button type="button" class="a11y__fermer" data-a11y-close aria-label="Fermer le panneau">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <path d="M18 6 6 18M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <p class="a11y__lede">
+    Ces réglages ne concernent que votre navigateur. Ils sont conservés d’une visite à l’autre.
+  </p>
+
+  <div class="a11y__corps">
+    {/* Quatre crans nommés plutôt qu'un curseur : ils se choisissent au
+        clavier sans viser, et l'on sait toujours où l'on en est.
+
+        De vrais <input type="radio"> et non des boutons portant
+        `role="radio"` : le groupe natif apporte la navigation aux
+        flèches, le point de tabulation unique et l'annonce « 2 sur 4 »
+        — soit exactement ce qu'un panneau d'accessibilité n'a aucune
+        excuse de réécrire à moitié. L'input est masqué à l'œil mais
+        reste focusable ; le cadre coloré n'est que son reflet. */}
+    <fieldset class="a11y__groupe">
+      <legend>Taille du texte</legend>
+      <div class="a11y__crans">
+        {[
+          { v: '100', t: 'Taille normale' },
+          { v: '110', t: 'Texte agrandi de 10 %' },
+          { v: '120', t: 'Texte agrandi de 20 %' },
+          { v: '130', t: 'Texte agrandi de 30 %' },
+        ].map((c, i) => (
+          <label class={`a11y__cran a11y__cran--${i}`} title={c.t}>
+            <input
+              type="radio"
+              name="a11y-taille"
+              value={c.v}
+              data-a11y-set="taille"
+              checked={c.v === '100'}
+            />
+            <span class="marque" aria-hidden="true">A</span>
+            <span class="sr-only">{c.t}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+
+    {/* Trois choix exclusifs. Chaque échantillon est écrit dans la
+        police qu'il propose : c'est le seul aperçu qui vaille. */}
+    <fieldset class="a11y__groupe">
+      <legend>Police de lecture</legend>
+      <div class="a11y__polices">
+        {[
+          { v: 'defaut', nom: 'Police du site', pour: null },
+          { v: 'luciole', nom: 'Luciole', pour: 'basse vision' },
+          { v: 'dyslexie', nom: 'OpenDyslexic', pour: 'dyslexie' },
+        ].map((p) => (
+          <label class={`a11y__police a11y__police--${p.v}`}>
+            <input
+              type="radio"
+              name="a11y-police"
+              value={p.v}
+              data-a11y-set="police"
+              checked={p.v === 'defaut'}
+            />
+            <span class="nom">{p.nom}</span>
+            {p.pour && <span class="pour">{p.pour}</span>}
+            <span class="ex" aria-hidden="true">Aa Bb Il1 O0</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+
+    <fieldset class="a11y__groupe">
+      <legend>Lisibilité</legend>
+
+      <label class="a11y__bascule">
+        <input type="checkbox" data-a11y-toggle="espacement" data-a11y-on="large" />
+        <span class="piste" aria-hidden="true"></span>
+        <span class="txt">
+          Espacement du texte
+          <span class="sous">Interligne, interlettre et intermot élargis.</span>
+        </span>
+      </label>
+
+      <label class="a11y__bascule">
+        <input type="checkbox" data-a11y-toggle="liens" data-a11y-on="soulignes" />
+        <span class="piste" aria-hidden="true"></span>
+        <span class="txt">
+          Liens soulignés
+          <span class="sous">Repérer un lien sans se fier à sa couleur.</span>
+        </span>
+      </label>
+
+      <label class="a11y__bascule">
+        <input type="checkbox" data-a11y-toggle="guide" data-a11y-on="on" />
+        <span class="piste" aria-hidden="true"></span>
+        <span class="txt">
+          Guide de lecture
+          <span class="sous">Une bande claire suit le pointeur, le reste s’assombrit.</span>
+        </span>
+      </label>
+    </fieldset>
+
+    <fieldset class="a11y__groupe">
+      <legend>Couleurs</legend>
+
+      <label class="a11y__bascule">
+        <input type="checkbox" data-a11y-toggle="contraste" data-a11y-on="renforce" />
+        <span class="piste" aria-hidden="true"></span>
+        <span class="txt">
+          Contraste renforcé
+          <span class="sous">Se cumule avec le thème clair ou sombre.</span>
+        </span>
+      </label>
+
+      <label class="a11y__bascule">
+        <input type="checkbox" data-a11y-toggle="couleurs" data-a11y-on="daltonisme" />
+        <span class="piste" aria-hidden="true"></span>
+        <span class="txt">
+          Palette adaptée au daltonisme
+          <span class="sous">
+            Le site distingue ses formats par quatre couleurs. Celles-ci restent
+            différenciables sous les trois formes de daltonisme.
+          </span>
+        </span>
+      </label>
+
+      <label class="a11y__bascule">
+        <input type="checkbox" data-a11y-toggle="animations" data-a11y-on="reduites" />
+        <span class="piste" aria-hidden="true"></span>
+        <span class="txt">
+          Animations réduites
+          <span class="sous">Coupe les transitions et les défilements animés.</span>
+        </span>
+      </label>
+    </fieldset>
+  </div>
+
+  <div class="a11y__pied">
+    <button type="button" class="a11y__reset" data-a11y-reset>Tout réinitialiser</button>
+    <p class="a11y__note">
+      <a href="/accessibilite/">Où nous en sommes, et ce qui manque encore</a> — un obstacle
+      rencontré sur ce site&nbsp;? Le signaler est le meilleur moyen qu’il soit corrigé.
+    </p>
+  </div>
+</div>
+
+{/* Guide de lecture — hors du tiroir : il couvre la fenêtre entière, et
+    doit rester en place une fois le panneau refermé. */}
+<div class="a11y-guide" aria-hidden="true">
+  <div class="a11y-guide__voile a11y-guide__voile--haut"></div>
+  <div class="a11y-guide__fenetre"></div>
+  <div class="a11y-guide__voile a11y-guide__voile--bas"></div>
+</div>
+
+<style>
+  /* ── Le tiroir ──────────────────────────────────────────────────── */
+  .a11y {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(380px, 100vw);
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-paper);
+    border-left: 1px solid var(--color-rule);
+    box-shadow: -12px 0 32px rgba(0, 0, 0, 0.1);
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    overflow: hidden;
+    /* Fermé : hors champ à droite. L'attribut `hidden` le retire de
+       l'arbre d'accessibilité, la transformation gère le mouvement. */
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+  }
+  .a11y.is-open {
+    transform: translateX(0);
+  }
+  /* `hidden` est posé et retiré par le script autour de la transition :
+     retiré avant l'ouverture, reposé après la fermeture, pour que le
+     tiroir ne reste pas focusable une fois refermé. */
+  .a11y[hidden] {
+    display: none;
+  }
+
+  .a11y__tete {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 22px 0;
+  }
+  .a11y__tete h2 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: calc(22px * var(--a11y-echelle));
+    font-weight: 400;
+  }
+  .a11y__fermer {
+    background: none;
+    border: 0;
+    padding: 6px;
+    margin: -6px;
+    color: var(--color-muted);
+    cursor: pointer;
+    border-radius: 999px;
+    display: inline-flex;
+  }
+  .a11y__fermer:hover {
+    color: var(--color-ink);
+    background: color-mix(in oklch, var(--color-ink), transparent 92%);
+  }
+
+  .a11y__lede {
+    margin: 8px 22px 0;
+    font-size: calc(12px * var(--a11y-echelle));
+    line-height: 1.5;
+    color: var(--color-muted);
+  }
+
+  .a11y__corps {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 18px 22px 8px;
+  }
+
+  .a11y__groupe {
+    border: 0;
+    padding: 0;
+    margin: 0 0 22px;
+  }
+  .a11y__groupe legend {
+    padding: 0;
+    margin-bottom: 10px;
+    font-family: var(--font-mono);
+    font-size: calc(10px * var(--a11y-echelle));
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* ── Crans de taille ────────────────────────────────────────────── */
+  .a11y__crans {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .a11y__cran {
+    position: relative;
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg);
+    border: 1px solid var(--color-rule);
+    border-radius: 3px;
+    padding: 10px 0;
+    cursor: pointer;
+    color: var(--color-ink);
+    font-family: var(--font-serif);
+    line-height: 1;
+    transition:
+      border-color 0.12s,
+      background-color 0.12s;
+  }
+  /* L'input porte l'état et le focus ; il est retiré de l'œil, pas de
+     l'arbre — `display: none` le rendrait injoignable au clavier. */
+  .a11y__cran input,
+  .a11y__police input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+  /* Chaque cran s'écrit à la taille qu'il applique — il est son propre
+     aperçu. Valeurs fixes, non multipliées par l'échelle : le groupe
+     doit garder le même rapport interne quel que soit le réglage en
+     cours, sinon il grandirait à chaque clic. */
+  .a11y__cran--0 .marque {
+    font-size: 13px;
+  }
+  .a11y__cran--1 .marque {
+    font-size: 16px;
+  }
+  .a11y__cran--2 .marque {
+    font-size: 19px;
+  }
+  .a11y__cran--3 .marque {
+    font-size: 22px;
+  }
+  .a11y__cran:hover {
+    border-color: var(--color-ink);
+  }
+  .a11y__cran:has(input:checked) {
+    background: var(--c-bleu);
+    border-color: var(--c-bleu);
+    color: var(--c-bleu-on);
+  }
+  .a11y__cran:has(input:focus-visible),
+  .a11y__police:has(input:focus-visible) {
+    outline: 2px solid var(--c-bleu-deep);
+    outline-offset: 2px;
+  }
+
+  /* ── Choix de police ────────────────────────────────────────────── */
+  .a11y__polices {
+    display: grid;
+    gap: 8px;
+  }
+  .a11y__police {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 4px 10px;
+    text-align: left;
+    background: var(--color-bg);
+    border: 1px solid var(--color-rule);
+    border-radius: 3px;
+    padding: 10px 12px;
+    cursor: pointer;
+    color: var(--color-ink);
+    transition:
+      border-color 0.12s,
+      background-color 0.12s;
+  }
+  .a11y__police:hover {
+    border-color: var(--color-ink);
+  }
+  .a11y__police:has(input:checked) {
+    border-color: var(--c-bleu);
+    background: color-mix(in srgb, var(--c-bleu) 10%, var(--color-bg));
+  }
+  .a11y__police .nom {
+    font-size: calc(13px * var(--a11y-echelle));
+    font-weight: 500;
+  }
+  .a11y__police .pour {
+    font-family: var(--font-mono);
+    font-size: calc(9px * var(--a11y-echelle));
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  /* L'échantillon porte la police proposée, indépendamment de celle qui
+     est active : c'est ce qui permet de comparer avant de choisir. */
+  .a11y__police .ex {
+    grid-column: 1 / -1;
+    font-size: 15px;
+    color: var(--color-muted);
+    letter-spacing: 0.04em;
+  }
+  .a11y__police--defaut .ex {
+    font-family: 'Fraunces Variable', Georgia, serif;
+  }
+  .a11y__police--luciole .ex {
+    font-family: 'Luciole', Verdana, sans-serif;
+  }
+  .a11y__police--dyslexie .ex {
+    font-family: 'OpenDyslexic', Verdana, sans-serif;
+  }
+
+  /* ── Bascules ───────────────────────────────────────────────────── */
+  .a11y__bascule {
+    /* Repère de positionnement pour l'input masqué ci-dessous. Sans
+       lui, celui-ci se calerait sur le tiroir — huit cases invisibles
+       empilées dans le coin haut-gauche, par-dessus le bouton de
+       fermeture, qui intercepteraient ses clics. */
+    position: relative;
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 9px 0;
+    cursor: pointer;
+  }
+  .a11y__bascule input {
+    /* Retiré de l'affichage mais pas de l'arbre : c'est lui qui porte
+       l'état, reçoit le focus et répond à la barre d'espace. La piste
+       n'est qu'un décor branché dessus. */
+    position: absolute;
+    opacity: 0;
+    width: 34px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+  }
+  .a11y__bascule .piste {
+    position: relative;
+    width: 34px;
+    height: 20px;
+    border-radius: 999px;
+    background: var(--color-rule);
+    transition: background-color 0.14s;
+    margin-top: 1px;
+  }
+  .a11y__bascule .piste::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.14s;
+  }
+  .a11y__bascule input:checked ~ .piste {
+    background: var(--c-vert);
+  }
+  .a11y__bascule input:checked ~ .piste::after {
+    transform: translateX(14px);
+  }
+  .a11y__bascule input:focus-visible ~ .piste {
+    outline: 2px solid var(--c-bleu-deep);
+    outline-offset: 2px;
+  }
+  .a11y__bascule .txt {
+    font-size: calc(13px * var(--a11y-echelle));
+    line-height: 1.35;
+  }
+  .a11y__bascule .sous {
+    display: block;
+    margin-top: 2px;
+    font-size: calc(11.5px * var(--a11y-echelle));
+    line-height: 1.45;
+    color: var(--color-muted);
+  }
+
+  /* ── Pied ───────────────────────────────────────────────────────── */
+  .a11y__pied {
+    flex: 0 0 auto;
+    padding: 14px 22px 18px;
+    border-top: 1px solid var(--color-rule);
+  }
+  .a11y__reset {
+    background: none;
+    border: 1px solid var(--color-rule);
+    border-radius: 3px;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: calc(12px * var(--a11y-echelle));
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+  .a11y__reset:hover {
+    border-color: var(--color-ink);
+  }
+  .a11y__note {
+    margin: 10px 0 0;
+    font-size: calc(11px * var(--a11y-echelle));
+    line-height: 1.45;
+    color: var(--color-muted);
+  }
+  .a11y__note a {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Sous 420 px le tiroir prend toute la largeur — un tiroir de 380 px
+     sur un écran de 360 laisserait une bande de page inutilisable. */
+  @media (max-width: 420px) {
+    .a11y {
+      width: 100vw;
+      border-left: 0;
+    }
+  }
+</style>
+
+<script>
+  /**
+   * Pilotage du panneau. Trois responsabilités, et rien d'autre :
+   * poser les attributs sur <html>, les écrire dans localStorage,
+   * refléter l'état dans les contrôles.
+   *
+   * Sur `astro:page-load` comme les autres scripts du chrome : avec le
+   * ClientRouter, un module ne s'exécute qu'une fois par URL, et les
+   * écouteurs posés à la première page seraient perdus dès la seconde.
+   */
+  type Reglages = Record<string, string>;
+
+  /** Valeur qui vaut « éteint » pour chaque réglage — celle qu'on ne
+   *  stocke pas et qui ne pose aucun attribut. */
+  const DEFAUTS: Reglages = {
+    taille: '100',
+    espacement: 'normal',
+    police: 'defaut',
+    contraste: 'normal',
+    couleurs: 'normal',
+    liens: 'normal',
+    animations: 'normal',
+    guide: 'off',
+  };
+
+  const CLE = 'a11y';
+
+  function lire(): Reglages {
+    try {
+      const brut = localStorage.getItem(CLE);
+      if (!brut) return {};
+      const obj = JSON.parse(brut) as unknown;
+      return obj && typeof obj === 'object' ? (obj as Reglages) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function ecrire(r: Reglages): void {
+    try {
+      localStorage.setItem(CLE, JSON.stringify(r));
+    } catch {
+      /* Navigation privée : le réglage vaut pour cette session, ce qui
+         est déjà mieux que rien. */
+    }
+  }
+
+  /** Pose (ou retire) l'attribut correspondant sur <html>. */
+  function appliquer(cle: string, valeur: string): void {
+    const attr = `data-a11y-${cle}`;
+    if (!valeur || valeur === DEFAUTS[cle]) document.documentElement.removeAttribute(attr);
+    else document.documentElement.setAttribute(attr, valeur);
+  }
+
+  document.addEventListener('astro:page-load', function () {
+    const panneau = document.getElementById('panneau-accessibilite');
+    const bouton = document.querySelector<HTMLButtonElement>('[data-a11y-menu]');
+    if (!panneau || !bouton) return;
+
+    let reglages = lire();
+
+    // Le tiroir et le bouton sont remplacés à chaque navigation (ils ne
+    // portent pas `transition:persist`), donc leurs écouteurs meurent
+    // avec eux. Ceux posés sur `document`, en revanche, survivraient et
+    // s'empileraient page après page en pointant vers des éléments
+    // depuis longtemps détruits — d'où ce signal, coupé net à l'échange
+    // de document. Même dispositif que la barre de progression.
+    const ac = new AbortController();
+    document.addEventListener('astro:before-swap', () => ac.abort(), { once: true });
+
+    function refleter(): void {
+      // Groupes de boutons radio.
+      panneau!.querySelectorAll<HTMLInputElement>('[data-a11y-set]').forEach((el) => {
+        const cle = el.dataset.a11ySet!;
+        el.checked = (reglages[cle] ?? DEFAUTS[cle]) === el.value;
+      });
+      // Bascules.
+      panneau!.querySelectorAll<HTMLInputElement>('[data-a11y-toggle]').forEach((el) => {
+        const cle = el.dataset.a11yToggle!;
+        el.checked = (reglages[cle] ?? DEFAUTS[cle]) === el.dataset.a11yOn;
+      });
+    }
+
+    function poser(cle: string, valeur: string): void {
+      if (valeur === DEFAUTS[cle]) delete reglages[cle];
+      else reglages[cle] = valeur;
+      appliquer(cle, valeur);
+      ecrire(reglages);
+      refleter();
+      if (cle === 'guide') guide(valeur === 'on');
+    }
+
+    // ── Ouverture / fermeture ─────────────────────────────────────
+    function ouvrir(): void {
+      panneau!.hidden = false;
+      panneau!.setAttribute('aria-hidden', 'false');
+      // Deux images successives : sans ce délai, le navigateur groupe
+      // le retrait de `hidden` et l'ajout de la classe, et la
+      // translation n'est pas animée.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => panneau!.classList.add('is-open')),
+      );
+      bouton!.setAttribute('aria-expanded', 'true');
+      panneau!.querySelector<HTMLElement>('.a11y__fermer')?.focus();
+    }
+
+    function fermer(rendreFocus = true): void {
+      panneau!.classList.remove('is-open');
+      panneau!.setAttribute('aria-hidden', 'true');
+      bouton!.setAttribute('aria-expanded', 'false');
+      // `hidden` seulement une fois le mouvement fini, sinon le tiroir
+      // disparaîtrait d'un coup au lieu de sortir par la droite.
+      window.setTimeout(() => {
+        if (!panneau!.classList.contains('is-open')) panneau!.hidden = true;
+      }, 240);
+      if (rendreFocus) bouton!.focus();
+    }
+
+    bouton.addEventListener('click', () => {
+      if (panneau.classList.contains('is-open')) fermer();
+      else ouvrir();
+    });
+    panneau.querySelector('[data-a11y-close]')?.addEventListener('click', () => fermer());
+
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && panneau.classList.contains('is-open')) fermer();
+      },
+      { signal: ac.signal },
+    );
+
+    // Clic hors du tiroir — sur le bouton lui-même, c'est son propre
+    // écouteur qui bascule, sans quoi les deux se neutraliseraient.
+    document.addEventListener(
+      'pointerdown',
+      (e) => {
+        if (!panneau.classList.contains('is-open')) return;
+        const cible = e.target as Node;
+        if (panneau.contains(cible) || bouton.contains(cible)) return;
+        fermer(false);
+      },
+      { signal: ac.signal },
+    );
+
+    // ── Contrôles ─────────────────────────────────────────────────
+    panneau.querySelectorAll<HTMLInputElement>('[data-a11y-set]').forEach((el) => {
+      el.addEventListener('change', () => {
+        if (el.checked) poser(el.dataset.a11ySet!, el.value);
+      });
+    });
+    panneau.querySelectorAll<HTMLInputElement>('[data-a11y-toggle]').forEach((el) => {
+      el.addEventListener('change', () => {
+        const cle = el.dataset.a11yToggle!;
+        poser(cle, el.checked ? el.dataset.a11yOn! : DEFAUTS[cle]);
+      });
+    });
+    panneau.querySelector('[data-a11y-reset]')?.addEventListener('click', () => {
+      Object.keys(DEFAUTS).forEach((cle) => appliquer(cle, DEFAUTS[cle]));
+      reglages = {};
+      ecrire(reglages);
+      refleter();
+      guide(false);
+    });
+
+    // ── Guide de lecture ──────────────────────────────────────────
+    // Le seul réglage qui demande du script à l'exécution : il suit le
+    // pointeur. Écouteur posé à l'allumage et retiré à l'extinction,
+    // plutôt que laissé en place à tester une condition — un mousemove
+    // est l'évènement le plus fréquent d'une page.
+    const cadre = document.querySelector<HTMLElement>('.a11y-guide');
+    const haut = cadre?.querySelector<HTMLElement>('.a11y-guide__voile--haut');
+    const fenetre = cadre?.querySelector<HTMLElement>('.a11y-guide__fenetre');
+    const bas = cadre?.querySelector<HTMLElement>('.a11y-guide__voile--bas');
+    const HAUTEUR = 96;
+
+    function suivre(e: PointerEvent): void {
+      if (!haut || !fenetre || !bas) return;
+      const y = e.clientY;
+      const h0 = Math.max(0, y - HAUTEUR / 2);
+      haut.style.top = '0px';
+      haut.style.height = h0 + 'px';
+      fenetre.style.top = h0 + 'px';
+      fenetre.style.height = HAUTEUR + 'px';
+      bas.style.top = h0 + HAUTEUR + 'px';
+      bas.style.bottom = '0px';
+    }
+
+    function guide(actif: boolean): void {
+      if (actif)
+        document.addEventListener('pointermove', suivre, { passive: true, signal: ac.signal });
+      else document.removeEventListener('pointermove', suivre);
+    }
+
+    refleter();
+    guide((reglages.guide ?? DEFAUTS.guide) === 'on');
+  });
+</script>

@@ -1,0 +1,325 @@
+/* ════════════════════════════════════════════════════════════════════
+   Réglages d'accessibilité — la feuille que pilote le panneau.
+
+   Chaque réglage est un attribut posé sur <html> par le panneau, et
+   relu avant le premier paint par le script d'amorçage de Layout.astro.
+   Toute la mise en œuvre est ici, en CSS : le JavaScript ne fait que
+   poser des attributs et les écrire dans localStorage. Conséquence
+   voulue — si le script échoue, les réglages déjà enregistrés
+   s'appliquent quand même, et rien de ce qui suit ne dépend d'un
+   composant en particulier.
+
+   Ce qui n'est PAS ici, et n'a pas à y être : la navigation au clavier,
+   les libellés ARIA, le contraste de base, la structure de titres. Ce
+   sont des propriétés du site, pas des options. Un panneau qui
+   proposerait de les « activer » avouerait que le site s'en passe le
+   reste du temps.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Taille du texte ──────────────────────────────────────────────────
+   Facteur lu par toutes les déclarations `font-size` du site, qui sont
+   écrites `calc(<valeur> * var(--a11y-echelle))`. Les largeurs et les
+   gouttières, elles, ne bougent pas : c'est du texte qui grandit, pas
+   une page qu'on zoome. Au-delà de 130 % les colonnes étroites
+   commencent à se resserrer — d'où l'arrêt là plutôt qu'un cran de
+   plus qui casserait les grilles. */
+:root {
+  --a11y-f-taille: 1;
+  /* Correction de corps propre à la police active — cf « Polices de
+     lecture » plus bas. Deux facteurs multipliés plutôt qu'une seule
+     variable : le cran de taille et la compensation de police sont
+     deux décisions distinctes, et une variable qui se redéfinirait à
+     partir d'elle-même serait un cycle, donc ignorée. */
+  --a11y-f-police: 1;
+  --a11y-echelle: calc(var(--a11y-f-taille) * var(--a11y-f-police));
+}
+[data-a11y-taille='110'] {
+  --a11y-f-taille: 1.1;
+}
+[data-a11y-taille='120'] {
+  --a11y-f-taille: 1.2;
+}
+[data-a11y-taille='130'] {
+  --a11y-f-taille: 1.3;
+}
+
+/* ── Espacement du texte ──────────────────────────────────────────────
+   Les valeurs du critère WCAG 1.4.12 « Text Spacing », qui sont un
+   plancher de lisibilité et non un effet : interligne à 1,5 fois le
+   corps, interlettre à 0,12 em, intermot à 0,16 em. Le site doit rester
+   utilisable à ce réglage — c'est justement ce que le critère vérifie.
+
+   `!important` à contrecœur, mais nécessaire : l'interligne est fixé
+   composant par composant, souvent en valeur unitaire, et une règle de
+   même spécificité ne passerait pas devant un style scopé Astro. */
+[data-a11y-espacement='large'] body,
+[data-a11y-espacement='large'] p,
+[data-a11y-espacement='large'] li,
+[data-a11y-espacement='large'] dd,
+[data-a11y-espacement='large'] dt,
+[data-a11y-espacement='large'] blockquote,
+[data-a11y-espacement='large'] figcaption {
+  line-height: 1.7 !important;
+  letter-spacing: 0.06em !important;
+  word-spacing: 0.12em !important;
+}
+[data-a11y-espacement='large'] p,
+[data-a11y-espacement='large'] li {
+  margin-bottom: 1.4em;
+}
+/* Les titres gardent un interligne serré : à 1,7 un display de 76 px
+   se disloquerait en lignes flottantes. Ils reçoivent l'interlettre,
+   pas l'interligne. */
+[data-a11y-espacement='large'] h1,
+[data-a11y-espacement='large'] h2,
+[data-a11y-espacement='large'] h3 {
+  letter-spacing: 0.02em !important;
+  line-height: 1.3 !important;
+}
+
+/* ── Polices de lecture ───────────────────────────────────────────────
+   Deux besoins distincts, deux polices — les confondre reviendrait à
+   ne servir correctement ni l'un ni l'autre.
+
+   Luciole : dessinée par Laurent Bourcellier et Jonathan Perez avec le
+   CTRDV pour les personnes déficientes visuelles. Formes très
+   différenciées (I l 1, O 0), ouvertures larges, accents renforcés pour
+   le français. Auto-hébergée depuis /fonts/luciole/ (CC BY 4.0).
+
+   OpenDyslexic : lettres lestées du bas, censées limiter l'inversion.
+   Les études contrôlées ne mesurent pas de gain de vitesse par rapport
+   à une police ordinaire, mais beaucoup de personnes dyslexiques la
+   préfèrent à l'usage — et c'est leur lecture, pas une mesure, qui
+   décide ici.
+
+   Dans les deux cas la bascule est totale (serif, sans et mono), sinon
+   la moitié de la page resterait dans la police d'origine. */
+@font-face {
+  font-family: 'Luciole';
+  src: url('/fonts/luciole/Luciole-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Luciole';
+  src: url('/fonts/luciole/Luciole-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Luciole';
+  src: url('/fonts/luciole/Luciole-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Luciole';
+  src: url('/fonts/luciole/Luciole-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+[data-a11y-police='luciole'] {
+  --font-serif: 'Luciole', Verdana, sans-serif;
+  --font-sans: 'Luciole', Verdana, sans-serif;
+  --font-mono: 'Luciole', ui-monospace, monospace;
+  /* Même correction que ci-dessous, un cran plus légère : la Luciole a
+     elle aussi une hauteur d'x plus haute que la Fraunces, mais des
+     chasses moins larges que l'OpenDyslexic. */
+  --a11y-f-police: 0.92;
+}
+[data-a11y-police='dyslexie'] {
+  --font-serif: 'OpenDyslexic', Verdana, sans-serif;
+  --font-sans: 'OpenDyslexic', Verdana, sans-serif;
+  --font-mono: 'OpenDyslexic', ui-monospace, monospace;
+  /* À corps égal, l'OpenDyslexic paraît nettement plus grosse que la
+     Fraunces : sa hauteur d'x est bien plus haute et ses chasses plus
+     larges. Le corps demandé est bien rendu tel quel — mais il n'a pas
+     l'air d'être le même, et changer de police se met à ressembler à
+     un changement de taille.
+     On rattrape la différence ici, une fois pour toutes : les crans du
+     panneau gardent ainsi le même sens quelle que soit la police, ce
+     qui est bien le moins pour un réglage nommé « taille du texte ». */
+  --a11y-f-police: 0.88;
+}
+/* L'italique de titre du site est un choix de dessin, pas une nuance de
+   sens : sous une police de lecture il redevient droit, l'italique étant
+   l'un des styles les plus coûteux à déchiffrer. */
+[data-a11y-police='luciole'] h1,
+[data-a11y-police='luciole'] h2,
+[data-a11y-police='dyslexie'] h1,
+[data-a11y-police='dyslexie'] h2 {
+  font-style: normal;
+}
+
+/* ── Contraste renforcé ───────────────────────────────────────────────
+   Se cumule avec le thème clair ou sombre plutôt que de le remplacer :
+   quelqu'un qui lit en sombre et a besoin de contraste ne devrait pas
+   avoir à choisir entre les deux.
+
+   Le gris de texte secondaire disparaît — c'est lui qui tombe sous le
+   seuil AA le plus souvent. Les filets se durcissent, les aplats de
+   surlignage montent en opacité, et tout ce qui était décoratif et
+   pâle rejoint l'encre. */
+[data-a11y-contraste='renforce'] {
+  --color-ink: #000000;
+  --color-body: #000000;
+  --color-body-soft: #1a1a1a;
+  --color-muted: #3a3a3a;
+  --color-bg: #ffffff;
+  --color-paper: #ffffff;
+  --color-rule: #6a6a6a;
+  --color-citation-bg: #f0f0f0;
+}
+[data-theme='dark'][data-a11y-contraste='renforce'] {
+  --color-ink: #ffffff;
+  --color-body: #ffffff;
+  --color-body-soft: #ededed;
+  --color-muted: #d0d0d0;
+  --color-bg: #000000;
+  --color-paper: #0a0a0a;
+  --color-rule: #9a9a9a;
+  --color-citation-bg: #141414;
+}
+/* Les bordures fines se voient mal dès qu'on a besoin de contraste :
+   elles passent de 1 à 2 px partout où elles portent une limite. */
+[data-a11y-contraste='renforce'] hr,
+[data-a11y-contraste='renforce'] .item,
+[data-a11y-contraste='renforce'] footer.site {
+  border-width: 2px;
+}
+/* L'indicateur de focus doit rester visible sur les deux fonds. */
+[data-a11y-contraste='renforce'] :focus-visible {
+  outline: 3px solid currentColor !important;
+  outline-offset: 2px !important;
+}
+
+/* ── Palette adaptée au daltonisme ────────────────────────────────────
+   Le site se sert de quatre couleurs de famille comme d'un code :
+   bleu, vert, jaune, violet distinguent les formats, les thématiques et
+   les familles de page. Or bleu/violet et vert/jaune sont précisément
+   les paires que confondent les deux déficiences les plus répandues —
+   la protanopie et la deutéranopie touchent environ 8 % des hommes.
+
+   On remplace donc les quatre teintes par quatre entrées de la palette
+   d'Okabe et Ito, conçue pour rester distinguable sous les trois types
+   de déficience à la fois. Une seule palette plutôt qu'un réglage par
+   type : c'est tout l'intérêt de celle-ci, et demander à quelqu'un de
+   nommer sa déficience pour lire un site serait une drôle de porte
+   d'entrée.
+
+   Les teintes retenues, écartées en luminance autant qu'en ton :
+     bleu   #0072b2  bleu franc
+     vert   #009e73  vert bleuté (et non jaunâtre — c'est ce qui le
+                     sépare du jaune pour un œil deutéranope)
+     jaune  #e69f00  orangé (un jaune pur passe pour du vert clair)
+     violet #cc79a7  rose-violet (plus chaud, il ne se confond plus
+                     avec le bleu)
+   La couleur reste doublée par une forme partout où elle porte du sens
+   — les pictogrammes de format, les libellés — comme le veut le
+   critère WCAG 1.4.1. */
+[data-a11y-couleurs='daltonisme'] {
+  --c-bleu: #0072b2;
+  --c-bleu-deep: #005486;
+  --c-bleu-fill: #0072b2;
+  --c-bleu-on: #ffffff;
+  --c-bleu-on-soft: #cfe6f4;
+
+  --c-vert: #009e73;
+  --c-vert-deep: #007355;
+  --c-vert-fill: #009e73;
+  --c-vert-on: #ffffff;
+  --c-vert-on-soft: #cdeee3;
+
+  --c-jaune: #e69f00;
+  --c-jaune-deep: #8a6000;
+
+  --c-violet: #cc79a7;
+  --c-violet-deep: #8f4a72;
+
+  --color-accent: #8f4a72;
+}
+/* Les aplats dilués se recalculent sur les nouvelles teintes — sans
+   ça, ils garderaient les anciennes et le code couleur se retrouverait
+   à moitié remappé. */
+[data-a11y-couleurs='daltonisme'] {
+  --c-bleu-tint: color-mix(in srgb, var(--c-bleu) 14%, var(--color-bg));
+  --c-vert-tint: color-mix(in srgb, var(--c-vert) 18%, var(--color-bg));
+  --c-jaune-tint: color-mix(in srgb, var(--c-jaune) 16%, var(--color-bg));
+  --c-violet-tint: color-mix(in srgb, var(--c-violet) 16%, var(--color-bg));
+}
+
+/* ── Liens soulignés ──────────────────────────────────────────────────
+   WCAG 1.4.1 : la couleur seule ne peut pas être le seul moyen de
+   repérer un lien. Le site s'en remet largement à elle dans le corps
+   de texte ; cette option rétablit le soulignement partout.
+
+   Sauf sur les liens qui sont déjà des blocs identifiables autrement —
+   une carte entière, un onglet de nav, un bouton : les souligner ne
+   lèverait aucune ambiguïté et rendrait la page illisible. */
+[data-a11y-liens='soulignes'] a:not(.item):not(.author-card):not(.tituba-btn) {
+  text-decoration: underline !important;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+/* ── Animations réduites ──────────────────────────────────────────────
+   Même effet que `prefers-reduced-motion: reduce`, mais déclaré à la
+   main : le réglage système n'est pas toujours accessible, et l'on peut
+   vouloir couper les animations d'un seul site.
+
+   Durées non nulles mais infimes : à 0 s, certains navigateurs ne
+   déclenchent pas l'évènement `transitionend`, dont dépendent des
+   composants pour se refermer. */
+[data-a11y-animations='reduites'] *,
+[data-a11y-animations='reduites'] *::before,
+[data-a11y-animations='reduites'] *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+  scroll-behavior: auto !important;
+}
+
+/* ── Guide de lecture ─────────────────────────────────────────────────
+   Une bande claire qui suit le curseur, le reste de la page assombri.
+   Aide à tenir la ligne sur un article long — c'est le seul réglage du
+   panneau qui demande du script à l'exécution (la position du
+   pointeur), et il est écrit pour ne rien faire tant qu'il est éteint.
+
+   `pointer-events: none` : le guide se superpose à la page sans jamais
+   intercepter un clic. */
+.a11y-guide {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100%;
+  pointer-events: none;
+  z-index: 40;
+  display: none;
+}
+[data-a11y-guide='on'] .a11y-guide {
+  display: block;
+}
+.a11y-guide__voile {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+[data-theme='dark'] .a11y-guide__voile {
+  background: rgba(0, 0, 0, 0.62);
+}
+/* Les deux bords de la fenêtre de lecture, pour qu'elle se lise comme
+   une règle posée sur la page et non comme un trou dans le voile. */
+.a11y-guide__fenetre {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}

@@ -342,6 +342,12 @@ export type Serie = {
   lede?: string | null;
   image?: { filename?: string } | number | string | null;
   themes?: PublicationTheme[] | null;
+  /**
+   * Réglages du flux propre à l'émission (format `podcasts`
+   * uniquement). Chaque valeur ne s'y trouve que si elle doit différer
+   * du global Abonnements — cf src/pages/series/[slug]/rss.xml.ts.
+   */
+  feed?: { explicit?: boolean | null; ownerEmail?: string | null } | null;
   draft?: boolean;
 };
 

@@ -140,7 +140,7 @@ const signature =
     justify-content: space-between;
     align-items: baseline;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.16em;
     text-transform: uppercase;
     margin-bottom: 24px;
@@ -210,7 +210,7 @@ const signature =
     justify-content: space-between;
     gap: 16px;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--c-une-accent);
@@ -240,7 +240,7 @@ const signature =
        hero qu'elle est censée suivre. C'est la longueur du texte, pas la
        maquette, qui commande ici. */
     font-family: var(--font-serif);
-    font-size: clamp(26px, 3vw, 42px);
+    font-size: calc(clamp(26px, 3vw, 42px) * var(--a11y-echelle));
     line-height: 1.12;
     font-weight: 300;
     letter-spacing: -0.02em;
@@ -263,7 +263,7 @@ const signature =
     font-family: var(--font-serif);
     font-style: italic;
     font-weight: 300;
-    font-size: 20px;
+    font-size: calc(20px * var(--a11y-echelle));
     line-height: 1.5;
     color: var(--c-une-soft);
     /* Pas de plafond : le chapô prend toute la largeur de la carte, comme
@@ -295,14 +295,14 @@ const signature =
     justify-content: center;
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 13px;
+    font-size: calc(13px * var(--a11y-echelle));
     letter-spacing: 0.02em;
   }
 
   .sig {
     margin: 0;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--c-une-mute);
   }
 
@@ -318,7 +318,7 @@ const signature =
        hérités du corps de texte : l'appel appartient au pied de bloc, il
        en prend l'échelle. Même valeur dans le carré podcast, pour que
        les deux appels de l'accueil pèsent pareil. */
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     border-bottom: 1px solid currentColor;
     padding-bottom: 1px;
     white-space: nowrap;
@@ -336,7 +336,7 @@ const signature =
       border-radius: 18px;
     }
     .lede {
-      font-size: 18px;
+      font-size: calc(18px * var(--a11y-echelle));
     }
   }
 </style>

@@ -116,7 +116,7 @@ const hasFooter = Astro.slots.has('footer');
     margin-top: 4px;
     padding-top: 10px;
     border-top: 1px solid var(--color-rule);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
   }
   .nav-menu__footer :global(a) {
     color: var(--c-bleu-deep);

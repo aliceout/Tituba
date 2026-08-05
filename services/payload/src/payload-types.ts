@@ -1683,6 +1683,10 @@ export interface Identity {
    * Footer (col 1, sous la baseline, en mono).
    */
   copyrightLine?: string | null;
+  /**
+   * Adresse à laquelle arrivent les messages du formulaire de contact. Elle n’apparaît jamais sur le site — c’est tout l’intérêt du formulaire. Si vous la laissez vide, les messages partent vers l’adresse d’expédition configurée sur le serveur.
+   */
+  contactEmail?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1791,6 +1795,7 @@ export interface IdentitySelect<T extends boolean = true> {
   authorName?: T;
   baseline?: T;
   copyrightLine?: T;
+  contactEmail?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

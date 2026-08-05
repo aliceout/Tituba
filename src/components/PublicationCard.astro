@@ -133,7 +133,7 @@ const href = publicationHref(collection, docId);
   }
   .item .lcol {
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--color-muted);
     display: flex;
     flex-direction: column;
@@ -141,24 +141,24 @@ const href = publicationHref(collection, docId);
     min-height: 100%;
   }
   .item .fmt {
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--c-bleu-deep);
     margin-bottom: 10px;
   }
   .item .date {
-    font-size: 13px;
+    font-size: calc(13px * var(--a11y-echelle));
     color: var(--color-ink);
     font-weight: 500;
   }
   .item .read {
     margin-top: 12px;
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
   }
   .item .kicker {
     font-family: var(--font-sans);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--c-bleu-deep);
@@ -168,7 +168,7 @@ const href = publicationHref(collection, docId);
     color: var(--color-muted);
   }
   .item h2 {
-    font-size: 26px;
+    font-size: calc(26px * var(--a11y-echelle));
     line-height: 1.2;
     font-weight: 600;
     margin: 0 0 12px;
@@ -179,14 +179,14 @@ const href = publicationHref(collection, docId);
     /* Retours à la ligne du chapô conservés — cf le même parti sur les
        autres surfaces qui affichent un champ multiligne. */
     white-space: pre-line;
-    font-size: 16px;
+    font-size: calc(16px * var(--a11y-echelle));
     line-height: 1.55;
     color: var(--color-body-soft);
     margin: 0;
   }
   .item .rcol {
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--color-muted);
     text-align: right;
     display: flex;

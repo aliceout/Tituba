@@ -138,7 +138,7 @@ const formatLinks = PUBLICATION_ORDER.map((c) => ({
     grid-template-columns: 2fr 1fr 1fr;
     gap: 56px;
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: calc(13px * var(--a11y-echelle));
     color: var(--color-ink);
   }
   /* Mono largement interlettré, comme « À LA UNE », « AU SOMMAIRE » et
@@ -147,7 +147,7 @@ const formatLinks = PUBLICATION_ORDER.map((c) => ({
      parlait une autre langue typographique. */
   footer.site h4 {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--color-muted);
@@ -175,7 +175,7 @@ const formatLinks = PUBLICATION_ORDER.map((c) => ({
   footer.site .brand-foot {
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 22px;
+    font-size: calc(22px * var(--a11y-echelle));
     font-weight: 400;
     text-transform: lowercase;
     letter-spacing: -0.01em;
@@ -187,7 +187,7 @@ const formatLinks = PUBLICATION_ORDER.map((c) => ({
   }
   footer.site p {
     font-family: var(--font-serif);
-    font-size: 15px;
+    font-size: calc(15px * var(--a11y-echelle));
     line-height: 1.55;
     color: var(--color-muted);
     margin: 0;
@@ -199,12 +199,12 @@ const formatLinks = PUBLICATION_ORDER.map((c) => ({
     margin-top: 4px;
   }
   footer.site .copyright {
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     color: var(--color-muted);
     margin-top: 24px;
   }
   footer.site .version {
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     color: var(--color-muted);
     margin-top: 4px;
   }

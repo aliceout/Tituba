@@ -23,7 +23,7 @@ const { entries } = Astro.props;
 <style>
   .socials {
     font-family: var(--font-serif);
-    font-size: 17px;
+    font-size: calc(17px * var(--a11y-echelle));
     line-height: 1.6;
     color: var(--color-body);
     list-style: none;
@@ -42,6 +42,6 @@ const { entries } = Astro.props;
   }
   .socials .hint {
     color: var(--color-muted);
-    font-size: 15px;
+    font-size: calc(15px * var(--a11y-echelle));
   }
 </style>

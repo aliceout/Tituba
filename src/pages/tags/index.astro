@@ -107,18 +107,18 @@ const sorted = tags.slice().sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   }
   .tag-card .slug {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: calc(12px * var(--a11y-echelle));
     color: var(--color-muted);
   }
   .tag-card .name {
     font-family: var(--font-serif);
-    font-size: 17px;
+    font-size: calc(17px * var(--a11y-echelle));
     color: var(--color-ink);
     transition: color 0.12s;
   }
   .tag-card .count {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     color: var(--color-muted);
   }
 </style>

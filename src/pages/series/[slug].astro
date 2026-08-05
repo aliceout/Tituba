@@ -53,6 +53,20 @@ const compte =
   title={formatHeroTitle(serie.name)}
   lede={serie.lede ? formatHeroLede(serie.lede) : ''}
 >
+  {/* Découverte du flux propre à l'émission : c'est ce que lisent les
+      applications d'écoute et les navigateurs à qui l'on donne
+      l'adresse de la page plutôt que celle du flux. */}
+  {estEmission && (
+    <Fragment slot="head">
+      <link
+        rel="alternate"
+        type="application/rss+xml"
+        title={`${serie.name} — flux podcast`}
+        href={`/series/${serie.slug}/rss.xml`}
+      />
+    </Fragment>
+  )}
+
   {/* Surtitre : la nature de l'objet avant son nom, comme sur la page
       d'un billet. « Émission » et non « Série » pour un podcast — c'est
       le mot du métier, et celui qu'emploie l'admin. */}
@@ -61,6 +75,17 @@ const compte =
     {estEmission ? 'Émission' : 'Série'}
     <span class="serie-sep" aria-hidden="true">·</span>
     <span class="serie-compte">{compte}</span>
+    {/* S'abonner à cette émission seule, plutôt qu'à toute la
+        production audio du site. Le lien n'a de sens que pour une
+        émission : une série de textes n'a pas de flux propre. */}
+    {estEmission && (
+      <>
+        <span class="serie-sep" aria-hidden="true">·</span>
+        <a class="serie-flux" href={`/series/${serie.slug}/rss.xml`}>
+          s’abonner à cette émission
+        </a>
+      </>
+    )}
   </p>
 
   {imageUrl && (
@@ -103,11 +128,23 @@ const compte =
     align-items: center;
     gap: 7px;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--color-accent);
     margin: 0 0 24px;
+  }
+  /* Souligné, contrairement au reste du surtitre : c'est le seul
+     élément cliquable de la ligne, et rien d'autre ne le signalerait à
+     cette taille. */
+  .serie-flux {
+    color: var(--color-muted);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+    transition: color 0.12s;
+  }
+  .serie-flux:hover {
+    color: var(--color-accent);
   }
   .serie-sep {
     opacity: 0.5;
@@ -156,7 +193,7 @@ const compte =
      suite plutôt que comme un empilement. */
   .serie-rang {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: calc(13px * var(--a11y-echelle));
     color: var(--color-muted);
     font-variant-numeric: tabular-nums;
     padding-top: 26px;
@@ -175,7 +212,7 @@ const compte =
       gap: 4px;
     }
     .serie-rang {
-      font-size: 11px;
+      font-size: calc(11px * var(--a11y-echelle));
       padding-top: 22px;
     }
   }

@@ -73,5 +73,15 @@ export const Identity: GlobalConfig = {
       defaultValue: 'CC BY-NC-SA 4.0',
       admin: { description: 'Footer (col 1, sous la baseline, en mono).' },
     },
+    {
+      name: 'contactEmail',
+      type: 'text',
+      required: false,
+      label: 'Adresse de réception',
+      admin: {
+        description:
+          'Adresse à laquelle arrivent les messages du formulaire de contact. Elle n’apparaît jamais sur le site — c’est tout l’intérêt du formulaire. Si vous la laissez vide, les messages partent vers l’adresse d’expédition configurée sur le serveur.',
+      },
+    },
   ],
 };

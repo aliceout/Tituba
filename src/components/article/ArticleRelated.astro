@@ -26,7 +26,7 @@ const { collection, items } = Astro.props;
 <style>
   h3 {
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: calc(13px * var(--a11y-echelle));
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -55,12 +55,12 @@ const { collection, items } = Astro.props;
   }
   .related .d {
     font-family: var(--font-sans);
-    font-size: 11px;
+    font-size: calc(11px * var(--a11y-echelle));
     color: var(--color-muted);
     margin-bottom: 4px;
   }
   .related .t {
-    font-size: 17px;
+    font-size: calc(17px * var(--a11y-echelle));
     font-weight: 600;
     line-height: 1.3;
   }
