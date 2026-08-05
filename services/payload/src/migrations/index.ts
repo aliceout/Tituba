@@ -17,6 +17,7 @@ import * as migration_20260804_153037_categorie_figee from './20260804_153037_ca
 import * as migration_20260804_153717_series_themes from './20260804_153717_series_themes';
 import * as migration_20260804_165235_actus_image from './20260804_165235_actus_image';
 import * as migration_20260805_091529_actus_en_bref from './20260805_091529_actus_en_bref';
+import * as migration_20260805_130139_auteurice_profil from './20260805_130139_auteurice_profil';
 
 export const migrations = [
   {
@@ -112,6 +113,11 @@ export const migrations = [
   {
     up: migration_20260805_091529_actus_en_bref.up,
     down: migration_20260805_091529_actus_en_bref.down,
-    name: '20260805_091529_actus_en_bref'
+    name: '20260805_091529_actus_en_bref',
+  },
+  {
+    up: migration_20260805_130139_auteurice_profil.up,
+    down: migration_20260805_130139_auteurice_profil.down,
+    name: '20260805_130139_auteurice_profil'
   },
 ];

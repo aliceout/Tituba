@@ -2,10 +2,220 @@
 /**
  * Index du format « podcasts » — /podcasts/
  *
- * Enveloppe mince : le rendu vit dans PublicationIndex, partagé par les
- * cinq formats.
+ * Cette page ne passe plus par PublicationIndex, contrairement aux
+ * quatre autres formats, et c'est délibéré : l'audio se parcourt par
+ * émission, pas par publication. Une liste plate d'épisodes venus de
+ * plusieurs émissions mélange des contextes, et devient illisible dès
+ * qu'il y en a une trentaine.
+ *
+ * D'où deux temps. Les émissions d'abord — c'est ce à quoi on s'abonne
+ * et ce qu'on reconnaît. Les derniers épisodes ensuite, toutes émissions
+ * confondues : quelqu'un qui arrive ici veut souvent écouter tout de
+ * suite, et un épisode peut n'appartenir à aucune émission, le
+ * rattachement étant facultatif.
  */
-import PublicationIndex from '../../components/PublicationIndex.astro';
+import PageShell from '../../components/ui/PageShell.astro';
+import PublicationCard from '../../components/PublicationCard.astro';
+import { fetchCollection, publishedOnly, uploadedImageUrl, type FeedDoc } from '../../lib/payload';
+import { PUBLICATIONS, fetchSeries, type Serie } from '../../lib/publications';
+import { formatHeroTitle, stripHeroMarkers } from '../../lib/site';
+
+const spec = PUBLICATIONS.podcasts;
+
+const emissions: Serie[] = await fetchSeries('podcasts');
+
+type Episode = FeedDoc & { series?: number | string | { id: number | string } | null };
+let episodes: Episode[] = [];
+try {
+  episodes = await fetchCollection<Episode>('podcasts', {
+    depth: 1,
+    limit: 30,
+    sort: '-publishedAt',
+    where: publishedOnly(),
+  });
+} catch (err) {
+  console.warn('[podcasts] fetchCollection failed:', (err as Error).message);
+}
+
+/**
+ * Nombre d'épisodes publiés par émission, pour l'annoncer sur sa carte.
+ * Compté sur les épisodes déjà chargés plutôt qu'en interrogeant l'API
+ * une fois par émission : c'est la même donnée, et une requête par carte
+ * multiplierait les allers-retours pour un chiffre d'appoint.
+ */
+const idDe = (v: unknown): string =>
+  v && typeof v === 'object' && 'id' in (v as Record<string, unknown>)
+    ? String((v as { id: unknown }).id)
+    : String(v ?? '');
+
+const comptes = new Map<string, number>();
+for (const e of episodes) {
+  const k = idDe(e.series);
+  if (k) comptes.set(k, (comptes.get(k) ?? 0) + 1);
+}
 ---
 
-<PublicationIndex collection="podcasts" />
+<PageShell
+  documentTitle={spec.labelPlural}
+  description="Les émissions de Tituba et leurs derniers épisodes."
+  title={formatHeroTitle('Nos *émissions*.')}
+  lede="Des conversations enregistrées, réunies par émission. Chacune suit son fil, et chacune s’écoute ou s’abonne séparément."
+>
+  {emissions.length > 0 && (
+    <section class="emissions" aria-label="Émissions">
+      {emissions.map((em) => {
+        const img = uploadedImageUrl(em.image ?? null);
+        const n = comptes.get(String(em.id)) ?? 0;
+        return (
+          <a class="em" href={`/series/${em.slug}/`}>
+            {/* Faute d'image, le carré reste un aplat plutôt qu'un cadre
+                vide : une émission sans couverture doit avoir l'air
+                d'attendre la sienne, pas d'être cassée. */}
+            <div class:list={['em-vignette', { 'em-vignette--nue': !img }]}>
+              {img && <img src={img} alt="" />}
+            </div>
+            <div class="em-texte">
+              <h2>{stripHeroMarkers(em.name)}</h2>
+              {em.lede && <p class="em-lede">{em.lede}</p>}
+              <p class="em-compte">
+                {n === 0 ? 'Aucun épisode publié' : `${n} épisode${n > 1 ? 's' : ''}`}
+              </p>
+            </div>
+          </a>
+        );
+      })}
+    </section>
+  )}
+
+  {/* Les épisodes ne sont listés que faute d'émission à montrer :
+      sinon la page n'aurait aucun contenu. Dès qu'une émission existe,
+      c'est par elle qu'on entre — la liste faisait double emploi et
+      occupait plus de place que les pochettes qu'elle doublait. */}
+  {emissions.length === 0 && (
+  <section class="derniers" aria-labelledby="derniers-titre">
+    <h2 class="derniers-titre" id="derniers-titre">Épisodes</h2>
+    {episodes.length === 0 ? (
+      <p class="vide">Aucun épisode publié pour l’instant.</p>
+    ) : (
+      <div class="feed">
+        {episodes.map((d) => (
+          <PublicationCard
+            collection="podcasts"
+            docId={d.publicId}
+            title={d.title}
+            themeSlugs={d.themeSlugs}
+            publishedAt={d.publishedAt}
+            lede={d.lede}
+            readingTime={d.readingTime}
+            durationSeconds={d.durationSeconds}
+          />
+        ))}
+      </div>
+    )}
+  </section>
+  )}
+</PageShell>
+
+<style>
+  /* Une émission se présente comme une pochette : le carré d'abord, le
+     texte à côté. C'est la convention de toutes les applications
+     d'écoute, et elle rend la vignette reconnaissable avant le nom. */
+  .emissions {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 28px 36px;
+    margin-bottom: 72px;
+  }
+  .em {
+    display: grid;
+    grid-template-columns: 132px 1fr;
+    gap: 20px;
+    align-items: start;
+    color: inherit;
+    transition: opacity 0.12s;
+  }
+  .em:hover {
+    opacity: 0.78;
+  }
+  .em-vignette {
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--color-rule);
+  }
+  .em-vignette--nue {
+    background: color-mix(in srgb, var(--color-accent) 16%, var(--color-bg));
+  }
+  .em-vignette img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .em-texte h2 {
+    font-family: var(--font-serif);
+    font-size: 21px;
+    font-weight: 400;
+    line-height: 1.2;
+    margin: 0 0 8px;
+  }
+  .em-lede {
+    white-space: pre-line;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-muted);
+    margin: 0 0 10px;
+    /* Trois lignes : la carte annonce l'émission, sa page la présente. */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .em-compte {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin: 0;
+  }
+
+  .derniers-titre {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin: 0 0 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  /* Bloc et non grille : PublicationCard est conçue pour occuper une
+     ligne entière — mise en case, elle se retrouvait sur 305 px de
+     large et 765 de haut. Même traitement que l'index des autres
+     formats (cf PublicationIndex, .feed), qui les empile.
+     C'est aussi ce qui garde les filets de séparation entre cartes,
+     posés par la carte elle-même sur son bord haut. */
+  .feed {
+    padding-bottom: 40px;
+  }
+  .vide {
+    font-family: var(--font-sans);
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 720px) {
+    .emissions {
+      grid-template-columns: 1fr;
+      gap: 22px;
+      margin-bottom: 48px;
+    }
+    .em {
+      grid-template-columns: 96px 1fr;
+      gap: 14px;
+    }
+  }
+</style>

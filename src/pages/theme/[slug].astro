@@ -20,6 +20,11 @@ import {
   publishedOnly,
 } from '../../lib/payload';
 import { fetchFeed } from '../../lib/publications';
+// La description d'un thème est saisie dans un textarea et rendue par
+// PageTitle en `set:html` : elle doit être échappée, et ses retours à la
+// ligne convertis, sous peine de perdre les seconds et de laisser passer
+// le premier.
+import { formatHeroLede } from '../../lib/site';
 import type { FeedDoc } from '../../lib/payload';
 
 type IndexPagesGlobal = { themes?: { enabled?: boolean } };
@@ -81,7 +86,7 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
   documentTitle={theme.name}
   description={theme.description ?? `Toutes les publications de Tituba sur la thématique ${theme.name}.`}
   title={theme.name}
-  lede={theme.description ?? undefined}
+  lede={theme.description ? formatHeroLede(theme.description) : undefined}
   famille="violet"
 >
   <div class="hero-bottom-meta" slot="titre-pied">

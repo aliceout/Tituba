@@ -3707,6 +3707,45 @@ button.btn--style-primary,
     }
   }
 
+
+  // Champ en erreur. Le modificateur était posé par les vues (cf
+  // MediaEditView) sans jamais rien changer : la classe existait, ses
+  // règles non. Le filet passe au rouge, et le libellé avec — signaler
+  // par la seule couleur du cadre laisse passer un champ survolé.
+  &__field--invalid {
+    > .lbl {
+      color: #b63a3a;
+    }
+
+    input[type='text'],
+    input[type='email'],
+    input[type='url'],
+    input[type='number'],
+    select,
+    textarea {
+      border-color: #b63a3a;
+
+      &:focus {
+        border-color: #b63a3a;
+      }
+    }
+
+    // Message posé directement dans le champ, sans classe longue :
+    // il n’apparaît que là, et le nommer deux fois n’apprend rien.
+    .err {
+      color: #b63a3a;
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      margin-top: -2px;
+    }
+  }
+
+  // Astérisque des champs obligatoires. En couleur d’accent et non en
+  // rouge : elle annonce une contrainte, elle ne signale pas une faute.
+  &__field .req {
+    color: var(--b-accent);
+    margin-left: 2px;
+  }
   // Message d'erreur affiché sous un .tituba-editview__field--invalid.
   // Margin-top négatif pour grignoter le gap du field et coller le
   // message à l'input.
@@ -5715,6 +5754,18 @@ button.btn--style-primary,
   // contient aujourd'hui qu'un champ, qui prend donc toute la largeur.
   // Une déclaration à deux colonnes en aurait laissé une vide.
   .ep-block {
+    // Un champ qui porte du texte suivi traverse la grille : la
+    // colonne de 280 px convient à un intitulé ou à un nombre, pas à
+    // un paragraphe ni à un couple intitulé + adresse.
+    &__body .field--pleine {
+      grid-column: 1 / -1;
+    }
+    // Plancher de hauteur, au cas où un champ multiligne serait déclaré
+    // sans `rows` : deux lignes suffisent à une phrase, pas à ce qu'on
+    // met dans un panneau de la colonne centrale.
+    &__body textarea {
+      min-height: 5em;
+    }
     &__body {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -5736,9 +5787,16 @@ button.btn--style-primary,
         margin-bottom: 6px;
       }
 
+      // `textarea` et `select` manquaient à cette liste : ils tombaient
+      // donc sur le rendu natif du navigateur au milieu de champs
+      // habillés, ce qui se voyait immédiatement. Mêmes déclarations que
+      // pour les `input` juste au-dessus — il ne s'agit pas d'inventer
+      // un traitement mais d'étendre celui qui existe.
       input[type='number'],
       input[type='text'],
-      input[type='url'] {
+      input[type='url'],
+      select,
+      textarea {
         width: 100%;
         padding: 7px 10px;
         background: var(--b-paper);
@@ -5751,6 +5809,14 @@ button.btn--style-primary,
           outline: none;
           border-color: var(--b-accent);
         }
+      }
+
+      // Propre au multiligne : une interlettre confortable pour du texte
+      // suivi, et un redimensionnement vertical seulement — l'horizontal
+      // ferait déborder le champ de sa colonne de grille.
+      textarea {
+        line-height: 1.55;
+        resize: vertical;
       }
 
       .hint {
@@ -6442,6 +6508,73 @@ button.btn--style-primary,
   color: var(--b-ink);
 }
 
+// Portrait de « Mon compte ». Le sélecteur d'image occupe sinon toute
+// la largeur du champ (640px), ce qui donne un aperçu de la taille
+// d'une affiche pour une vignette qui sera affichée en 120px sur le
+// site. On le ramène ici à cette taille-là, et au rond : ce qu'on voit
+// en réglant doit être ce qu'on obtient une fois publié.
+.tituba-account__portrait {
+  .img-block__cadre {
+    width: 132px;
+    border-radius: 50%;
+  }
+  // Les deux boutons suivent l'aperçu plutôt que de s'étaler sur la
+  // largeur du champ.
+  .img-block__empty {
+    max-width: 132px;
+    text-align: center;
+  }
+
+  /**
+   * Une fois le portrait déposé, les commandes passent à sa droite
+   * plutôt qu'en dessous : la vignette ne fait que 132px, et empiler
+   * trois boutons sous elle laissait une colonne de vide à côté pour
+   * une pile deux fois plus haute que l'image.
+   *
+   * Le composant les rend à deux endroits — « Ajuster »/« Retirer »
+   * dans `__meta`, « Uploader » dans `__actions`, qui n'est même pas
+   * dans le même parent. Deux `display: contents` remontent tout ce
+   * monde au niveau de la grille, sans toucher au balisage : le
+   * sélecteur d'image sert aussi les billets, où la disposition
+   * actuelle convient.
+   *
+   * `:has()` restreint la bascule au cas où une image est en place —
+   * sans lui, l'état vide hériterait d'une colonne de 132px qui ne
+   * contiendrait rien.
+   */
+  .img-block__body:has(.img-block__current) {
+    display: grid;
+    grid-template-columns: 132px 1fr;
+    gap: 8px 20px;
+    align-content: start;
+
+    .img-block__current,
+    .img-block__meta {
+      display: contents;
+    }
+    .img-block__cadre {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+    .img-block__links {
+      grid-column: 2;
+      grid-row: 1;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .img-block__actions {
+      grid-column: 2;
+      grid-row: 2;
+      align-self: start;
+    }
+    .img-block__error {
+      grid-column: 1 / -1;
+      grid-row: 3;
+    }
+  }
+}
+
 // Sécurité du compte (2FA + appareils de confiance) — embed dans
 // AccountView et UserEditView, sans accordéon. Deux groupes empilés
 // avec un titre lbl-style et un corps en texte serif.
@@ -6910,4 +7043,91 @@ button.btn--style-primary,
     font-size: 11.5px;
     font-style: italic;
   }
+}
+
+// ─── Liste de liens libellés (champs de type ) ───────────
+// Deux champs par ligne plutôt qu'un seul : une source sans intitulé
+// est une adresse qu'on ne sait pas lire, et un intitulé sans adresse
+// un lien mort. Les deux se saisissent donc ensemble, côte à côte.
+.liens-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__ligne {
+    display: grid;
+    // L'intitulé est court, l'adresse longue : elle prend ce qui reste.
+    grid-template-columns: 1fr 1.6fr 28px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  &__del {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--b-rule);
+    border-radius: 4px;
+    color: var(--b-muted);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s;
+
+    &:hover {
+      color: var(--theme-error-500, #b3261e);
+      border-color: var(--theme-error-500, #b3261e);
+    }
+  }
+
+  &__add {
+    align-self: flex-start;
+  }
+}
+
+// Pastille d etat dans le titre d une vue d edition — l h1 est en
+// serif de grande taille, la pastille garde son propre corps et se
+// cale sur la ligne de base plutot que de suivre l echelle du titre.
+.tituba-editview__hero .tituba-h1 .status-pill {
+  margin-left: 14px;
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
+}
+
+// Texte réservé aux lecteurs d ecran. Une asterisque seule ne se
+// prononce pas ; le mot qui la double se lit et ne s affiche pas.
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Champ en erreur dans une ligne d auteur ice. Pas de libelle a
+// colorer ici — les colonnes sont titrees une fois en tete du
+// tableau —, donc le filet porte seul le signal.
+.tituba-editview__authors-row .lastname.invalide {
+  border-color: #b63a3a;
+}
+.tituba-editview__authors-row .lastname.invalide:focus {
+  border-color: #b63a3a;
+}
+
+
+
+// Total tous auteur ices confondu es, accole au chiffre de la
+// personne. Corps reduit et couleur en retrait : c est le
+// denominateur du rapport, pas une seconde valeur a lire.
+.tituba-dashboard__stat .n .tot {
+  font-size: 0.5em;
+  color: var(--b-muted);
+  font-weight: 400;
+  letter-spacing: 0;
 }

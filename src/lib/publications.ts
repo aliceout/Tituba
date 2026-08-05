@@ -332,6 +332,96 @@ export async function fetchFeed(
  * post courant. Utilisé par le bloc « Dans le même thème » en pied de
  * page de lecture.
  */
+/** Une série ou une émission, telle que le site la lit. */
+export type Serie = {
+  id: number | string;
+  name: string;
+  slug: string;
+  /** Décide du vocabulaire et de la collection interrogée. */
+  format: PublicationCollection;
+  lede?: string | null;
+  image?: { filename?: string } | number | string | null;
+  themes?: PublicationTheme[] | null;
+  draft?: boolean;
+};
+
+/**
+ * Séries publiées d'un format donné, par ordre alphabétique.
+ *
+ * Les brouillons sont écartés côté requête et non après coup : filtrer
+ * ensuite les laisserait consommer la limite et rétrécirait la liste
+ * sans que rien ne le signale — c'est le raisonnement de `publishedOnly`,
+ * appliqué ici à la main puisque les séries n'ont pas de date de
+ * publication à comparer.
+ */
+export async function fetchSeries(format: PublicationCollection): Promise<Serie[]> {
+  try {
+    return await fetchCollection<Serie>('series', {
+      depth: 1,
+      limit: 100,
+      sort: 'name',
+      where: [
+        { field: 'format', value: format },
+        ...(process.env.SHOW_DRAFTS === '1'
+          ? []
+          : [{ field: 'draft', operator: 'not_equals' as const, value: true }]),
+      ],
+    });
+  } catch (err) {
+    console.warn('[series] fetchSeries failed:', (err as Error).message);
+    return [];
+  }
+}
+
+/** Une série par son slug, ou null — y compris si elle est en brouillon. */
+export async function fetchSerieBySlug(slug: string): Promise<Serie | null> {
+  try {
+    const docs = await fetchCollection<Serie>('series', {
+      depth: 1,
+      limit: 1,
+      where: [{ field: 'slug', value: slug }],
+    });
+    return docs[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Billets d'une série, dans l'ordre où elle veut être parcourue : le
+ * rang saisi d'abord, la date de parution pour départager ceux qui n'en
+ * ont pas.
+ *
+ * Le tri est fait ici et non par l'API : `sort=seriesNumber` y placerait
+ * les valeurs nulles en tête ou en queue selon le moteur, alors qu'on
+ * veut les intercaler à leur date.
+ */
+export async function fetchSeriePosts(serie: Serie): Promise<FeedDoc[]> {
+  try {
+    const docs = await fetchCollection<FeedDoc & { seriesNumber?: number | null }>(
+      serie.format,
+      {
+        depth: 1,
+        limit: 200,
+        where: [{ field: 'series', value: String(serie.id) }, ...publishedOnly()],
+      },
+    );
+    return [...docs].sort((a, b) => {
+      const ra = a.seriesNumber ?? null;
+      const rb = b.seriesNumber ?? null;
+      if (ra !== null && rb !== null) return ra - rb;
+      if (ra !== null) return -1;
+      if (rb !== null) return 1;
+      return (
+        new Date(b.publishedAt ?? 0).getTime() - new Date(a.publishedAt ?? 0).getTime()
+      );
+    });
+  } catch (err) {
+    console.warn('[series] fetchSeriePosts failed:', (err as Error).message);
+    return [];
+  }
+}
+
 export async function fetchRelatedPosts(
   collection: PublicationCollection,
   themeSlug: string | undefined,

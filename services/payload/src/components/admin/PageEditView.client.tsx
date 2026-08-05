@@ -146,6 +146,8 @@ export default function PageEditViewClient({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Erreurs par champ, posées avant l'envoi (cf save). */
+  const [champsEnErreur, setChampsEnErreur] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
   // Modale de confirmation de suppression. Réutilise le pattern
@@ -287,6 +289,18 @@ export default function PageEditViewClient({
   }
 
   async function save() {
+    // Validation cliente avant l'envoi : sans elle, un champ oublié
+    // remonte en 400 dont le corps JSON s’affiche tel quel en tête de
+    // page — illisible, et muet sur ce qu’il faut corriger.
+    const manquants: Record<string, string> = {};
+    if (!data.title.trim()) manquants.title = 'Le titre est obligatoire.';
+    if (!data.slug.trim()) manquants.slug = 'Le slug est obligatoire — il forme l’adresse de la page.';
+    if (Object.keys(manquants).length > 0) {
+      setChampsEnErreur(manquants);
+      setError(null);
+      return;
+    }
+    setChampsEnErreur({});
     setSaving(true);
     setError(null);
     try {
@@ -393,6 +407,13 @@ export default function PageEditViewClient({
         </>
       }
     >
+      {Object.keys(champsEnErreur).length > 0 && (
+        <div className="tituba-editview__error" role="alert">
+          {Object.keys(champsEnErreur).length === 1
+            ? 'Un champ obligatoire n’est pas rempli — il est signalé ci-dessous.'
+            : `${Object.keys(champsEnErreur).length} champs obligatoires ne sont pas remplis — ils sont signalés ci-dessous.`}
+        </div>
+      )}
       {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
@@ -426,13 +447,21 @@ export default function PageEditViewClient({
             )}
 
             <label className="tituba-editview__field">
-              <span className="lbl">Titre de la page</span>
+              <span className="lbl">
+                Titre de la page <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.title}
-                onChange={(e) => patch('title', e.target.value)}
+                aria-invalid={champsEnErreur.title ? true : undefined}
+                onChange={(e) => {
+                  patch('title', e.target.value);
+                  if (champsEnErreur.title) setChampsEnErreur(({ title: _, ...r }) => r);
+                }}
                 required
               />
+              {champsEnErreur.title && <span className="err">{champsEnErreur.title}</span>}
               {estFixe && (
                 <span className="hint">
                   Les *astérisques* surlignent un mot dans le hero, comme sur un titre de billet.
@@ -441,11 +470,18 @@ export default function PageEditViewClient({
             </label>
 
             <label className="tituba-editview__field">
-              <span className="lbl">Slug</span>
+              <span className="lbl">
+                Slug <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.slug}
-                onChange={(e) => patch('slug', e.target.value)}
+                aria-invalid={champsEnErreur.slug ? true : undefined}
+                onChange={(e) => {
+                  patch('slug', e.target.value);
+                  if (champsEnErreur.slug) setChampsEnErreur(({ slug: _, ...r }) => r);
+                }}
                 required
                 // Verrouillé sur une page fixe : le slug est ce qui la
                 // relie à sa route. La collection refuse d'ailleurs de
@@ -453,6 +489,7 @@ export default function PageEditViewClient({
                 // rendre visible.
                 disabled={estFixe}
               />
+              {champsEnErreur.slug && <span className="err">{champsEnErreur.slug}</span>}
               <span className="hint">
                 {estFixe
                   ? 'Fixé par la route du site. Non modifiable.'

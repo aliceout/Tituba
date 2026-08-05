@@ -153,6 +153,8 @@ export default function NavigationEditViewClient(): React.ReactElement {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Erreurs par champ, indexées par ligne pour les liens de pied. */
+  const [champsEnErreur, setChampsEnErreur] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [pageOptions, setPageOptions] = useState<PageOption[]>([]);
   const [indexPages, setIndexPages] = useState<IndexPagesGlobal>({});
@@ -316,7 +318,35 @@ export default function NavigationEditViewClient(): React.ReactElement {
     });
   }
 
+  /** Retire l'erreur d'un champ dès qu'on le corrige. */
+  function oublierErreur(cle: string) {
+    setChampsEnErreur((prev) => {
+      if (!prev[cle]) return prev;
+      const suite = { ...prev };
+      delete suite[cle];
+      return suite;
+    });
+  }
+
   async function save() {
+    // Validation cliente avant l'envoi : un lien de pied incomplet
+    // remontait en 400 dont le corps JSON s'affichait tel quel, sans
+    // dire lequel des liens était en cause.
+    const manquants: Record<string, string> = {};
+    (data.navFooter ?? []).forEach((l, i) => {
+      if (!String(l.label ?? '').trim()) {
+        manquants[`footer.${i}.label`] = 'Le libellé est obligatoire.';
+      }
+      if (!String(l.href ?? '').trim()) {
+        manquants[`footer.${i}.href`] = 'L’adresse est obligatoire.';
+      }
+    });
+    if (Object.keys(manquants).length > 0) {
+      setChampsEnErreur(manquants);
+      setError(null);
+      return;
+    }
+    setChampsEnErreur({});
     setSaving(true);
     setError(null);
     try {
@@ -392,6 +422,13 @@ export default function NavigationEditViewClient(): React.ReactElement {
         </>
       }
     >
+      {Object.keys(champsEnErreur).length > 0 && (
+        <div className="tituba-editview__error" role="alert">
+          {Object.keys(champsEnErreur).length === 1
+            ? 'Un champ obligatoire n’est pas rempli — il est signalé ci-dessous.'
+            : `${Object.keys(champsEnErreur).length} champs obligatoires ne sont pas remplis — ils sont signalés ci-dessous.`}
+        </div>
+      )}
       {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
@@ -520,21 +557,53 @@ export default function NavigationEditViewClient(): React.ReactElement {
               )}
               {(data.navFooter ?? []).map((row, idx) => (
                 <div key={idx} className="tituba-editview__rowitem">
-                  <label className="tituba-editview__field tituba-editview__field--inline">
-                    <span className="lbl">Label</span>
+                  {/* Chaque lien de pied porte ses propres erreurs : sur
+                      une liste de huit, un message général laisserait
+                      chercher laquelle est incomplète. D'où des clés
+                      indexées, `footer.<n>.label` et `.href`. */}
+                  <label
+                    className={`tituba-editview__field tituba-editview__field--inline${
+                      champsEnErreur[`footer.${idx}.label`] ? ' tituba-editview__field--invalid' : ''
+                    }`}
+                  >
+                    <span className="lbl">
+                      Label <span className="req" aria-hidden="true">*</span>
+                      <span className="sr-only"> (obligatoire)</span>
+                    </span>
                     <input
                       type="text"
                       value={row.label}
-                      onChange={(e) => updateFooter(idx, { label: e.target.value })}
+                      aria-invalid={champsEnErreur[`footer.${idx}.label`] ? true : undefined}
+                      onChange={(e) => {
+                        updateFooter(idx, { label: e.target.value });
+                        oublierErreur(`footer.${idx}.label`);
+                      }}
                     />
+                    {champsEnErreur[`footer.${idx}.label`] && (
+                      <span className="err">{champsEnErreur[`footer.${idx}.label`]}</span>
+                    )}
                   </label>
-                  <label className="tituba-editview__field tituba-editview__field--inline">
-                    <span className="lbl">Href</span>
+                  <label
+                    className={`tituba-editview__field tituba-editview__field--inline${
+                      champsEnErreur[`footer.${idx}.href`] ? ' tituba-editview__field--invalid' : ''
+                    }`}
+                  >
+                    <span className="lbl">
+                      Href <span className="req" aria-hidden="true">*</span>
+                      <span className="sr-only"> (obligatoire)</span>
+                    </span>
                     <input
                       type="text"
                       value={row.href}
-                      onChange={(e) => updateFooter(idx, { href: e.target.value })}
+                      aria-invalid={champsEnErreur[`footer.${idx}.href`] ? true : undefined}
+                      onChange={(e) => {
+                        updateFooter(idx, { href: e.target.value });
+                        oublierErreur(`footer.${idx}.href`);
+                      }}
                     />
+                    {champsEnErreur[`footer.${idx}.href`] && (
+                      <span className="err">{champsEnErreur[`footer.${idx}.href`]}</span>
+                    )}
                   </label>
                   <label className="tituba-editview__field tituba-editview__field--inline tituba-editview__field--check">
                     <input

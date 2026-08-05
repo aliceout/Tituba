@@ -134,6 +134,41 @@ export const Users: CollectionConfig = {
       required: false,
     },
     {
+      /**
+       * Présentation affichée sur la page publique de la personne.
+       *
+       * Écrite par l'intéressé·e depuis « Mon compte » : c'est elle qui
+       * dit qui elle est, pas l'administration du site. L'accès en
+       * écriture du compte le permet déjà — chacun·e peut modifier son
+       * propre profil, les admins celui de tout le monde.
+       */
+      name: 'bio',
+      type: 'textarea',
+      required: false,
+      label: 'Présentation',
+      admin: {
+        description:
+          'Quelques phrases sur vous — parcours, terrain, sujets de travail. Affichées sur votre page publique, sous votre nom.',
+      },
+    },
+    {
+      /**
+       * Portrait, montré en rond sur la page publique. Le cadrage se
+       * fait en carré à la saisie (cf AccountView) : c'est la seule
+       * proportion dont on puisse tirer un cercle sans déformer, et
+       * cadrer en carré ce qui sortira en rond montre bien ce qui sera
+       * gardé — un cercle inscrit dans le carré retenu.
+       */
+      name: 'photo',
+      type: 'upload',
+      relationTo: 'media',
+      required: false,
+      label: 'Portrait',
+      admin: {
+        description: 'Affiché en rond sur votre page publique. Cadré en carré au dépôt.',
+      },
+    },
+    {
       // Format Chicago author-date personnel — affiché dans le bloc
       // « Pour citer » des billets que ce user co-signe. Si vide, la
       // signature est dérivée du displayName via une heuristique

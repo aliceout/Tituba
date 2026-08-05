@@ -11,7 +11,12 @@ import PageShell from '../../components/ui/PageShell.astro';
 import PublicationCard from '../../components/PublicationCard.astro';
 import CardFilterBar from '../../components/CardFilterBar.astro';
 import { PUBLICATIONS, PUBLICATION_ORDER, fetchFeed } from '../../lib/publications';
-import { fetchUserDisplayName } from '../../lib/payload';
+import { fetchUserDisplayName, uploadedImageUrl } from '../../lib/payload';
+// Le nom part dans `title`, que PageTitle rend en `set:html` : il doit
+// être échappé, et ses astérisques deviennent ici des mots surlignés —
+// c'est la seule page où le nom fait titre, donc la seule où le
+// surlignage a lieu d'être. Ailleurs, `stripHeroMarkers` les efface.
+import { formatHeroTitle, stripHeroMarkers } from '../../lib/site';
 import type { FeedDoc } from '../../lib/payload';
 
 type Post = FeedDoc;
@@ -33,7 +38,19 @@ try {
 }
 
 const total = posts.length;
+
 const name = author.displayName ?? 'Auteur·ice';
+// Nom nu, pour tout ce qui n'est pas le h1 : onglet du navigateur,
+// description, texte alternatif du portrait.
+const nameNu = stripHeroMarkers(name);
+
+// Présentation et portrait, saisis par la personne depuis « Mon
+// compte ». Les deux sont facultatifs : une fiche sans photo ni texte
+// reste une fiche complète.
+const bio = (author.bio ?? '').trim();
+const photoUrl = uploadedImageUrl(author.photo);
+const photoAlt =
+  author.photo && typeof author.photo === 'object' ? (author.photo.alt ?? '') : '';
 
 // Formats réellement représentés chez cette personne, dans l'ordre
 // éditorial — un filtre vide n'aurait pas de sens ici non plus.
@@ -47,18 +64,33 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
 ---
 
 <PageShell
-  documentTitle={name}
-  description={`Les publications de ${name} sur Tituba.`}
-  title={name}
+  documentTitle={nameNu}
+  description={`Les publications de ${nameNu} sur Tituba.`}
+  title={formatHeroTitle(name)}
   famille="bleu"
 >
-  <div class="hero-bottom-meta" slot="titre-pied">
-    <span>{total} publication{total > 1 ? 's' : ''}</span>
-    <span aria-hidden="true">·</span>
-    <a class="back mono" href="/auteurices/">← tous les auteur·ices</a>
-  </div>
-
   <Fragment slot="sous-titre">
+    {/* Portrait et présentation avant le filtre : c'est la personne
+        qu'on vient lire ici, la liste de ses textes vient ensuite. Le
+        bloc entier disparaît si ni l'un ni l'autre n'est renseigné. */}
+    {(photoUrl || bio) && (
+      <div class="auteurice-profil">
+        <div class="col-portrait">
+          {photoUrl && (
+            <img
+              class="portrait"
+              src={photoUrl}
+              alt={photoAlt || `Portrait de ${nameNu}`}
+              width="120"
+              height="120"
+              loading="lazy"
+            />
+          )}
+        </div>
+        {bio && <p class="bio">{bio}</p>}
+      </div>
+    )}
+
     <CardFilterBar
       dimension="type"
       label="Format"
@@ -85,23 +117,52 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
 </PageShell>
 
 <style>
-  /* Pied du hero, propre à cette page — compteur + lien retour. Rendu
-     dans le slot par défaut de PageTitle (cf. titre-pied ci-dessus). */
-  .hero-bottom-meta {
-    font-family: var(--font-sans);
-    font-size: 13px;
-    color: var(--color-muted);
-    margin-top: 24px;
+  /* Portrait et présentation sur une même ligne, le portrait au fer à
+     gauche sur l'axe du nom. La présentation occupe tout ce qui reste
+     à droite — pas de cap de mesure : la ligne se règle sur la
+     largeur de la page, comme le reste. */
+  .auteurice-profil {
     display: flex;
-    gap: 24px;
     align-items: center;
+    gap: 28px;
+    margin: 8px 0;
   }
-  .hero-bottom-meta .back {
-    color: var(--c-bleu-deep);
-    transition: color 0.12s;
+  .auteurice-profil .col-portrait {
+    flex: 0 0 auto;
   }
-  .hero-bottom-meta .back:hover {
-    color: var(--color-ink);
+  .auteurice-profil .bio {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Sous le portrait plutôt qu'à côté : à cette largeur, la colonne de
+     texte restante ne tiendrait plus que trois ou quatre mots. */
+  @media (max-width: 640px) {
+    .auteurice-profil {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 20px;
+    }
+  }
+  /* Déposé cadré en carré côté admin ; `object-fit: cover` en tire le
+     cercle sans déformer, y compris pour un fichier plus ancien qui ne
+     serait pas tout à fait carré. */
+  .auteurice-profil .portrait {
+    display: block;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--color-rule);
+  }
+  .auteurice-profil .bio {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 18px;
+    line-height: 1.7;
+    color: var(--color-muted);
+    /* Saisie dans un textarea : les retours à la ligne sont voulus. */
+    white-space: pre-line;
   }
 
   .empty {

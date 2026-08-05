@@ -30,7 +30,7 @@ const liens = (sources ?? []).filter(
 ---
 
 <aside class="brief" aria-labelledby="brief-titre">
-  <h2 class="brief-titre" id="brief-titre">L’actualité en bref</h2>
+  <h2 class="brief-titre" id="brief-titre">L’actualité en question</h2>
   <p class="brief-texte">{texte}</p>
 
   {liens.length > 0 && (
@@ -77,6 +77,7 @@ const liens = (sources ?? []).filter(
     line-height: 1.6;
     color: var(--color-ink);
     text-align: justify;
+    white-space: pre-line;
     hyphens: auto;
     -webkit-hyphens: auto;
     margin: 0;
@@ -89,13 +90,21 @@ const liens = (sources ?? []).filter(
     padding-top: 18px;
     border-top: 1px solid var(--color-rule);
   }
+  /* Repris trait pour trait des repères du bloc commun juste en dessous
+     (cf ArticleToc, .duree) : même fonte sans empattement, même corps,
+     même graisse, même interlettrage, même encre. Ce sont les mêmes
+     petits intitulés de rubrique dans la même colonne — les distinguer
+     ne signalait rien, ça donnait seulement deux systèmes à quelques
+     centimètres l'un de l'autre.
+     Le titre de la colonne, lui, garde le mono et la couleur d'accent :
+     c'est le titre du bloc, pas un intitulé de rubrique. */
   .brief-sources-titre {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.14em;
+    font-weight: 600;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--color-muted);
+    color: var(--color-ink);
     margin: 0 0 8px;
   }
   .brief-sources ul {

@@ -55,6 +55,7 @@ import {
 } from './publications/registry';
 import UnsplashImagePicker from './publications/UnsplashImagePicker.client';
 import AudioUploadField from './publications/AudioUploadField.client';
+import { stripHeroMarkers } from '@/lib/hero-markers';
 
 type PostType = string;
 
@@ -768,7 +769,20 @@ export default function PublicationEditViewClient({
    */
   function renderExtraField(f: (typeof spec.extraFields)[number]) {
     return (
-      <div key={f.name} className={`field${fieldErrors[f.name] ? ' field--invalid' : ''}`}>
+      <div
+        key={f.name}
+        className={[
+          'field',
+          fieldErrors[f.name] ? 'field--invalid' : '',
+          // Un paragraphe et une liste de liens prennent toute la
+          // rangée : enfermés dans une colonne de 280 px, le premier se
+          // hache en lignes de quatre mots et la seconde n'a plus la
+          // place de mettre son intitulé à côté de son adresse.
+          f.type === 'textarea' || f.type === 'links' ? 'field--pleine' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         <label>{f.label}</label>
         {f.type === 'list' ? (
           <ChipsInput
@@ -791,8 +805,18 @@ export default function PublicationEditViewClient({
               </option>
             ))}
           </select>
+        ) : f.type === 'links' ? (
+          <LinksInput
+            values={
+              Array.isArray((post as WithExtras)[f.name])
+                ? ((post as WithExtras)[f.name] as Lien[])
+                : []
+            }
+            onChange={(v) => patch(f.name as keyof Post, v as never)}
+          />
         ) : f.type === 'textarea' ? (
           <textarea
+            rows={f.rows ?? 3}
             value={String((post as WithExtras)[f.name] ?? '')}
             placeholder={f.placeholder}
             onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
@@ -1074,7 +1098,7 @@ export default function PublicationEditViewClient({
             {mainFields.length > 0 && (
               <div className="ep-block">
                 <div className="ep-block__h">
-                  <span>Épisode</span>
+                  <span>{spec.mainLabel ?? 'Champs du format'}</span>
                 </div>
                 <div className="ep-block__body">
                   {mainFields.map((f) => renderExtraField(f))}
@@ -1446,7 +1470,7 @@ export default function PublicationEditViewClient({
                           <option value="">— choisir un·e membre —</option>
                           {allUsers.map((u) => (
                             <option key={u.id} value={String(u.id)}>
-                              {u.displayName ?? u.email ?? `User #${u.id}`}
+                              {stripHeroMarkers(u.displayName) ?? u.email ?? `User #${u.id}`}
                             </option>
                           ))}
                         </select>
@@ -1712,6 +1736,68 @@ function BiblioSearchPicker({
 // Retour arrière sur un champ vide retire la dernière pastille : c'est
 // le comportement attendu de toute saisie en pastilles, et sans lui il
 // faudrait viser une croix à la souris pour défaire une frappe.
+
+type Lien = { label: string; url: string };
+
+/**
+ * Liste de liens libellés — chaque ligne porte un intitulé et une
+ * adresse. Pendant de ChipsInput pour les champs de type `links` : là
+ * où une pastille ne contient qu'un mot, une source demande deux
+ * valeurs, et un couple ne se saisit pas au fil de la frappe.
+ *
+ * Les lignes vides ne sont pas rejetées à la saisie — on n'interrompt
+ * pas quelqu'un qui colle une adresse avant d'écrire son intitulé.
+ * C'est `pickExtraValues` qui les écarte à l'enregistrement.
+ */
+function LinksInput({
+  values,
+  onChange,
+}: {
+  values: Lien[];
+  onChange: (v: Lien[]) => void;
+}): React.ReactElement {
+  const lignes = values.length > 0 ? values : [];
+
+  function modifier(i: number, cle: keyof Lien, valeur: string) {
+    onChange(lignes.map((l, j) => (j === i ? { ...l, [cle]: valeur } : l)));
+  }
+
+  return (
+    <div className="liens-input">
+      {lignes.map((l, i) => (
+        <div className="liens-input__ligne" key={i}>
+          <input
+            type="text"
+            value={l.label ?? ''}
+            placeholder="Intitulé — ex : Le Monde"
+            onChange={(e) => modifier(i, 'label', e.target.value)}
+          />
+          <input
+            type="url"
+            value={l.url ?? ''}
+            placeholder="https://…"
+            onChange={(e) => modifier(i, 'url', e.target.value)}
+          />
+          <button
+            type="button"
+            className="liens-input__del"
+            onClick={() => onChange(lignes.filter((_, j) => j !== i))}
+            aria-label={`Retirer ${l.label || 'cette source'}`}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="tituba-btn tituba-btn--ghost liens-input__add"
+        onClick={() => onChange([...lignes, { label: '', url: '' }])}
+      >
+        + Ajouter une source
+      </button>
+    </div>
+  );
+}
 
 function ChipsInput({
   values,

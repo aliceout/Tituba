@@ -385,6 +385,14 @@ export interface User {
   id: number;
   displayName?: string | null;
   /**
+   * Quelques phrases sur vous — parcours, terrain, sujets de travail. Affichées sur votre page publique, sous votre nom.
+   */
+  bio?: string | null;
+  /**
+   * Affiché en rond sur votre page publique. Cadré en carré au dépôt.
+   */
+  photo?: (number | null) | Media;
+  /**
    * Format Chicago author-date « Nom, P. » utilisé pour vous dans le bloc « Pour citer » des billets que vous co-signez. Si vide, la signature est dérivée automatiquement du nom affiché.
    */
   citationFormat?: string | null;
@@ -1448,6 +1456,8 @@ export interface PagesSelect<T extends boolean = true> {
  */
 export interface UsersSelect<T extends boolean = true> {
   displayName?: T;
+  bio?: T;
+  photo?: T;
   citationFormat?: T;
   role?: T;
   status?: T;

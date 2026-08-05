@@ -615,6 +615,8 @@ export default function UnsplashImagePicker({
   value,
   onChange,
   aspect = 1,
+  unsplash = true,
+  cadrageToujours = false,
 }: {
   value: MediaValue | number | string | null;
   onChange: (mediaId: number | string | null, mediaDoc: MediaValue) => void;
@@ -625,6 +627,21 @@ export default function UnsplashImagePicker({
    * bande large — d'où le paramètre plutôt qu'un carré imposé à tous.
    */
   aspect?: number;
+  /**
+   * Propose la banque d'images. Vrai pour une couverture de billet, où
+   * une photo d'illustration est le cas courant ; faux là où l'image ne
+   * peut venir que de la personne elle-même — un portrait ne se
+   * cherche pas dans une photothèque.
+   */
+  unsplash?: boolean;
+  /**
+   * Ouvre le cadrage à chaque choix, même quand l'image est déjà à la
+   * proportion de l'emplacement. Une photo carrée n'a rien à rogner,
+   * mais on peut vouloir resserrer sur un visage : là où la zone
+   * retenue est un choix et pas seulement une contrainte, on la
+   * propose systématiquement.
+   */
+  cadrageToujours?: boolean;
 }): React.ReactElement {
   // `value` arrive soit comme id brut (juste choisi), soit comme objet
   // media peuplé (depth du fetch initial du billet) — normalisé ici en
@@ -657,10 +674,10 @@ export default function UnsplashImagePicker({
       setModalOpen(false);
       if (doc && doc.width && doc.height) {
         const ecart = Math.abs(doc.width / doc.height - aspect) / aspect;
-        if (ecart > 0.01) setCropDoc(doc);
+        if (cadrageToujours || ecart > 0.01) setCropDoc(doc);
       }
     },
-    [onChange, aspect],
+    [onChange, aspect, cadrageToujours],
   );
 
   async function uploadFile(file: File) {
@@ -736,7 +753,8 @@ export default function UnsplashImagePicker({
                     il n'y aurait rien à y régler. */}
                 {resolved.width &&
                   resolved.height &&
-                  Math.abs(resolved.width / resolved.height - aspect) / aspect > 0.01 && (
+                  (cadrageToujours ||
+                    Math.abs(resolved.width / resolved.height - aspect) / aspect > 0.01) && (
                   <button
                     type="button"
                     className="img-block__link"
@@ -771,13 +789,15 @@ export default function UnsplashImagePicker({
           >
             {uploading ? 'Envoi…' : 'Uploader un fichier'}
           </button>
-          <button
-            type="button"
-            className="tituba-btn tituba-btn--ghost"
-            onClick={() => setModalOpen(true)}
-          >
-            Rechercher sur Unsplash
-          </button>
+          {unsplash && (
+            <button
+              type="button"
+              className="tituba-btn tituba-btn--ghost"
+              onClick={() => setModalOpen(true)}
+            >
+              Rechercher sur Unsplash
+            </button>
+          )}
           <input
             ref={fileInputRef}
             type="file"

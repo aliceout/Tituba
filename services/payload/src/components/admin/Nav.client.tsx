@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import ZoteroAutoSync from './ZoteroAutoSync.client';
+import { stripHeroMarkers } from '@/lib/hero-markers';
 
 type Me = {
   user?: {
@@ -185,7 +186,7 @@ export default function NavClient({ activePath: serverActive, counts, version, i
       });
   }, []);
 
-  const userName = me?.displayName?.trim() || me?.email?.split('@')[0] || '—';
+  const userName = stripHeroMarkers(me?.displayName?.trim()) || me?.email?.split('@')[0] || '—';
   const rawRole = me?.role ?? '';
   // Libellés inclusifs des rôles, affichés dans le footer de la sidebar.
   // Source des rôles bruts : services/payload/src/access/roles.ts.

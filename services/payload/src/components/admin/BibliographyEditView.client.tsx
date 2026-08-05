@@ -130,6 +130,9 @@ export default function BibliographyEditViewClient({
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Erreurs par champ. Les lignes d’auteur·ice sont indexées :
+   *  `authors.0.lastName`, pour pouvoir désigner la ligne fautive. */
+  const [champsEnErreur, setChampsEnErreur] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [usedIn, setUsedIn] = useState<UsedInPost[]>([]);
 
@@ -228,6 +231,30 @@ export default function BibliographyEditViewClient({
   }
 
   async function save() {
+    // Validation cliente avant l'envoi. Les entrées de bibliographie
+    // ont six champs obligatoires, dont deux à l’intérieur du tableau
+    // des auteur·ices : sans repérage par ligne, un message général
+    // laisserait chercher laquelle des cinq lignes pose problème.
+    const manquants: Record<string, string> = {};
+    if (!data.slug.trim()) manquants.slug = 'La clé est obligatoire — c’est elle qui cite la référence dans un billet.';
+    if (!String(data.title).trim()) manquants.title = 'Le titre est obligatoire.';
+    if (String(data.year).trim() === '') manquants.year = 'L’année est obligatoire.';
+    const lignes = data.authors ?? [];
+    if (lignes.length === 0) {
+      manquants.authors = 'Au moins une personne est obligatoire.';
+    } else {
+      lignes.forEach((a, i) => {
+        if (!String(a.lastName ?? '').trim()) {
+          manquants[`authors.${i}.lastName`] = 'Le nom est obligatoire.';
+        }
+      });
+    }
+    if (Object.keys(manquants).length > 0) {
+      setChampsEnErreur(manquants);
+      setError(null);
+      return;
+    }
+    setChampsEnErreur({});
     setSaving(true);
     setError(null);
     try {
@@ -360,6 +387,13 @@ export default function BibliographyEditViewClient({
         </>
       }
     >
+      {Object.keys(champsEnErreur).length > 0 && (
+        <div className="tituba-editview__error" role="alert">
+          {Object.keys(champsEnErreur).length === 1
+            ? 'Un champ obligatoire n’est pas rempli — il est signalé ci-dessous.'
+            : `${Object.keys(champsEnErreur).length} champs obligatoires ne sont pas remplis — ils sont signalés ci-dessous.`}
+        </div>
+      )}
       {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
@@ -408,23 +442,34 @@ export default function BibliographyEditViewClient({
                   ))}
                 </select>
               </label>
-              <label className="tituba-editview__field">
-                <span className="lbl">Année</span>
+              <label
+                className={`tituba-editview__field${champsEnErreur.year ? ' tituba-editview__field--invalid' : ''}`}
+              >
+                <span className="lbl">
+                  Année <span className="req" aria-hidden="true">*</span>
+                  <span className="sr-only"> (obligatoire)</span>
+                </span>
                 <input
                   type="number"
                   value={data.year === '' ? '' : data.year}
                   min={1700}
                   max={3000}
-                  onChange={(e) =>
-                    patch('year', e.target.value === '' ? '' : Number(e.target.value))
-                  }
+                  aria-invalid={champsEnErreur.year ? true : undefined}
+                  onChange={(e) => {
+                    patch('year', e.target.value === '' ? '' : Number(e.target.value));
+                    if (champsEnErreur.year) setChampsEnErreur(({ year: _, ...r }) => r);
+                  }}
                 />
+                {champsEnErreur.year && <span className="err">{champsEnErreur.year}</span>}
               </label>
             </div>
 
             <div className="tituba-editview__authors">
               <div className="tituba-editview__authors-head">
-                <span className="lbl">Auteur·ice·s</span>
+                <span className="lbl">
+                  Auteur·ice·s <span className="req" aria-hidden="true">*</span>
+                  <span className="sr-only"> (au moins une)</span>
+                </span>
                 <span className="hint">
                   La 1<sup>ère</sup> ligne = auteur·ice principal·e (utilisé pour la
                   citation courte et le tri). Laissez « Prénom » vide pour les auteurs
@@ -433,12 +478,34 @@ export default function BibliographyEditViewClient({
               </div>
               {data.authors.map((a, idx) => (
                 <div key={idx} className="tituba-editview__authors-row">
+                  {/* Le nom porte l'erreur de sa propre ligne : sur cinq
+                      personnes saisies, un message général laisserait
+                      chercher laquelle est incomplète. D'où une clé
+                      indexée, `authors.<n>.lastName`.
+                      Pas de libellé visible dans ce tableau — les
+                      colonnes sont titrées une fois en tête —, donc
+                      l'obligation passe par le repère du champ et par un
+                      `aria-label` qui la nomme. */}
                   <input
                     type="text"
-                    className="lastname"
-                    placeholder="Nom"
+                    className={`lastname${champsEnErreur[`authors.${idx}.lastName`] ? ' invalide' : ''}`}
+                    placeholder="Nom *"
                     value={a.lastName}
-                    onChange={(e) => patchAuthor(idx, 'lastName', e.target.value)}
+                    aria-invalid={champsEnErreur[`authors.${idx}.lastName`] ? true : undefined}
+                    aria-label={`Nom de la personne ${idx + 1} (obligatoire)`}
+                    onChange={(e) => {
+                      patchAuthor(idx, 'lastName', e.target.value);
+                      // L'erreur porte sur cette ligne précise : on ne
+                      // retire que la sienne.
+                      const cle = `authors.${idx}.lastName`;
+                      if (champsEnErreur[cle]) {
+                        setChampsEnErreur((prev) => {
+                          const suite = { ...prev };
+                          delete suite[cle];
+                          return suite;
+                        });
+                      }
+                    }}
                   />
                   <input
                     type="text"
@@ -501,23 +568,43 @@ export default function BibliographyEditViewClient({
               </button>
             </div>
 
-            <label className="tituba-editview__field">
-              <span className="lbl">Titre</span>
+            <label
+              className={`tituba-editview__field${champsEnErreur.title ? ' tituba-editview__field--invalid' : ''}`}
+            >
+              <span className="lbl">
+                Titre <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.title}
-                onChange={(e) => patch('title', e.target.value)}
+                aria-invalid={champsEnErreur.title ? true : undefined}
+                onChange={(e) => {
+                  patch('title', e.target.value);
+                  if (champsEnErreur.title) setChampsEnErreur(({ title: _, ...r }) => r);
+                }}
               />
+              {champsEnErreur.title && <span className="err">{champsEnErreur.title}</span>}
             </label>
 
-            <label className="tituba-editview__field">
-              <span className="lbl">Slug</span>
+            <label
+              className={`tituba-editview__field${champsEnErreur.slug ? ' tituba-editview__field--invalid' : ''}`}
+            >
+              <span className="lbl">
+                Slug <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.slug}
-                onChange={(e) => patch('slug', e.target.value)}
+                aria-invalid={champsEnErreur.slug ? true : undefined}
+                onChange={(e) => {
+                  patch('slug', e.target.value);
+                  if (champsEnErreur.slug) setChampsEnErreur(({ slug: _, ...r }) => r);
+                }}
                 placeholder="farris-2017"
               />
+              {champsEnErreur.slug && <span className="err">{champsEnErreur.slug}</span>}
               <span className="hint">
                 Clé courte, sert d’ancre <span className="mono">#bib-…</span> côté article.
               </span>

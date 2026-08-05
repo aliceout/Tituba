@@ -17,7 +17,7 @@ import PageShell from '../../components/ui/PageShell.astro';
 import FormatIcon from '../../components/FormatIcon.astro';
 import { fetchFeed, PUBLICATIONS, PUBLICATION_ORDER } from '../../lib/publications';
 import { fetchIndexPages } from '../../lib/payload';
-import { formatHeroTitle } from '../../lib/site';
+import { formatHeroLede, formatHeroTitle } from '../../lib/site';
 
 type PagesFixes = { formats?: { heroTitle?: string; heroLede?: string } };
 
@@ -71,7 +71,7 @@ function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
   documentTitle="Formats"
   description="Les cinq formats de publication de Tituba : articles de recherche, analyses, actus, podcasts et outils."
   title={formatHeroTitle(heroTitre)}
-  lede={heroLede}
+  lede={formatHeroLede(heroLede)}
 >
   <div class="grid">
     {PUBLICATION_ORDER.map((c, i) => {

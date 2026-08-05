@@ -1,0 +1,182 @@
+---
+/**
+ * Page d'une série — /series/<slug>/
+ *
+ * Une seule route pour les trois formats qui se mettent en série : c'est
+ * le champ `format` de la série qui décide de la collection interrogée
+ * et du vocabulaire employé. Une émission de podcast parle d'épisodes,
+ * une série d'articles de volets, mais elles se présentent pareil — un
+ * nom, une image, une présentation, puis la suite ordonnée de ce qu'elle
+ * contient.
+ *
+ * L'ordre vient de `fetchSeriePosts` : le rang saisi d'abord, la date de
+ * parution pour ceux qui n'en ont pas.
+ */
+import PageShell from '../../components/ui/PageShell.astro';
+import PublicationCard from '../../components/PublicationCard.astro';
+import FormatIcon from '../../components/FormatIcon.astro';
+import { uploadedImageUrl } from '../../lib/payload';
+import {
+  PUBLICATIONS,
+  fetchSerieBySlug,
+  fetchSeriePosts,
+  type FeedDoc,
+} from '../../lib/publications';
+import { formatHeroLede, formatHeroTitle, stripHeroMarkers } from '../../lib/site';
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/');
+
+const serie = await fetchSerieBySlug(slug);
+// Une série en brouillon n'a pas de page publique — c'est ce que la case
+// promet dans l'admin.
+if (!serie || serie.draft) {
+  return Astro.rewrite('/404');
+}
+
+const spec = PUBLICATIONS[serie.format];
+const estEmission = serie.format === 'podcasts';
+const mot = estEmission ? 'épisode' : 'volet';
+
+const posts: FeedDoc[] = await fetchSeriePosts(serie);
+const imageUrl = uploadedImageUrl(serie.image ?? null);
+
+const compte =
+  posts.length === 0
+    ? `Aucun ${mot} publié pour l’instant`
+    : `${posts.length} ${mot}${posts.length > 1 ? 's' : ''}`;
+---
+
+<PageShell
+  documentTitle={stripHeroMarkers(serie.name)}
+  description={serie.lede ?? `${compte} — ${spec.labelPlural.toLowerCase()}.`}
+  title={formatHeroTitle(serie.name)}
+  lede={serie.lede ? formatHeroLede(serie.lede) : ''}
+>
+  {/* Surtitre : la nature de l'objet avant son nom, comme sur la page
+      d'un billet. « Émission » et non « Série » pour un podcast — c'est
+      le mot du métier, et celui qu'emploie l'admin. */}
+  <p class="serie-format">
+    <FormatIcon collection={serie.format} />
+    {estEmission ? 'Émission' : 'Série'}
+    <span class="serie-sep" aria-hidden="true">·</span>
+    <span class="serie-compte">{compte}</span>
+  </p>
+
+  {imageUrl && (
+    <figure class="serie-image">
+      <img src={imageUrl} alt="" />
+    </figure>
+  )}
+
+  {posts.length > 0 ? (
+    <ol class="serie-liste">
+      {posts.map((doc, i) => (
+        <li>
+          {/* Le rang est affiché même quand il n'a pas été saisi : c'est
+              la position dans la série qui compte pour se repérer, pas
+              le numéro que quelqu'un aurait pensé à écrire. */}
+          <span class="serie-rang" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+          <PublicationCard
+            collection={serie.format}
+            docId={doc.publicId}
+            title={doc.title}
+            themeSlugs={doc.themeSlugs}
+            publishedAt={doc.publishedAt}
+            lede={doc.lede}
+            readingTime={doc.readingTime}
+            durationSeconds={doc.durationSeconds}
+          />
+        </li>
+      ))}
+    </ol>
+  ) : (
+    <p class="serie-vide">
+      Cette {estEmission ? 'émission' : 'série'} n’a pas encore de {mot} publié.
+    </p>
+  )}
+</PageShell>
+
+<style>
+  .serie-format {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin: 0 0 24px;
+  }
+  .serie-sep {
+    opacity: 0.5;
+  }
+  .serie-compte {
+    color: var(--color-muted);
+  }
+
+  /* L'image en bandeau et non en carré à côté du titre : la page d'une
+     série est une couverture de recueil, pas une fiche. */
+  .serie-image {
+    margin: 0 0 48px;
+  }
+  .serie-image img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 21 / 9;
+    object-fit: cover;
+    border-radius: var(--radius-panel, 10px);
+    background: var(--color-rule);
+  }
+
+  /* Liste ordonnée et non grille : une série se parcourt dans un ordre,
+     et une grille en donnerait deux (celui des lignes, celui des
+     colonnes) sans dire lequel prime. */
+  .serie-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .serie-liste li {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    align-items: start;
+    gap: 8px;
+    border-top: 1px solid var(--color-rule);
+  }
+  .serie-liste li:last-child {
+    border-bottom: 1px solid var(--color-rule);
+  }
+  /* Le rang en chiffres à deux positions, alignés : c'est ce qui donne à
+     la colonne son aplomb, et ce qui fait lire la liste comme une
+     suite plutôt que comme un empilement. */
+  .serie-rang {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+    padding-top: 26px;
+  }
+
+  .serie-vide {
+    font-family: var(--font-sans);
+    color: var(--color-muted);
+    padding: 32px 0;
+    border-top: 1px solid var(--color-rule);
+  }
+
+  @media (max-width: 720px) {
+    .serie-liste li {
+      grid-template-columns: 34px 1fr;
+      gap: 4px;
+    }
+    .serie-rang {
+      font-size: 11px;
+      padding-top: 22px;
+    }
+  }
+</style>

@@ -106,6 +106,8 @@ export default function SeriesEditViewClient({
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Erreurs par champ, posées avant l’envoi (cf save). */
+  const [champsEnErreur, setChampsEnErreur] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [billets, setBillets] = useState<BilletLie[]>([]);
   /** Taxonomie complète, pour le sélecteur — chargée une fois. */
@@ -214,32 +216,56 @@ export default function SeriesEditViewClient({
     });
   }
 
-  async function save() {
+  /**
+   * Enregistre la série.
+   *
+   * @param surcharge Champs imposés à cet enregistrement. « Publier » et
+   *   « Mettre en pause » ne sont rien d'autre qu'un enregistrement avec
+   *   l'état de publication forcé — les faire passer par ce même chemin
+   *   évite deux façons d'écrire le même document, qui auraient fini par
+   *   diverger sur un champ.
+   */
+  async function save(surcharge?: Partial<Serie>) {
+    // Validation cliente AVANT toute requête : sans elle, Payload
+    // renvoie un 400 dont le corps JSON s’affichait tel quel en tête
+    // de page — illisible, et muet sur quel champ corriger.
+    const manquants: Record<string, string> = {};
+    if (!data.name.trim()) manquants.name = 'Le nom est obligatoire.';
+    if (!data.slug.trim()) manquants.slug = 'Le slug est obligatoire — il forme l’adresse de la page.';
+    if (Object.keys(manquants).length > 0) {
+      setChampsEnErreur(manquants);
+      setError(null);
+      return;
+    }
+    setChampsEnErreur({});
     setSaving(true);
     setError(null);
     try {
-      const existe = data.id != null && data.id !== '';
-      const url = existe ? `${API_SERIES}/${encodeURIComponent(String(data.id))}` : API_SERIES;
+      // L'état effectivement envoyé : celui du formulaire, augmenté de
+      // ce que le bouton impose.
+      const etat: Serie = surcharge ? { ...data, ...surcharge } : data;
+      const existe = etat.id != null && etat.id !== '';
+      const url = existe ? `${API_SERIES}/${encodeURIComponent(String(etat.id))}` : API_SERIES;
       // L'image peut être un objet peuplé (depth=1) : l'API attend un
       // identifiant, pas le document.
       const image =
-        data.image && typeof data.image === 'object' ? (data.image.id ?? null) : (data.image ?? null);
+        etat.image && typeof etat.image === 'object' ? (etat.image.id ?? null) : (etat.image ?? null);
       const corps: Record<string, unknown> = {
-        name: data.name,
-        lede: data.lede,
+        name: etat.name,
+        lede: etat.lede,
         // L'API attend des identifiants, pas les documents peuplés que
         // renvoie un fetch avec depth ≥ 1.
         themes: themeIds,
         image,
-        draft: data.draft,
-        ...(estEmission ? { feed: data.feed } : {}),
+        draft: etat.draft,
+        ...(estEmission ? { feed: etat.feed } : {}),
       };
       // Format et slug ne sont envoyés qu'à la création : l'API les
       // refuse en modification, et les inclure ferait échouer chaque
       // enregistrement.
       if (!existe) {
-        corps.format = data.format;
-        corps.slug = data.slug;
+        corps.format = etat.format;
+        corps.slug = etat.slug;
       }
 
       const res = await fetch(url, {
@@ -340,19 +366,73 @@ export default function SeriesEditViewClient({
               Supprimer
             </button>
           )}
+          {/* Mise en pause — visible, et non repliée dans une case au bas
+              du formulaire. Retirer une émission de la circulation est
+              une décision éditoriale ordinaire ; elle doit se prendre là
+              où l'on prend les autres. */}
+          {data.id != null && !data.draft && (
+            <button
+              type="button"
+              className="tituba-btn tituba-btn--ghost"
+              onClick={() => void save({ draft: true })}
+              disabled={saving}
+              title="Retire la série du site sans rien supprimer"
+              suppressHydrationWarning
+            >
+              Mettre en pause
+            </button>
+          )}
+
+          {/* Enregistrer et publier sont deux gestes distincts tant que
+              la série n'est pas en ligne : on peut vouloir la garder de
+              côté le temps de la remplir. Une fois publiée, ils se
+              confondent — enregistrer, c'est mettre à jour ce qui est
+              déjà visible. */}
+          {data.draft && data.id != null && (
+            <button
+              type="button"
+              className="tituba-btn tituba-btn--ghost"
+              onClick={() => void save()}
+              disabled={!dirty || saving || loading}
+              title="Enregistrer sans publier (⌘S)"
+              suppressHydrationWarning
+            >
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          )}
+
           <button
             type="button"
             className="tituba-btn tituba-btn--accent"
-            onClick={() => void save()}
-            disabled={!dirty || saving || loading}
-            title="Sauvegarder (⌘S)"
+            onClick={() => void save(data.draft ? { draft: false } : undefined)}
+            // Publier reste offert même sans modification en attente :
+            // c'est un changement d'état, pas un enregistrement.
+            disabled={saving || loading || (!data.draft && !dirty)}
+            title={data.draft ? 'Rendre la série visible sur le site' : 'Enregistrer (⌘S)'}
             suppressHydrationWarning
           >
-            {saving ? 'Enregistrement…' : 'Sauvegarder'}
+            {saving
+              ? 'Enregistrement…'
+              : data.draft
+                ? data.id == null
+                  ? 'Créer et publier'
+                  : 'Publier'
+                : 'Mettre à jour'}
           </button>
         </>
       }
     >
+      {/* Deux bandeaux distincts : celui des champs manquants dit
+          quoi faire et renvoie vers le formulaire ; celui des erreurs
+          dit ce qui a échoué côté serveur. Les confondre donnait un
+          corps JSON brut en tête de page. */}
+      {Object.keys(champsEnErreur).length > 0 && (
+        <div className="tituba-editview__error" role="alert">
+          {Object.keys(champsEnErreur).length === 1
+            ? 'Un champ obligatoire n’est pas rempli — il est signalé ci-dessous.'
+            : `${Object.keys(champsEnErreur).length} champs obligatoires ne sont pas remplis — ils sont signalés ci-dessous.`}
+        </div>
+      )}
       {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
@@ -366,7 +446,21 @@ export default function SeriesEditViewClient({
           }}
         >
           <div className="tituba-editview__hero">
-            <h1 className="tituba-h1">{estEmission ? 'Émission' : 'Série'}</h1>
+            <h1 className="tituba-h1">
+              {estEmission ? 'Émission' : 'Série'}
+              {/* L'état de publication se lit ici, faute de case à
+                  cocher : les boutons de la barre disent quoi faire, ce
+                  repère dit où l'on en est. Une série jamais publiée et
+                  une série retirée du site ne se disent pas pareil — la
+                  première attend, la seconde a été décidée. */}
+              {data.id != null && (
+                <span
+                  className={`status-pill ${data.draft ? 'status-pill--draft' : 'status-pill--published'}`}
+                >
+                  {data.draft ? 'Hors ligne' : 'En ligne'}
+                </span>
+              )}
+            </h1>
             {data.slug && (
               <p className="tituba-editview__hero-key">
                 clé : <span className="mono">{data.slug}</span>
@@ -375,31 +469,55 @@ export default function SeriesEditViewClient({
           </div>
 
           <section className="tituba-editview__section">
-            <label className="tituba-editview__field">
-              <span className="lbl">Nom</span>
+            <label
+              className={`tituba-editview__field${champsEnErreur.name ? ' tituba-editview__field--invalid' : ''}`}
+            >
+              {/* L'astérisque est portée par le libellé et redoublée
+                  d'un mot pour la synthèse vocale : un signe seul ne se
+                  lit pas, et « Nom étoile » n'apprend rien. */}
+              <span className="lbl">
+                Nom <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.name}
                 onChange={(e) => {
                   patch('name', e.target.value);
                   if (slugLibre) patch('slug', slugifier(e.target.value));
+                  // L'erreur s'efface dès qu'on corrige : la laisser
+                  // jusqu'au prochain envoi contredirait ce qu'on voit.
+                  if (champsEnErreur.name) {
+                    setChampsEnErreur(({ name: _, ...reste }) => reste);
+                  }
                 }}
                 placeholder={estEmission ? 'Ex : Voix de la mer' : 'Ex : Homonationalismes'}
+                aria-invalid={champsEnErreur.name ? true : undefined}
               />
+              {champsEnErreur.name && <span className="err">{champsEnErreur.name}</span>}
               <span className="hint">
                 Le nom sous lequel la série apparaît partout — page publique, mention sur chaque{' '}
                 {motEntree}, et titre du flux pour une émission.
               </span>
             </label>
 
-            <label className="tituba-editview__field">
-              <span className="lbl">Slug</span>
+            <label
+              className={`tituba-editview__field${champsEnErreur.slug ? ' tituba-editview__field--invalid' : ''}`}
+            >
+              <span className="lbl">
+                Slug <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.slug}
+                aria-invalid={champsEnErreur.slug ? true : undefined}
                 onChange={(e) => {
                   setSlugLibre(false);
                   patch('slug', slugifier(e.target.value));
+                  if (champsEnErreur.slug) {
+                    setChampsEnErreur(({ slug: _, ...reste }) => reste);
+                  }
                 }}
                 placeholder="voix-de-la-mer"
                 // Figé une fois la série créée : son adresse est
@@ -408,6 +526,7 @@ export default function SeriesEditViewClient({
                 // avertir — un avertissement se lit après coup.
                 disabled={data.id != null}
               />
+              {champsEnErreur.slug && <span className="err">{champsEnErreur.slug}</span>}
               <span className="hint">
                 {data.id != null ? (
                   <>
@@ -562,21 +681,12 @@ export default function SeriesEditViewClient({
             </section>
           )}
 
-          <section className="tituba-editview__section">
-            <label className="tituba-editview__field tituba-editview__field--toggle">
-              <input
-                type="checkbox"
-                checked={Boolean(data.draft)}
-                onChange={(e) => patch('draft', e.target.checked)}
-              />
-              <span className="lbl">Brouillon</span>
-              <span className="hint">
-                Tant que la case est cochée, la série n’a pas de page publique
-                {estEmission ? ' et son flux n’est pas publié' : ''}. Les billets qu’elle contient,
-                eux, restent publiés — c’est leur propre brouillon qui en décide.
-              </span>
-            </label>
-          </section>
+          {/* Plus de case « Brouillon » en pied de formulaire. Cochée
+              d'office, elle ne disait ni où en était la série ni quoi
+              faire pour l'en sortir : il fallait dérouler toute la page
+              pour découvrir qu'un travail terminé n'était pas en ligne.
+              L'état de publication se lit et se change désormais dans la
+              barre du haut, à côté de l'enregistrement (cf topbarActions). */}
 
           {data.id != null && (
             <div className="tituba-biblio-usedin">

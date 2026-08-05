@@ -52,6 +52,8 @@ export default function ThemeEditViewClient({
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Erreurs par champ, posées avant l'envoi (cf save). */
+  const [champsEnErreur, setChampsEnErreur] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [usedIn, setUsedIn] = useState<UsedInPost[]>([]);
 
@@ -99,6 +101,18 @@ export default function ThemeEditViewClient({
   }
 
   async function save() {
+    // Validation cliente avant l'envoi : sans elle, un champ oublié
+    // remonte en 400 dont le corps JSON s'affiche tel quel en tête de
+    // page — illisible, et muet sur ce qu'il faut corriger.
+    const manquants: Record<string, string> = {};
+    if (!data.name.trim()) manquants.name = 'Le nom est obligatoire.';
+    if (!data.slug.trim()) manquants.slug = 'Le slug est obligatoire — il forme l’adresse de la page.';
+    if (Object.keys(manquants).length > 0) {
+      setChampsEnErreur(manquants);
+      setError(null);
+      return;
+    }
+    setChampsEnErreur({});
     setSaving(true);
     setError(null);
     try {
@@ -218,6 +232,13 @@ export default function ThemeEditViewClient({
         </>
       }
     >
+      {Object.keys(champsEnErreur).length > 0 && (
+        <div className="tituba-editview__error" role="alert">
+          {Object.keys(champsEnErreur).length === 1
+            ? 'Un champ obligatoire n’est pas rempli — il est signalé ci-dessous.'
+            : `${Object.keys(champsEnErreur).length} champs obligatoires ne sont pas remplis — ils sont signalés ci-dessous.`}
+        </div>
+      )}
       {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
@@ -240,28 +261,48 @@ export default function ThemeEditViewClient({
           </div>
 
           <section className="tituba-editview__section">
-            <label className="tituba-editview__field">
-              <span className="lbl">Nom</span>
+            <label
+              className={`tituba-editview__field${champsEnErreur.name ? ' tituba-editview__field--invalid' : ''}`}
+            >
+              <span className="lbl">
+                Nom <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.name}
-                onChange={(e) => patch('name', e.target.value)}
+                aria-invalid={champsEnErreur.name ? true : undefined}
+                onChange={(e) => {
+                  patch('name', e.target.value);
+                  if (champsEnErreur.name) setChampsEnErreur(({ name: _, ...r }) => r);
+                }}
                 placeholder="Ex : Genre & géopolitique"
               />
+              {champsEnErreur.name && <span className="err">{champsEnErreur.name}</span>}
               <span className="hint">
                 Appellation publique du thème — affichée dans les chips de billet et la page
                 /theme/&lt;slug&gt;/.
               </span>
             </label>
 
-            <label className="tituba-editview__field">
-              <span className="lbl">Slug</span>
+            <label
+              className={`tituba-editview__field${champsEnErreur.slug ? ' tituba-editview__field--invalid' : ''}`}
+            >
+              <span className="lbl">
+                Slug <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.slug}
-                onChange={(e) => patch('slug', e.target.value)}
+                aria-invalid={champsEnErreur.slug ? true : undefined}
+                onChange={(e) => {
+                  patch('slug', e.target.value);
+                  if (champsEnErreur.slug) setChampsEnErreur(({ slug: _, ...r }) => r);
+                }}
                 placeholder="genre-geopolitique"
               />
+              {champsEnErreur.slug && <span className="err">{champsEnErreur.slug}</span>}
               <span className="hint">
                 Identifiant URL — sert aussi de hash de tag inline
                 (<span className="mono">#queer-theory</span>).

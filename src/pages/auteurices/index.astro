@@ -10,6 +10,10 @@
  */
 import PageShell from '../../components/ui/PageShell.astro';
 import { fetchAuthorsList } from '../../lib/payload';
+// Le nom peut porter des astérisques de surlignage : elles ne valent
+// que sur la fiche de la personne, où le nom fait titre. Ici, elles ne
+// se liraient que comme une coquille.
+import { stripHeroMarkers } from '../../lib/site';
 
 let authors: Awaited<ReturnType<typeof fetchAuthorsList>> = [];
 try {
@@ -21,7 +25,10 @@ try {
 // Tri : décroissant par usage, puis alpha.
 const sorted = authors.slice().sort((a, b) => {
   if (b.count !== a.count) return b.count - a.count;
-  return (a.displayName ?? '').localeCompare(b.displayName ?? '', 'fr');
+  return (stripHeroMarkers(a.displayName) ?? '').localeCompare(
+    stripHeroMarkers(b.displayName) ?? '',
+    'fr',
+  );
 });
 ---
 
@@ -38,7 +45,7 @@ const sorted = authors.slice().sort((a, b) => {
     <div class="grid">
       {sorted.map((a) => (
         <a class="author-card" href={`/auteurice/${a.id}/`}>
-          <div class="t">{a.displayName ?? 'Auteur·ice'}</div>
+          <div class="t">{stripHeroMarkers(a.displayName) ?? 'Auteur·ice'}</div>
           <div class="right">
             {a.count} publication{a.count > 1 ? 's' : ''}
           </div>

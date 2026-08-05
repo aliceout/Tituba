@@ -176,6 +176,9 @@ const href = publicationHref(collection, docId);
     transition: color 0.12s;
   }
   .item p {
+    /* Retours à la ligne du chapô conservés — cf le même parti sur les
+       autres surfaces qui affichent un champ multiligne. */
+    white-space: pre-line;
     font-size: 16px;
     line-height: 1.55;
     color: var(--color-body-soft);

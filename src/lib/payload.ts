@@ -447,12 +447,23 @@ export async function fetchAuthorsList(): Promise<AuthorListEntry[]> {
  * `email` n'a pas de restriction `access.read` au niveau champ — ne
  * jamais élargir ce select sous peine de l'exposer publiquement ici.
  */
-export async function fetchUserDisplayName(
-  id: number | string,
-): Promise<{ id: number | string; displayName: string | null } | null> {
+export async function fetchUserDisplayName(id: number | string): Promise<{
+  id: number | string;
+  displayName: string | null;
+  /** Présentation saisie par la personne depuis « Mon compte ». */
+  bio?: string | null;
+  /** Portrait, peuplé (depth 1) pour en tirer le nom de fichier. */
+  photo?: { filename?: string; alt?: string } | number | string | null;
+} | null> {
   try {
-    return await fetchPayload<{ id: number | string; displayName: string | null }>(
-      `/users/${encodeURIComponent(String(id))}?depth=0&select[displayName]=true`,
+    // `depth=1` et non 0 : sans peuplement, `photo` ne serait qu'un
+    // identifiant, dont on ne peut pas tirer d'URL. La sélection reste
+    // limitée aux trois champs affichés — le reste d'un compte
+    // (adresse, rôle, jetons) n'a rien à faire dans une réponse
+    // publique.
+    return await fetchPayload(
+      `/users/${encodeURIComponent(String(id))}?depth=1` +
+        '&select[displayName]=true&select[bio]=true&select[photo]=true',
     );
   } catch {
     return null;

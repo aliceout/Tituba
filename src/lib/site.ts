@@ -125,6 +125,7 @@ export function formatHeroLede(s: string): string {
   return escapeHtml(s).replace(/\r?\n/g, '<br />');
 }
 
+
 /**
  * Liste d'auteur·ices d'un billet (cf issue #2). Chaque entrée est soit
  * un user du site (kind=user, user populé avec displayName), soit
@@ -146,15 +147,19 @@ export type PostAuthorEntry = {
  * Renvoie le nom affichable d'une entrée auteur·ice, sans rattachement.
  * - kind=user : displayName si dispo, sinon email, sinon vide.
  * - kind=external : name brut.
+ *
+ * Les astérisques de surlignage sont retirées : elles ne valent que sur
+ * la fiche de la personne, où le nom fait titre. Dans une signature
+ * sous un titre de billet, elles ne se lisent que comme une coquille.
  */
 function authorDisplayName(a: PostAuthorEntry): string {
   if ((a.kind ?? 'user') === 'user') {
     if (a.user && typeof a.user === 'object') {
-      return a.user.displayName?.trim() || a.user.email?.trim() || '';
+      return stripHeroMarkers(a.user.displayName?.trim() || a.user.email?.trim() || '');
     }
     return '';
   }
-  return (a.name ?? '').trim();
+  return stripHeroMarkers((a.name ?? '').trim());
 }
 
 /**

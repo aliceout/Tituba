@@ -78,6 +78,10 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
             {PUBLICATIONS[c].labelPlural}
           </a>
         ))}
+        {/* Même pied que le menu des thématiques : les cinq entrées
+            mènent chacune à un format, celle-ci à la page qui les
+            présente tous. */}
+        <a slot="footer" href="/formats/">Voir tous les formats →</a>
       </NavDropdown>
 
       {nav.itemsApres.map((item) => (

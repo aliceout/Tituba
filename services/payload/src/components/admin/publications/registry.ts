@@ -51,7 +51,10 @@ export type FieldSpec = {
    */
   hidden?: boolean;
 } & (
-  | { type: 'text' | 'url' | 'textarea' }
+  | { type: 'text' | 'url' }
+  /**  fixe la hauteur de saisie. Sans lui le navigateur en donne
+   *  deux, ce qui suffit à un intitulé mais pas à un paragraphe. */
+  | { type: 'textarea'; rows?: number }
   | { type: 'number'; min?: number; max?: number }
   | { type: 'select'; options: { label: string; value: string }[] }
   | { type: 'checkbox' }
@@ -74,6 +77,12 @@ export type FieldSpec = {
    *  lecteur à la redécouper, et se casserait sur un nom qui en
    *  contient une. */
   | { type: 'list' }
+  /** Liste de liens libellés — chaque entrée est un couple intitulé +
+   *  adresse. Distinct de `list`, qui ne stocke que des chaînes : ici
+   *  chaque entrée porte deux valeurs, et une seule des deux ne veut
+   *  rien dire — un intitulé sans adresse donne un lien mort, une
+   *  adresse sans intitulé une ligne qu'on ne sait pas lire. */
+  | { type: 'links' }
 );
 
 /** Comment présenter la durée d'une publication. */
@@ -104,6 +113,13 @@ export type PublicationSpec = {
    * que les thématiques — et c'est à côté d'elles qu'elle se rend.
    */
   series?: boolean;
+  /**
+   * Intitulé du panneau qui accueille les champs de zone .
+   * Il était écrit en dur — « Épisode » — dans la vue partagée par
+   * les cinq formats : un billet d'actu affichait donc un panneau
+   * intitulé « Épisode ».
+   */
+  mainLabel?: string;
   /** Champs propres au format. Cf. l'avertissement en tête de fichier. */
   extraFields: FieldSpec[];
   /** Champs obligatoires vérifiés côté client avant l'envoi. */
@@ -156,7 +172,24 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
     routePrefix: '/actus',
     labelSingular: "Billet d'actu",
     labelPlural: "Billets d'actu",
+    mainLabel: "L'actualité",
     extraFields: [
+      {
+        name: 'enBref',
+        type: 'textarea',
+        rows: 7,
+        label: 'En bref — le fait',
+        zone: 'main',
+        placeholder: 'Ce qui s’est passé, quand, décidé par qui…',
+        help: 'Deux à quatre phrases factuelles. Affiché en colonne à côté du texte, pas dans le billet — le lectorat qui connaît déjà l’actualité saute la colonne, celui qui l’ignore y trouve son entrée.',
+      },
+      {
+        name: 'sources',
+        type: 'links',
+        label: 'Sources du fait',
+        zone: 'main',
+        help: 'Les liens qui permettent de vérifier le fait résumé ci-dessus. Distincts de la bibliographie, qui sert l’argumentation.',
+      },
       {
         name: 'image',
         type: 'upload',
@@ -174,6 +207,7 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
     routePrefix: '/podcasts',
     labelSingular: 'Podcast',
     labelPlural: 'Podcasts',
+    mainLabel: 'Épisode',
     series: true,
     extraFields: [
       {
@@ -269,7 +303,7 @@ export function emptyExtraValues(spec: PublicationSpec): Record<string, unknown>
     out[f.name] =
       f.type === 'number' || f.type === 'upload' || f.type === 'audio'
         ? null
-        : f.type === 'list'
+        : f.type === 'list' || f.type === 'links'
         ? []
         : f.type === 'checkbox'
         ? false
@@ -303,6 +337,18 @@ export function pickExtraValues(
       // une pastille sans nom.
       out[f.name] = Array.isArray(raw)
         ? raw.map((v) => String(v).trim()).filter(Boolean)
+        : [];
+    } else if (f.type === 'links') {
+      // Une entrée à moitié remplie est écartée plutôt que rejetée à la
+      // saisie : on n'interrompt pas quelqu'un qui colle une adresse
+      // avant d'écrire son intitulé.
+      out[f.name] = Array.isArray(raw)
+        ? (raw as { label?: unknown; url?: unknown }[])
+            .map((e) => ({
+              label: typeof e?.label === 'string' ? e.label.trim() : '',
+              url: typeof e?.url === 'string' ? e.url.trim() : '',
+            }))
+            .filter((e) => e.label && e.url)
         : [];
     } else if (f.type === 'upload' || f.type === 'audio') {
       // La valeur peut être un id brut (déjà sélectionné puis re-tapé

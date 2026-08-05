@@ -19,6 +19,20 @@ import Link from 'next/link';
 import AccountSecurity from '@/components/auth/AccountSecurity.client';
 
 import CarnetPage from './CarnetPage';
+import UnsplashImagePicker from './publications/UnsplashImagePicker.client';
+
+/**
+ * Identifiant d'un portrait, quelle que soit sa forme : l'API renvoie le
+ * document peuplé au chargement, et un identifiant seul juste après un
+ * choix. Le comparer et l'envoyer sous la même forme est ce qui permet
+ * de détecter une modification sans faux positif à chaque rechargement.
+ */
+function idPhoto(v: unknown): number | string | null {
+  if (v && typeof v === 'object' && 'id' in (v as Record<string, unknown>)) {
+    return (v as { id: number | string }).id;
+  }
+  return (v as number | string | null) ?? null;
+}
 
 const API_USERS = '/cms/api/users';
 
@@ -30,6 +44,8 @@ type Me = {
   email: string;
   displayName?: string | null;
   citationFormat?: string | null;
+  bio?: string | null;
+  photo?: { id: number | string; filename?: string | null; url?: string | null } | number | string | null;
   role: UserRole;
   status: UserStatus;
   lastLoginAt?: string | null;
@@ -64,6 +80,9 @@ export default function AccountViewClient(): React.ReactElement {
   const [me, setMe] = useState<Me | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [citationFormat, setCitationFormat] = useState('');
+  const [bio, setBio] = useState('');
+  /** Portrait — objet peuplé ou identifiant seul selon le moment. */
+  const [photo, setPhoto] = useState<Me['photo']>(null);
   const [initialJson, setInitialJson] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -83,9 +102,12 @@ export default function AccountViewClient(): React.ReactElement {
         setMe(u);
         const name = u.displayName ?? '';
         const cf = u.citationFormat ?? '';
+        const bo = u.bio ?? '';
+        setBio(bo);
+        setPhoto(u.photo ?? null);
         setDisplayName(name);
         setCitationFormat(cf);
-        setInitialJson(JSON.stringify({ displayName: name, citationFormat: cf }));
+        setInitialJson(JSON.stringify({ displayName: name, citationFormat: cf, bio: bo, photo: idPhoto(u.photo ?? null) }));
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -93,7 +115,8 @@ export default function AccountViewClient(): React.ReactElement {
       .finally(() => setLoading(false));
   }, []);
 
-  const dirty = JSON.stringify({ displayName, citationFormat }) !== initialJson;
+  const dirty =
+    JSON.stringify({ displayName, citationFormat, bio, photo: idPhoto(photo) }) !== initialJson;
 
   async function save() {
     if (!me) return;
@@ -104,13 +127,13 @@ export default function AccountViewClient(): React.ReactElement {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayName, citationFormat }),
+        body: JSON.stringify({ displayName, citationFormat, bio, photo: idPhoto(photo) }),
       });
       if (!res.ok) {
         const body = await res.text();
         throw new Error(`HTTP ${res.status} — ${body.slice(0, 200)}`);
       }
-      setInitialJson(JSON.stringify({ displayName, citationFormat }));
+      setInitialJson(JSON.stringify({ displayName, citationFormat, bio, photo: idPhoto(photo) }));
       setSavedAt(Date.now());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -169,7 +192,11 @@ export default function AccountViewClient(): React.ReactElement {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
               />
-              <span className="hint">Affiché dans la nav et les en-têtes admin.</span>
+              <span className="hint">
+                Affiché dans la nav et les en-têtes admin. Les *astérisques* surlignent un mot sur
+                le titre de votre page publique ; ailleurs — signatures, menus, onglet du
+                navigateur — elles n’apparaissent pas.
+              </span>
             </label>
 
             <label className="tituba-editview__field">
@@ -186,6 +213,48 @@ export default function AccountViewClient(): React.ReactElement {
                 automatiquement du nom affiché.
               </span>
             </label>
+
+            {/* Présentation et portrait — c'est vous qui les écrivez, pas
+                l'administration du site : ils vivent donc ici, dans votre
+                espace, et non dans la fiche que les admins éditent. */}
+            <label className="tituba-editview__field">
+              <span className="lbl">Présentation</span>
+              <textarea
+                rows={5}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Parcours, terrain, sujets de travail…"
+              />
+              <span className="hint">
+                Affichée sur votre page publique, sous votre nom. Les retours à la ligne sont
+                conservés.
+              </span>
+            </label>
+
+            <div className="tituba-editview__field tituba-account__portrait">
+              <span className="lbl">Portrait</span>
+              {/* Cadrage carré : c'est la seule proportion dont on tire un
+                  cercle sans déformer, et le carré retenu montre bien ce
+                  qui sera visible — le rond s'y inscrit. Toujours
+                  proposé, même sur une photo déjà carrée : on resserre
+                  sur un visage, ce n'est pas qu'une affaire de format.
+                  Pas de banque d'images : un portrait est le vôtre.
+                  On retient le document renvoyé plutôt que son seul
+                  identifiant : l'aperçu survit alors à un remontage du
+                  composant, et `idPhoto` ramène les deux formes à la
+                  même clé au moment de comparer et d'envoyer. */}
+              <UnsplashImagePicker
+                value={photo ?? null}
+                onChange={(id, doc) => setPhoto(doc ?? id)}
+                aspect={1}
+                unsplash={false}
+                cadrageToujours
+              />
+              <span className="hint">
+                Affiché en rond sur votre page publique. Cadrez en carré : le cercle s’inscrit dans
+                la zone retenue.
+              </span>
+            </div>
 
             <label className="tituba-editview__field tituba-editview__field--readonly">
               <span className="lbl">Email</span>

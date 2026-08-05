@@ -10,6 +10,7 @@
 
 import React from 'react';
 import { getPayload } from 'payload';
+import { headers } from 'next/headers';
 
 import config from '@/payload.config';
 import NavBurger from './NavBurger.client';
@@ -114,6 +115,44 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
     fetchCount(payload, 'themes'),
   ]);
 
+  /**
+   * Part signée par la personne connectée, sur l'ensemble publié.
+   *
+   * Le total seul ne dit rien de sa place dans le travail collectif ;
+   * c'est le rapport qui la situe. Compté sur les cinq formats et sur
+   * les seules publications en ligne — les brouillons ont déjà leur
+   * ligne juste au-dessus.
+   *
+   * L'identifiant vient de la session et non de la prop `user`, qui ne
+   * porte que le nom d'affichage et l'adresse.
+   */
+  // Conservé format par format, et non seulement en somme : la bande de
+  // compteurs affiche un nombre par format, et chacun a besoin du sien.
+  let signesParFormat: number[] = FORMATS.map(() => 0);
+  // Distingue « la personne n'a rien signé » de « on n'a pas pu le
+  // savoir ». Sans ce drapeau, une session illisible afficherait
+  // « 0/6 » — un fait faux, là où l'absence de rapport n'aurait rien
+  // affirmé du tout.
+  let partConnue = false;
+  try {
+    const auth = await payload.auth({ headers: await headers() });
+    const moi = auth?.user?.id;
+    if (moi != null) {
+      signesParFormat = await Promise.all(
+        FORMATS.map((f) =>
+          fetchCount(payload, f.slug, {
+            draft: { equals: false },
+            'authors.user': { equals: moi },
+          }),
+        ),
+      );
+      partConnue = true;
+    }
+  } catch {
+    // Session illisible : on retombe sur le seul total. Un compte faux
+    // serait pire qu'un compte absent.
+  }
+
   const draftsRes = await findAcrossFormats(payload, { draft: { equals: true } }, '-updatedAt', 3);
   const drafts = draftsRes.docs;
 
@@ -130,7 +169,7 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
   // locale de l'email, sinon vide (le rendu masque alors le prénom et
   // affiche un simple « Bonjour. »).
   const userName =
-    (user?.displayName ?? '').split(' ')[0] || user?.email?.split('@')[0] || '';
+    stripHeroMarkers(user?.displayName ?? '').split(' ')[0] || user?.email?.split('@')[0] || '';
 
   const totalDrafts = draftsRes.total;
   const totalScheduled = scheduledRes.total;
@@ -151,29 +190,49 @@ export default async function Dashboard({ user }: Props): Promise<React.ReactEle
             <>Bonjour.</>
           )}
         </h1>
-        <p className="tituba-dashboard__lede">
-          {totalDrafts > 0 && (
-            <>
-              {totalDrafts} brouillon{totalDrafts > 1 ? 's' : ''} en cours
-              {totalScheduled > 0 && ', '}
-            </>
-          )}
-          {totalScheduled > 0 && (
-            <>
-              {totalScheduled} publication{totalScheduled > 1 ? 's' : ''} planifiée
-              {totalScheduled > 1 ? 's' : ''}
-            </>
-          )}
-          {totalDrafts === 0 && totalScheduled === 0 && (
-            <>Aucun brouillon en cours, aucune publication planifiée.</>
-          )}
-        </p>
+        {/* Rien à signaler, rien d'écrit. La phrase qui annonçait
+            l'absence de brouillon et de publication planifiée occupait
+            une ligne pour ne rien apprendre — et les deux colonnes plus
+            bas le disent déjà, chacune à sa place. Le <p> lui-même n'est
+            pas rendu, sinon sa marge subsisterait. */}
+        {(totalDrafts > 0 || totalScheduled > 0) && (
+          <p className="tituba-dashboard__lede">
+            {totalDrafts > 0 && (
+              <>
+                {totalDrafts} brouillon{totalDrafts > 1 ? 's' : ''} en cours
+                {totalScheduled > 0 && ', '}
+              </>
+            )}
+            {totalScheduled > 0 && (
+              <>
+                {totalScheduled} publication{totalScheduled > 1 ? 's' : ''} planifiée
+                {totalScheduled > 1 ? 's' : ''}
+              </>
+            )}
+          </p>
+        )}
       </header>
 
       <section className="tituba-dashboard__stats" aria-label="Statistiques">
         {FORMATS.map((f, i) => (
           <div className="tituba-dashboard__stat" key={f.slug}>
-            <span className="n">{counts[i]}</span>
+            {/* Le grand chiffre est celui de la personne connectée, le
+                total du collectif le suit en petit. Un rapport plutôt
+                que deux nombres empilés : il se lit d'un coup, et la
+                pastille garde deux lignes.
+                Le zéro s'affiche ici, contrairement à une ligne « dont 0
+                de vous » : dans un rapport, il n'est pas un reproche
+                mais une donnée — « 0/4 » dit simplement où l'on en est.
+                Le total seul reprend la main si la part n'a pas pu être
+                établie : mieux vaut ne rien affirmer qu'affirmer zéro. */}
+            {partConnue ? (
+              <span className="n">
+                {signesParFormat[i] ?? 0}
+                <span className="tot">/{counts[i]}</span>
+              </span>
+            ) : (
+              <span className="n">{counts[i]}</span>
+            )}
             <span className="lbl">{counts[i] > 1 ? f.plural : f.singular}</span>
           </div>
         ))}

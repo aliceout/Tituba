@@ -118,7 +118,9 @@ export const Navigation: GlobalConfig = {
         { name: 'external', type: 'checkbox', defaultValue: false },
       ],
       defaultValue: [
-        { label: 'Tags', href: '/tags/', external: false },
+        { label: 'Formats', href: '/formats/', external: false },
+        { label: 'Thèmes', href: '/themes/', external: false },
+        { label: 'Auteur·ices', href: '/auteurices/', external: false },
         { label: 'Archives', href: '/archives/', external: false },
         { label: 'Admin', href: '/cms/admin', external: false },
       ],
