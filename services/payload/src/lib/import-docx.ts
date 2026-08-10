@@ -49,6 +49,8 @@ export type LigneBiblio = {
 export type ResultatImport = {
   /** HTML du corps, notes marquées, bibliographie retirée. */
   html: string;
+  /** Titre du document, s'il en portait un — proposé, jamais imposé. */
+  titre: string | null;
   /** Texte des notes, dans l'ordre de leur appel. */
   notes: string[];
   biblio: LigneBiblio[];
@@ -154,6 +156,31 @@ function extraireNotes(html: string): { corps: string; notes: string[] } {
 }
 
 /**
+ * Détache le titre du document, quand il en porte un.
+ *
+ * Un texte commence presque toujours par son titre, en « Titre 1 ».
+ * Laissé dans le corps, il y deviendrait un intertitre faisant double
+ * emploi avec le titre du billet, et le sommaire annoncerait une section
+ * qui n'en est pas une.
+ *
+ * Seulement le tout premier élément : un h1 rencontré plus loin est une
+ * partie du texte, et l'arracher de là déplacerait du contenu.
+ */
+function detacherTitre(html: string): { corps: string; titre: string | null } {
+  const m = html.match(/^\s*<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (!m) return { corps: html, titre: null };
+
+  const titre = m[1]
+    .replace(/<[^>]+>/g, '')
+    .replace(new RegExp(RE_MARQUE.source, 'g'), '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!titre) return { corps: html, titre: null };
+
+  return { corps: html.slice(m[0].length), titre };
+}
+
+/**
  * Ramène les titres d'un cran : le h1 de la page est le titre du
  * billet, un second dans le corps désorganiserait la structure. Un h5
  * ou h6 reste au plancher plutôt que de disparaître.
@@ -163,6 +190,52 @@ function descendreTitres(html: string): string {
     const niveau = Math.min(Number(n) + 1, 6);
     return `<${fin}h${niveau}${reste}>`;
   });
+}
+
+/**
+ * Ce qu'on dit de ce qui n'a pas suivi.
+ *
+ * mammoth se plaint en anglais et par identifiant de style interne —
+ * « Unrecognised run style: 'null' (Style ID: FootnoteReference) ». Cela
+ * ne veut rien dire pour qui a écrit le texte, et ça inquiète pour rien :
+ * ces messages accompagnent une conversion parfaitement réussie.
+ *
+ * On les ramène donc à une phrase, une seule, qui dit ce qui est vrai :
+ * une mise en forme sans équivalent sur le site n'a pas été reprise.
+ */
+function nettoyerAvertissements(messages: string[]): string[] {
+  const out = new Set<string>();
+  for (const m of messages) {
+    if (/style/i.test(m)) {
+      out.add('Certaines mises en forme n’ont pas d’équivalent sur le site et ont été ignorées.');
+    } else {
+      out.add(m);
+    }
+  }
+  return [...out];
+}
+
+/**
+ * Retire les images et signale ce qui ne passera pas.
+ *
+ * mammoth incorpore les images dans le HTML, encodées en toutes lettres.
+ * Laissées là, elles finiraient recopiées dans le corps du billet et
+ * stockées telles quelles en base — plusieurs mégaoctets de texte pour
+ * une photo, hors de la médiathèque, sans texte alternatif et sans
+ * possibilité de les remplacer. Elles sont donc retirées, et signalées :
+ * qui a illustré son texte doit savoir qu'il faut redéposer les images.
+ */
+function retirerImages(html: string): { corps: string; avertissements: string[] } {
+  const avertissements: string[] = [];
+  if (/<img\b/i.test(html)) {
+    avertissements.push(
+      'Les images ne sont pas importées — à redéposer depuis la médiathèque.',
+    );
+  }
+  if (/<table\b/i.test(html)) {
+    avertissements.push('Les tableaux ne sont pas importés — à reprendre à la main.');
+  }
+  return { corps: html.replace(/<img\b[^>]*>/gi, ''), avertissements };
 }
 
 /** Formats acceptés, et ce qu'on en dit à qui dépose autre chose. */
@@ -200,16 +273,19 @@ export async function lireDocument(
   // document, donc APRÈS la bibliographie. Détacher celle-ci en premier
   // emportait la liste avec elle, et le texte des notes se retrouvait
   // pris pour des références.
-  const { corps: sansNotes, notes } = extraireNotes(value);
+  const { corps: sansImages, avertissements: perdus } = retirerImages(value);
+  const { corps: sansNotes, notes } = extraireNotes(sansImages);
   const { corps: sansBiblio, lignes } = detacherBiblio(sansNotes);
-  const html = descendreTitres(sansBiblio).trim();
+  const { corps: sansTitre, titre } = detacherTitre(sansBiblio.trim());
+  const html = descendreTitres(sansTitre).trim();
 
   return {
     html,
+    titre,
     notes,
     biblio: lignes.map((texte) => ({ texte, ...deviner(texte) })),
-    // Les styles inconnus sont signalés, pas tus : quelqu'un qui a mis
-    // en forme son texte doit savoir ce qui n'a pas suivi.
-    avertissements: [...new Set(messages)],
+    // Ce qui n'a pas suivi est dit, pas tu : quelqu'un qui a illustré ou
+    // mis en forme son texte doit savoir ce qu'il lui reste à faire.
+    avertissements: [...new Set([...perdus, ...nettoyerAvertissements(messages)])],
   };
 }

@@ -164,6 +164,7 @@ export const importDocumentEndpoint: Endpoint = {
         {
           ok: true,
           body,
+          titre: lu.titre,
           // De quoi annoncer ce qui a été trouvé avant d'insérer.
           resume: {
             titres: (lu.html.match(/<h[2-6][^>]*>/g) ?? []).length,

@@ -4744,6 +4744,199 @@ button.btn--style-primary,
     font-size: 12px;
   }
 
+  // ─── Import d'un document ─────────────────────────────────────
+  //
+  // Repliée en un seul bouton discret : la plupart des billets
+  // s'écrivent directement dans l'éditeur, et un panneau permanent en
+  // tête du corps ferait du bruit pour tout le monde au bénéfice d'un
+  // geste occasionnel.
+  .ed-import {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 20px;
+    font-family: var(--font-sans);
+
+    &__open {
+      background: none;
+      border: 1px dashed var(--b-rule);
+      border-radius: 4px;
+      color: var(--b-muted);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 5px 10px;
+
+      &:hover {
+        border-color: var(--b-accent);
+        color: var(--b-accent);
+      }
+    }
+
+    &__hint {
+      color: var(--b-muted);
+      font-size: 11px;
+    }
+
+    &--open {
+      display: block;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      border-radius: 6px;
+      padding: 16px 18px;
+    }
+
+    &__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    &__close,
+    &__cancel {
+      background: none;
+      border: 0;
+      color: var(--b-muted);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      text-decoration: underline;
+      padding: 0;
+    }
+
+    &__lede {
+      color: var(--b-muted);
+      font-size: 12px;
+      line-height: 1.55;
+      margin: 8px 0 14px;
+    }
+
+    &__file {
+      font-size: 12px;
+      max-width: 100%;
+    }
+
+    &__status {
+      color: var(--b-muted);
+      font-size: 12px;
+      margin: 12px 0 0;
+    }
+
+    &__error {
+      color: #b63a3a;
+      font-size: 12px;
+      margin: 12px 0 0;
+    }
+
+    &__result {
+      border-top: 1px solid var(--b-rule);
+      margin-top: 14px;
+      padding-top: 14px;
+    }
+
+    &__found {
+      font-size: 13px;
+      margin: 0 0 12px;
+    }
+
+    &__titre {
+      align-items: baseline;
+      display: flex;
+      font-size: 12px;
+      gap: 8px;
+      margin: 0 0 12px;
+    }
+
+    &__warnings {
+      color: var(--theme-warning-500, #b8842a);
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0 0 12px;
+      padding-left: 18px;
+    }
+
+    &__biblio {
+      margin: 0 0 14px;
+
+      h4 {
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        margin: 0 0 4px;
+        text-transform: uppercase;
+      }
+
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      li {
+        border-top: 1px solid var(--b-rule);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 7px 0;
+      }
+    }
+
+    &__biblio-note {
+      color: var(--b-muted);
+      font-size: 11px;
+      line-height: 1.5;
+      margin: 0 0 8px;
+
+      kbd {
+        font-family: var(--font-mono);
+      }
+    }
+
+    &__ref {
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    &__match {
+      color: var(--b-accent);
+      font-size: 11px;
+
+      &--absent {
+        color: var(--b-muted);
+      }
+    }
+
+    &__warn-body {
+      background: rgba(184, 132, 42, 0.08);
+      border-left: 2px solid var(--theme-warning-500, #b8842a);
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0 0 12px;
+      padding: 8px 10px;
+
+      kbd {
+        font-family: var(--font-mono);
+      }
+    }
+
+    &__actions {
+      align-items: center;
+      display: flex;
+      gap: 14px;
+    }
+
+    &__insert {
+      background: var(--b-accent);
+      border: 0;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 7px 14px;
+    }
+  }
+
   .ed-divider {
     border: 0;
     border-top: 1px solid var(--b-rule);

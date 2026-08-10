@@ -23,7 +23,6 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { mergeRegister } from '@lexical/utils';
 import { HeadingNode, QuoteNode, $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
-import { LinkNode } from '@lexical/link';
 import { ListNode, ListItemNode } from '@lexical/list';
 import {
   $createParagraphNode,
@@ -37,6 +36,7 @@ import {
   KEY_DOWN_COMMAND,
   FORMAT_TEXT_COMMAND,
   $insertNodes,
+  $parseSerializedNode,
   type EditorState,
   type LexicalEditor,
   type LexicalNode,
@@ -50,6 +50,7 @@ import {
   $createCarnetInlineBlockNode,
   $isCarnetInlineBlockNode,
   DraftContainerNode,
+  CarnetLinkNode,
   $createDraftContainerNode,
   $isDraftContainerNode,
   $unwrapDraftContainer,
@@ -229,6 +230,37 @@ function $walkLiveTree(cb: (node: LexicalNode) => void): void {
 // du JSON ne matche pas la key live de Lexical — on doit donc
 // walker l'arbre vivant et compter dans l'ordre d'apparition pour
 // retrouver le bon node.
+/**
+ * Remplace tout le corps par un texte importé.
+ *
+ * Passe par une mise à jour de l'éditeur et non par un remplacement
+ * d'état complet : le second
+ * repart d'un état neuf et efface l'historique, alors qu'ici l'import
+ * doit rester annulable. Quelqu'un qui se trompe de document doit
+ * pouvoir revenir en arrière par Ctrl+Z, sans avoir rien perdu.
+ *
+ * Les nœuds qui ne peuvent pas vivre à la racine — du texte nu, un
+ * bloc en ligne — sont enveloppés dans un paragraphe : les déposer
+ * tels quels casserait l'éditeur au premier rendu.
+ */
+export function remplacerContenu(editor: LexicalEditor, etat: LexicalState): void {
+  editor.update(() => {
+    const root = $getRoot();
+    root.clear();
+    for (const brut of etat.root.children ?? []) {
+      const noeud = $parseSerializedNode(brut);
+      if ($isElementNode(noeud) && !noeud.isInline()) {
+        root.append(noeud);
+        continue;
+      }
+      const para = $createParagraphNode();
+      para.append(noeud);
+      root.append(para);
+    }
+    if (root.getChildrenSize() === 0) root.append($createParagraphNode());
+  });
+}
+
 export function deleteFootnoteByIndex(editor: LexicalEditor, index: number): void {
   editor.update(() => {
     let i = 0;
@@ -720,7 +752,7 @@ export default function PostBodyEditor({
       nodes: [
         HeadingNode,
         QuoteNode,
-        LinkNode,
+        CarnetLinkNode,
         ListNode,
         ListItemNode,
         CarnetBlockNode,

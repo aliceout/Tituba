@@ -45,6 +45,7 @@ import PostBodyEditor, {
   deleteFootnoteByIndex,
   extractBiblioInlineIds,
   extractFootnotes,
+  remplacerContenu,
   type LexicalState,
 } from './post-editor/Editor';
 
@@ -56,6 +57,7 @@ import {
 import UnsplashImagePicker from './publications/UnsplashImagePicker.client';
 import AudioUploadField from './publications/AudioUploadField.client';
 import FichierUploadField from './publications/FichierUploadField.client';
+import ImportDocument from './publications/ImportDocument.client';
 import { stripHeroMarkers } from '@/lib/hero-markers';
 
 type PostType = string;
@@ -1074,6 +1076,22 @@ export default function PublicationEditViewClient({
                 </div>
               )}
               <hr className="ed-divider" />
+              {/* En tête du corps, parce que c'est là qu'on arrive avec
+                  un document sous le bras — et repliée, parce que la
+                  plupart des billets s'écrivent directement ici. */}
+              <ImportDocument
+                collection={collectionSlug ?? 'articles'}
+                corpsRempli={!isLexicalBodyEmpty(post.body ?? null)}
+                onInsert={({ body, titre }) => {
+                  const editor = editorRef.current;
+                  // Par l'éditeur quand il est monté : l'insertion reste
+                  // alors annulable. Le repli sert au cas — improbable —
+                  // où la référence n'aurait pas encore été posée.
+                  if (editor) remplacerContenu(editor, body as LexicalState);
+                  else patch('body', body as LexicalState);
+                  if (titre) patch('title', titre);
+                }}
+              />
               {fieldErrors.body && (
                 <div className="ed-body__error" role="alert">
                   {fieldErrors.body}
