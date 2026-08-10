@@ -29,110 +29,59 @@ const liens = (sources ?? []).filter(
 );
 ---
 
-<aside class="brief" aria-labelledby="brief-titre">
-  <h2 class="brief-titre" id="brief-titre">L’actualité en question</h2>
-  <p class="brief-texte">{texte}</p>
+{/* Pas de collage ici : c’est la colonne qui l’enveloppe qui colle (cf
+    PublicationArticle, .brief-colonne), puisqu’elle contient aussi les
+    repères et les actions. Deux blocs collants imbriqués se contraignent
+    l’un l’autre et finissent par se figer à contretemps.
+
+    Sous 1300 px la colonne n’existe plus : le bloc repasse au-dessus du
+    texte, où il garde son sens — on lit le fait avant le commentaire. */}
+<aside class="font-sans max-large:mb-[34px]" aria-labelledby="brief-titre">
+  {/* Le titre du bloc garde le mono et la couleur d’accent : c’est le
+      titre de la colonne, pas un intitulé de rubrique. */}
+  <h2
+    class="text-accent m-0 mb-3 font-mono text-label font-medium tracking-[0.14em] uppercase"
+    id="brief-titre"
+  >
+    L’actualité en question
+  </h2>
+  {/* Un filet à gauche plutôt qu’un cadre : le bloc se distingue du texte
+      sans devenir un encadré, qui appellerait à être lu en premier alors
+      qu’il n’est qu’un préalable.
+
+      Justifié avec césure, comme le corps des billets : la justification
+      seule, dans une colonne de cette largeur, ouvre des blancs béants
+      entre les mots. La césure les referme. */}
+  <p
+    class="text-ink border-rule m-0 border-l-2 pl-3.5 text-[calc(13.5px*var(--a11y-echelle))] leading-[1.6] hyphens-auto whitespace-pre-line text-justify"
+  >
+    {texte}
+  </p>
 
   {liens.length > 0 && (
-    <div class="brief-sources">
-      <h3 class="brief-sources-titre">Sources</h3>
-      <ul>
+    <div class="border-rule mt-[18px] border-t pt-[18px]">
+      {/* Repris trait pour trait des repères du bloc commun juste en
+          dessous (cf ArticleToc) : ce sont les mêmes petits intitulés de
+          rubrique dans la même colonne — les distinguer ne signalait
+          rien, ça donnait deux systèmes à quelques centimètres l’un de
+          l’autre. */}
+      <h3 class="text-ink m-0 mb-2 font-sans text-[calc(10px*var(--a11y-echelle))] font-semibold tracking-[0.12em] uppercase">
+        Sources
+      </h3>
+      <ul class="m-0 flex list-none flex-col gap-1.5 p-0">
         {liens.map((s) => (
           <li>
-            <a href={s.url} rel="noopener noreferrer" target="_blank">{s.label}</a>
+            <a
+              href={s.url}
+              rel="noopener noreferrer"
+              target="_blank"
+              class="text-muted border-rule hover:text-ink hover:border-b-ink border-b text-[calc(12.5px*var(--a11y-echelle))] leading-[1.4] transition-colors duration-100"
+            >
+              {s.label}
+            </a>
           </li>
         ))}
       </ul>
     </div>
   )}
 </aside>
-
-<style>
-  /* Pas de collage ici : c'est la colonne qui l'enveloppe qui colle (cf
-     PublicationArticle, .brief-colonne), puisqu'elle contient aussi les
-     repères et les actions. Deux blocs collants imbriqués se contraignent
-     l'un l'autre et finissent par se figer à contretemps. */
-  .brief {
-    font-family: var(--font-sans);
-  }
-
-  /* Un filet à gauche plutôt qu'un cadre : le bloc se distingue du texte
-     sans devenir un encadré, qui appellerait à être lu en premier alors
-     qu'il n'est qu'un préalable. */
-  .brief-titre {
-    font-family: var(--font-mono);
-    font-size: calc(11px * var(--a11y-echelle));
-    font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--color-accent);
-    margin: 0 0 12px;
-  }
-
-  /* Justifié avec césure, comme le corps des billets (cf ArticleBody) :
-     la justification seule, dans une colonne de cette largeur, ouvre des
-     blancs béants entre les mots. La césure les referme. */
-  .brief-texte {
-    font-size: calc(13.5px * var(--a11y-echelle));
-    line-height: 1.6;
-    color: var(--color-ink);
-    text-align: justify;
-    white-space: pre-line;
-    hyphens: auto;
-    -webkit-hyphens: auto;
-    margin: 0;
-    padding-left: 14px;
-    border-left: 2px solid var(--color-rule);
-  }
-
-  .brief-sources {
-    margin-top: 18px;
-    padding-top: 18px;
-    border-top: 1px solid var(--color-rule);
-  }
-  /* Repris trait pour trait des repères du bloc commun juste en dessous
-     (cf ArticleToc, .duree) : même fonte sans empattement, même corps,
-     même graisse, même interlettrage, même encre. Ce sont les mêmes
-     petits intitulés de rubrique dans la même colonne — les distinguer
-     ne signalait rien, ça donnait seulement deux systèmes à quelques
-     centimètres l'un de l'autre.
-     Le titre de la colonne, lui, garde le mono et la couleur d'accent :
-     c'est le titre du bloc, pas un intitulé de rubrique. */
-  .brief-sources-titre {
-    font-family: var(--font-sans);
-    font-size: calc(10px * var(--a11y-echelle));
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--color-ink);
-    margin: 0 0 8px;
-  }
-  .brief-sources ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .brief-sources a {
-    font-size: calc(12.5px * var(--a11y-echelle));
-    line-height: 1.4;
-    color: var(--color-muted);
-    border-bottom: 1px solid var(--color-rule);
-    transition: color 0.12s, border-color 0.12s;
-  }
-  .brief-sources a:hover {
-    color: var(--color-ink);
-    border-bottom-color: var(--color-ink);
-  }
-
-  /* Sous 1300 px la colonne n'existe plus (cf .post-split) : le bloc
-     repasse au-dessus du texte, où il garde son sens — on lit le fait
-     avant le commentaire. */
-  @media (max-width: 1300px) {
-    .brief {
-      margin-bottom: 34px;
-    }
-  }
-</style>
