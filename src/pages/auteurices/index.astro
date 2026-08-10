@@ -40,13 +40,13 @@ const sorted = authors.slice().sort((a, b) => {
   famille="bleu"
 >
   {sorted.length === 0 ? (
-    <p class="empty">Aucun·e auteur·ice pour l'instant.</p>
+    <p class="text-muted py-16 text-center font-sans">Aucun·e auteur·ice pour l'instant.</p>
   ) : (
-    <div class="grid">
+    <div class="grid grid-cols-2 gap-0 max-mobile:grid-cols-1">
       {sorted.map((a) => (
-        <a class="author-card" href={`/auteurice/${a.id}/`}>
-          <div class="t">{stripHeroMarkers(a.displayName) ?? 'Auteur·ice'}</div>
-          <div class="right">
+        <a class="border-rule group grid grid-cols-[1fr_100px] items-baseline gap-6 border-t py-6 text-inherit transition-colors duration-100 odd:border-r odd:pr-6 even:pl-6 max-mobile:odd:border-r-0 max-mobile:odd:pr-0 max-mobile:even:pl-0" href={`/auteurice/${a.id}/`}>
+          <div class="group-hover:text-[var(--c-bleu-deep)] m-0 font-serif text-[calc(24px*var(--a11y-echelle))] leading-[1.2] font-(--font-weight-heading) tracking-[-0.02em] transition-colors duration-100">{stripHeroMarkers(a.displayName) ?? 'Auteur·ice'}</div>
+          <div class="text-muted text-right font-sans text-[calc(14px*var(--a11y-echelle))]">
             {a.count} publication{a.count > 1 ? 's' : ''}
           </div>
         </a>
@@ -54,66 +54,3 @@ const sorted = authors.slice().sort((a, b) => {
     </div>
   )}
 </PageShell>
-
-<style>
-  /* Gouttière et rythme vertical viennent de PageShell. */
-  .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-  }
-  .author-card {
-    display: grid;
-    grid-template-columns: 1fr 100px;
-    gap: 24px;
-    padding: 24px 0;
-    border-top: 1px solid var(--color-rule);
-    align-items: baseline;
-    color: inherit;
-    transition: color 0.12s;
-  }
-  .author-card:nth-child(odd) {
-    padding-right: 24px;
-    border-right: 1px solid var(--color-rule);
-  }
-  .author-card:nth-child(even) {
-    padding-left: 24px;
-  }
-  .author-card:hover .t {
-    color: var(--c-bleu-deep);
-  }
-  .author-card .t {
-    font-family: var(--font-serif);
-    font-size: calc(24px * var(--a11y-echelle));
-    line-height: 1.2;
-    font-weight: var(--w-heading);
-    margin: 0;
-    letter-spacing: -0.02em;
-    transition: color 0.12s;
-  }
-  .author-card .right {
-    font-family: var(--font-sans);
-    font-size: calc(14px * var(--a11y-echelle));
-    color: var(--color-muted);
-    text-align: right;
-  }
-
-  @media (max-width: 900px) {
-    .grid {
-      grid-template-columns: 1fr;
-    }
-    .author-card:nth-child(odd) {
-      padding-right: 0;
-      border-right: 0;
-    }
-    .author-card:nth-child(even) {
-      padding-left: 0;
-    }
-  }
-</style>
