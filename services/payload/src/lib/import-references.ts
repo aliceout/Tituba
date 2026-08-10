@@ -338,6 +338,45 @@ const RE_RENVOI_NOMME =
 const RE_IBID = /^\s*(ibid|idem)\b/i;
 
 /**
+ * Les noms de famille d'une signature, dans l'ordre.
+ *
+ * « Rodier Claire et Morice Alain » → [Rodier, Morice]
+ * « Rodier, C. et Morice, A. »      → [Rodier, Morice]
+ *
+ * Les deux écritures donnent la même liste, et c'est tout l'intérêt :
+ * c'est elle qui distingue deux textes d'un même auteur quand l'un est
+ * co-signé et l'autre non.
+ */
+export function nomsDeSignature(zone: string): string[] {
+  return zone
+    .split(/\s+(?:et|&|and)\s+/i)
+    .map((bout) => {
+      const c = bout.trim();
+      if (!c) return '';
+      // « Rodier, C. » : le nom précède la virgule.
+      if (c.includes(',')) return (c.split(',')[0] ?? '').trim();
+      const mots = c.split(/\s+/).filter(Boolean);
+      // « Morice Alain » : le dernier mot est le prénom.
+      return mots.length === 1 ? mots[0] : mots.slice(0, -1).join(' ');
+    })
+    .filter((s) => s.length >= 2);
+}
+
+/** Clé d'une signature, insensible à la casse et à l'écriture. */
+function cleSignature(noms: string[]): string {
+  return noms.map((n) => n.toLowerCase()).join('|');
+}
+
+/**
+ * La zone des noms d'une référence complète : ce qui précède le titre.
+ * Sans titre repérable, on s'en remet au seul nom lu.
+ */
+function zoneDesNoms(texte: string): string {
+  const i = texte.search(/[«“"(]/);
+  return i > 0 ? texte.slice(0, i).replace(/[,;\s]+$/, '') : '';
+}
+
+/**
  * Les désignations possibles de la source visée par un renvoi.
  *
  * Ce qui précède « art. cit. » n'est pas toujours un nom de famille :
@@ -398,10 +437,20 @@ export function resoudreRenvois(notes: string[]): EtatRenvois {
   // Une source se laisse désigner par son auteur·ice comme par sa revue :
   // on tient les deux registres, et l'on retient pour chacun les titres
   // rencontrés — c'est leur nombre qui dira si le renvoi est ambigu.
+  // La signature entière d'abord — c'est elle qui départage deux textes
+  // d'un même auteur, l'un co-signé et l'autre non. Le premier nom seul
+  // et la revue ne servent qu'à défaut.
+  const parSignature = new Map<string, Set<string>>();
   const parNom = new Map<string, Set<string>>();
   const parEditeur = new Map<string, Set<string>>();
   let courante: string | null = null;
   const etat: EtatRenvois = { resolus: 0, ambigus: [], orphelins: [] };
+
+  const noter = (registre: Map<string, Set<string>>, cle: string, titre: string): void => {
+    const titres = registre.get(cle) ?? new Set<string>();
+    titres.add(titre);
+    registre.set(cle, titres);
+  };
 
   const chercher = (designations: string[]): Set<string> | undefined => {
     for (const d of designations) {
@@ -418,17 +467,14 @@ export function resoudreRenvois(notes: string[]): EtatRenvois {
       if (noteEstReference(citation)) {
         const r = analyserReference(citation);
         const titre = r.titre ?? r.texte.slice(0, 40);
-        if (r.nom) {
-          const titres = parNom.get(r.nom) ?? new Set<string>();
-          titres.add(titre);
-          parNom.set(r.nom, titres);
-          courante = r.nom;
+        const zone = zoneDesNoms(citation);
+        const signature = zone ? nomsDeSignature(zone) : r.nom ? [r.nom] : [];
+        if (signature.length > 0) {
+          noter(parSignature, cleSignature(signature), titre);
+          courante = signature[0];
         }
-        if (r.editeur) {
-          const titres = parEditeur.get(r.editeur) ?? new Set<string>();
-          titres.add(titre);
-          parEditeur.set(r.editeur, titres);
-        }
+        if (r.nom) noter(parNom, r.nom, titre);
+        if (r.editeur) noter(parEditeur, r.editeur, titre);
         continue;
       }
 
@@ -440,7 +486,15 @@ export function resoudreRenvois(notes: string[]): EtatRenvois {
       if (!RE_RENVOI_NOMME.test(citation)) continue;
 
       const designations = designationsDuRenvoi(citation);
-      const titres = chercher(designations);
+      // La signature du renvoi d'abord : « Rodier, C. et Morice, A. »
+      // ne désigne pas le même texte que « Rodier, C. » seul, et
+      // confondre les deux rendait ambigu ce qui ne l'est pas.
+      const coupe = citation.search(RE_RENVOI_NOMME);
+      const zone = (coupe > 0 ? citation.slice(0, coupe) : '').replace(/[,;\s]+$/, '');
+      const signature = zone ? nomsDeSignature(zone) : [];
+      const titres =
+        (signature.length > 0 ? parSignature.get(cleSignature(signature)) : undefined) ??
+        chercher(designations);
       if (!titres) {
         etat.orphelins.push(citation);
         continue;

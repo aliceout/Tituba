@@ -11,6 +11,7 @@ import { describe, it } from 'node:test';
 import {
   analyserReference,
   citationsDeNote,
+  nomsDeSignature,
   noteEstReference,
   resoudreRenvois,
 } from './import-references';
@@ -117,5 +118,37 @@ describe('renvois', () => {
     ]);
     assert.equal(etat.resolus, 0);
     assert.equal(etat.ambigus.length, 1);
+  });
+
+  it('distingue le texte co-signé de celui écrit seule', () => {
+    const etat = resoudreRenvois([
+      'Rodier Claire et Morice Alain, « Migrations : comment l’UE enferme », Plein droit, 2010.',
+      'Rodier Claire, « Frontières », Vacarme, 2014.',
+      // Deux noms : le texte co-signé.
+      'Rodier, C. et Morice, A., art. cit.',
+      // Un seul : celui qu’elle a signé seule.
+      'Rodier, C., art. cit., p. 109.',
+    ]);
+    assert.equal(etat.resolus, 2);
+    assert.deepEqual(etat.ambigus, []);
+    assert.deepEqual(etat.orphelins, []);
+  });
+
+  it('retombe sur le premier nom quand la signature ne concorde pas', () => {
+    const etat = resoudreRenvois([
+      'Audebert Cedric et Nelly Robin, « L’externalisation », Cultures & Conflits, 2009.',
+      // Renvoi au premier signataire seul : la source reste identifiable.
+      'Audebert, C., art. cit., p. 43.',
+    ]);
+    assert.equal(etat.resolus, 1);
+    assert.deepEqual(etat.orphelins, []);
+  });
+});
+
+describe('signature', () => {
+  it('lit les deux écritures d’une co-signature', () => {
+    assert.deepEqual(nomsDeSignature('Rodier Claire et Morice Alain'), ['Rodier', 'Morice']);
+    assert.deepEqual(nomsDeSignature('Rodier, C. et Morice, A.'), ['Rodier', 'Morice']);
+    assert.deepEqual(nomsDeSignature('de Rochegonde, A.'), ['de Rochegonde']);
   });
 });
