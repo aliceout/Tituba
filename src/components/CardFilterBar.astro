@@ -28,19 +28,52 @@ export interface Props {
 }
 
 const { dimension, label, options, total } = Astro.props as Props;
+
+/**
+ * L’état actif passe par `aria-pressed` plutôt que par une classe posée
+ * depuis le script : Tailwind ne génère que les classes qu’il lit dans
+ * les sources. Le lecteur d’écran y gagne au passage — le filtre en
+ * cours n’était annoncé nulle part, seule la couleur le disait.
+ */
+const PUCE = [
+  'cursor-pointer rounded-full border border-rule bg-transparent px-3 py-1.5',
+  'font-sans text-[calc(13px*var(--a11y-echelle))] leading-normal font-normal text-muted',
+  'transition-[color,border-color,background] duration-[120ms]',
+  'aria-pressed:border-[var(--c-bleu-deep)] aria-pressed:bg-[var(--c-bleu-deep)] aria-pressed:text-bg',
+  'aria-[pressed=false]:hover:border-[var(--c-bleu-deep)] aria-[pressed=false]:hover:text-[var(--c-bleu-deep)]',
+].join(' ');
 ---
 
 {options.length > 1 && (
-  <section class="filters" data-card-filters data-dimension={dimension} data-total={total}>
-    <div class="row">
-      <div class="grp" role="group" aria-label={`Filtrer par ${label.toLowerCase()}`}>
-        <span class="lbl">{label}</span>
-        <div class="chips">
-          <button class="chip on" type="button" data-filter-value="all">Tous</button>
+  <section
+    class="border-rule border-b py-[18px] font-sans text-[calc(13px*var(--a11y-echelle))]"
+    data-card-filters
+    data-dimension={dimension}
+    data-total={total}
+  >
+    <div class="flex flex-wrap items-center gap-6">
+      {/* `flex-1 min-w-0` : sans lui le groupe se dimensionne sur son
+          contenu, la boîte de puces hérite d’une largeur plus étroite que
+          l’espace disponible, et une puce part à la ligne alors qu’il
+          restait de la place. */}
+      <div class="flex min-w-0 flex-1 items-baseline gap-1.5" role="group" aria-label={`Filtrer par ${label.toLowerCase()}`}>
+        {/* Le libellé hors du flux d’enroulement, pour que les puces
+            reportées s’alignent sous « Tous ». La largeur réservée est
+            celle de l’accueil : le bord gauche de « Tous » tombe au même
+            endroit d’une page à l’autre. */}
+        <span class="text-muted flex-[0_0_96px] pr-2">{label}</span>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button class={PUCE} type="button" aria-pressed="true" data-filter-value="all">
+            Tous
+          </button>
+          {/* Option déclarée mais sans publication ici : lisible, sans
+              attirer l’œil autant que celles qui mènent quelque part —
+              sauf si c’est elle qu’on a choisie. */}
           {options.map((o) => (
             <button
-              class:list={['chip', { empty: o.count === 0 }]}
+              class:list={[PUCE, o.count === 0 && 'opacity-55 aria-pressed:opacity-100']}
               type="button"
+              aria-pressed="false"
               data-filter-value={o.value}
               title={o.count !== undefined ? `${o.label} — ${o.count} publication${o.count > 1 ? 's' : ''}` : o.label}
             >
@@ -49,81 +82,12 @@ const { dimension, label, options, total } = Astro.props as Props;
           ))}
         </div>
       </div>
-      <div class="count" data-filter-count>
+      <div class="text-muted ml-auto" data-filter-count>
         {total} publication{total > 1 ? 's' : ''}
       </div>
     </div>
   </section>
 )}
-
-<style>
-  .filters {
-    padding: 18px 0;
-    border-bottom: 1px solid var(--color-rule);
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-  }
-  .filters .row {
-    display: flex;
-    gap: 24px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .filters .grp {
-    display: flex;
-    gap: 6px;
-    align-items: baseline;
-    /* Occupe toute la largeur de la ligne. Sans ça le groupe se
-       dimensionne sur son contenu et la boîte de puces hérite d'une
-       largeur plus étroite que l'espace réellement disponible : une
-       puce partait à la ligne alors qu'il restait de la place. */
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  /* Cf. index.astro : le libellé hors du flux d'enroulement, pour que
-     les puces reportées s'alignent sous « Tous ». */
-  .filters .chips {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .filters .lbl {
-    color: var(--color-muted);
-    padding-right: 8px;
-    /* Même largeur réservée que sur l'accueil : le bord gauche des
-       boutons « Tous » tombe au même endroit d'une page à l'autre. */
-    flex: 0 0 96px;
-  }
-  .chip {
-    padding: 6px 12px;
-    border-radius: 999px;
-    border: 1px solid var(--color-rule);
-    background: transparent;
-    color: var(--color-muted);
-    cursor: pointer;
-    font: inherit;
-    transition: color 0.12s, border-color 0.12s, background 0.12s;
-  }
-  .chip.on {
-    background: var(--c-bleu-deep);
-    color: var(--color-bg);
-    border-color: var(--c-bleu-deep);
-  }
-  /* Option déclarée mais sans publication ici : lisible, sans attirer
-     l'œil autant que celles qui mènent quelque part. */
-  .chip.empty:not(.on) {
-    opacity: 0.55;
-  }
-  .chip:hover:not(.on) {
-    border-color: var(--c-bleu-deep);
-    color: var(--c-bleu-deep);
-  }
-  .filters .count {
-    margin-left: auto;
-    color: var(--color-muted);
-  }
-</style>
 
 <script>
   // Filtrage client des cartes. Générique : la dimension filtrée est
@@ -167,7 +131,7 @@ const { dimension, label, options, total } = Astro.props as Props;
           ? `${visible} publication${visible > 1 ? 's' : ''}`
           : `${visible} publication${visible > 1 ? 's' : ''} sur ${total}`;
       for (const b of bar.querySelectorAll<HTMLElement>('[data-filter-value]')) {
-        b.classList.toggle('on', b.dataset.filterValue === current);
+        b.setAttribute('aria-pressed', String(b.dataset.filterValue === current));
       }
       const hash = current === 'all' ? '' : `#${dimension}=${current}`;
       if (hash !== window.location.hash) {
