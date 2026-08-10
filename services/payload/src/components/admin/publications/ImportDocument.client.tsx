@@ -62,6 +62,8 @@ type Resultat = {
   titre: string | null;
   resume: { titres: number; paragraphes: number; notes: number };
   biblio: LigneBiblio[];
+  /** Sources citées en entier dans les notes — elles y restent. */
+  notesRefs: LigneBiblio[];
   avertissements: string[];
 };
 
@@ -126,7 +128,7 @@ export default function ImportDocument({
       // ont leur place en pied de billet.
       setACreer(
         new Set(
-          data.biblio
+          [...data.biblio, ...(data.notesRefs ?? [])]
             .filter((l) => l.manques.length === 0 || l.candidats.some((c) => c.sur))
             .map((l) => l.texte),
         ),
@@ -175,7 +177,9 @@ export default function ImportDocument({
   async function creer(): Promise<void> {
     if (!resultat || aCreer.size === 0) return;
 
-    const retenues = resultat.biblio.filter((l) => aCreer.has(l.texte));
+    const retenues = [...resultat.biblio, ...(resultat.notesRefs ?? [])].filter((l) =>
+      aCreer.has(l.texte),
+    );
     // Celles qu'une entrée existante recouvre déjà : rien à créer, tout
     // à rattacher.
     const dejaLa = retenues
@@ -233,6 +237,32 @@ export default function ImportDocument({
       setCreationEnCours(false);
     }
   }
+
+  /**
+   * Les deux provenances, présentées à part.
+   *
+   * La bibliographie finale et les notes ne se valent pas du point de
+   * vue de qui relit : une source citée en note demande un coup d'œil
+   * de plus, parce que la note reste où elle est et qu'on pourrait
+   * croire qu'on la déplace.
+   */
+  const groupes = resultat
+    ? [
+        {
+          titre: 'Bibliographie du document',
+          aide: null as string | null,
+          lignes: resultat.biblio,
+        },
+        {
+          titre: 'Sources citées en entier dans les notes',
+          aide:
+            'Les notes ne bougent pas — elles restent dans le texte, telles quelles. ' +
+            'Ces sources sont seulement ajoutées à la bibliographie, où le lectorat ira ' +
+            'les chercher.',
+          lignes: resultat.notesRefs ?? [],
+        },
+      ].filter((g) => g.lignes.length > 0)
+    : [];
 
   function basculer(texte: string): void {
     setACreer((prev) => {
@@ -304,7 +334,7 @@ export default function ImportDocument({
             compte(resultat.resume.paragraphes, 'paragraphe'),
             compte(resultat.resume.titres, 'intertitre'),
             compte(resultat.resume.notes, 'note'),
-            compte(resultat.biblio.length, 'référence'),
+            compte(resultat.biblio.length + (resultat.notesRefs?.length ?? 0), 'référence'),
           ].join(', ')}
           .
         </p>
@@ -330,85 +360,93 @@ export default function ImportDocument({
           </ul>
         )}
 
-        {resultat.biblio.length > 0 && (
+        {groupes.length > 0 && (
           <div className="ed-import__biblio">
-            <h4>Bibliographie détachée</h4>
+            <h4>Références trouvées</h4>
             <p className="ed-import__biblio-note">
-              Ces références ne sont pas insérées dans le texte&nbsp;: elles rejoignent
-              votre bibliographie et la liste en pied de billet. Pour en{' '}
-              <em>citer</em> une dans le corps, appelez-la ensuite depuis l’éditeur avec{' '}
-              <kbd>/</kbd>. Vérifiez ce qui sera écrit&nbsp;— seul ce qui se lit sans
-              ambiguïté est repris, le reste se complète ensuite.
+              Elles ne sont pas insérées dans le texte&nbsp;: elles rejoignent votre
+              bibliographie et la liste en pied de billet. Pour en <em>citer</em> une dans
+              le corps, appelez-la ensuite depuis l’éditeur avec <kbd>/</kbd>. Vérifiez ce
+              qui sera écrit&nbsp;— seul ce qui se lit sans ambiguïté est repris, le reste
+              se complète ensuite.
             </p>
-            <ul>
-              {resultat.biblio.map((l, i) => {
-                const faite = creation.get(l.texte);
-                const sur = l.candidats.find((c) => c.sur);
-                const creable = l.manques.length === 0 && !sur && !faite?.id;
-                // Cochable = peut rejoindre le billet, qu'il faille la
-                // créer d'abord ou qu'elle existe déjà.
-                const cochable = creable || (Boolean(sur) && !faite);
-                return (
-                  <li key={`${i}-${l.texte.slice(0, 20)}`}>
-                    <label className="ed-import__ref-ligne">
-                      {cochable ? (
-                        <input
-                          type="checkbox"
-                          checked={aCreer.has(l.texte)}
-                          disabled={creationEnCours}
-                          onChange={() => basculer(l.texte)}
-                        />
-                      ) : (
-                        <span className="ed-import__puce" aria-hidden="true" />
-                      )}
-                      <span className="ed-import__ref">{l.texte}</span>
-                    </label>
+            {groupes.map((g) => (
+              <div key={g.titre} className="ed-import__groupe">
+                <h5>{g.titre}</h5>
+                {g.aide && <p className="ed-import__biblio-note">{g.aide}</p>}
+                <ul>
+                  {g.lignes.map((l, i) => {
+                    const faite = creation.get(l.texte);
+                    const sur = l.candidats.find((c) => c.sur);
+                    const creable = l.manques.length === 0 && !sur && !faite?.id;
+                    // Cochable = peut rejoindre le billet, qu'il faille la
+                    // créer d'abord ou qu'elle existe déjà.
+                    const cochable = creable || (Boolean(sur) && !faite);
+                    return (
+                      <li key={`${i}-${l.texte.slice(0, 20)}`}>
+                        <label className="ed-import__ref-ligne">
+                          {cochable ? (
+                            <input
+                              type="checkbox"
+                              checked={aCreer.has(l.texte)}
+                              disabled={creationEnCours}
+                              onChange={() => basculer(l.texte)}
+                            />
+                          ) : (
+                            <span className="ed-import__puce" aria-hidden="true" />
+                          )}
+                          <span className="ed-import__ref">{l.texte}</span>
+                        </label>
 
-                    {/* Ce qui sera écrit, en clair — c'est sur cette ligne
-                        qu'on repère une lecture qui a dérapé. */}
-                    {creable && (
-                      <span className="ed-import__lu">
-                        {[
-                          [l.nom, l.prenom].filter(Boolean).join(', '),
-                          l.annee,
-                          l.titre ?? '(titre non isolé — la référence entière en tiendra lieu)',
-                          l.editeur,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    )}
+                        {/* Ce qui sera écrit, en clair — c'est sur cette
+                            ligne qu'on repère une lecture qui a dérapé. */}
+                        {creable && (
+                          <span className="ed-import__lu">
+                            {[
+                              [l.nom, l.prenom].filter(Boolean).join(', '),
+                              l.annee,
+                              l.titre ??
+                                '(titre non isolé — la référence entière en tiendra lieu)',
+                              l.editeur,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </span>
+                        )}
 
-                    {faite?.id != null && (
-                      <span className="ed-import__match">
-                        Créée et liée au billet&nbsp;: {faite.label}
-                      </span>
-                    )}
-                    {faite?.erreur && (
-                      <span className="ed-import__match ed-import__match--absent">
-                        {faite.erreur}
-                      </span>
-                    )}
-                    {!faite && sur && (
-                      <span className="ed-import__match">
-                        Déjà dans votre bibliographie&nbsp;: {sur.label} — à lier au billet
-                      </span>
-                    )}
-                    {!faite && !sur && l.manques.length > 0 && (
-                      <span className="ed-import__match ed-import__match--absent">
-                        {l.manques.join(' et ')} introuvable
-                        {l.manques.length > 1 ? 's' : ''} — à saisir à la main.
-                      </span>
-                    )}
-                    {!faite && !sur && l.manques.length === 0 && l.candidats.length > 0 && (
-                      <span className="ed-import__match">
-                        Peut-être déjà là&nbsp;: {l.candidats[0].label}
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                        {faite?.id != null && (
+                          <span className="ed-import__match">
+                            Créée et liée au billet&nbsp;: {faite.label}
+                          </span>
+                        )}
+                        {faite?.erreur && (
+                          <span className="ed-import__match ed-import__match--absent">
+                            {faite.erreur}
+                          </span>
+                        )}
+                        {!faite && sur && (
+                          <span className="ed-import__match">
+                            Déjà dans votre bibliographie&nbsp;: {sur.label} — à lier au
+                            billet
+                          </span>
+                        )}
+                        {!faite && !sur && l.manques.length > 0 && (
+                          <span className="ed-import__match ed-import__match--absent">
+                            {l.manques.join(' et ')} introuvable
+                            {l.manques.length > 1 ? 's' : ''} — à saisir à la main.
+                          </span>
+                        )}
+                        {!faite && !sur && l.manques.length === 0 && l.candidats.length > 0 && (
+                          <span className="ed-import__match">
+                            Peut-être déjà là&nbsp;: {l.candidats[0].label}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
 
             <div className="ed-import__biblio-actions">
               <button

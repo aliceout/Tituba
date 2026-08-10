@@ -35,7 +35,12 @@
 import mammoth from 'mammoth';
 
 import { odtVersHtml } from './import-odt';
-import { analyserReference, type ReferenceLue } from './import-references';
+import {
+  analyserReference,
+  cleDeDoublon,
+  noteEstReference,
+  type ReferenceLue,
+} from './import-references';
 
 /**
  * Une ligne de la bibliographie détachée du document, telle que la lit
@@ -51,6 +56,15 @@ export type ResultatImport = {
   /** Texte des notes, dans l'ordre de leur appel. */
   notes: string[];
   biblio: LigneBiblio[];
+  /**
+   * Références complètes trouvées DANS les notes.
+   *
+   * Elles restent des notes — on ne touche pas au texte. Mais une
+   * source citée en entier dans une note appartient aussi à la
+   * bibliographie du billet, et ne l'y trouver nulle part serait
+   * incompréhensible pour qui lit l'article.
+   */
+  notesRefs: LigneBiblio[];
   /** Ce que mammoth n'a pas su traduire — affiché à l'import. */
   avertissements: string[];
 };
@@ -320,11 +334,28 @@ export async function lireDocument(
     .replace(/<h([1-6])[^>]*>\s*<\/h\1>/gi, '')
     .trim();
 
+  // Les sources citées en entier dans les notes rejoignent celles de la
+  // bibliographie finale — sans doublon : une source se trouve souvent
+  // aux deux endroits, et la proposer deux fois ferait deux entrées pour
+  // un même livre.
+  const biblio = lignes.map(analyserReference);
+  const vues = new Set(biblio.map(cleDeDoublon));
+  const notesRefs: LigneBiblio[] = [];
+  for (const note of notes) {
+    if (!noteEstReference(note)) continue;
+    const ref = analyserReference(note);
+    const cle = cleDeDoublon(ref);
+    if (vues.has(cle)) continue;
+    vues.add(cle);
+    notesRefs.push(ref);
+  }
+
   return {
     html,
     titre,
     notes,
-    biblio: lignes.map(analyserReference),
+    biblio,
+    notesRefs,
     // Ce qui n'a pas suivi est dit, pas tu : quelqu'un qui a illustré ou
     // mis en forme son texte doit savoir ce qu'il lui reste à faire. Ce
     // qui a été retiré à dessein est dit aussi — sans quoi on chercherait

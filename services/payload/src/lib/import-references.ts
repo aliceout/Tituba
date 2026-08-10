@@ -48,6 +48,20 @@ const PARTICULE = /^(d[eu]|des|d’|d'|van|von|der|le|la|les|di|da|dos|del|ter|t
 
 const MAJUSCULE = /^[A-ZÀ-Ý]/u;
 
+/**
+ * Renvoi à une source déjà citée plus haut, pas une source.
+ *
+ * « Weber, S., art. cit., p. 33 » ne dit pas ce qu'est l'article : il
+ * dit d'aller le chercher dans une note antérieure. Créer une entrée
+ * là-dessus produirait une référence sans titre, sans année et sans
+ * éditeur, qui ne servirait à personne.
+ */
+export const RE_FORME_COURTE =
+  /\b(art\.\s*cit|op\.\s*cit|loc\.\s*cit|rap\.\s*cit|ouvr\.\s*cit|art\.\s*cité|ibid|idem|supra|infra)\b/i;
+
+/** Marque d'un texte non signé, en tête de référence. */
+const RE_ANONYME = /^\s*(\[?\s*anon\.?\s*\]?|anonyme|collectif|s\.\s*n\.)\s*[,.]/i;
+
 /** Mois français — sert à écarter les dates des segments de titre. */
 const RE_DATE =
   /^\s*\d{0,2}\s*(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)?\s*\d{4}\s*$/i;
@@ -67,7 +81,13 @@ function lireNom(texte: string): { nom: string | null; prenom: string | null } {
   }
 
   // « Nom Prénom, » — tout ce qui précède la première virgule.
-  const avant = texte.split(/[,«(]/)[0]?.trim() ?? '';
+  //
+  // Les co-auteur·ices sont écartés d'abord : « Rodier Claire et Morice
+  // Alain » formait un bloc de cinq mots où aucun nom ne se laissait
+  // isoler. On garde la première personne, la seule dont la place dans
+  // la référence soit certaine — l'ordre des suivantes se lit dans le
+  // texte d'origine, conservé dans l'entrée.
+  const avant = (texte.split(/[,«(]/)[0] ?? '').split(/\s+(?:et|&|and)\s+/i)[0]?.trim() ?? '';
   const mots = avant.split(/\s+/).filter(Boolean);
   const debut = mots.length > 2 && PARTICULE.test(mots[0]) ? 1 : 0;
   const utiles = mots.slice(debut);
@@ -158,13 +178,25 @@ function lireEditeur(texte: string, titre: string | null): string | null {
 export function analyserReference(texte: string): ReferenceLue {
   const propre = texte.replace(/\s+/g, ' ').trim();
 
-  const { nom, prenom } = lireNom(propre);
+  const lu = lireNom(propre);
   const anneeM = propre.match(/\b(1[5-9]\d{2}|20\d{2})\b/);
   const annee = anneeM ? Number.parseInt(anneeM[1], 10) : null;
   const urlM = propre.match(/https?:\/\/[^\s,;»”"')\]]+/);
   const url = urlM ? urlM[0].replace(/[.]$/, '') : null;
   const titre = lireTitre(propre);
   const editeur = lireEditeur(propre, titre);
+
+  // Texte non signé : c'est le titre de publication qui en répond, et
+  // c'est ainsi qu'on le cite. Ce n'est pas une invention — l'usage
+  // bibliographique porte l'organe de presse en auteur collectif quand
+  // l'article ne l'est par personne — mais cela se voit dans ce qui
+  // sera écrit, et se décoche.
+  let nom = lu.nom;
+  let prenom = lu.prenom;
+  if (!nom && editeur && RE_ANONYME.test(propre)) {
+    nom = editeur;
+    prenom = null;
+  }
 
   // Le type se déduit de la forme, pas du contenu : un titre entre
   // guillemets accompagné d'un support est un article ; une adresse
@@ -179,6 +211,42 @@ export function analyserReference(texte: string): ReferenceLue {
   if (annee == null) manques.push('année');
 
   return { texte: propre, nom, prenom, annee, titre, editeur, url, type, manques };
+}
+
+/**
+ * Une note contient-elle une référence complète ?
+ *
+ * L'usage en sciences humaines donne la source en entier à sa première
+ * mention, puis en forme courte ensuite. Les premières ont leur place
+ * dans la bibliographie ; les secondes n'ont de sens que dans le fil
+ * des notes, et n'apprendraient rien hors de lui.
+ *
+ * Exigeant à dessein : un nom, une année, et de quoi identifier
+ * l'œuvre. Une note qui commente le propos de l'auteur·ice — le cas le
+ * plus fréquent — n'a rien de tout cela et reste où elle est.
+ */
+export function noteEstReference(texte: string): boolean {
+  if (RE_FORME_COURTE.test(texte)) return false;
+  const r = analyserReference(texte);
+  return r.manques.length === 0 && Boolean(r.titre || r.url);
+}
+
+/**
+ * Clé de rapprochement entre deux écritures d'une même source.
+ *
+ * Une source citée en note ET listée en bibliographie ne doit être
+ * proposée qu'une fois : les deux écritures diffèrent toujours un peu —
+ * ponctuation, mention « [En ligne] », page — mais le nom, l'année et
+ * le début du titre suffisent à les reconnaître.
+ */
+export function cleDeDoublon(r: ReferenceLue): string {
+  const titre = (r.titre ?? r.texte)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 40);
+  return `${(r.nom ?? '').toLowerCase()}|${r.annee ?? ''}|${titre}`;
 }
 
 /**
