@@ -1928,33 +1928,36 @@ button.btn--style-primary,
     }
   }
 
-  // Barre d'actions, sous les filtres. Toujours présente, et toujours
-  // de la même hauteur : la faire apparaître à la première case cochée
-  // poussait le tableau vers le bas, et la ligne suivante se dérobait
-  // sous le curseur au moment de la cocher.
+  // Actions groupées — au bout de la barre d'outils, à droite de la
+  // recherche et des filtres. Pas de ligne à elles : une ligne qui
+  // apparaît est une ligne qui pousse le tableau, et la case suivante
+  // se dérobe alors sous le curseur.
   //
-  // `min-height` fixé à la hauteur du bouton le plus haut : le contenu
-  // change, la boîte non.
+  // `margin-left: auto` les colle à droite, quelle que soit la largeur
+  // prise par les filtres.
   &__lot {
     align-items: center;
-    background: var(--b-paper);
-    border: 1px solid var(--b-rule);
-    border-radius: 4px;
     display: flex;
-    gap: 12px;
-    margin: 0 0 10px;
-    padding: 0 12px;
-    // Le contenu change, la boîte non : hauteur imposée, et des
-    // enfants qui tiennent dedans. Sur la même ligne de force que les
-    // champs du dessus, à quelques pixels près.
-    min-height: 30px;
+    gap: 10px;
+    margin-left: auto;
     white-space: nowrap;
 
     // Les boutons se rangent à la hauteur de la barre plutôt que
     // l'inverse.
     .tituba-btn {
       font-size: 12px;
-      padding: 3px 10px;
+      padding: 4px 12px;
+
+      &:disabled {
+        cursor: default;
+        opacity: 0.45;
+      }
+    }
+
+    // Le lien de dégroupage suit le même sort que les boutons.
+    .tituba-listview__lot-annuler:disabled {
+      cursor: default;
+      opacity: 0.45;
     }
   }
 
@@ -1963,13 +1966,9 @@ button.btn--style-primary,
     font-size: 12px;
     font-weight: 500;
     margin-right: auto;
+
   }
 
-  &__lot-vide {
-    color: var(--b-muted);
-    font-family: var(--font-sans);
-    font-size: 12px;
-  }
 
   &__lot-annuler {
     background: none;

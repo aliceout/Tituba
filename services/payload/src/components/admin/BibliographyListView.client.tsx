@@ -138,6 +138,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
 
   /** Les entrées cochées qu'on a sous la main, pour les nommer. */
   const nommees = entries.filter((b) => selection.has(String(b.id)));
+  const vide = selection.size === 0;
 
   function fermerAction() {
     if (enCours) return;
@@ -239,56 +240,53 @@ export default function BibliographyListViewClient(): React.ReactElement {
             <option value="zotero">Zotero</option>
           </select>
         </label>
+        {/* Les actions groupées, au bout de la barre d'outils.
+
+            Elles ont eu une barre à elles, qui n'apparaissait qu'à la
+            première case cochée et poussait alors tout le tableau vers
+            le bas : la ligne qu'on visait se dérobait sous le curseur
+            au moment même où l'on cochait la précédente. Pénible à la
+            souris, hostile pour qui vise difficilement.
+
+            Ici elles n'apparaissent toujours qu'une fois quelque chose
+            de coché, mais sans rien décaler : la ligne existe déjà, et
+            sa hauteur est celle du champ de recherche — les boutons
+            sont plus courts, ils s'y logent sans la pousser.
+
+            `aria-live` annonce le décompte aux lecteurs d'écran. */}
+        <div className="tituba-listview__lot" aria-live="polite">
+          {!vide && (
+            <>
+              <span className="tituba-listview__lot-compte">
+                {selection.size} sélectionnée{selection.size > 1 ? 's' : ''}
+              </span>
+              <button
+                type="button"
+                className="tituba-btn tituba-btn--ghost"
+                onClick={() => setAction('anonymiser')}
+              >
+                Retirer l’auteur·ice
+              </button>
+              <button
+                type="button"
+                className="tituba-btn tituba-btn--danger"
+                onClick={() => setAction('supprimer')}
+              >
+                Supprimer
+              </button>
+              <button
+                type="button"
+                className="tituba-listview__lot-annuler"
+                onClick={() => setSelection(new Set())}
+              >
+                Tout décocher
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {error && <div className="tituba-listview__error">Erreur : {error}</div>}
-
-      {/* La barre est toujours là, et toujours de la même hauteur.
-          Elle n'apparaissait qu'une fois quelque chose de coché, et
-          poussait alors le tableau vers le bas : la ligne qu'on visait
-          se dérobait sous le curseur au moment même où l'on cochait la
-          précédente. Insupportable à la souris, et bien pire pour qui
-          vise difficilement.
-
-          Faute de sélection, elle dit à quoi elle sert — ce qui vaut
-          mieux qu'une bande vide, et fait connaître la fonction. Le
-          compte est annoncé aux lecteurs d'écran par `aria-live`, sans
-          que rien ne bouge à l'écran. */}
-      <div className="tituba-listview__lot" aria-live="polite">
-        {selection.size === 0 ? (
-          <span className="tituba-listview__lot-vide">
-            Cochez des références pour agir sur plusieurs à la fois.
-          </span>
-        ) : (
-          <>
-            <span className="tituba-listview__lot-compte">
-              {selection.size} référence{selection.size > 1 ? 's' : ''} sélectionnée
-              {selection.size > 1 ? 's' : ''}
-            </span>
-            <button
-              type="button"
-              className="tituba-btn tituba-btn--ghost"
-              onClick={() => setAction('anonymiser')}
-            >
-              Retirer l’auteur·ice
-            </button>
-            <button
-              type="button"
-              className="tituba-btn tituba-btn--danger"
-              onClick={() => setAction('supprimer')}
-            >
-              Supprimer
-            </button>
-            <button
-              type="button"
-              className="tituba-listview__lot-annuler"
-              onClick={() => setSelection(new Set())}
-            >
-              Tout décocher
-            </button>
-          </>
-        )}
-      </div>
 
       <div className="tituba-listview__table" role="table">
         <div className="tituba-listview__row tituba-listview__row--head" role="row">
