@@ -27,27 +27,41 @@ interface Props {
 
 const { authorCitation, title, publishedFr, articleUrl, citationText, routePrefix, docId } =
   Astro.props;
+
+/** Les trois liens de téléchargement sont identiques au libellé près. */
+const lienFormat =
+  'font-sans text-meta text-(--accent) border-b border-(--accent) hover:text-ink hover:border-b-ink';
 ---
 
 <section id="cite">
-  <Panel famille="marque" padding="serre" class="citation-panel">
-    <div class="lbl">Pour citer cet article</div>
-    <div class="body">
-      {authorCitation}. « {title} », <em>Tituba</em>, {publishedFr},
-      <span class="url">{' '}{articleUrl}</span>.
+  {/* La forme vient de Panel : fond de marque dilué, rayon des panneaux
+      du site — même construction que le carré « URL du flux » de
+      RssFeedBlock. Colonne et gap plutôt que des margin-top/bottom
+      dépareillés entre le label, le corps et les actions : un seul écart
+      à régler, pas trois. */}
+  <Panel famille="marque" padding="serre" class="mt-10 flex flex-col gap-3.5">
+    <div class="font-mono text-label tracking-[0.2em] text-(--accent) uppercase">
+      Pour citer cet article
     </div>
-    <div class="acts">
+    <div class="font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]">
+      {authorCitation}. « {title} », <em>Tituba</em>, {publishedFr},
+      <span class="font-mono text-meta">{' '}{articleUrl}</span>.
+    </div>
+    <div class="flex flex-wrap items-center gap-4">
+      {/* L’état « copié » passe par un attribut plutôt que par une classe
+          ajoutée à la main : Tailwind ne génère que les classes qu’il lit
+          dans les sources, et une classe née dans un script lui échappe. */}
       <Button
         ton="contour"
         famille="marque"
-        class="copy-btn"
+        class="copy-btn data-[copie]:bg-(--accent) data-[copie]:text-paper"
         data-citation={citationText}
         aria-label="Copier la citation"
       >
         Copier
       </Button>
       <a
-        class="download-link"
+        class={lienFormat}
         href={`${routePrefix}/${docId}.bib`}
         download={`tituba-${docId}.bib`}
         aria-label="Télécharger la citation au format BibTeX"
@@ -55,7 +69,7 @@ const { authorCitation, title, publishedFr, articleUrl, citationText, routePrefi
         BibTeX
       </a>
       <a
-        class="download-link"
+        class={lienFormat}
         href={`${routePrefix}/${docId}.ris`}
         download={`tituba-${docId}.ris`}
         aria-label="Télécharger la citation au format RIS"
@@ -63,7 +77,7 @@ const { authorCitation, title, publishedFr, articleUrl, citationText, routePrefi
         RIS
       </a>
       <a
-        class="download-link"
+        class={lienFormat}
         href={`${routePrefix}/${docId}.ris`}
         download={`tituba-${docId}.ris`}
         aria-label="Importer la citation dans Zotero (format RIS)"
@@ -75,87 +89,28 @@ const { authorCitation, title, publishedFr, articleUrl, citationText, routePrefi
   </Panel>
 </section>
 
-<style>
-  /* La forme vient de Panel : fond de marque dilué, rayon des panneaux
-     du site — même construction que le carré « URL du flux » de
-     RssFeedBlock. Colonne flex + gap plutôt que des margin-top/bottom
-     dépareillés entre le label, le corps et les actions : un seul
-     écart à régler, pas trois.
-     :global() ici est nécessaire, pas juste une note de style : la
-     classe est passée en prop à <Panel>, qui la pose sur SA propre
-     racine — un élément qui porte le data-astro-cid de Panel.astro,
-     pas celui de ce composant-ci. Sans :global(), ce sélecteur ne
-     matche jamais rien (vérifié : display restait 'block', gap
-     'normal' malgré la règle). Les sélecteurs descendants plus bas
-     (.lbl, .body, .acts) n'ont pas ce problème : ce sont des éléments
-     à nous, passés dans le slot par défaut. */
-  :global(.citation-panel) {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-top: 40px;
-  }
-  .lbl {
-    font-family: var(--font-mono);
-    font-size: var(--t-label);
-    letter-spacing: var(--ls-label);
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-  .body {
-    font-family: var(--font-serif);
-    font-size: calc(15px * var(--a11y-echelle));
-    line-height: 1.55;
-  }
-  .body .url {
-    font-family: var(--font-mono);
-    font-size: calc(12px * var(--a11y-echelle));
-  }
-  .acts {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .acts :global(.copy-btn.copied) {
-    background: var(--accent);
-    color: var(--color-paper);
-  }
-  .download-link {
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--accent);
-    border-bottom: 1px solid var(--accent);
-  }
-  .download-link:hover {
-    color: var(--color-ink);
-    border-bottom-color: var(--color-ink);
-  }
-</style>
-
 <script>
-  // Sur `astro:page-load` : avec le ClientRouter, un module ne
-  // s'exécute qu'une fois par URL — sans cet évènement, le bouton de
-  // la page suivante resterait sans écouteur.
+  // Sur `astro:page-load` : avec le ClientRouter, un module ne s’exécute
+  // qu’une fois par URL — sans cet évènement, le bouton de la page
+  // suivante resterait sans écouteur.
   document.addEventListener('astro:page-load', () => {
-    const copyBtn = document.querySelector<HTMLButtonElement>('.copy-btn');
-    if (copyBtn && navigator.clipboard) {
-      copyBtn.addEventListener('click', async () => {
-        const text = copyBtn.dataset.citation || '';
-        try {
-          await navigator.clipboard.writeText(text);
-          const original = copyBtn.textContent;
-          copyBtn.textContent = 'Copié';
-          copyBtn.classList.add('copied');
-          setTimeout(() => {
-            copyBtn.textContent = original;
-            copyBtn.classList.remove('copied');
-          }, 2000);
-        } catch {
-          // Pas de fallback si clipboard refuse — rare en HTTPS, OK en
-          // contexte où l'utilisateur peut sélectionner le texte à la main.
-        }
-      });
-    }
+    const bouton = document.querySelector<HTMLButtonElement>('.copy-btn');
+    if (!bouton || !navigator.clipboard) return;
+    bouton.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(bouton.dataset.citation || '');
+      } catch {
+        // Pas de repli si le presse-papier refuse — rare en HTTPS, et le
+        // texte reste sélectionnable à la main.
+        return;
+      }
+      const libelle = bouton.textContent;
+      bouton.textContent = 'Copié';
+      bouton.dataset.copie = '';
+      setTimeout(() => {
+        bouton.textContent = libelle;
+        delete bouton.dataset.copie;
+      }, 2000);
+    });
   });
 </script>
