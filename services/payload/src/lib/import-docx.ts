@@ -106,16 +106,103 @@ function detacherBiblio(html: string): { corps: string; lignes: string[] } {
  * l'exercice est notoirement peu fiable sur du texte libre — mais à
  * réunir de quoi interroger la bibliothèque existante. C'est un humain
  * qui tranchera.
+ *
+ * Deux conventions, parce que les deux ont cours et qu'en ignorer une
+ * revenait à ne rien reconnaître d'une bibliographie entière :
+ *
+ *   Farris, Sara R. 2017. …        ← le prénom suit la virgule
+ *   Agier Michel, « La fabrique… » ← le prénom précède la virgule
+ *
+ * Dans le second cas, le nom peut compter plusieurs mots (« Le Cain
+ * Blandine ») : on prend tout ce qui précède le dernier, qui est le
+ * prénom.
  */
 function deviner(texte: string): { nom: string | null; annee: number | null } {
   const annee = texte.match(/\b(1[5-9]\d{2}|20\d{2})\b/);
-  // Le nom de famille ouvre presque toujours une référence, avant la
-  // virgule qui introduit le prénom.
-  const nom = texte.match(/^\s*([A-ZÀ-Ý][\p{L}'’-]{1,})\s*[,.]/u);
+  const majuscule = /^[A-ZÀ-Ý]/u;
+
+  let nom: string | null = null;
+  // « Nom, Prénom » — la virgule suit immédiatement le nom.
+  const avecVirgule = texte.match(/^\s*([A-ZÀ-Ý][\p{L}'’-]+)\s*[,.]/u);
+  if (avecVirgule) {
+    nom = avecVirgule[1];
+  } else {
+    // « Nom Prénom, » — tout ce qui précède la première virgule.
+    const avant = texte.split(/[,«(]/)[0]?.trim() ?? '';
+    const mots = avant.split(/\s+/).filter(Boolean);
+    // Une particule ouvre le nom sans porter de majuscule : « de
+    // Rochegonde Amaury ». La compter dans le nom plutôt que la laisser
+    // disqualifier la ligne entière.
+    const particule = /^(d[eu]|des|d’|d'|van|von|der|le|la|les|di|da|dos|del|ter|ten)$/i;
+    const debut = mots.length > 2 && particule.test(mots[0]) ? 1 : 0;
+    const utiles = mots.slice(debut);
+    if (utiles.length >= 2 && utiles.length <= 4 && utiles.every((m) => majuscule.test(m))) {
+      nom = mots.slice(0, mots.length - 1).join(' ');
+    }
+  }
+
   return {
-    nom: nom ? nom[1] : null,
+    nom,
     annee: annee ? Number.parseInt(annee[1], 10) : null,
   };
+}
+
+/** Titres qui annoncent un sommaire, quelle que soit la casse. */
+const RE_TITRE_SOMMAIRE =
+  /^\s*(table\s+des\s+mati[èe]res|sommaire|table\s+of\s+contents)\s*[:.]?\s*$/i;
+
+/**
+ * Retire le sommaire engendré par le traitement de texte.
+ *
+ * Word insère une table des matières figée : une suite de « Titre I : …
+ * 12 » renvoyant à des ancres internes. Importée telle quelle, elle
+ * atterrit au milieu du billet, avec des numéros de page qui ne veulent
+ * plus rien dire sur le web et des liens qui ne mènent nulle part — le
+ * tout en double du sommaire que le site fabrique lui-même.
+ *
+ * Les renvois portent une ancre `#_Toc…`, signature qui ne trompe pas.
+ * À défaut de liens, on ne retire les lignes que juste après un titre
+ * qui annonce un sommaire, et seulement si elles en ont la forme : un
+ * intitulé suivi d'un numéro de page.
+ */
+function retirerSommaire(html: string): { corps: string; retire: number } {
+  let retire = 0;
+
+  let corps = html.replace(/<p\b[^>]*>[\s\S]*?<\/p>/gi, (bloc) => {
+    if (!/href="#_Toc/i.test(bloc)) return bloc;
+    retire += 1;
+    return '';
+  });
+
+  const titre = [...corps.matchAll(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi)].find((m) =>
+    RE_TITRE_SOMMAIRE.test(m[2].replace(/<[^>]+>/g, '')),
+  );
+  if (!titre || titre.index === undefined) return { corps, retire };
+
+  // Ce qui suit le titre, tant que ça ressemble à une ligne de sommaire.
+  let fin = titre.index + titre[0].length;
+  let lignes = 0;
+  for (;;) {
+    const suite = corps.slice(fin).match(/^\s*<p\b[^>]*>([\s\S]*?)<\/p>/i);
+    if (!suite) break;
+    const t = suite[1]
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    // Une ligne vide sépare parfois deux entrées : on la franchit.
+    if (t && !/\s\d{1,4}$/.test(t)) break;
+    if (t) lignes += 1;
+    fin += suite[0].length;
+  }
+
+  // Le titre seul part avec ses lignes ; sans lignes à retirer, il ne
+  // part que si les renvois ont déjà été enlevés au-dessus.
+  if (lignes < 2 && retire === 0) return { corps, retire };
+
+  retire += lignes;
+  corps = corps.slice(0, titre.index) + corps.slice(lignes >= 2 ? fin : titre.index + titre[0].length);
+  return { corps, retire };
 }
 
 /**
@@ -276,8 +363,14 @@ export async function lireDocument(
   const { corps: sansImages, avertissements: perdus } = retirerImages(value);
   const { corps: sansNotes, notes } = extraireNotes(sansImages);
   const { corps: sansBiblio, lignes } = detacherBiblio(sansNotes);
-  const { corps: sansTitre, titre } = detacherTitre(sansBiblio.trim());
-  const html = descendreTitres(sansTitre).trim();
+  const { corps: sansSommaire, retire } = retirerSommaire(sansBiblio);
+  const { corps: sansTitre, titre } = detacherTitre(sansSommaire.trim());
+  // Un titre vide n'a pas de contenu à porter, mais il ouvre une section
+  // dans le sommaire du site : une entrée sans intitulé, sur laquelle on
+  // clique pour n'aller nulle part.
+  const html = descendreTitres(sansTitre)
+    .replace(/<h([1-6])[^>]*>\s*<\/h\1>/gi, '')
+    .trim();
 
   return {
     html,
@@ -285,7 +378,19 @@ export async function lireDocument(
     notes,
     biblio: lignes.map((texte) => ({ texte, ...deviner(texte) })),
     // Ce qui n'a pas suivi est dit, pas tu : quelqu'un qui a illustré ou
-    // mis en forme son texte doit savoir ce qu'il lui reste à faire.
-    avertissements: [...new Set([...perdus, ...nettoyerAvertissements(messages)])],
+    // mis en forme son texte doit savoir ce qu'il lui reste à faire. Ce
+    // qui a été retiré à dessein est dit aussi — sans quoi on chercherait
+    // son sommaire.
+    avertissements: [
+      ...new Set([
+        ...perdus,
+        ...(retire > 0
+          ? [
+              `Le sommaire du document (${retire} ligne${retire > 1 ? 's' : ''}) n’a pas été repris — le site fabrique le sien.`,
+            ]
+          : []),
+        ...nettoyerAvertissements(messages),
+      ]),
+    ],
   };
 }
