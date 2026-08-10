@@ -36,6 +36,13 @@
  * écrit, coché mais décochable, et quelqu'un tranche. Une référence mal
  * appariée est bien plus coûteuse à repérer, plus tard, qu'à saisir
  * tout de suite.
+ *
+ * « Insérer » fait ensuite tout ce que cela suppose, dans l'ordre :
+ * porter les références retenues dans la bibliographie, convertir les
+ * notes qui ne sont qu'une citation, poser le corps. Cet ordre est
+ * contraint — une citation ne peut pointer vers une entrée qui n'existe
+ * pas — et une séquence obligatoire qu'on sait exécuter soi-même n'a
+ * rien à faire dans une interface.
  */
 
 import React, { useRef, useState } from 'react';
@@ -190,18 +197,47 @@ export default function ImportDocument({
     }
   }
 
-  /** Notes qui deviendraient des citations si l'on insérait maintenant. */
+  /**
+   * Notes qui deviendront des citations si l'on insère maintenant.
+   *
+   * Compté sur ce que l'insertion VA créer, pas sur ce qui est déjà en
+   * base : les deux gestes n'en font plus qu'un, l'annonce doit donc
+   * porter sur le résultat et non sur une étape intermédiaire.
+   */
+  const clesPretes = new Set([
+    ...cleVersId.keys(),
+    ...[...(resultat?.biblio ?? []), ...(resultat?.notesRefs ?? [])]
+      .filter((l) => aCreer.has(l.texte))
+      .map((l) => l.cle),
+  ]);
   const convertibles = (resultat?.notesLues ?? []).filter(
-    (n) => !n.garde && n.citations.length > 0 && n.citations.every((c) => cleVersId.has(c.cle)),
+    (n) => !n.garde && n.citations.length > 0 && n.citations.every((c) => clesPretes.has(c.cle)),
   ).length;
 
-  function inserer(): void {
+  /**
+   * Insère — et fait, dans l'ordre, tout ce que cela suppose.
+   *
+   * Les références cochées rejoignent d'abord la bibliographie, puis
+   * les notes qui les citent deviennent des citations, puis le corps
+   * est posé. Cet ordre est contraint : une citation ne peut pointer
+   * vers une entrée qui n'existe pas encore.
+   *
+   * Il était demandé à l'utilisatrice — deux boutons, et un message
+   * pour rappeler lequel d'abord. Une séquence obligatoire qu'on peut
+   * exécuter soi-même n'a rien à faire dans une interface.
+   */
+  async function inserer(): Promise<void> {
     if (!resultat) return;
-    // Le corps est modifié sur une copie avant d'être posé : les notes
-    // qui ne sont qu'une citation deviennent des citations liées, les
-    // autres restent des notes.
+    const cles = aCreer.size > 0 ? await creer() : cleVersId;
+    // La bibliographie a résisté : on n'insère pas un corps dont les
+    // citations pointeraient vers des entrées qui n'existent pas. Le
+    // motif est déjà à l'écran, le panneau reste ouvert.
+    if (!cles) return;
+    // Le corps est modifié sur une copie : les notes qui ne sont qu'une
+    // citation deviennent des citations liées, les autres restent des
+    // notes.
     const corps = JSON.parse(JSON.stringify(resultat.body)) as unknown;
-    convertirNotes(corps, cleVersId);
+    convertirNotes(corps, cles);
     onInsert({ body: corps, titre: reprendreTitre ? resultat.titre : null });
     fermer();
   }
@@ -289,8 +325,8 @@ export default function ImportDocument({
    * découpage affiché ici vient de lui, le lui renvoyer n'apporterait
    * rien et ouvrirait la porte à autre chose.
    */
-  async function creer(): Promise<void> {
-    if (!resultat || aCreer.size === 0) return;
+  async function creer(): Promise<Map<string, number | string> | null> {
+    if (!resultat || aCreer.size === 0) return cleVersId;
 
     const retenues = [...resultat.biblio, ...(resultat.notesRefs ?? [])].filter((l) =>
       aCreer.has(l.texte),
@@ -330,7 +366,7 @@ export default function ImportDocument({
         };
         if (!res.ok || !data.ok) {
           setErreur(data.error ?? 'Les références n’ont pas pu être créées.');
-          return;
+          return null;
         }
         const suite = new Map(creation);
         const restant = new Set(aCreer);
@@ -365,8 +401,10 @@ export default function ImportDocument({
         await onLier(tout);
         setLiees((n) => n + tout.length);
       }
+      return suiteCles;
     } catch {
       setErreur('L’opération a échoué — le serveur n’a pas répondu.');
+      return null;
     } finally {
       setCreationEnCours(false);
     }
@@ -695,15 +733,26 @@ export default function ImportDocument({
               ? `${compte(convertibles, 'note')} sur ${resultat.resume.notes} ne ${
                   convertibles > 1 ? 'sont' : 'est'
                 } qu’une citation : ${
-                  convertibles > 1 ? 'elles deviendront des citations liées' : 'elle deviendra une citation liée'
+                  convertibles > 1
+                    ? 'elles deviendront des citations liées'
+                    : 'elle deviendra une citation liée'
                 } à la bibliographie, pagination comprise. Les autres restent des notes.`
-              : `Les ${resultat.resume.notes} notes seront reprises telles quelles. Ajoutez d’abord les références à la bibliographie du billet pour que celles qui ne sont qu’une citation y renvoient au lieu de la recopier.`}
+              : `Les ${resultat.resume.notes} notes seront reprises telles quelles : aucune ne renvoie à une référence identifiée.`}
           </p>
         )}
 
         <div className="ed-import__actions">
-          <button type="button" className="ed-import__insert" onClick={inserer}>
-            {corpsRempli ? 'Remplacer le corps' : 'Insérer dans le billet'}
+          <button
+            type="button"
+            className="ed-import__insert"
+            disabled={creationEnCours}
+            onClick={() => void inserer()}
+          >
+            {creationEnCours
+              ? 'En cours…'
+              : corpsRempli
+                ? 'Remplacer le corps'
+                : 'Insérer dans le billet'}
           </button>
           <button type="button" className="ed-import__cancel" onClick={fermer}>
             Annuler
