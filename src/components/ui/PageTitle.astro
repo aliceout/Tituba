@@ -75,38 +75,45 @@ const { title, lede, famille, taille } = Astro.props;
 // réduite plutôt que de courir sur 4-5 lignes.
 const SEUIL_TITRE_LONG = 70;
 const longueur = title.replace(/<[^>]+>/g, '').trim().length;
-const estLong =
-  taille === 'pleine' ? false : longueur > SEUIL_TITRE_LONG;
+const estLong = taille === 'pleine' ? false : longueur > SEUIL_TITRE_LONG;
+
+/**
+ * Échelle réduite au-delà du seuil. C’était une règle
+ * [data-longueur='long'] h1 ; le calcul est ici, à côté du seuil qui
+ * le décide, plutôt qu’à cent lignes de là.
+ */
+const echelle = estLong ? 'text-display-long' : 'text-display';
 ---
 
-<section class="titre" data-famille={famille} data-longueur={estLong ? 'long' : 'court'}>
-  <h1 set:html={title}></h1>
-  {lede && <p class="lede" set:html={lede}></p>}
+{/* Pas de marge basse : c’est le bloc suivant qui porte l’écart, comme
+    partout ailleurs sur le site (cf. --block-gap). La faire porter des
+    deux côtés ferait doubler certains blancs selon le voisinage — le
+    défaut déjà corrigé sur l’accueil.
+
+    Pas de padding non plus en haut : c’est <main> (Layout.astro) qui le
+    porte, pour toutes les pages sans exception, afin que l’écart entre
+    l’en-tête et le hero vive au même endroit que le reste de la
+    géométrie de page. */}
+<section class="titre py-0" data-famille={famille}>
+  <h1
+    class:list={[
+      'font-serif font-display leading-display tracking-display m-0 mb-9 max-poche:mb-[26px]',
+      echelle,
+    ]}
+    set:html={title}
+  />
+  {/* Chapô en sans : il contraste avec le serif du titre plutôt que de
+      le prolonger. */}
+  {lede && <p class="text-muted m-0 font-sans text-lede leading-[1.55]" set:html={lede} />}
   <slot />
 </section>
 
+{/* Le seul CSS qui reste ici, et il ne peut pas être ailleurs : ces
+    règles visent les <em> du titre, qui ne viennent pas de ce fichier
+    mais de `set:html` — formatHeroTitle transforme en <em> les mots mis
+    entre astérisques dans l’admin. On ne peut pas leur poser de classe
+    utilitaire : ils n’existent pas au moment où on écrit le composant. */}
 <style>
-  /* Pas de marge basse : c'est le bloc suivant qui porte l'écart, comme
-     partout ailleurs sur le site (cf. --block-gap). Faire porter la
-     marge des deux côtés ferait doubler certains blancs selon le
-     voisinage — le défaut qu'on a déjà corrigé sur l'accueil. */
-  /* Pas de padding-top ici : c'est <main> (Layout.astro) qui le porte,
-     pour toutes les pages sans exception — déplacé depuis .titre pour
-     que l'écart entre le header et le hero vive au même endroit que le
-     reste de la géométrie de page. */
-  .titre {
-    padding-block: 0;
-  }
-
-  h1 {
-    font-family: var(--font-serif);
-    font-size: var(--t-display);
-    font-weight: var(--w-display);
-    line-height: var(--lh-display);
-    letter-spacing: var(--ls-display);
-    margin: 0 0 36px;
-  }
-
   /* Surlignage au marqueur : le trait passe derrière le mot au lieu de
      le repeindre, donc le titre reste d'une seule encre et se lit d'un
      trait. Le dégradé à seuil net simule un feutre passé sous la ligne
@@ -116,7 +123,7 @@ const estLong =
      premier mot marqué est bleu, le deuxième vert, le troisième jaune,
      puis on recycle. Les couleurs se pilotent donc par le seul ordre des
      astérisques saisis dans l'admin — rien à configurer. */
-  h1 :global(em) {
+  .titre h1 :global(em) {
     font-style: normal;
     font-weight: inherit;
     color: inherit;
@@ -126,21 +133,21 @@ const estLong =
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
   }
-  h1 :global(em:nth-of-type(3n + 1)) {
+  .titre h1 :global(em:nth-of-type(3n + 1)) {
     background: linear-gradient(
       180deg,
       transparent 62%,
       color-mix(in srgb, var(--c-bleu) 33%, transparent) 62%
     );
   }
-  h1 :global(em:nth-of-type(3n + 2)) {
+  .titre h1 :global(em:nth-of-type(3n + 2)) {
     background: linear-gradient(
       180deg,
       transparent 62%,
       color-mix(in srgb, var(--c-vert) 33%, transparent) 62%
     );
   }
-  h1 :global(em:nth-of-type(3n + 3)) {
+  .titre h1 :global(em:nth-of-type(3n + 3)) {
     background: linear-gradient(
       180deg,
       transparent 62%,
@@ -150,8 +157,8 @@ const estLong =
 
   /* Famille imposée — une page verte a un titre surligné en vert.
      Placée après les règles de rotation, et non avant : les deux ont
-     exactement la même spécificité (0,1,2), donc seul l'ordre source
-     départage. Écrite plus haut, elle n'aurait rien fait. */
+     exactement la même spécificité, donc seul l'ordre source départage.
+     Écrite plus haut, elle n'aurait rien fait. */
   [data-famille='bleu'] {
     --fam-marqueur: var(--c-bleu);
   }
@@ -173,28 +180,5 @@ const estLong =
       transparent 62%,
       color-mix(in srgb, var(--fam-marqueur) 33%, transparent) 62%
     );
-  }
-
-  /* Titre long : échelle réduite (cf commentaire du calcul de seuil
-     plus haut). Même sélecteur simple que la famille — un attribut de
-     donnée, une règle, pas de logique CSS plus élaborée. */
-  [data-longueur='long'] h1 {
-    font-size: var(--t-display-long);
-  }
-
-  /* Chapô en sans : il contraste avec le serif du titre plutôt que de
-     le prolonger. */
-  .lede {
-    font-family: var(--font-sans);
-    font-size: var(--t-lede);
-    line-height: 1.55;
-    color: var(--color-muted);
-    margin: 0;
-  }
-
-  @media (max-width: 720px) {
-    h1 {
-      margin-bottom: 26px;
-    }
   }
 </style>
