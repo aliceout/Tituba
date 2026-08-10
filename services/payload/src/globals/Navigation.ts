@@ -121,6 +121,7 @@ export const Navigation: GlobalConfig = {
         { label: 'Formats', href: '/formats/', external: false },
         { label: 'Thèmes', href: '/themes/', external: false },
         { label: 'Auteur·ices', href: '/auteurices/', external: false },
+        { label: 'Mots-clés', href: '/tags/', external: false },
         { label: 'Archives', href: '/archives/', external: false },
       ],
     },

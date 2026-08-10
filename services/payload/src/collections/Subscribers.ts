@@ -80,23 +80,29 @@ export const Subscribers: CollectionConfig = {
           "« En attente » : lien de confirmation pas encore cliqué. « Actif·ve » : reçoit les mails de nouveaux billets. « Désabonné·e » : a cliqué sur le lien de désabo dans un mail, ne reçoit plus rien.",
       },
     },
+    /**
+     * Mécanique du lien de confirmation — masquée de l'admin.
+     *
+     * Ces deux champs ne se lisent pas, ne se corrigent pas et ne
+     * disent rien d'utile sur une personne abonnée : afficher le
+     * condensat d'un jeton, c'est encombrer une fiche d'une donnée
+     * technique en donnant l'impression qu'elle se règle à la main.
+     * `hidden` les retire de l'interface sans toucher au stockage, dont
+     * le flux de confirmation dépend.
+     */
     {
       name: 'confirmTokenHash',
       type: 'text',
       required: false,
       label: 'Hash du token de confirmation',
-      admin: {
-        readOnly: true,
-        description:
-          'SHA-256 du token envoyé dans le mail de confirmation. Stocké en base, jamais affiché en clair. Effacé après confirmation.',
-      },
+      admin: { hidden: true, readOnly: true },
     },
     {
       name: 'confirmTokenExpiresAt',
       type: 'date',
       required: false,
       label: 'Expiration du token de confirmation',
-      admin: { readOnly: true },
+      admin: { hidden: true, readOnly: true },
     },
     {
       name: 'subscribedAt',

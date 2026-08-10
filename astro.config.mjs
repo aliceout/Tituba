@@ -1,7 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
-import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
 // URL canonique du site — utilisée pour Astro.site, le sitemap et le
@@ -31,17 +30,13 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  integrations: [
-    sitemap({
-      filter: (page) =>
-        !page.includes('/cms') &&
-        !page.includes('/status'),
-      i18n: {
-        defaultLocale: 'fr',
-        locales: { fr: 'fr-FR' },
-      },
-    }),
-  ],
+  // Plus d'intégration `sitemap` : en rendu serveur elle ne connaît que
+  // les routes statiques, et ne listait donc aucune publication — ni
+  // article, ni épisode, ni thématique. Un plan figé au build vieillit
+  // en outre dès la parution suivante, alors que rien ici ne se
+  // reconstruit quand on publie. Le plan est désormais servi à la
+  // demande par src/pages/sitemap.xml.ts.
+  integrations: [],
   image: {
     service: { entrypoint: 'astro/assets/services/sharp' },
   },
