@@ -100,7 +100,7 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
         dans le centrage des menus. */}
     <div class="actions">
       <SearchLink active={nav.searchActive} />
-      <ThemeToggle />
+      <ThemeToggle class="ml-1 max-poche:absolute max-poche:top-4 max-poche:right-6" />
       {/* Ouvre le panneau de réglages d'accessibilité. Celui-ci est
           rendu par le Layout et non ici : le header porte un
           `z-index`, donc un contexte d'empilement dont un tiroir posé
@@ -306,11 +306,6 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
     border-bottom: 1.5px solid var(--c-bleu);
   }
 
-  /* Positionnement des boutons-icônes dans .actions — leur apparence
-     propre vit dans SearchLink / ThemeToggle. */
-  header.site .actions :global(.theme-toggle) {
-    margin-left: 4px;
-  }
 
   @media (max-width: 720px) {
     header.site .row {
@@ -323,13 +318,6 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
     header.site nav {
       gap: 18px;
       flex-wrap: wrap;
-    }
-    /* Sur mobile, le toggle sort du flux nav et se colle en haut à
-       droite du header, sur la même ligne visuelle que "Tituba.". */
-    header.site .actions :global(.theme-toggle) {
-      position: absolute;
-      right: 24px;
-      top: 16px;
     }
   }
 </style>

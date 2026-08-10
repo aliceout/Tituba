@@ -5,19 +5,28 @@
  * un rendu correct au premier paint (data-theme est posé par le script
  * anti-FOUC de Layout.astro avant le CSS).
  */
+interface Props {
+  /** Placement, décidé par le parent. Son apparence lui appartient. */
+  class?: string;
+}
+
+const { class: className } = Astro.props;
 ---
 
 <button
   type="button"
-  class="theme-toggle"
+  class:list={[
+    'text-muted hover:bg-ink/8 hover:text-ink inline-flex cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-1 transition-colors duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--c-bleu-deep)]',
+    className,
+  ]}
   aria-label="Basculer entre thème clair et sombre"
   title="Basculer le thème"
   data-theme-toggle
 >
-  <svg class="icon icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <svg class="block sombre:hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
   </svg>
-  <svg class="icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <svg class="hidden sombre:block" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="4"/>
     <path d="M12 2v2"/>
     <path d="M12 20v2"/>
@@ -30,40 +39,6 @@
   </svg>
 </button>
 
-<style>
-  .theme-toggle {
-    background: transparent;
-    border: 0;
-    padding: 4px;
-    color: var(--color-muted);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    transition: color 0.12s, background-color 0.12s;
-  }
-  .theme-toggle:hover {
-    color: var(--color-ink);
-    background: color-mix(in oklch, var(--color-ink), transparent 92%);
-  }
-  .theme-toggle:focus-visible {
-    outline: 2px solid var(--c-bleu-deep);
-    outline-offset: 2px;
-  }
-  /* Affichage conditionnel selon data-theme (posé sur <html> par le
-     script anti-FOUC du Layout). En light : on montre la lune (clic
-     → dark). En dark : on montre le soleil (clic → light). */
-  .theme-toggle .icon-sun {
-    display: none;
-  }
-  :global([data-theme='dark']) .theme-toggle .icon-moon {
-    display: none;
-  }
-  :global([data-theme='dark']) .theme-toggle .icon-sun {
-    display: inline-block;
-  }
-</style>
 
 <script>
   // Flip data-theme sur <html>, persiste dans localStorage. Le script

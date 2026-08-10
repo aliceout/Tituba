@@ -25,7 +25,7 @@ const { collection, size = 13 } = Astro.props;
 ---
 
 <svg
-  class="fmt-icon"
+  class="inline-block align-[-0.15em] mr-1.5 text-current"
   width={size}
   height={size}
   viewBox="0 0 16 16"
@@ -76,14 +76,3 @@ const { collection, size = 13 } = Astro.props;
     </g>
   )}
 </svg>
-
-<style>
-  .fmt-icon {
-    display: inline-block;
-    vertical-align: -0.15em;
-    margin-right: 6px;
-    /* Le trait suit la couleur du libellé, y compris son opacité
-       héritée — l'icône ne se détache jamais du mot qu'elle accompagne. */
-    color: inherit;
-  }
-</style>

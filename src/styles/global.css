@@ -6,6 +6,12 @@
 
 /* Polices self-hostées via @fontsource (importées dans Layout.astro). */
 
+/* Le mode sombre du site est un attribut sur <html>, posé par le script
+   anti-FOUC du Layout — pas la préférence système. La variante `dark:`
+   de Tailwind, qui lit `prefers-color-scheme`, ne le verrait donc pas.
+   `sombre:` s'écrit devant n'importe quel utilitaire. */
+@custom-variant sombre (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme {
   /* Couleurs (valeurs light mode par défaut — surchargeables par
      Payload Site → Branding via une <style> :root inline dans le
