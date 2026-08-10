@@ -35,16 +35,13 @@
 import mammoth from 'mammoth';
 
 import { odtVersHtml } from './import-odt';
+import { analyserReference, type ReferenceLue } from './import-references';
 
-/** Une ligne de la bibliographie détachée du document. */
-export type LigneBiblio = {
-  /** Le texte tel qu'il figurait dans le document. */
-  texte: string;
-  /** Nom de famille présumé — sert à chercher une entrée existante. */
-  nom: string | null;
-  /** Année présumée. */
-  annee: number | null;
-};
+/**
+ * Une ligne de la bibliographie détachée du document, telle que la lit
+ * `import-references` — texte d'origine compris, toujours.
+ */
+export type LigneBiblio = ReferenceLue;
 
 export type ResultatImport = {
   /** HTML du corps, notes marquées, bibliographie retirée. */
@@ -96,55 +93,6 @@ function detacherBiblio(html: string): { corps: string; lignes: string[] } {
     .filter((l) => l.length > 8);
 
   return { corps: html.slice(0, dernier.index), lignes };
-}
-
-/**
- * Devine le nom et l'année d'une référence, pour proposer un
- * rapprochement.
- *
- * Volontairement grossier : on ne cherche pas à analyser une citation —
- * l'exercice est notoirement peu fiable sur du texte libre — mais à
- * réunir de quoi interroger la bibliothèque existante. C'est un humain
- * qui tranchera.
- *
- * Deux conventions, parce que les deux ont cours et qu'en ignorer une
- * revenait à ne rien reconnaître d'une bibliographie entière :
- *
- *   Farris, Sara R. 2017. …        ← le prénom suit la virgule
- *   Agier Michel, « La fabrique… » ← le prénom précède la virgule
- *
- * Dans le second cas, le nom peut compter plusieurs mots (« Le Cain
- * Blandine ») : on prend tout ce qui précède le dernier, qui est le
- * prénom.
- */
-function deviner(texte: string): { nom: string | null; annee: number | null } {
-  const annee = texte.match(/\b(1[5-9]\d{2}|20\d{2})\b/);
-  const majuscule = /^[A-ZÀ-Ý]/u;
-
-  let nom: string | null = null;
-  // « Nom, Prénom » — la virgule suit immédiatement le nom.
-  const avecVirgule = texte.match(/^\s*([A-ZÀ-Ý][\p{L}'’-]+)\s*[,.]/u);
-  if (avecVirgule) {
-    nom = avecVirgule[1];
-  } else {
-    // « Nom Prénom, » — tout ce qui précède la première virgule.
-    const avant = texte.split(/[,«(]/)[0]?.trim() ?? '';
-    const mots = avant.split(/\s+/).filter(Boolean);
-    // Une particule ouvre le nom sans porter de majuscule : « de
-    // Rochegonde Amaury ». La compter dans le nom plutôt que la laisser
-    // disqualifier la ligne entière.
-    const particule = /^(d[eu]|des|d’|d'|van|von|der|le|la|les|di|da|dos|del|ter|ten)$/i;
-    const debut = mots.length > 2 && particule.test(mots[0]) ? 1 : 0;
-    const utiles = mots.slice(debut);
-    if (utiles.length >= 2 && utiles.length <= 4 && utiles.every((m) => majuscule.test(m))) {
-      nom = mots.slice(0, mots.length - 1).join(' ');
-    }
-  }
-
-  return {
-    nom,
-    annee: annee ? Number.parseInt(annee[1], 10) : null,
-  };
 }
 
 /** Titres qui annoncent un sommaire, quelle que soit la casse. */
@@ -376,7 +324,7 @@ export async function lireDocument(
     html,
     titre,
     notes,
-    biblio: lignes.map((texte) => ({ texte, ...deviner(texte) })),
+    biblio: lignes.map(analyserReference),
     // Ce qui n'a pas suivi est dit, pas tu : quelqu'un qui a illustré ou
     // mis en forme son texte doit savoir ce qu'il lui reste à faire. Ce
     // qui a été retiré à dessein est dit aussi — sans quoi on chercherait

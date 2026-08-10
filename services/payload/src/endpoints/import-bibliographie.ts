@@ -1,0 +1,141 @@
+/**
+ * Créer les entrées manquantes d'une bibliographie importée.
+ *
+ *   POST /cms/api/import-bibliographie   { "textes": ["…", "…"] }
+ *
+ * L'endpoint ne reçoit que du texte, jamais des champs déjà découpés :
+ * il relit lui-même chaque référence. Faire confiance au découpage venu
+ * du navigateur reviendrait à laisser écrire n'importe quoi dans la
+ * bibliographie par une requête forgée, alors que la relecture ici ne
+ * coûte rien — c'est le même code qui a servi à l'affichage.
+ *
+ * Ce qui est écrit est ce qui se lit, et rien d'autre. Une référence
+ * dont le nom ou l'année ne se laissent pas lire n'est pas créée à
+ * trous : elle est refusée, avec la raison. Le texte d'origine est
+ * toujours conservé dans l'entrée — quoi qu'il arrive, on peut revenir
+ * à ce qui était écrit dans le document.
+ */
+import type { Endpoint } from 'payload';
+
+import { errorResponse, jsonResponse, readJsonBody, requireUser } from '../auth/helpers';
+import { analyserReference, slugDeReference } from '../lib/import-references';
+
+/** Une bibliographie de mémoire en compte cent ; au-delà, on doute. */
+const MAX_REFERENCES = 400;
+
+type Resultat = {
+  texte: string;
+  /** Entrée créée. */
+  id?: number | string;
+  label?: string;
+  /** Refus motivé — la référence reste à saisir à la main. */
+  erreur?: string;
+};
+
+/**
+ * Clé libre pour l'ancre `#bib-…`.
+ *
+ * Deux ouvrages du même auteur la même année sont courants : on suffixe
+ * alors, plutôt que d'échouer sur la contrainte d'unicité ou d'écraser
+ * l'entrée existante.
+ */
+async function slugLibre(
+  payload: Parameters<NonNullable<Endpoint['handler']>>[0]['payload'],
+  base: string,
+): Promise<string> {
+  for (let i = 0; i < 50; i++) {
+    const candidat = i === 0 ? base : `${base}-${i + 1}`;
+    const dejaLa = await payload.find({
+      collection: 'bibliography',
+      where: { slug: { equals: candidat } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    });
+    if (dejaLa.totalDocs === 0) return candidat;
+  }
+  // Cinquante homonymes la même année : ce n'est plus un cas d'usage.
+  throw new Error('Trop de références partagent cette clé.');
+}
+
+export const importBibliographieEndpoint: Endpoint = {
+  path: '/import-bibliographie',
+  method: 'post',
+  handler: async (req) => {
+    if (!requireUser(req)) return errorResponse('Non authentifié.', 401, 'unauthenticated');
+
+    const body = await readJsonBody<{ textes?: unknown }>(req);
+    const textes = Array.isArray(body?.textes)
+      ? body.textes.filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+      : [];
+
+    if (textes.length === 0) return errorResponse('Aucune référence reçue.', 400, 'no_refs');
+    if (textes.length > MAX_REFERENCES) {
+      return errorResponse(
+        `Trop de références en une fois (${MAX_REFERENCES} au maximum).`,
+        400,
+        'too_many',
+      );
+    }
+
+    const resultats: Resultat[] = [];
+
+    for (const texte of textes) {
+      const ref = analyserReference(texte);
+
+      if (ref.manques.length > 0 || !ref.nom || ref.annee == null) {
+        resultats.push({
+          texte: ref.texte,
+          erreur: `${ref.manques.join(' et ')} introuvable${ref.manques.length > 1 ? 's' : ''} — à saisir à la main.`,
+        });
+        continue;
+      }
+
+      try {
+        const slug = await slugLibre(req.payload, slugDeReference(ref.nom, ref.annee));
+        const doc = await req.payload.create({
+          collection: 'bibliography',
+          overrideAccess: true,
+          data: {
+            slug,
+            type: ref.type,
+            year: ref.annee,
+            authors: [
+              // Autrice par défaut : c'est ce qu'annonce une
+              // bibliographie sauf mention contraire, et la mention
+              // contraire ne se lit pas dans une ligne de texte.
+              { lastName: ref.nom, firstName: ref.prenom ?? undefined, role: 'author' },
+            ],
+            // Faute de titre isolé, la référence entière en tient lieu :
+            // l'entrée reste reconnaissable et se corrige, là où un titre
+            // inventé se serait fait passer pour une lecture.
+            title: ref.titre ?? ref.texte.slice(0, 250),
+            publisher: ref.editeur ?? undefined,
+            url: ref.url ?? undefined,
+            // Le texte d'origine, toujours. C'est lui qui fait foi si la
+            // lecture s'est trompée.
+            annotation: `Importé d’un document :\n${ref.texte}`,
+            source: 'manual',
+          },
+        });
+        resultats.push({
+          texte: ref.texte,
+          id: doc.id,
+          label: `${ref.nom} (${ref.annee})`,
+        });
+      } catch (err) {
+        req.payload.logger.warn(
+          { err: (err as Error).message, texte: ref.texte.slice(0, 80) },
+          'Création de référence impossible',
+        );
+        resultats.push({ texte: ref.texte, erreur: (err as Error).message });
+      }
+    }
+
+    const crees = resultats.filter((r) => r.id != null).length;
+    return jsonResponse(
+      { ok: true, crees, refuses: resultats.length - crees, resultats },
+      { status: 200 },
+    );
+  },
+};

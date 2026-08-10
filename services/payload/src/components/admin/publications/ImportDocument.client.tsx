@@ -39,9 +39,18 @@ import React, { useRef, useState } from 'react';
 type LigneBiblio = {
   texte: string;
   nom: string | null;
+  prenom: string | null;
   annee: number | null;
+  titre: string | null;
+  editeur: string | null;
+  url: string | null;
+  /** Ce qui manque pour pouvoir créer l'entrée. Vide = créable. */
+  manques: string[];
   candidats: { id: number | string; label: string; sur: boolean }[];
 };
+
+/** Ce qu'il est advenu d'une référence qu'on a demandé de créer. */
+type Creation = { id?: number | string; label?: string; erreur?: string };
 
 type Resultat = {
   body: unknown;
@@ -74,6 +83,11 @@ export default function ImportDocument({
   const [nomFichier, setNomFichier] = useState('');
   const [reprendreTitre, setReprendreTitre] = useState(true);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // Références retenues pour création, par leur texte — stable là où un
+  // indice ne l'est pas.
+  const [aCreer, setACreer] = useState<Set<string>>(new Set());
+  const [creation, setCreation] = useState<Map<string, Creation>>(new Map());
+  const [creationEnCours, setCreationEnCours] = useState(false);
 
   async function lire(fichier: File): Promise<void> {
     setEnCours(true);
@@ -96,6 +110,16 @@ export default function ImportDocument({
       }
       setResultat(data);
       setReprendreTitre(Boolean(data.titre));
+      setCreation(new Map());
+      // Cochées d'emblée : celles qui se lisent et qu'aucune entrée
+      // existante ne recouvre. Les autres demandent un geste.
+      setACreer(
+        new Set(
+          data.biblio
+            .filter((l) => l.manques.length === 0 && !l.candidats.some((c) => c.sur))
+            .map((l) => l.texte),
+        ),
+      );
     } catch {
       setErreur('La lecture a échoué — le serveur n’a pas répondu.');
     } finally {
@@ -118,6 +142,61 @@ export default function ImportDocument({
     setResultat(null);
     setErreur(null);
     setNomFichier('');
+    setACreer(new Set());
+    setCreation(new Map());
+  }
+
+  /**
+   * Crée les références cochées dans la bibliographie.
+   *
+   * Seuls les textes partent : c'est le serveur qui les relit. Le
+   * découpage affiché ici vient de lui, le lui renvoyer n'apporterait
+   * rien et ouvrirait la porte à autre chose.
+   */
+  async function creer(): Promise<void> {
+    const textes = [...aCreer];
+    if (textes.length === 0) return;
+    setCreationEnCours(true);
+    try {
+      const res = await fetch('/cms/api/import-bibliographie', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textes }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        resultats?: ({ texte: string } & Creation)[];
+      };
+      if (!res.ok || !data.ok) {
+        setErreur(data.error ?? 'Les références n’ont pas pu être créées.');
+        return;
+      }
+      const suite = new Map(creation);
+      const restant = new Set(aCreer);
+      for (const r of data.resultats ?? []) {
+        suite.set(r.texte, { id: r.id, label: r.label, erreur: r.erreur });
+        // Ce qui est créé sort de la sélection : recliquer ne doit pas
+        // en faire un doublon.
+        if (r.id != null) restant.delete(r.texte);
+      }
+      setCreation(suite);
+      setACreer(restant);
+    } catch {
+      setErreur('La création a échoué — le serveur n’a pas répondu.');
+    } finally {
+      setCreationEnCours(false);
+    }
+  }
+
+  function basculer(texte: string): void {
+    setACreer((prev) => {
+      const suite = new Set(prev);
+      if (suite.has(texte)) suite.delete(texte);
+      else suite.add(texte);
+      return suite;
+    });
   }
 
   // Le champ de fichier reste monté et invisible : le bouton l'actionne.
@@ -211,27 +290,99 @@ export default function ImportDocument({
           <div className="ed-import__biblio">
             <h4>Bibliographie détachée</h4>
             <p className="ed-import__biblio-note">
-              Ces références ne sont pas insérées dans le texte. Créez-les dans la
-              bibliographie si elles y manquent, puis appelez-les depuis l’éditeur avec
-              <kbd>/</kbd>.
+              Ces références ne sont pas insérées dans le texte&nbsp;: elles vont dans
+              votre bibliographie, d’où vous les appellerez depuis l’éditeur avec
+              <kbd>/</kbd>. Vérifiez ce qui sera créé&nbsp;— seul ce qui se lit sans
+              ambiguïté est repris, le reste se complète ensuite.
             </p>
             <ul>
-              {resultat.biblio.map((l, i) => (
-                <li key={`${i}-${l.texte.slice(0, 20)}`}>
-                  <span className="ed-import__ref">{l.texte}</span>
-                  {l.candidats.length > 0 ? (
-                    <span className="ed-import__match">
-                      {l.candidats[0].sur ? 'Déjà dans la bibliographie' : 'Peut-être'}
-                      &nbsp;: {l.candidats[0].label}
-                    </span>
-                  ) : (
-                    <span className="ed-import__match ed-import__match--absent">
-                      Absente de la bibliographie
-                    </span>
-                  )}
-                </li>
-              ))}
+              {resultat.biblio.map((l, i) => {
+                const faite = creation.get(l.texte);
+                const sur = l.candidats.find((c) => c.sur);
+                const creable = l.manques.length === 0 && !sur && !faite?.id;
+                return (
+                  <li key={`${i}-${l.texte.slice(0, 20)}`}>
+                    <label className="ed-import__ref-ligne">
+                      {creable ? (
+                        <input
+                          type="checkbox"
+                          checked={aCreer.has(l.texte)}
+                          disabled={creationEnCours}
+                          onChange={() => basculer(l.texte)}
+                        />
+                      ) : (
+                        <span className="ed-import__puce" aria-hidden="true" />
+                      )}
+                      <span className="ed-import__ref">{l.texte}</span>
+                    </label>
+
+                    {/* Ce qui sera écrit, en clair — c'est sur cette ligne
+                        qu'on repère une lecture qui a dérapé. */}
+                    {creable && (
+                      <span className="ed-import__lu">
+                        {[
+                          [l.nom, l.prenom].filter(Boolean).join(', '),
+                          l.annee,
+                          l.titre ?? '(titre non isolé — la référence entière en tiendra lieu)',
+                          l.editeur,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    )}
+
+                    {faite?.id != null && (
+                      <span className="ed-import__match">
+                        Créée dans la bibliographie&nbsp;: {faite.label}
+                      </span>
+                    )}
+                    {faite?.erreur && (
+                      <span className="ed-import__match ed-import__match--absent">
+                        {faite.erreur}
+                      </span>
+                    )}
+                    {!faite && sur && (
+                      <span className="ed-import__match">
+                        Déjà dans la bibliographie&nbsp;: {sur.label}
+                      </span>
+                    )}
+                    {!faite && !sur && l.manques.length > 0 && (
+                      <span className="ed-import__match ed-import__match--absent">
+                        {l.manques.join(' et ')} introuvable
+                        {l.manques.length > 1 ? 's' : ''} — à saisir à la main.
+                      </span>
+                    )}
+                    {!faite && !sur && l.manques.length === 0 && l.candidats.length > 0 && (
+                      <span className="ed-import__match">
+                        Peut-être déjà là&nbsp;: {l.candidats[0].label}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
+
+            <div className="ed-import__biblio-actions">
+              <button
+                type="button"
+                className="ed-import__creer"
+                disabled={aCreer.size === 0 || creationEnCours}
+                onClick={() => void creer()}
+              >
+                {creationEnCours
+                  ? 'Création…'
+                  : `Créer ${compte(aCreer.size, 'référence')} dans la bibliographie`}
+              </button>
+              {aCreer.size > 0 && !creationEnCours && (
+                <button
+                  type="button"
+                  className="ed-import__cancel"
+                  onClick={() => setACreer(new Set())}
+                >
+                  Ne rien créer
+                </button>
+              )}
+            </div>
           </div>
         )}
 

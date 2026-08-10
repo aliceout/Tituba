@@ -4910,6 +4910,52 @@ button.btn--style-primary,
       }
     }
 
+    &__ref-ligne {
+      align-items: baseline;
+      cursor: pointer;
+      display: flex;
+      gap: 8px;
+    }
+
+    // Aligne les lignes sans case à cocher sur celles qui en ont.
+    &__puce {
+      flex: none;
+      width: 13px;
+    }
+
+    // Ce qui sera écrit en base, sous la référence d'origine.
+    &__lu {
+      color: var(--b-muted);
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      padding-left: 21px;
+    }
+
+    &__biblio-actions {
+      align-items: center;
+      border-top: 1px solid var(--b-rule);
+      display: flex;
+      gap: 14px;
+      padding-top: 12px;
+    }
+
+    &__creer {
+      background: none;
+      border: 1px solid var(--b-accent);
+      border-radius: 4px;
+      color: var(--b-accent);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 12px;
+
+      &:disabled {
+        border-color: var(--b-rule);
+        color: var(--b-muted);
+        cursor: default;
+      }
+    }
+
     &__ref {
       font-size: 12px;
       line-height: 1.45;

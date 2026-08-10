@@ -33,6 +33,7 @@ import {
 import { subscribersEndpoints } from './endpoints/subscribers';
 import { unsplashEndpoints } from './endpoints/unsplash';
 import { contactEndpoints } from './endpoints/contact';
+import { importBibliographieEndpoint } from './endpoints/import-bibliographie';
 import { importDocumentEndpoint } from './endpoints/import-document';
 import { extendPublicationsSearchVector } from './db/extend-publications-search-vector';
 import { buildEmailAdapter } from './auth/transport';
@@ -166,6 +167,7 @@ export default buildConfig({
     ...unsplashEndpoints,
     ...contactEndpoints,
     importDocumentEndpoint,
+    importBibliographieEndpoint,
   ],
   editor: lexicalEditor(),
   email: buildEmailAdapter(),
