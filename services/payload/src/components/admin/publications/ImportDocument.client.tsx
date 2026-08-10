@@ -49,6 +49,8 @@ type LigneBiblio = {
   titre: string | null;
   editeur: string | null;
   url: string | null;
+  /** Texte non signé : la place de l'auteur·ice reste vide. */
+  anonyme: boolean;
   /** Ce qui manque pour pouvoir créer l'entrée. Vide = créable. */
   manques: string[];
   candidats: { id: number | string; label: string; sur: boolean }[];
@@ -110,7 +112,7 @@ export default function ImportDocument({
   function pret(l: LigneBiblio, c?: { nom?: string; annee?: string }): boolean {
     const nom = l.nom ?? c?.nom?.trim();
     const annee = l.annee ?? (c?.annee ? Number(c.annee) : NaN);
-    return Boolean(nom) && Number.isInteger(annee) && Number(annee) >= 1700;
+    return (Boolean(nom) || l.anonyme) && Number.isInteger(annee) && Number(annee) >= 1700;
   }
 
   function complete(l: LigneBiblio): boolean {
@@ -478,7 +480,8 @@ export default function ImportDocument({
                         {creable && (
                           <span className="ed-import__lu">
                             {[
-                              [l.nom, l.prenom].filter(Boolean).join(', '),
+                              [l.nom, l.prenom].filter(Boolean).join(', ') ||
+                                (l.anonyme ? 'non signé' : ''),
                               l.annee,
                               l.titre ??
                                 '(titre non isolé — la référence entière en tiendra lieu)',

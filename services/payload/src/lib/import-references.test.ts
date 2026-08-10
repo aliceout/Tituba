@@ -69,8 +69,13 @@ describe('lecture du titre', () => {
       '[anon.], « Les réfugiés sont « une chance » pour l’Allemagne », Les echos, 2015.',
     );
     assert.equal(r.titre, 'Les réfugiés sont « une chance » pour l’Allemagne');
-    // Faute de signature, l'organe de presse répond du texte.
-    assert.equal(r.nom, 'Les echos');
+    // Non signé : la revue reste la revue, elle n'en devient pas
+    // l'autrice. Et l'absence n'est pas comptée comme un manque —
+    // c'est une information, pas un trou.
+    assert.equal(r.nom, null);
+    assert.equal(r.anonyme, true);
+    assert.equal(r.editeur, 'Les echos');
+    assert.deepEqual(r.manques, []);
   });
 });
 

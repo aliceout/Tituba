@@ -111,12 +111,16 @@ export const Bibliography: CollectionConfig = {
       // citation courte est `authors[0]` — pas de flag séparé, juste l'ordre.
       name: 'authors',
       type: 'array',
-      required: true,
-      minRows: 1,
+      // Facultatif : un article de presse non signé n'a pas
+      // d'auteur·ice, et lui en attribuer un — l'organe de presse, par
+      // exemple — revient à écrire quelque chose que la source ne dit
+      // pas. La place reste vide, le titre identifie l'œuvre.
+      required: false,
+      minRows: 0,
       label: 'Auteur·ice·s',
       admin: {
         description:
-          'Une ligne par personne (1er = auteur·ice principal·e, utilisé pour le tri et la citation courte). `firstName` peut rester vide pour les auteurs corporatifs (UNESCO, Conseil de l’Europe…).',
+          'Une ligne par personne (1re = auteur·ice principal·e, utilisée pour le tri et la citation courte). Le prénom peut rester vide pour les auteurs collectifs (UNESCO, Conseil de l’Europe…). Laissez la liste vide pour un texte non signé.',
         initCollapsed: false,
       },
       fields: [
@@ -313,10 +317,14 @@ export const Bibliography: CollectionConfig = {
       hooks: {
         beforeChange: [
           ({ data }) => {
+            // Assemblé morceau par morceau : sans auteur·ice — un texte
+            // non signé — la composition directe laissait le libellé
+            // s'ouvrir sur une espace, et la liste s'alignait de travers.
             const author = buildAuthorLabel(data);
             const year = data?.year ?? '';
             const title = data?.title ?? '';
-            return `${author}${year ? ` (${year})` : ''}${title ? ` — ${title}` : ''}`;
+            const tete = [author, year ? `(${year})` : ''].filter(Boolean).join(' ');
+            return [tete, title].filter(Boolean).join(' — ');
           },
         ],
       },

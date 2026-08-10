@@ -36,6 +36,14 @@ export type ReferenceLue = {
   url: string | null;
   type: TypeReference;
   /**
+   * Texte non signé, et qui l'annonce (« [anon.] », « Anonyme »).
+   *
+   * Distinct d'un nom qu'on n'a pas su lire : ici on sait qu'il n'y en
+   * a pas. L'entrée peut donc se créer sans auteur·ice plutôt que
+   * d'attendre qu'on en invente un.
+   */
+  anonyme: boolean;
+  /**
    * Ce qui manque pour créer l'entrée. Vide = créable.
    * Le nom et l'année sont exigés par la collection ; sans eux, aucune
    * entrée n'est proposée plutôt qu'une entrée à trous.
@@ -252,17 +260,17 @@ export function analyserReference(texte: string): ReferenceLue {
   const titre = lireTitre(propre);
   const editeur = lireEditeur(propre, titre);
 
-  // Texte non signé : c'est le titre de publication qui en répond, et
-  // c'est ainsi qu'on le cite. Ce n'est pas une invention — l'usage
-  // bibliographique porte l'organe de presse en auteur collectif quand
-  // l'article ne l'est par personne — mais cela se voit dans ce qui
-  // sera écrit, et se décoche.
-  let nom = lu.nom;
-  let prenom = lu.prenom;
-  if (!nom && editeur && RE_ANONYME.test(propre)) {
-    nom = editeur;
-    prenom = null;
-  }
+  // Un texte non signé reste non signé.
+  //
+  // On y portait l'organe de presse en auteur collectif — l'usage
+  // bibliographique l'autorise — mais dans la bibliothèque cela donnait
+  // « Jeune Afrique » à la fois comme autrice et comme revue, deux fois
+  // la même chose sur la même ligne, et une attribution que personne
+  // n'avait demandée. La revue reste la revue ; la place de l'auteur·ice
+  // reste vide, ce qui est exact.
+  const nom = lu.nom;
+  const prenom = lu.prenom;
+  const anonyme = !nom && RE_ANONYME.test(propre);
 
   // Le type se déduit de la forme, pas du contenu : un titre entre
   // guillemets accompagné d'un support est un article ; une adresse
@@ -273,10 +281,12 @@ export function analyserReference(texte: string): ReferenceLue {
   else if (url && !editeur) type = 'web';
 
   const manques: string[] = [];
-  if (!nom) manques.push('nom');
+  // Un texte qui se déclare non signé ne manque de rien : l'absence
+  // d'auteur·ice y est une information, pas un trou.
+  if (!nom && !anonyme) manques.push('nom');
   if (annee == null) manques.push('année');
 
-  return { texte: propre, nom, prenom, annee, titre, editeur, url, type, manques };
+  return { texte: propre, nom, prenom, annee, titre, editeur, url, type, anonyme, manques };
 }
 
 /**

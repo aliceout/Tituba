@@ -25,12 +25,58 @@ const MAX_REFERENCES = 400;
 
 type Resultat = {
   texte: string;
-  /** Entrée créée. */
+  /** Entrée créée, ou retrouvée si elle existait déjà. */
   id?: number | string;
   label?: string;
+  /** Vrai quand l'entrée existait : rien n'a été écrit. */
+  deja?: boolean;
   /** Refus motivé — la référence reste à saisir à la main. */
   erreur?: string;
 };
+
+/** Forme comparable d'un titre : la ponctuation et la casse ne comptent pas. */
+function titreNormalise(titre: string): string {
+  return titre
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 60);
+}
+
+/**
+ * L'entrée existe-t-elle déjà ?
+ *
+ * Le dernier rempart, et le seul qui tienne : le panneau propose ce
+ * qu'il croit manquer, mais il travaille sur un état lu à un instant
+ * donné. Deux imports du même document à vingt minutes d'écart — ce qui
+ * arrive dès qu'on s'y reprend à deux fois — créaient deux fois la même
+ * source, une fois sous « Agier Michel », une fois sous « Agier, M. ».
+ *
+ * On compare sur l'année et le titre plutôt que sur le nom : c'est
+ * l'écriture du nom qui varie d'une citation à l'autre, jamais l'œuvre.
+ */
+async function dejaPresente(
+  payload: Parameters<NonNullable<Endpoint['handler']>>[0]['payload'],
+  annee: number,
+  titre: string,
+): Promise<{ id: number | string; label: string } | null> {
+  const cible = titreNormalise(titre);
+  if (!cible) return null;
+
+  const res = await payload.find({
+    collection: 'bibliography',
+    where: { year: { equals: annee } },
+    limit: 200,
+    depth: 0,
+    overrideAccess: true,
+  });
+  const trouve = (
+    res.docs as Array<{ id: number | string; title?: string | null; displayLabel?: string | null }>
+  ).find((d) => titreNormalise(d.title ?? '') === cible);
+
+  return trouve ? { id: trouve.id, label: trouve.displayLabel?.trim() || String(trouve.title) } : null;
+}
 
 /**
  * Clé libre pour l'ancre `#bib-…`.
@@ -109,11 +155,12 @@ export const importBibliographieEndpoint: Endpoint = {
         nom: entree.nom ?? lu.nom,
         annee: entree.annee ?? lu.annee,
       };
-      const manques = [!ref.nom ? 'nom' : null, ref.annee == null ? 'année' : null].filter(
-        (m): m is string => m !== null,
-      );
+      const manques = [
+        !ref.nom && !ref.anonyme ? 'nom' : null,
+        ref.annee == null ? 'année' : null,
+      ].filter((m): m is string => m !== null);
 
-      if (manques.length > 0 || !ref.nom || ref.annee == null) {
+      if (manques.length > 0 || ref.annee == null) {
         resultats.push({
           texte: ref.texte,
           erreur: `${manques.join(' et ')} introuvable${manques.length > 1 ? 's' : ''} — à saisir à la main.`,
@@ -122,7 +169,25 @@ export const importBibliographieEndpoint: Endpoint = {
       }
 
       try {
-        const slug = await slugLibre(req.payload, slugDeReference(ref.nom, ref.annee));
+        // Rien à écrire si l'œuvre est déjà là : on rend l'entrée
+        // existante, que l'appelant rattachera au billet comme si elle
+        // venait d'être créée.
+        const titre = ref.titre ?? ref.texte;
+        const existante = await dejaPresente(req.payload, ref.annee, titre);
+        if (existante) {
+          resultats.push({
+            texte: ref.texte,
+            id: existante.id,
+            label: existante.label,
+            deja: true,
+          });
+          continue;
+        }
+
+        // Sans auteur·ice, la clé se dérive de la revue puis du titre :
+        // il en faut une, et l'ancre doit rester lisible.
+        const base = ref.nom ?? ref.editeur ?? (ref.titre ?? ref.texte).split(/\s+/).slice(0, 3).join(' ');
+        const slug = await slugLibre(req.payload, slugDeReference(base, ref.annee));
         const doc = await req.payload.create({
           collection: 'bibliography',
           overrideAccess: true,
@@ -130,12 +195,16 @@ export const importBibliographieEndpoint: Endpoint = {
             slug,
             type: ref.type,
             year: ref.annee,
-            authors: [
-              // Autrice par défaut : c'est ce qu'annonce une
-              // bibliographie sauf mention contraire, et la mention
-              // contraire ne se lit pas dans une ligne de texte.
-              { lastName: ref.nom, firstName: ref.prenom ?? undefined, role: 'author' },
-            ],
+            // Vide pour un texte non signé : la revue est la revue, elle
+            // n'en devient pas l'autrice.
+            authors: ref.nom
+              ? [
+                  // Autrice par défaut : c'est ce qu'annonce une
+                  // bibliographie sauf mention contraire, et la mention
+                  // contraire ne se lit pas dans une ligne de texte.
+                  { lastName: ref.nom, firstName: ref.prenom ?? undefined, role: 'author' as const },
+                ]
+              : [],
             // Faute de titre isolé, la référence entière en tient lieu :
             // l'entrée reste reconnaissable et se corrige, là où un titre
             // inventé se serait fait passer pour une lecture.

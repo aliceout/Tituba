@@ -473,14 +473,16 @@ export interface Bibliography {
   type: 'book' | 'chapter' | 'article' | 'paper' | 'web' | 'other';
   year: number;
   /**
-   * Une ligne par personne (1er = auteur·ice principal·e, utilisé pour le tri et la citation courte). `firstName` peut rester vide pour les auteurs corporatifs (UNESCO, Conseil de l’Europe…).
+   * Une ligne par personne (1re = auteur·ice principal·e, utilisée pour le tri et la citation courte). Le prénom peut rester vide pour les auteurs collectifs (UNESCO, Conseil de l’Europe…). Laissez la liste vide pour un texte non signé.
    */
-  authors: {
-    lastName: string;
-    firstName?: string | null;
-    role: 'author' | 'editor' | 'translator';
-    id?: string | null;
-  }[];
+  authors?:
+    | {
+        lastName: string;
+        firstName?: string | null;
+        role: 'author' | 'editor' | 'translator';
+        id?: string | null;
+      }[]
+    | null;
   title: string;
   /**
    * Pour les livres : éditeur. Pour les articles : revue.
