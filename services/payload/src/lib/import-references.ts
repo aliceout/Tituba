@@ -67,56 +67,70 @@ const RE_DATE =
   /^\s*\d{0,2}\s*(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)?\s*\d{4}\s*$/i;
 
 /**
- * Nom et prénom, dans les deux usages.
+ * Nom et prénom, quelle que soit la manière de les écrire.
  *
- * Le nom peut compter plusieurs mots (« Le Cain », « de Rochegonde ») :
- * on prend, avant la virgule, tout ce qui précède le dernier mot.
+ * Ce qui départage les usages n'est pas la ponctuation mais ce qui suit
+ * la première virgule :
+ *
+ *   de Rochegonde, A., « Chronique… »   → « A. » est un prénom, donc
+ *                                         toute la tête est le nom
+ *   Agier Michel, « La fabrique… »      → rien avant le titre, donc la
+ *                                         tête porte nom ET prénom
+ *   Union européenne, « Communication… »→ idem, mais la casse trahit
+ *                                         une institution
+ *
+ * Les particules ne portent pas de majuscule et ouvrent pourtant le
+ * nom : « de Rochegonde », « Le Cain », « Wa Kabwe-Segatti ». Les
+ * traiter comme un défaut de casse revenait à ne pas lire du tout des
+ * noms parfaitement clairs.
+ *
+ * Les co-signataires sont écartés : on garde la première personne, la
+ * seule dont la place dans la référence soit certaine. L'ordre des
+ * suivantes se lit dans le texte d'origine, conservé dans l'entrée.
  */
 function lireNom(texte: string): { nom: string | null; prenom: string | null } {
-  // « Nom, Prénom » — la virgule suit immédiatement le nom.
-  const avecVirgule = texte.match(/^\s*([A-ZÀ-Ý][\p{L}'’-]+)\s*,\s*([^.,(]{1,40})/u);
-  if (avecVirgule) {
-    const prenom = avecVirgule[2].replace(/\s+\d{4}.*$/, '').trim();
-    return { nom: avecVirgule[1], prenom: prenom || null };
-  }
+  // Le titre ferme la zone des noms : ce qui vient après ne s'y trouve
+  // jamais.
+  const avantTitre = texte.split(/[«“"(]/)[0] ?? texte;
+  const morceaux = avantTitre.split(',');
+  const tete = (morceaux[0] ?? '').split(/\s+(?:et|&|and)\s+/i)[0]?.trim() ?? '';
+  const suite = (morceaux.slice(1).join(',') ?? '').trim();
 
-  // « Nom Prénom, » — tout ce qui précède la première virgule.
-  //
-  // Les co-auteur·ices sont écartés d'abord : « Rodier Claire et Morice
-  // Alain » formait un bloc de cinq mots où aucun nom ne se laissait
-  // isoler. On garde la première personne, la seule dont la place dans
-  // la référence soit certaine — l'ordre des suivantes se lit dans le
-  // texte d'origine, conservé dans l'entrée.
-  const avant = (texte.split(/[,«(]/)[0] ?? '').split(/\s+(?:et|&|and)\s+/i)[0]?.trim() ?? '';
-  const mots = avant.split(/\s+/).filter(Boolean);
-  const debut = mots.length > 2 && PARTICULE.test(mots[0]) ? 1 : 0;
+  const mots = tete.split(/\s+/).filter(Boolean);
+  if (mots.length === 0) return { nom: null, prenom: null };
+
+  const debut = mots.length > 1 && PARTICULE.test(mots[0]) ? 1 : 0;
   const utiles = mots.slice(debut);
+  if (utiles.length === 0 || !MAJUSCULE.test(utiles[0])) return { nom: null, prenom: null };
+
+  // Un prénom, ou des initiales, juste après la virgule.
+  const prenomSuivant = suite.match(
+    /^([A-ZÀ-Ý][\p{L}'’-]*\.?(?:\s+[A-ZÀ-Ý][\p{L}'’-]*\.?){0,2})(?=\s*[,.]|\s*$|\s+\d)/u,
+  );
+
+  // Le prénom suit : la tête entière est donc le nom.
+  if (prenomSuivant) {
+    return { nom: tete, prenom: prenomSuivant[1].trim() || null };
+  }
+
+  // Les deux formes suivantes reposent sur le titre : c'est lui qui
+  // ferme la zone des noms et atteste qu'on en lit une. Sans lui,
+  // « Sur ce point, la littérature reste divisée » se laisserait
+  // prendre pour un auteur collectif nommé « Sur ce point ».
+  const avecTitre = avantTitre.length < texte.length;
+  if (!avecTitre) return { nom: null, prenom: null };
+
+  // La tête porte les deux, sauf si la casse trahit une institution :
+  // « Agier Michel » prend deux majuscules, « Union européenne » une.
   if (utiles.length >= 2 && utiles.length <= 4 && utiles.every((m) => MAJUSCULE.test(m))) {
-    return {
-      nom: mots.slice(0, mots.length - 1).join(' '),
-      prenom: mots[mots.length - 1],
-    };
+    return { nom: mots.slice(0, -1).join(' '), prenom: mots[mots.length - 1] };
+  }
+  if (mots.length >= 2 && mots.length <= 8 && utiles.slice(1).some((m) => !MAJUSCULE.test(m))) {
+    return { nom: tete, prenom: null };
   }
 
-  // Auteur collectif : « Union européenne », « Conseil de l'Europe ».
-  //
-  // Ce qui les distingue d'une personne, c'est la casse : « Agier
-  // Michel » porte deux majuscules, une institution n'en porte qu'à sa
-  // tête. Faute de cette distinction, les rapports et documents de
-  // travail — souvent les sources les plus citées d'un mémoire —
-  // n'entraient dans aucune bibliographie.
-  if (
-    mots.length >= 2 &&
-    mots.length <= 8 &&
-    MAJUSCULE.test(mots[0]) &&
-    mots.slice(1).some((m) => !MAJUSCULE.test(m))
-  ) {
-    return { nom: avant, prenom: null };
-  }
-
-  // Un seul mot suivi d'un point : « Farris. 2017. … ».
-  const seul = texte.match(/^\s*([A-ZÀ-Ý][\p{L}'’-]+)\s*\./u);
-  return { nom: seul ? seul[1] : null, prenom: null };
+  // Un nom seul, sans prénom lisible.
+  return { nom: utiles.length === 1 ? tete : null, prenom: null };
 }
 
 const MOIS =
