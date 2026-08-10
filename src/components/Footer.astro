@@ -51,8 +51,8 @@ const DEFAULT_NAV: NavFooterLink[] = [
 ];
 
 // Colonne « Coulisses » — l'envers du site plutôt que son contenu. Le
-// lien de ticketing n'y figure pas : son adresse dépend du service
-// retenu, elle se saisit depuis l'admin.
+// suivi des tickets n'y figure pas : il vient de la configuration
+// (TICKETING_URL), pas de cette liste éditoriale.
 const DEFAULT_COULISSES: NavFooterLink[] = [
   { label: 'Nous rejoindre', href: '/nous-rejoindre/' },
   { label: 'Nous écrire', href: '/contact/' },
@@ -79,13 +79,30 @@ const baseline = identity.baseline || DEFAULT_BASELINE;
 const gitTag = process.env.GIT_TAG || 'dev';
 const copyrightLine = identity.copyrightLine || DEFAULT_COPYRIGHT;
 const navFooter = nav.navFooter && nav.navFooter.length > 0 ? nav.navFooter : DEFAULT_NAV;
-// Un lien sans adresse est écarté plutôt qu'affiché mort : le ticketing
-// existe dans la liste avant d'avoir une URL.
-const navCoulisses = (
+// Un lien sans adresse est écarté plutôt qu'affiché mort.
+const coulissesSaisies = (
   nav.navFooterCoulisses && nav.navFooterCoulisses.length > 0
     ? nav.navFooterCoulisses
     : DEFAULT_COULISSES
 ).filter((l) => l.href && l.href.trim());
+
+/**
+ * Suivi des tickets — ajouté depuis la configuration, pas depuis
+ * l'admin.
+ *
+ * C'est une adresse d'infrastructure : elle change le jour où l'on
+ * change de service, pas au gré d'une décision éditoriale. La saisir
+ * dans Payload aurait mis une donnée de déploiement dans la base de
+ * contenu, et obligé à la retaper sur chaque environnement.
+ *
+ * Absente, le lien ne s'affiche pas : un service qu'on n'a pas encore
+ * ne doit pas laisser d'entrée morte dans le pied.
+ */
+const ticketing = (process.env.TICKETING_URL ?? '').trim();
+const navCoulisses =
+  ticketing && !coulissesSaisies.some((l) => l.href === ticketing)
+    ? [...coulissesSaisies, { label: 'Suivi des tickets', href: ticketing, external: true }]
+    : coulissesSaisies;
 
 // Un paragraphe par ligne saisie dans l'admin, plutôt qu'un seul bloc
 // laissé à `white-space: pre-line`. Deux raisons : ce sont deux énoncés

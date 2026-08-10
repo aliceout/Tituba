@@ -40,7 +40,7 @@
 #   /services/tituba/payload   → PAYLOAD_SECRET, etc.
 #   /services/tituba/postgres  → POSTGRES_*
 #   /services/tituba/smtp      → SMTP_*
-#   /services/tituba/web       → ADDRESS, PORT_*
+#   /services/tituba/web       → ADDRESS, PORT_*, TICKETING_URL
 #   /services/tituba/unsplash  → UNSPLASH_ACCESS_KEY
 #   /services/tituba/contact   → INTERNAL_PROXY_SECRET, CONTACT_POW_MAX
 # Les noms de vars n'ont pas changé, seuls les paths Infisical bougent.

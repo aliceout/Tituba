@@ -130,6 +130,9 @@ services:
       ADDRESS: ${ADDRESS:?ADDRESS is required}
       # Optionnel — quand "1", l'Astro renvoie aussi les drafts Payload.
       SHOW_DRAFTS: ${SHOW_DRAFTS:-}
+      # Optionnel — lien « Suivi des tickets » du pied de page. Vide,
+      # le lien ne s'affiche pas.
+      TICKETING_URL: ${TICKETING_URL:-}
       # Même secret que côté Payload : c'est lui qui prouve que l'appel
       # vient bien du site. Défini d'un seul côté, il ne sert à rien.
       INTERNAL_PROXY_SECRET: ${INTERNAL_PROXY_SECRET:-}
