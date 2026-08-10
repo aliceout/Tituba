@@ -80,7 +80,7 @@ export const Identity: GlobalConfig = {
       label: 'Adresse de réception',
       admin: {
         description:
-          'Adresse à laquelle arrivent les messages du formulaire de contact. Elle n’apparaît jamais sur le site — c’est tout l’intérêt du formulaire. Si vous la laissez vide, les messages partent vers l’adresse d’expédition configurée sur le serveur.',
+          'Adresse à laquelle arrivent les messages du formulaire de contact. Elle n’apparaît jamais sur le site — c’est tout l’intérêt du formulaire. Sans elle, le formulaire refuse les envois et le dit : mieux vaut une panne visible qu’un message tombé dans une boîte que personne ne relève.',
       },
     },
   ],

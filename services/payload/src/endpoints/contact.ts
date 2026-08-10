@@ -230,26 +230,34 @@ function ech(s: string): string {
 }
 
 /**
- * Adresse de réception : le champ d'Identité, à défaut l'expéditeur
- * SMTP — ce qui garantit qu'un message ne se perd jamais faute de
- * réglage.
+ * Adresse de réception : le champ « Adresse de réception » d'Identité,
+ * et rien d'autre.
+ *
+ * Il y avait un repli sur `SMTP_FROM`, censé garantir qu'un message ne
+ * se perde jamais faute de réglage. Il garantissait l'inverse :
+ * `SMTP_FROM` est l'adresse *d'envoi* du site, un `noreply@` que
+ * personne ne relève. Les messages y seraient tombés en silence, et le
+ * formulaire aurait paru fonctionner.
+ *
+ * Sans adresse configurée, on refuse donc l'envoi et on le dit — à la
+ * personne qui écrit comme dans les journaux. Une panne visible vaut
+ * mieux qu'une perte invisible.
  */
 async function destinataireDe(req: Parameters<NonNullable<Endpoint['handler']>>[0]): Promise<string> {
-  let destinataire = process.env.SMTP_FROM || '';
   try {
     const identity = (await req.payload.findGlobal({
       slug: 'identity',
       depth: 0,
       overrideAccess: true,
     })) as { contactEmail?: string | null };
-    if (identity?.contactEmail?.trim()) destinataire = identity.contactEmail.trim();
+    return identity?.contactEmail?.trim() ?? '';
   } catch (err) {
-    req.payload.logger.warn(
+    req.payload.logger.error(
       { err: (err as Error).message },
-      'Identité illisible, repli sur SMTP_FROM',
+      'Identité illisible : impossible de connaître l’adresse de réception',
     );
+    return '';
   }
-  return destinataire;
 }
 
 /**
@@ -445,6 +453,17 @@ const contactEndpoint: Endpoint = {
     // contre la possession vérifiée d'une boîte mail, qui coûte plus
     // cher à un robot qu'un calcul de 300 ms.
     if (!avecPreuve) {
+      // L'adresse de réception est vérifiée AVANT d'envoyer la demande
+      // de confirmation : sans elle, on ferait cliquer quelqu'un pour
+      // un message qu'on ne saurait pas livrer, et l'échec
+      // n'apparaîtrait qu'au bout du parcours.
+      if (!(await destinataireDe(req))) {
+        req.payload.logger.error(
+          { event: 'contact_sans_destinataire' },
+          'Aucune adresse de réception configurée (Identité → Adresse de réception)',
+        );
+        return jsonResponse({ ok: false, code: 'no_recipient' }, { status: 500 });
+      }
       purgerAttente();
       if (enAttente.size >= MAX_EN_ATTENTE) {
         req.payload.logger.warn({ event: 'contact_attente_saturee' }, 'File de confirmation pleine');

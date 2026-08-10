@@ -210,7 +210,8 @@ export default function IdentityEditViewClient(): React.ReactElement {
               />
               <span className="hint">
                 Destinataire des messages du formulaire de contact. Elle n’apparaît jamais sur le
-                site. Vide, les messages partent vers l’adresse d’expédition du serveur.
+                site. Sans elle, le formulaire refuse les envois et le dit — mieux vaut une panne
+                visible qu’un message tombé dans une boîte que personne ne relève.
               </span>
             </label>
           </section>
