@@ -280,10 +280,17 @@ export function analyserReference(texte: string): ReferenceLue {
   if (titre && editeur && /[«“"]/.test(propre)) type = 'article';
   else if (url && !editeur) type = 'web';
 
+  // Ce qui manque VRAIMENT pour créer l'entrée, et rien de plus.
+  //
+  // L'auteur·ice n'en fait plus partie : la collection l'accepte vide,
+  // et il existe des sources qui n'en ont pas — un texte de loi, un
+  // rapport institutionnel, un article de presse non signé. Exiger un
+  // nom les tenait toutes hors de la bibliographie.
+  //
+  // L'année reste exigée parce que la collection l'exige. Elle se saisit
+  // en un champ quand elle ne se lit pas — un document daté « s.d. » en
+  // est un cas parfaitement ordinaire.
   const manques: string[] = [];
-  // Un texte qui se déclare non signé ne manque de rien : l'absence
-  // d'auteur·ice y est une information, pas un trou.
-  if (!nom && !anonyme) manques.push('nom');
   if (annee == null) manques.push('année');
 
   return { texte: propre, nom, prenom, annee, titre, editeur, url, type, anonyme, manques };
@@ -297,14 +304,21 @@ export function analyserReference(texte: string): ReferenceLue {
  * dans la bibliographie ; les secondes n'ont de sens que dans le fil
  * des notes, et n'apprendraient rien hors de lui.
  *
- * Exigeant à dessein : un nom, une année, et de quoi identifier
- * l'œuvre. Une note qui commente le propos de l'auteur·ice — le cas le
- * plus fréquent — n'a rien de tout cela et reste où elle est.
+ * La règle : un titre, et au moins un élément qui l'identifie — un nom,
+ * une année, une adresse. Une note qui commente le propos de
+ * l'auteur·ice n'a pas de titre et reste donc où elle est.
+ *
+ * Elle exigeait auparavant un nom ET une année, ce qui écartait des
+ * sources qui n'en ont pas : un texte de loi n'a pas d'auteur·ice, un
+ * rapport en ligne porte souvent « s.d. ». Ces sources-là existent, on
+ * les cite, elles ont leur place en bibliographie — quitte à ce qu'on
+ * complète l'année d'un champ au moment de les créer.
  */
 export function noteEstReference(texte: string): boolean {
   if (RE_FORME_COURTE.test(texte)) return false;
   const r = analyserReference(texte);
-  return r.manques.length === 0 && Boolean(r.titre || r.url);
+  if (!r.titre) return false;
+  return Boolean(r.nom || r.annee != null || r.url);
 }
 
 /**

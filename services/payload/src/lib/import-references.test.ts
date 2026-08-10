@@ -97,6 +97,41 @@ describe('notes', () => {
     assert.equal(noteEstReference('Weber, S., art. cit., p. 33.'), false);
     assert.equal(noteEstReference('Ibid., p. 36.'), false);
     assert.equal(noteEstReference('Sur ce point, la littérature reste divisée.'), false);
+    // Un commentaire long mais sans titre n'est pas davantage une source.
+    assert.equal(
+      noteEstReference('Nous suivons ici la lecture proposée par la commission en 2017.'),
+      false,
+    );
+  });
+
+  // Ces trois-là restaient hors de la bibliographie tant qu'un nom ET
+  // une année étaient exigés. Ce sont pourtant des sources, et elles se
+  // citent telles quelles.
+  it('retient une source sans auteur·ice', () => {
+    const t = '« Loi 2015/36, relative au trafic illicite des migrants », 26 mai 2015.';
+    assert.equal(noteEstReference(t), true);
+    const r = analyserReference(t);
+    assert.equal(r.nom, null);
+    assert.equal(r.annee, 2015);
+    // Rien à compléter : la collection accepte une entrée sans signature.
+    assert.deepEqual(r.manques, []);
+  });
+
+  it('retient une source sans date, et dit ce qu’il reste à saisir', () => {
+    const t =
+      'OCDE, « Aide publique au développement : définition et champ couvert », OCDE, s.d., [En ligne] URL : https://www.oecd.org/fr/x - Consulté le 3 mai 2018.';
+    assert.equal(noteEstReference(t), true);
+    const r = analyserReference(t);
+    assert.equal(r.nom, 'OCDE');
+    assert.equal(r.annee, null);
+    assert.deepEqual(r.manques, ['année']);
+  });
+
+  it('retient un rapport institutionnel sans date', () => {
+    const t =
+      'Union européenne, « Fifth Progress Report on the Partnership Framework », Action extérieure, s.d., [En ligne] URL : https://eeas.europa.eu/y.';
+    assert.equal(noteEstReference(t), true);
+    assert.equal(analyserReference(t).nom, 'Union européenne');
   });
 });
 
