@@ -1928,18 +1928,34 @@ button.btn--style-primary,
     }
   }
 
-  // Barre d'actions, sous les filtres. Absente tant que rien n'est
-  // coché — elle n'aurait rien à proposer.
+  // Barre d'actions, sous les filtres. Toujours présente, et toujours
+  // de la même hauteur : la faire apparaître à la première case cochée
+  // poussait le tableau vers le bas, et la ligne suivante se dérobait
+  // sous le curseur au moment de la cocher.
+  //
+  // `min-height` fixé à la hauteur du bouton le plus haut : le contenu
+  // change, la boîte non.
   &__lot {
     align-items: center;
     background: var(--b-paper);
     border: 1px solid var(--b-rule);
     border-radius: 4px;
     display: flex;
-    flex-wrap: wrap;
     gap: 12px;
-    margin: 0 0 12px;
-    padding: 10px 14px;
+    margin: 0 0 10px;
+    padding: 0 12px;
+    // Le contenu change, la boîte non : hauteur imposée, et des
+    // enfants qui tiennent dedans. Sur la même ligne de force que les
+    // champs du dessus, à quelques pixels près.
+    min-height: 30px;
+    white-space: nowrap;
+
+    // Les boutons se rangent à la hauteur de la barre plutôt que
+    // l'inverse.
+    .tituba-btn {
+      font-size: 12px;
+      padding: 3px 10px;
+    }
   }
 
   &__lot-compte {
@@ -1947,6 +1963,12 @@ button.btn--style-primary,
     font-size: 12px;
     font-weight: 500;
     margin-right: auto;
+  }
+
+  &__lot-vide {
+    color: var(--b-muted);
+    font-family: var(--font-sans);
+    font-size: 12px;
   }
 
   &__lot-annuler {
@@ -2062,6 +2084,9 @@ button.btn--style-primary,
     &--biblio &__row > .type-cell {
       display: none;
     }
+    &--biblio &__lot {
+      display: none;
+    }
 
     // Head row (nth-child positional, columnheader sans className)
     // Ordre HTML : 1=Prénom, 2=Nom, 3=Année, 4=Titre, 5=Éditeur, 6=Type, 7=Actions
@@ -2138,6 +2163,9 @@ button.btn--style-primary,
       grid-column: 1;
       grid-row: 1 / span 2;
       align-self: center;
+    }
+    &--biblio &__lot {
+      display: none;
     }
     &--biblio &__row > .pick,
     &--biblio &__row > .year,
