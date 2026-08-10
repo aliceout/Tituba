@@ -11,6 +11,7 @@
  */
 import Layout from '../../layouts/Layout.astro';
 import PageTitle from '../../components/ui/PageTitle.astro';
+import Message from '../../components/ui/Message.astro';
 import { postPayload } from '../../lib/payload';
 
 const id = (Astro.url.searchParams.get('id') ?? '').trim();
@@ -50,78 +51,37 @@ const title = TITLES[state];
 <Layout title={title} noindex={true}>
   <PageTitle title={title} />
 
-  <section class="container">
+  <section class="mx-auto max-w-[1080px] px-20 pt-10 pb-16 max-mobile:px-6 max-mobile:pt-8 max-mobile:pb-12">
     {state === 'success' && (
-      <>
-        <p class="lede">
-          C'est fait. L'adresse {unsubEmail && <strong>{unsubEmail}</strong>}
-          ne recevra plus d'alertes mail.
-        </p>
-        <p class="hint">
+      <Message>
+        C'est fait. L'adresse {unsubEmail && <strong>{unsubEmail}</strong>}
+        ne recevra plus d'alertes mail.
+        <Fragment slot="suite">
           Vous pouvez vous réinscrire à tout moment depuis la
           <a href="/abonnement/">page d'abonnement</a>.
-        </p>
-      </>
+        </Fragment>
+      </Message>
     )}
     {state === 'invalid' && (
-      <>
-        <p class="lede">
-          Ce lien de désabonnement n'est pas valide.
-        </p>
-        <p class="hint">
+      <Message>
+        Ce lien de désabonnement n'est pas valide.
+        <Fragment slot="suite">
           Si vous voulez vous désabonner, ouvrez le dernier mail
           d'alerte reçu et cliquez sur le lien « se désabonner » qui s'y
           trouve. Si ce n'est pas possible, écrivez à l'autrice depuis la
           <a href="/abonnement/">page d'abonnement</a>.
-        </p>
-      </>
+        </Fragment>
+      </Message>
     )}
     {state === 'missing' && (
-      <>
-        <p class="lede">
-          L'URL est incomplète : les paramètres <code>id</code> et
-          <code>sig</code> manquent.
-        </p>
-        <p class="hint">
+      <Message>
+        L'URL est incomplète : les paramètres <code>id</code> et
+        <code>sig</code> manquent.
+        <Fragment slot="suite">
           Si vous avez cliqué un lien depuis un mail, copiez l'URL complète
           dans votre navigateur.
-        </p>
-      </>
+        </Fragment>
+      </Message>
     )}
   </section>
 </Layout>
-
-<style>
-  .container {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 40px 80px 64px;
-  }
-  .lede {
-    font-family: var(--font-serif);
-    font-size: calc(19px * var(--a11y-echelle));
-    line-height: 1.55;
-    color: var(--color-body);
-    margin: 0 0 20px;
-  }
-  .lede strong {
-    color: var(--color-ink);
-    font-weight: 500;
-  }
-  .hint {
-    font-family: var(--font-sans);
-    font-size: calc(14px * var(--a11y-echelle));
-    color: var(--color-muted);
-    margin: 0;
-  }
-  .hint a {
-    color: var(--color-accent);
-    border-bottom: 1px solid var(--color-accent);
-  }
-
-  @media (max-width: 900px) {
-    .container {
-      padding: 32px 24px 48px;
-    }
-  }
-</style>

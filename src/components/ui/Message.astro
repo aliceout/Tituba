@@ -1,0 +1,28 @@
+---
+/**
+ * La réponse d'une page de parcours par mail : confirmation d'un
+ * abonnement, désabonnement, lien expiré, URL incomplète.
+ *
+ * Toujours la même paire — une phrase en serif qui annonce le résultat,
+ * une ligne en sans qui dit quoi faire ensuite. Sept états à travers
+ * deux pages, donc sept copies des deux mêmes longues suites de
+ * classes avant qu'elles tiennent ici.
+ *
+ * La seconde ligne est facultative : un état qui n'appelle aucune suite
+ * ne doit pas avoir à en inventer une.
+ */
+const avecSuite = Astro.slots.has('suite');
+---
+
+<p
+  class="text-body [&_strong]:text-ink m-0 mb-5 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55] [&_strong]:font-medium"
+>
+  <slot />
+</p>
+{
+  avecSuite && (
+    <p class="text-muted [&_a]:text-accent [&_a]:border-accent m-0 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:border-b">
+      <slot name="suite" />
+    </p>
+  )
+}

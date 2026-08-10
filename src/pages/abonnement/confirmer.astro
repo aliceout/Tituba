@@ -13,6 +13,7 @@
  */
 import Layout from '../../layouts/Layout.astro';
 import PageTitle from '../../components/ui/PageTitle.astro';
+import Message from '../../components/ui/Message.astro';
 import { postPayload } from '../../lib/payload';
 
 const token = (Astro.url.searchParams.get('token') ?? '').trim();
@@ -56,50 +57,42 @@ const title = TITLES[state];
 
   <section class="mx-auto max-w-[1080px] px-20 pt-10 pb-16 max-mobile:px-6 max-mobile:pt-8 max-mobile:pb-12">
     {state === 'success' && (
-      <>
-        <p class="text-body m-0 mb-5 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55] [&_strong]:text-ink [&_strong]:font-medium">
-          Merci ! L'adresse {confirmedEmail && <strong>{confirmedEmail}</strong>}
-          est désormais inscrite aux alertes mail. Vous recevrez un mail à
-          chaque nouveau billet publié.
-        </p>
-        <p class="text-muted m-0 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:text-accent [&_a]:border-b [&_a]:border-accent">
+      <Message>
+        Merci ! L'adresse {confirmedEmail && <strong>{confirmedEmail}</strong>}
+        est désormais inscrite aux alertes mail. Vous recevrez un mail à
+        chaque nouveau billet publié.
+        <Fragment slot="suite">
           Chaque mail contiendra un lien pour vous désabonner en un clic.
-        </p>
-      </>
+        </Fragment>
+      </Message>
     )}
     {state === 'invalid' && (
-      <>
-        <p class="text-body m-0 mb-5 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55] [&_strong]:text-ink [&_strong]:font-medium">
-          Ce lien n'est pas valide. Il a peut-être déjà été utilisé, ou
-          l'inscription correspondante a été annulée.
-        </p>
-        <p class="text-muted m-0 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:text-accent [&_a]:border-b [&_a]:border-accent">
+      <Message>
+        Ce lien n'est pas valide. Il a peut-être déjà été utilisé, ou
+        l'inscription correspondante a été annulée.
+        <Fragment slot="suite">
           Vous pouvez réessayer depuis la <a href="/abonnement/">page d'abonnement</a>.
-        </p>
-      </>
+        </Fragment>
+      </Message>
     )}
     {state === 'expired' && (
-      <>
-        <p class="text-body m-0 mb-5 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55] [&_strong]:text-ink [&_strong]:font-medium">
-          Ce lien a expiré (validité de 7 jours).
-        </p>
-        <p class="text-muted m-0 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:text-accent [&_a]:border-b [&_a]:border-accent">
+      <Message>
+        Ce lien a expiré (validité de 7 jours).
+        <Fragment slot="suite">
           Vous pouvez recommencer depuis la <a href="/abonnement/">page d'abonnement</a> —
           un nouveau mail vous sera envoyé.
-        </p>
-      </>
+        </Fragment>
+      </Message>
     )}
     {state === 'missing' && (
-      <>
-        <p class="text-body m-0 mb-5 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55] [&_strong]:text-ink [&_strong]:font-medium">
-          L'URL est incomplète : le paramètre <code>token</code> manque.
-        </p>
-        <p class="text-muted m-0 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:text-accent [&_a]:border-b [&_a]:border-accent">
+      <Message>
+        L'URL est incomplète : le paramètre <code>token</code> manque.
+        <Fragment slot="suite">
           Si vous avez cliqué un lien depuis un mail, copiez l'URL complète
           dans votre navigateur. Sinon, recommencez depuis la
           <a href="/abonnement/">page d'abonnement</a>.
-        </p>
-      </>
+        </Fragment>
+      </Message>
     )}
   </section>
 </Layout>
