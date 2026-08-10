@@ -32,3 +32,8 @@ services/payload/dist/
 # Média de test à la racine — trop lourd pour le dépôt, sert seulement
 # à éprouver le lecteur audio en local.
 /podcast.mp3
+
+# Page d’essai de la migration Tailwind — locale, jamais publiée :
+# sans underscore elle est une vraie route, donc elle ne doit pas partir
+# dans le dépôt.
+src/pages/verif-composants.astro
