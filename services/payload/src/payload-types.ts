@@ -1065,9 +1065,6 @@ export interface Subscriber {
    * « En attente » : lien de confirmation pas encore cliqué. « Actif·ve » : reçoit les mails de nouveaux billets. « Désabonné·e » : a cliqué sur le lien de désabo dans un mail, ne reçoit plus rien.
    */
   status: 'pending' | 'active' | 'unsubscribed';
-  /**
-   * SHA-256 du token envoyé dans le mail de confirmation. Stocké en base, jamais affiché en clair. Effacé après confirmation.
-   */
   confirmTokenHash?: string | null;
   confirmTokenExpiresAt?: string | null;
   subscribedAt?: string | null;
