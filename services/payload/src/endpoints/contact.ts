@@ -24,6 +24,15 @@
  *     haché correspond à une cible. Coûte ~300 ms au visiteur, un seul
  *     haché au serveur.
  *
+ * SANS JAVASCRIPT, la mesure 5 ne peut pas tourner : `crypto.subtle`
+ * n'existe pas. Le message n'est alors pas transmis directement — il
+ * attend qu'on ait cliqué sur un lien envoyé à l'adresse saisie. Le
+ * repli n'est donc pas une version allégée du chemin normal, ce qui en
+ * ferait l'autoroute à robots : il échange la preuve de travail contre
+ * la possession vérifiée d'une boîte mail, qui coûte structurellement
+ * plus cher qu'un calcul de 300 ms — et rend le spam traçable et
+ * auto-limitant, l'adresse finissant par se faire bloquer.
+ *
  * CE QUE ÇA N'ARRÊTE PAS, et il faut le savoir : un adversaire qui lit
  * ce fichier — il est public — réimplémente la preuve de travail en
  * natif et la résout en 2 ms au lieu de 300. Le rapport est d'environ
@@ -131,6 +140,44 @@ function demarrerPurge(): void {
   purge.unref?.();
 }
 
+/**
+ * Messages en attente de confirmation — chemin sans JavaScript.
+ *
+ * En mémoire, comme le limiteur de débit et l'anti-rejeu ci-dessus :
+ * un seul process Payload aujourd'hui. Ce n'est PAS une entorse à la
+ * décision « aucun stockage des messages » — celle-ci porte sur leur
+ * conservation, pas sur un tampon de trente minutes qui disparaît au
+ * redémarrage.
+ *
+ * Corollaire assumé, et c'est pourquoi le mail de confirmation reprend
+ * le message en entier : si le conteneur redémarre pendant l'attente,
+ * la confirmation échoue — la personne a au moins ses propres mots
+ * sous les yeux, et la page le lui dit.
+ */
+type MessageEnAttente = {
+  nom: string;
+  email: string;
+  objet: string;
+  message: string;
+  exp: number;
+};
+const enAttente = new Map<string, MessageEnAttente>();
+
+/** Plafond dur : au-delà, on refuse plutôt que de laisser enfler. */
+const MAX_EN_ATTENTE = 200;
+
+function purgerAttente(): void {
+  const now = Date.now();
+  for (const [id, m] of enAttente) if (m.exp < now) enAttente.delete(id);
+}
+
+/** URL publique du site — même convention que subscribers.ts. */
+function basePublique(): string {
+  const raw = process.env.ADDRESS || 'http://localhost:4321';
+  if (/^https?:\/\//.test(raw)) return raw.replace(/\/$/, '');
+  return `https://${raw}`.replace(/\/$/, '');
+}
+
 /** Vrai si le défi avait déjà servi. Consomme au passage. */
 function consommer(jti: string, exp: number): boolean {
   demarrerPurge();
@@ -172,6 +219,100 @@ function proxyLegitime(headers: Headers): boolean {
   }
   return safeEqualHex(headers.get('x-tituba-proxy'), attendu);
 }
+
+/** Échappe pour un corps de mail en HTML. */
+function ech(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Adresse de réception : le champ d'Identité, à défaut l'expéditeur
+ * SMTP — ce qui garantit qu'un message ne se perd jamais faute de
+ * réglage.
+ */
+async function destinataireDe(req: Parameters<NonNullable<Endpoint['handler']>>[0]): Promise<string> {
+  let destinataire = process.env.SMTP_FROM || '';
+  try {
+    const identity = (await req.payload.findGlobal({
+      slug: 'identity',
+      depth: 0,
+      overrideAccess: true,
+    })) as { contactEmail?: string | null };
+    if (identity?.contactEmail?.trim()) destinataire = identity.contactEmail.trim();
+  } catch (err) {
+    req.payload.logger.warn(
+      { err: (err as Error).message },
+      'Identité illisible, repli sur SMTP_FROM',
+    );
+  }
+  return destinataire;
+}
+
+/**
+ * Remet le message au collectif. Partagé par les deux chemins — envoi
+ * direct après preuve de travail, ou après confirmation par mail —
+ * plutôt que recopié : deux copies auraient fini par ne plus produire
+ * le même courrier.
+ */
+async function livrer(
+  req: Parameters<NonNullable<Endpoint['handler']>>[0],
+  m: { nom: string; email: string; objet: string; message: string },
+): Promise<{ ok: true } | { ok: false; code: string; status: number }> {
+  const destinataire = await destinataireDe(req);
+  if (!destinataire) {
+    req.payload.logger.error({ event: 'contact_sans_destinataire' }, 'Aucune adresse de réception');
+    return { ok: false, code: 'no_recipient', status: 500 };
+  }
+
+  const sujet = m.objet ? `[Contact] ${m.objet}` : `[Contact] Message de ${m.nom}`;
+  const corpsTexte = [
+    `De : ${m.nom} <${m.email}>`,
+    m.objet ? `Objet : ${m.objet}` : null,
+    '',
+    m.message,
+    '',
+    '—',
+    'Envoyé depuis le formulaire de contact du site.',
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+
+  try {
+    await req.payload.sendEmail({
+      to: destinataire,
+      // L'expéditeur reste le domaine du site : mettre l'adresse saisie
+      // ferait échouer SPF et DKIM, et le message finirait en
+      // indésirable. C'est `replyTo` qui permet de répondre.
+      replyTo: `${m.nom} <${m.email}>`,
+      subject: sujet,
+      text: corpsTexte,
+      html: [
+        `<p><strong>De :</strong> ${ech(m.nom)} &lt;${ech(m.email)}&gt;</p>`,
+        m.objet ? `<p><strong>Objet :</strong> ${ech(m.objet)}</p>` : '',
+        `<div style="white-space:pre-wrap">${ech(m.message)}</div>`,
+        '<hr />',
+        '<p style="color:#666;font-size:12px">Envoyé depuis le formulaire de contact du site.</p>',
+      ].join('\n'),
+    });
+  } catch (err) {
+    // Un échec d'envoi ne doit JAMAIS passer pour un succès : la
+    // personne repartirait en croyant son message parti, et personne ne
+    // saurait qu'il s'est perdu.
+    req.payload.logger.error(
+      { event: 'contact_send_failed', err: (err as Error).message },
+      'Envoi du message de contact impossible',
+    );
+    return { ok: false, code: 'send_failed', status: 502 };
+  }
+  return { ok: true };
+}
+
+/** Jeton du lien de confirmation — chemin sans JavaScript. */
+type JetonConfirmation = { typ: 'contact-confirm.v1'; pid: string; exp: number };
 
 // ─── Émission du défi ────────────────────────────────────────────────
 
@@ -265,10 +406,13 @@ const contactEndpoint: Endpoint = {
       return errorResponse('Formulaire déjà envoyé.', 409, 'already_used');
     }
 
-    // 2. La preuve de travail. Absente = navigateur sans JavaScript,
-    //    ou sans crypto.subtle : accepté, les quatre autres couches
-    //    s'appliquent quand même.
-    if (solution !== null && solution !== undefined && solution !== '') {
+    // 2. La preuve de travail. Absente = navigateur sans JavaScript, ou
+    //    sans crypto.subtle : le message part alors en confirmation par
+    //    mail plutôt qu'en livraison directe (cf. plus bas). Fournie
+    //    mais fausse : refusée sans indulgence — c'est un robot qui a
+    //    tenté sa chance, pas un navigateur en difficulté.
+    const avecPreuve = solution !== null && solution !== undefined && solution !== '';
+    if (avecPreuve) {
       const n = Number(solution);
       const valide =
         Number.isInteger(n) && n >= 0 && n <= defi.max && sha256(defi.sel + n) === defi.cible;
@@ -293,76 +437,125 @@ const contactEndpoint: Endpoint = {
       return jsonResponse({ ok: true }, { status: 200 });
     }
 
-    // Destinataire : le champ d'Identité, à défaut l'expéditeur SMTP —
-    // ce qui garantit qu'un message ne se perd jamais faute de réglage.
-    let destinataire = process.env.SMTP_FROM || '';
+    // ── Livraison, ou mise en attente ─────────────────────────────
+    //
+    // Sans preuve de travail — donc sans JavaScript — le message
+    // n'est pas transmis tout de suite : il attend un clic sur un
+    // lien envoyé à l'adresse saisie. Ce chemin échange la mesure 5
+    // contre la possession vérifiée d'une boîte mail, qui coûte plus
+    // cher à un robot qu'un calcul de 300 ms.
+    if (!avecPreuve) {
+      purgerAttente();
+      if (enAttente.size >= MAX_EN_ATTENTE) {
+        req.payload.logger.warn({ event: 'contact_attente_saturee' }, 'File de confirmation pleine');
+        return jsonResponse({ ok: false, code: 'saturated' }, { status: 503 });
+      }
+      const pid = randomBytes(16).toString('hex');
+      const exp = Date.now() + TTL_MS;
+      enAttente.set(pid, { nom, email, objet, message, exp });
+      const lien =
+        `${basePublique()}/contact/confirmer/?t=` +
+        encodeURIComponent(signCookie<JetonConfirmation>({ typ: 'contact-confirm.v1', pid, exp }));
+      try {
+        await req.payload.sendEmail({
+          to: email,
+          subject: 'Confirmez votre message à Tituba',
+          text: [
+            `Bonjour ${nom},`,
+            '',
+            'Vous venez de nous écrire depuis le site. Pour que votre message',
+            'nous parvienne, ouvrez ce lien :',
+            '',
+            lien,
+            '',
+            'Le lien est valable trente minutes. Sans clic, le message est',
+            'abandonné et rien ne nous parvient.',
+            '',
+            'Votre message, pour mémoire :',
+            '',
+            message,
+          ].join('\n'),
+          html: [
+            `<p>Bonjour ${ech(nom)},</p>`,
+            '<p>Vous venez de nous écrire depuis le site. Pour que votre message nous parvienne, ouvrez ce lien :</p>',
+            `<p><a href="${ech(lien)}">Confirmer mon message</a></p>`,
+            '<p style="color:#666;font-size:12px">Le lien est valable trente minutes. Sans clic, le message est abandonné et rien ne nous parvient.</p>',
+            '<hr />',
+            '<p style="color:#666;font-size:12px">Votre message, pour mémoire :</p>',
+            `<div style="white-space:pre-wrap">${ech(message)}</div>`,
+          ].join('\n'),
+        });
+      } catch (err) {
+        enAttente.delete(pid);
+        req.payload.logger.error(
+          { event: 'contact_confirm_send_failed', err: (err as Error).message },
+          'Envoi du lien de confirmation impossible',
+        );
+        return jsonResponse({ ok: false, code: 'send_failed' }, { status: 502 });
+      }
+      return jsonResponse({ ok: true, mode: 'confirmation' }, { status: 200 });
+    }
+
+    const livraison = await livrer(req, { nom, email, objet, message });
+    if (!livraison.ok) {
+      return jsonResponse({ ok: false, code: livraison.code }, { status: livraison.status });
+    }
+    return jsonResponse({ ok: true, mode: 'direct' }, { status: 200 });
+  },
+};
+
+// ─── Confirmation d'un message déposé sans JavaScript ────────────────
+
+const confirmEndpoint: Endpoint = {
+  path: '/contact-confirm',
+  method: 'post',
+  handler: async (req) => {
+    if (!proxyLegitime(req.headers)) {
+      return errorResponse('Accès direct refusé.', 403, 'direct_access');
+    }
+
+    let data: Record<string, unknown> = {};
     try {
-      const identity = (await req.payload.findGlobal({
-        slug: 'identity',
-        depth: 0,
-        overrideAccess: true,
-      })) as { contactEmail?: string | null };
-      if (identity?.contactEmail?.trim()) destinataire = identity.contactEmail.trim();
-    } catch (err) {
-      req.payload.logger.warn(
-        { err: (err as Error).message },
-        'Identité illisible, repli sur SMTP_FROM',
-      );
-    }
-    if (!destinataire) {
-      req.payload.logger.error({ event: 'contact_sans_destinataire' }, 'Aucune adresse de réception');
-      return jsonResponse({ ok: false, code: 'no_recipient' }, { status: 500 });
+      data = ((req.json ? await req.json() : null) ?? {}) as Record<string, unknown>;
+    } catch {
+      return errorResponse('Requête illisible.', 400, 'invalid_body');
     }
 
-    const ech = (s: string): string =>
-      s
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    const sujet = objet ? `[Contact] ${objet}` : `[Contact] Message de ${nom}`;
-    const corpsTexte = [
-      `De : ${nom} <${email}>`,
-      objet ? `Objet : ${objet}` : null,
-      '',
-      message,
-      '',
-      '—',
-      'Envoyé depuis le formulaire de contact du site.',
-    ]
-      .filter((l) => l !== null)
-      .join('\n');
+    const jeton = verifyCookie<JetonConfirmation>(String(data.jeton ?? '') || null);
+    if (!jeton || jeton.typ !== 'contact-confirm.v1') {
+      return errorResponse('Lien invalide.', 400, 'invalid_token');
+    }
+    if (Date.now() > jeton.exp) return errorResponse('Lien expiré.', 400, 'expired_token');
 
-    try {
-      await req.payload.sendEmail({
-        to: destinataire,
-        // L'expéditeur reste le domaine du site : mettre l'adresse
-        // saisie ferait échouer SPF et DKIM, et le message finirait en
-        // indésirable. C'est `replyTo` qui permet de répondre.
-        replyTo: `${nom} <${email}>`,
-        subject: sujet,
-        text: corpsTexte,
-        html: [
-          `<p><strong>De :</strong> ${ech(nom)} &lt;${ech(email)}&gt;</p>`,
-          objet ? `<p><strong>Objet :</strong> ${ech(objet)}</p>` : '',
-          `<div style="white-space:pre-wrap">${ech(message)}</div>`,
-          '<hr />',
-          '<p style="color:#666;font-size:12px">Envoyé depuis le formulaire de contact du site.</p>',
-        ].join('\n'),
-      });
-    } catch (err) {
-      // Un échec d'envoi ne doit JAMAIS passer pour un succès : la
-      // personne repartirait en croyant son message parti, et personne
-      // ne saurait qu'il s'est perdu.
-      req.payload.logger.error(
-        { event: 'contact_send_failed', err: (err as Error).message },
-        'Envoi du message de contact impossible',
-      );
-      return jsonResponse({ ok: false, code: 'send_failed' }, { status: 502 });
+    purgerAttente();
+    const message = enAttente.get(jeton.pid);
+    if (!message) {
+      /**
+       * Deux causes, indiscernables ici et volontairement traitées de
+       * même : le lien a déjà servi, ou le service a redémarré pendant
+       * l'attente. Les clients mail préchargent les liens qu'ils
+       * reçoivent — un second appel doit donc rester silencieux et non
+       * produire une erreur, sans quoi une confirmation réussie
+       * s'afficherait comme un échec au moment où la personne clique
+       * réellement.
+       */
+      return jsonResponse({ ok: true, code: 'already_used' }, { status: 200 });
     }
 
+    // Retiré avant l'envoi : un lien ne vaut qu'une fois, même si la
+    // remise échoue ensuite.
+    enAttente.delete(jeton.pid);
+
+    const livraison = await livrer(req, message);
+    if (!livraison.ok) {
+      return jsonResponse({ ok: false, code: livraison.code }, { status: livraison.status });
+    }
     return jsonResponse({ ok: true }, { status: 200 });
   },
 };
 
-export const contactEndpoints: Endpoint[] = [challengeEndpoint, contactEndpoint];
+export const contactEndpoints: Endpoint[] = [
+  challengeEndpoint,
+  contactEndpoint,
+  confirmEndpoint,
+];

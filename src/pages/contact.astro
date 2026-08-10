@@ -14,10 +14,13 @@
  *    recharger.
  *  - Sans JavaScript : le <form> porte un `action` et un `method`, la
  *    soumission native revient ici en POST, et ce frontmatter la relaie
- *    à Payload avec `solution: null`. Les quatre autres protections
- *    (jeton signé, pot de miel, piège temporel, limitation de débit)
- *    s'appliquent identiquement ; seule la preuve de travail saute,
- *    puisqu'elle a besoin de `crypto.subtle`.
+ *    à Payload avec `solution: null`. La preuve de travail ne pouvant
+ *    tourner sans `crypto.subtle`, le message n'est alors PAS transmis
+ *    tout de suite : il attend un clic sur un lien envoyé à l'adresse
+ *    saisie (cf. /contact/confirmer/). Ce chemin échange la preuve de
+ *    travail contre la possession vérifiée d'une boîte mail — sans quoi
+ *    il suffirait de désactiver JavaScript pour éviter la mesure la
+ *    plus coûteuse, et le repli serait l'autoroute à robots.
  *
  * L'`action` et le `method` ne sont pas décoratifs : le formulaire
  * d'abonnement du site n'en a pas, si bien que sans JavaScript il part
@@ -41,7 +44,7 @@ import { formatHeroTitle } from '../lib/site';
 Astro.response.headers.set('Cache-Control', 'private, no-store');
 
 type ReponseDefi = { ok?: boolean; jeton?: string; sel?: string; cible?: string; max?: number };
-type ReponseEnvoi = { ok?: boolean; code?: string };
+type ReponseEnvoi = { ok?: boolean; code?: string; mode?: 'direct' | 'confirmation' };
 
 /**
  * Objets proposés.
@@ -80,7 +83,8 @@ function composerObjet(choix: string, autre: string): string {
 /** Valeurs à réafficher après un POST natif raté — perdre un long
  *  message sur une erreur serait l'échec le plus grave de cette page. */
 let saisie = { nom: '', email: '', objetChoix: '', objetAutre: '', message: '' };
-let envoye = false;
+/** 'direct' : remis. 'confirmation' : en attente d'un clic dans le mail. */
+let envoye: false | 'direct' | 'confirmation' = false;
 let erreur: string | null = null;
 
 if (Astro.request.method === 'POST') {
@@ -109,7 +113,7 @@ if (Astro.request.method === 'POST') {
       entetesProxy(Astro.request, Astro.clientAddress),
     );
     if (body?.ok) {
-      envoye = true;
+      envoye = body.mode === 'confirmation' ? 'confirmation' : 'direct';
       saisie = { nom: '', email: '', objetChoix: '', objetAutre: '', message: '' };
     } else {
       erreur = messageErreur(body?.code);
@@ -148,10 +152,22 @@ const indisponible = !defi.jeton;
   famille="vert"
 >
   <div class="contact">
-    {envoye && (
+    {envoye === 'direct' && (
       <p class="contact-ok" role="status">
         <strong>Message envoyé.</strong> Nous vous répondrons à l’adresse indiquée. Merci d’avoir
         pris le temps de nous écrire.
+      </p>
+    )}
+
+    {/* Sans JavaScript, le message attend une confirmation. Le dire
+        franchement plutôt que d'annoncer un envoi qui n'a pas eu lieu :
+        quelqu'un qui croit son message parti n'ira pas ouvrir le mail,
+        et il se perdra. */}
+    {envoye === 'confirmation' && (
+      <p class="contact-ok" role="status">
+        <strong>Une dernière étape.</strong> Nous venons de vous envoyer un mail : ouvrez-le et
+        cliquez sur le lien pour que votre message nous parvienne. Il est valable trente minutes,
+        et le mail en contient le texte intégral.
       </p>
     )}
 

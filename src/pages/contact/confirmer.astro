@@ -1,0 +1,134 @@
+---
+/**
+ * Confirmation d'un message déposé sans JavaScript — /contact/confirmer/
+ *
+ * Le formulaire de contact fait résoudre au navigateur une petite
+ * preuve de travail avant l'envoi. Sans JavaScript elle ne peut pas
+ * tourner : le message attend alors qu'on ait ouvert le lien reçu par
+ * mail. Le repli n'est donc pas une version allégée du chemin normal,
+ * ce qui en ferait l'autoroute à robots — il échange la preuve de
+ * travail contre la possession vérifiée d'une boîte mail.
+ *
+ * La remise se fait ici, dans le frontmatter : c'est un GET humain qui
+ * déclenche une écriture, ce qui est assumé. Les clients mail
+ * préchargent les liens ; l'endpoint traite donc un second appel comme
+ * un succès silencieux plutôt qu'une erreur, sans quoi une
+ * confirmation déjà passée s'afficherait comme un échec au moment où
+ * la personne clique vraiment.
+ */
+import PageShell from '../../components/ui/PageShell.astro';
+import { entetesProxy, postPayload } from '../../lib/payload';
+import { formatHeroTitle } from '../../lib/site';
+
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+
+type Reponse = { ok?: boolean; code?: string };
+
+const jeton = Astro.url.searchParams.get('t') ?? '';
+
+/** `succes` couvre aussi le lien déjà utilisé — cf. en-tête. */
+type Etat = 'succes' | 'expire' | 'invalide' | 'panne';
+let etat: Etat = 'invalide';
+
+if (jeton) {
+  try {
+    const { body } = await postPayload<Reponse>(
+      '/contact-confirm',
+      { jeton },
+      entetesProxy(Astro.request, Astro.clientAddress),
+    );
+    if (body?.ok) etat = 'succes';
+    else if (body?.code === 'expired_token') etat = 'expire';
+    else if (body?.code === 'invalid_token') etat = 'invalide';
+    else etat = 'panne';
+  } catch (err) {
+    console.warn('[contact/confirmer] appel impossible :', (err as Error).message);
+    etat = 'panne';
+  }
+}
+
+const TITRES: Record<Etat, string> = {
+  succes: 'Message *confirmé*.',
+  expire: 'Lien *expiré*.',
+  invalide: 'Lien *invalide*.',
+  panne: 'Confirmation *impossible*.',
+};
+---
+
+<PageShell
+  documentTitle="Confirmation"
+  description="Confirmation d'un message envoyé au collectif Tituba."
+  title={formatHeroTitle(TITRES[etat])}
+  famille="vert"
+  noindex={true}
+>
+  <div class="confirmation">
+    {etat === 'succes' && (
+      <>
+        <p>
+          Votre message nous est parvenu. Nous vous répondrons à l’adresse depuis laquelle vous
+          avez confirmé.
+        </p>
+        <p class="secondaire">
+          Merci d’avoir fait ce détour : il nous évite de recevoir des envois automatiques, et
+          c’est votre boîte mail qui en fait la démonstration.
+        </p>
+      </>
+    )}
+
+    {etat === 'expire' && (
+      <>
+        <p>
+          Ce lien avait une durée de vie de trente minutes, et elle est passée. Votre message ne
+          nous a pas été transmis.
+        </p>
+        <p class="secondaire">
+          Le mail que vous avez reçu en contient le texte intégral : vous pouvez le recopier dans
+          <a href="/contact/">un nouvel envoi</a>, rien n’est perdu.
+        </p>
+      </>
+    )}
+
+    {etat === 'invalide' && (
+      <p>
+        Ce lien n’est pas lisible — il a peut-être été coupé par votre client mail. Réessayez en
+        le copiant en entier, ou <a href="/contact/">écrivez-nous à nouveau</a>.
+      </p>
+    )}
+
+    {etat === 'panne' && (
+      <>
+        <p>
+          Quelque chose a échoué de notre côté, et votre message n’est pas parti. Ce n’est pas
+          vous.
+        </p>
+        <p class="secondaire">
+          Le mail que vous avez reçu en contient le texte : réessayez dans quelques minutes depuis
+          <a href="/contact/">le formulaire</a>.
+        </p>
+      </>
+    )}
+  </div>
+</PageShell>
+
+<style>
+  .confirmation {
+    max-width: var(--mesure);
+  }
+  .confirmation p {
+    font-family: var(--font-serif);
+    font-size: var(--t-body);
+    line-height: var(--lh-body);
+    color: var(--color-body);
+    margin: 0 0 16px;
+  }
+  .confirmation .secondaire {
+    font-size: var(--t-sublede);
+    color: var(--color-muted);
+  }
+  .confirmation a {
+    color: var(--c-vert-deep);
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+</style>
