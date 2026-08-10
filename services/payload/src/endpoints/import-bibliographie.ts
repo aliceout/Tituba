@@ -64,10 +64,30 @@ export const importBibliographieEndpoint: Endpoint = {
   handler: async (req) => {
     if (!requireUser(req)) return errorResponse('Non authentifié.', 401, 'unauthenticated');
 
-    const body = await readJsonBody<{ textes?: unknown }>(req);
-    const textes = Array.isArray(body?.textes)
-      ? body.textes.filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
-      : [];
+    // Le texte, et rien d'autre — sauf ce que quelqu'un a explicitement
+    // saisi pour combler un manque. Accepter des champs déjà découpés
+    // laisserait écrire n'importe quoi dans la bibliographie par une
+    // requête forgée ; accepter un nom et une année tapés à la main est
+    // autre chose : c'est précisément ce qu'on a demandé de fournir.
+    const body = await readJsonBody<{ textes?: unknown; references?: unknown }>(req);
+    const brutes = Array.isArray(body?.references)
+      ? body.references
+      : Array.isArray(body?.textes)
+        ? body.textes.map((t) => ({ texte: t }))
+        : [];
+
+    const textes = brutes
+      .map((r) => {
+        const o = r as { texte?: unknown; nom?: unknown; annee?: unknown };
+        if (typeof o?.texte !== 'string' || !o.texte.trim()) return null;
+        const annee = Number(o.annee);
+        return {
+          texte: o.texte,
+          nom: typeof o.nom === 'string' && o.nom.trim() ? o.nom.trim().slice(0, 120) : null,
+          annee: Number.isInteger(annee) && annee >= 1700 && annee <= 3000 ? annee : null,
+        };
+      })
+      .filter((r): r is { texte: string; nom: string | null; annee: number | null } => r !== null);
 
     if (textes.length === 0) return errorResponse('Aucune référence reçue.', 400, 'no_refs');
     if (textes.length > MAX_REFERENCES) {
@@ -80,13 +100,23 @@ export const importBibliographieEndpoint: Endpoint = {
 
     const resultats: Resultat[] = [];
 
-    for (const texte of textes) {
-      const ref = analyserReference(texte);
+    for (const entree of textes) {
+      const lu = analyserReference(entree.texte);
+      // Ce qui a été saisi l'emporte sur ce qui a été deviné : la
+      // personne a le document sous les yeux, pas nous.
+      const ref = {
+        ...lu,
+        nom: entree.nom ?? lu.nom,
+        annee: entree.annee ?? lu.annee,
+      };
+      const manques = [!ref.nom ? 'nom' : null, ref.annee == null ? 'année' : null].filter(
+        (m): m is string => m !== null,
+      );
 
-      if (ref.manques.length > 0 || !ref.nom || ref.annee == null) {
+      if (manques.length > 0 || !ref.nom || ref.annee == null) {
         resultats.push({
           texte: ref.texte,
-          erreur: `${ref.manques.join(' et ')} introuvable${ref.manques.length > 1 ? 's' : ''} — à saisir à la main.`,
+          erreur: `${manques.join(' et ')} introuvable${manques.length > 1 ? 's' : ''} — à saisir à la main.`,
         });
         continue;
       }

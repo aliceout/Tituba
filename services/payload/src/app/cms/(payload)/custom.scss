@@ -4953,6 +4953,35 @@ button.btn--style-primary,
       }
     }
 
+    // La saisie de ce qui ne s'est pas laissé lire — sur la même ligne
+    // que le motif, pour qu'on voie d'un coup ce qui manque et où le
+    // dire.
+    &__manque {
+      align-items: baseline;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-left: 21px;
+
+      input {
+        background: var(--b-bg);
+        border: 1px solid var(--b-rule);
+        border-radius: 3px;
+        color: var(--b-ink);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        padding: 2px 6px;
+      }
+
+      input[type='number'] {
+        width: 74px;
+      }
+
+      input[type='text'] {
+        min-width: 180px;
+      }
+    }
+
     &__ref-ligne {
       align-items: baseline;
       cursor: pointer;

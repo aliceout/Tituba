@@ -119,6 +119,43 @@ function lireNom(texte: string): { nom: string | null; prenom: string | null } {
   return { nom: seul ? seul[1] : null, prenom: null };
 }
 
+const MOIS =
+  'janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[ûu]t|septembre|octobre|novembre|d[ée]cembre';
+
+/**
+ * L'année de publication — pas n'importe quelle année du texte.
+ *
+ * Trois pièges, tous rencontrés :
+ *
+ *  - la date de consultation d'une page web (« Consulté le 31 mars
+ *    2018 ») n'est pas la date de la source ;
+ *  - un titre en porte souvent une (« Programme indicatif national
+ *    2008-2013 »), antérieure à la publication ;
+ *  - « s.d. » veut dire qu'il n'y en a pas, et une source sans date
+ *    doit le rester plutôt que d'en recevoir une par accident.
+ *
+ * On écarte donc la consultation, on cherche d'abord une date complète,
+ * et l'on ne retient un nombre isolé qu'à défaut — le dernier, car
+ * l'année de publication ferme la référence là où celles du titre
+ * l'ouvrent.
+ */
+function lireAnnee(texte: string): number | null {
+  const sansAcces = texte.replace(/consult[ée]e?\s+le[^,;.]*/gi, ' ');
+  if (/\b(s\.\s*d\.|sans\s+date|n\.\s*d\.)/i.test(sansAcces)) return null;
+
+  const pleine = sansAcces.match(
+    new RegExp(`\\b\\d{1,2}\\s+(?:${MOIS})\\s+(1[5-9]\\d{2}|20\\d{2})\\b`, 'i'),
+  );
+  if (pleine) return Number.parseInt(pleine[1], 10);
+
+  const moisAnnee = sansAcces.match(new RegExp(`(?:${MOIS})\\s+(1[5-9]\\d{2}|20\\d{2})\\b`, 'i'));
+  if (moisAnnee) return Number.parseInt(moisAnnee[1], 10);
+
+  const toutes = [...sansAcces.matchAll(/\b(1[5-9]\d{2}|20\d{2})\b/g)];
+  if (toutes.length === 0) return null;
+  return Number.parseInt(toutes[toutes.length - 1][1], 10);
+}
+
 /**
  * Le contenu des guillemets ouvrants les plus extérieurs.
  *
@@ -195,8 +232,7 @@ export function analyserReference(texte: string): ReferenceLue {
   const propre = texte.replace(/\s+/g, ' ').trim();
 
   const lu = lireNom(propre);
-  const anneeM = propre.match(/\b(1[5-9]\d{2}|20\d{2})\b/);
-  const annee = anneeM ? Number.parseInt(anneeM[1], 10) : null;
+  const annee = lireAnnee(propre);
   const urlM = propre.match(/https?:\/\/[^\s,;»”"')\]]+/);
   const url = urlM ? urlM[0].replace(/[.]$/, '') : null;
   const titre = lireTitre(propre);
@@ -287,11 +323,31 @@ const RE_RENVOI_NOMME =
 /** « Ibid. », « Idem » — renvoi à la note qui précède. */
 const RE_IBID = /^\s*(ibid|idem)\b/i;
 
-/** Nom de famille qui ouvre un renvoi. Le prénom abrégé n'en fait pas partie. */
-function nomDuRenvoi(texte: string): string | null {
-  const m = texte.match(/^\s*([A-ZÀ-Ý][\p{L}'’-]+(?:\s+[A-ZÀ-Ý][\p{L}'’-]+)?)\s*[,.]/u);
-  if (!m) return null;
-  return m[1].replace(/\s+[A-ZÀ-Ý]\.?$/u, '').trim();
+/**
+ * Les désignations possibles de la source visée par un renvoi.
+ *
+ * Ce qui précède « art. cit. » n'est pas toujours un nom de famille :
+ * « Revue du Droit de l'Union Européenne art. cit., p. 249 » désigne la
+ * source par sa revue. On rend donc plusieurs écritures du même bout de
+ * texte, de la plus complète à la plus dépouillée, à confronter ensuite
+ * aux noms comme aux titres de publication déjà rencontrés.
+ */
+function designationsDuRenvoi(texte: string): string[] {
+  const coupe = texte.search(RE_RENVOI_NOMME);
+  const avant = (coupe > 0 ? texte.slice(0, coupe) : texte).replace(/[,;\s]+$/, '').trim();
+  if (!avant) return [];
+
+  const out = new Set<string>([avant]);
+  // Le premier des co-signataires.
+  const premier = avant.split(/\s+(?:et|&|and)\s+/i)[0]?.trim();
+  if (premier) out.add(premier);
+  // Sans le prénom, abrégé ou non.
+  const sansPrenom = (premier ?? avant).split(',')[0]?.trim();
+  if (sansPrenom) out.add(sansPrenom);
+  // Sans l'initiale accolée : « Weber S. » → « Weber ».
+  if (sansPrenom) out.add(sansPrenom.replace(/\s+[A-ZÀ-Ý]\.?$/u, '').trim());
+
+  return [...out].filter((s) => s.length >= 3);
 }
 
 export type EtatRenvois = {
@@ -325,9 +381,21 @@ export type EtatRenvois = {
  * pas retrouver.
  */
 export function resoudreRenvois(notes: string[]): EtatRenvois {
+  // Une source se laisse désigner par son auteur·ice comme par sa revue :
+  // on tient les deux registres, et l'on retient pour chacun les titres
+  // rencontrés — c'est leur nombre qui dira si le renvoi est ambigu.
   const parNom = new Map<string, Set<string>>();
+  const parEditeur = new Map<string, Set<string>>();
   let courante: string | null = null;
   const etat: EtatRenvois = { resolus: 0, ambigus: [], orphelins: [] };
+
+  const chercher = (designations: string[]): Set<string> | undefined => {
+    for (const d of designations) {
+      const trouve = parNom.get(d) ?? parEditeur.get(d);
+      if (trouve) return trouve;
+    }
+    return undefined;
+  };
 
   // Citation par citation, et non note par note : une même note donne
   // souvent une source en entier puis renvoie à une autre.
@@ -335,11 +403,17 @@ export function resoudreRenvois(notes: string[]): EtatRenvois {
     for (const citation of citationsDeNote(note)) {
       if (noteEstReference(citation)) {
         const r = analyserReference(citation);
+        const titre = r.titre ?? r.texte.slice(0, 40);
         if (r.nom) {
           const titres = parNom.get(r.nom) ?? new Set<string>();
-          titres.add(r.titre ?? r.texte.slice(0, 40));
+          titres.add(titre);
           parNom.set(r.nom, titres);
           courante = r.nom;
+        }
+        if (r.editeur) {
+          const titres = parEditeur.get(r.editeur) ?? new Set<string>();
+          titres.add(titre);
+          parEditeur.set(r.editeur, titres);
         }
         continue;
       }
@@ -351,8 +425,8 @@ export function resoudreRenvois(notes: string[]): EtatRenvois {
       }
       if (!RE_RENVOI_NOMME.test(citation)) continue;
 
-      const nom = nomDuRenvoi(citation);
-      const titres = nom ? parNom.get(nom) : undefined;
+      const designations = designationsDuRenvoi(citation);
+      const titres = chercher(designations);
       if (!titres) {
         etat.orphelins.push(citation);
         continue;
@@ -362,7 +436,7 @@ export function resoudreRenvois(notes: string[]): EtatRenvois {
         continue;
       }
       etat.resolus += 1;
-      courante = nom;
+      courante = designations[designations.length - 1] ?? courante;
     }
   }
 

@@ -101,6 +101,38 @@ export default function ImportDocument({
   const [creation, setCreation] = useState<Map<string, Creation>>(new Map());
   const [creationEnCours, setCreationEnCours] = useState(false);
   const [liees, setLiees] = useState(0);
+  // Ce qu'on a saisi à la place de ce qui ne se lisait pas.
+  const [complements, setComplements] = useState<Map<string, { nom?: string; annee?: string }>>(
+    new Map(),
+  );
+
+  /** Une référence est-elle prête, une fois les manques comblés ? */
+  function pret(l: LigneBiblio, c?: { nom?: string; annee?: string }): boolean {
+    const nom = l.nom ?? c?.nom?.trim();
+    const annee = l.annee ?? (c?.annee ? Number(c.annee) : NaN);
+    return Boolean(nom) && Number.isInteger(annee) && Number(annee) >= 1700;
+  }
+
+  function complete(l: LigneBiblio): boolean {
+    return pret(l, complements.get(l.texte));
+  }
+
+  /**
+   * Enregistre une saisie, et coche la ligne dès qu'elle est complète —
+   * l'avoir renseignée EST le geste, redemander un clic serait une
+   * formalité de plus pour rien.
+   */
+  function completer(texte: string, champ: 'nom' | 'annee', valeur: string): void {
+    const suivant = { ...complements.get(texte), [champ]: valeur };
+    setComplements((prev) => new Map(prev).set(texte, suivant));
+
+    const ligne = [...(resultat?.biblio ?? []), ...(resultat?.notesRefs ?? [])].find(
+      (l) => l.texte === texte,
+    );
+    if (ligne && pret(ligne, suivant)) {
+      setACreer((prev) => (prev.has(texte) ? prev : new Set(prev).add(texte)));
+    }
+  }
 
   async function lire(fichier: File): Promise<void> {
     setEnCours(true);
@@ -188,8 +220,15 @@ export default function ImportDocument({
       .map((l) => l.candidats.find((c) => c.sur)?.id)
       .filter((id): id is number | string => id != null);
     const aEcrire = retenues
-      .filter((l) => !l.candidats.some((c) => c.sur) && l.manques.length === 0)
-      .map((l) => l.texte);
+      .filter((l) => !l.candidats.some((c) => c.sur) && complete(l))
+      .map((l) => {
+        const c = complements.get(l.texte);
+        return {
+          texte: l.texte,
+          nom: l.nom ?? c?.nom?.trim() ?? null,
+          annee: l.annee ?? Number(c?.annee) ?? null,
+        };
+      });
 
     setCreationEnCours(true);
     try {
@@ -200,7 +239,7 @@ export default function ImportDocument({
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ textes: aEcrire }),
+          body: JSON.stringify({ references: aEcrire }),
         });
         const data = (await res.json()) as {
           ok?: boolean;
@@ -414,7 +453,7 @@ export default function ImportDocument({
                   {g.lignes.map((l, i) => {
                     const faite = creation.get(l.texte);
                     const sur = l.candidats.find((c) => c.sur);
-                    const creable = l.manques.length === 0 && !sur && !faite?.id;
+                    const creable = complete(l) && !sur && !faite?.id;
                     // Cochable = peut rejoindre le billet, qu'il faille la
                     // créer d'abord ou qu'elle existe déjà.
                     const cochable = creable || (Boolean(sur) && !faite);
@@ -466,10 +505,35 @@ export default function ImportDocument({
                             billet
                           </span>
                         )}
+                        {/* Ce qui ne se lit pas se saisit ici. On ne
+                            devine pas — mais rien ne doit rester bloqué
+                            faute d'un champ où le dire. */}
                         {!faite && !sur && l.manques.length > 0 && (
-                          <span className="ed-import__match ed-import__match--absent">
-                            {l.manques.join(' et ')} introuvable
-                            {l.manques.length > 1 ? 's' : ''} — à saisir à la main.
+                          <span className="ed-import__manque">
+                            <span className="ed-import__match ed-import__match--absent">
+                              {l.manques.join(' et ')} illisible
+                              {l.manques.length > 1 ? 's' : ''} dans le document&nbsp;:
+                            </span>
+                            {l.manques.includes('nom') && (
+                              <input
+                                type="text"
+                                placeholder="Auteur·ice ou organisme"
+                                value={complements.get(l.texte)?.nom ?? ''}
+                                disabled={creationEnCours}
+                                onChange={(e) => completer(l.texte, 'nom', e.target.value)}
+                              />
+                            )}
+                            {l.manques.includes('année') && (
+                              <input
+                                type="number"
+                                placeholder="Année"
+                                min={1700}
+                                max={3000}
+                                value={complements.get(l.texte)?.annee ?? ''}
+                                disabled={creationEnCours}
+                                onChange={(e) => completer(l.texte, 'annee', e.target.value)}
+                              />
+                            )}
                           </span>
                         )}
                         {!faite && !sur && l.manques.length === 0 && l.candidats.length > 0 && (
