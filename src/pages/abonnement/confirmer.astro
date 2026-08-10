@@ -54,36 +54,36 @@ const title = TITLES[state];
 <Layout title={title} noindex={true}>
   <PageTitle title={title} />
 
-  <section class="container">
+  <section class="mx-auto max-w-[1080px] px-20 pt-10 pb-16 max-mobile:px-6 max-mobile:pt-8 max-mobile:pb-12">
     {state === 'success' && (
       <>
-        <p class="lede">
+        <p class="text-body m-0 mb-5 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55] [&_strong]:text-ink [&_strong]:font-medium">
           Merci ! L'adresse {confirmedEmail && <strong>{confirmedEmail}</strong>}
           est désormais inscrite aux alertes mail. Vous recevrez un mail à
           chaque nouveau billet publié.
         </p>
-        <p class="hint">
+        <p class="text-muted m-0 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:text-accent [&_a]:border-b [&_a]:border-accent">
           Chaque mail contiendra un lien pour vous désabonner en un clic.
         </p>
       </>
     )}
     {state === 'invalid' && (
       <>
-        <p class="lede">
+        <p class="text-body m-0 mb-5 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55] [&_strong]:text-ink [&_strong]:font-medium">
           Ce lien n'est pas valide. Il a peut-être déjà été utilisé, ou
           l'inscription correspondante a été annulée.
         </p>
-        <p class="hint">
+        <p class="text-muted m-0 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:text-accent [&_a]:border-b [&_a]:border-accent">
           Vous pouvez réessayer depuis la <a href="/abonnement/">page d'abonnement</a>.
         </p>
       </>
     )}
     {state === 'expired' && (
       <>
-        <p class="lede">
+        <p class="text-body m-0 mb-5 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55] [&_strong]:text-ink [&_strong]:font-medium">
           Ce lien a expiré (validité de 7 jours).
         </p>
-        <p class="hint">
+        <p class="text-muted m-0 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:text-accent [&_a]:border-b [&_a]:border-accent">
           Vous pouvez recommencer depuis la <a href="/abonnement/">page d'abonnement</a> —
           un nouveau mail vous sera envoyé.
         </p>
@@ -91,10 +91,10 @@ const title = TITLES[state];
     )}
     {state === 'missing' && (
       <>
-        <p class="lede">
+        <p class="text-body m-0 mb-5 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55] [&_strong]:text-ink [&_strong]:font-medium">
           L'URL est incomplète : le paramètre <code>token</code> manque.
         </p>
-        <p class="hint">
+        <p class="text-muted m-0 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:text-accent [&_a]:border-b [&_a]:border-accent">
           Si vous avez cliqué un lien depuis un mail, copiez l'URL complète
           dans votre navigateur. Sinon, recommencez depuis la
           <a href="/abonnement/">page d'abonnement</a>.
@@ -103,38 +103,3 @@ const title = TITLES[state];
     )}
   </section>
 </Layout>
-
-<style>
-  .container {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 40px 80px 64px;
-  }
-  .lede {
-    font-family: var(--font-serif);
-    font-size: calc(19px * var(--a11y-echelle));
-    line-height: 1.55;
-    color: var(--color-body);
-    margin: 0 0 20px;
-  }
-  .lede strong {
-    color: var(--color-ink);
-    font-weight: 500;
-  }
-  .hint {
-    font-family: var(--font-sans);
-    font-size: calc(14px * var(--a11y-echelle));
-    color: var(--color-muted);
-    margin: 0;
-  }
-  .hint a {
-    color: var(--color-accent);
-    border-bottom: 1px solid var(--color-accent);
-  }
-
-  @media (max-width: 900px) {
-    .container {
-      padding: 32px 24px 48px;
-    }
-  }
-</style>

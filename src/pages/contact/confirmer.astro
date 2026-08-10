@@ -62,14 +62,14 @@ const TITRES: Record<Etat, string> = {
   famille="vert"
   noindex={true}
 >
-  <div class="confirmation">
+  <div class="max-w-mesure [&_p]:font-serif [&_p]:text-courant [&_p]:leading-body [&_p]:text-body [&_p]:m-0 [&_p]:mb-4 [&_a]:text-[var(--c-vert-deep)] [&_a]:underline [&_a]:underline-offset-[0.18em]">
     {etat === 'succes' && (
       <>
         <p>
           Votre message nous est parvenu. Nous vous répondrons à l’adresse depuis laquelle vous
           avez confirmé.
         </p>
-        <p class="secondaire">
+        <p class="text-sublede text-muted">
           Merci d’avoir fait ce détour : il nous évite de recevoir des envois automatiques, et
           c’est votre boîte mail qui en fait la démonstration.
         </p>
@@ -82,7 +82,7 @@ const TITRES: Record<Etat, string> = {
           Ce lien avait une durée de vie de trente minutes, et elle est passée. Votre message ne
           nous a pas été transmis.
         </p>
-        <p class="secondaire">
+        <p class="text-sublede text-muted">
           Le mail que vous avez reçu en contient le texte intégral : vous pouvez le recopier dans
           <a href="/contact/">un nouvel envoi</a>, rien n’est perdu.
         </p>
@@ -102,7 +102,7 @@ const TITRES: Record<Etat, string> = {
           Quelque chose a échoué de notre côté, et votre message n’est pas parti. Ce n’est pas
           vous.
         </p>
-        <p class="secondaire">
+        <p class="text-sublede text-muted">
           Le mail que vous avez reçu en contient le texte : réessayez dans quelques minutes depuis
           <a href="/contact/">le formulaire</a>.
         </p>
@@ -110,25 +110,3 @@ const TITRES: Record<Etat, string> = {
     )}
   </div>
 </PageShell>
-
-<style>
-  .confirmation {
-    max-width: var(--mesure);
-  }
-  .confirmation p {
-    font-family: var(--font-serif);
-    font-size: var(--t-body);
-    line-height: var(--lh-body);
-    color: var(--color-body);
-    margin: 0 0 16px;
-  }
-  .confirmation .secondaire {
-    font-size: var(--t-sublede);
-    color: var(--color-muted);
-  }
-  .confirmation a {
-    color: var(--c-vert-deep);
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
-  }
-</style>
