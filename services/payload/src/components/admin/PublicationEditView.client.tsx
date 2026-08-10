@@ -15,7 +15,7 @@
 // chrome Payload — slash menu maison, theme maison, blocks rendus
 // par nos nodes décorateur.
 
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
 // useLayoutEffect côté serveur déclenche un warning React. On bascule
@@ -246,6 +246,26 @@ export default function PublicationEditViewClient({
   const [bibHelpOpen, setBibHelpOpen] = useState(false);
 
   // Tick toutes les 30s pour rafraîchir le « il y a X min »
+  /**
+   * (Re)charge la liste des références proposées par le panneau
+   * Bibliographie liée.
+   *
+   * Rappelée après un import : les entrées qui viennent d'être créées
+   * n'existaient pas au montage, et sans ce rechargement elles
+   * s'afficheraient en « Réf. #21 » — un numéro, là où il faut un nom.
+   */
+  const chargerBiblio = useCallback(async () => {
+    try {
+      const r = await fetch('/cms/api/bibliography?limit=1000&depth=0&sort=authorLabel', {
+        credentials: 'include',
+      });
+      const data = (await r.json()) as { docs: BibEntry[] };
+      setBiblioOptions(data.docs ?? []);
+    } catch {
+      // La liste précédente vaut mieux qu'une liste vide.
+    }
+  }, []);
+
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
@@ -281,12 +301,7 @@ export default function PublicationEditViewClient({
       .then((r) => r.json())
       .then((data: { docs: Tag[] }) => setAllTags(data.docs ?? []))
       .catch(() => setAllTags([]));
-    const biblioP = fetch('/cms/api/bibliography?limit=1000&depth=0&sort=authorLabel', {
-      credentials: 'include',
-    })
-      .then((r) => r.json())
-      .then((data: { docs: BibEntry[] }) => setBiblioOptions(data.docs ?? []))
-      .catch(() => setBiblioOptions([]));
+    const biblioP = chargerBiblio();
     // Liste des médias pour le picker FigureRenderer (recherche +
     // preview thumbnail). depth=0 pour ne pas charger les relations.
     const mediaP = fetch('/cms/api/media?limit=500&depth=0&sort=-createdAt', {
@@ -1090,6 +1105,21 @@ export default function PublicationEditViewClient({
                   if (editor) remplacerContenu(editor, body as LexicalState);
                   else patch('body', body as LexicalState);
                   if (titre) patch('title', titre);
+                }}
+                onLier={async (ids) => {
+                  // Les entrées viennent d'être créées : sans ce
+                  // rechargement, le panneau les afficherait par leur
+                  // numéro.
+                  await chargerBiblio();
+                  setPost((p) => {
+                    const cur = (p.bibliography ?? []) as Array<BibEntry | number | string>;
+                    const dejaLa = new Set(
+                      cur.map((b) => String(typeof b === 'object' ? b.id : b)),
+                    );
+                    const ajout = ids.filter((id) => !dejaLa.has(String(id)));
+                    if (ajout.length === 0) return p;
+                    return { ...p, bibliography: [...cur, ...ajout] };
+                  });
                 }}
               />
               {fieldErrors.body && (

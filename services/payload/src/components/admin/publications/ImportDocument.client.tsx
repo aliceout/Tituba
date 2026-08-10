@@ -27,10 +27,15 @@
  * par Ctrl+Z une fois inséré (cf `remplacerContenu`), mais mieux vaut
  * ne pas avoir à s'en servir.
  *
- * La bibliographie est affichée, jamais reliée d'office : on montre les
- * entrées existantes qui pourraient correspondre, et quelqu'un tranche.
- * Une référence mal appariée est bien plus coûteuse à repérer, plus
- * tard, qu'à saisir tout de suite.
+ * La bibliographie détachée rejoint la bibliographie du site ET la
+ * liste en pied de billet : sans ce second rattachement, l'entrée
+ * existe quelque part et le billet n'en dit rien — ce qui revient, du
+ * point de vue de la lectrice, à ne l'avoir jamais importée.
+ *
+ * Rien n'est rattaché d'office pour autant : on montre ce qui sera
+ * écrit, coché mais décochable, et quelqu'un tranche. Une référence mal
+ * appariée est bien plus coûteuse à repérer, plus tard, qu'à saisir
+ * tout de suite.
  */
 
 import React, { useRef, useState } from 'react';
@@ -71,11 +76,14 @@ export default function ImportDocument({
   collection,
   corpsRempli,
   onInsert,
+  onLier,
 }: {
   collection: string;
   /** Un corps déjà écrit : on prévient avant de l'effacer. */
   corpsRempli: boolean;
   onInsert: (r: { body: unknown; titre: string | null }) => void;
+  /** Rattache des références à la bibliographie du billet. */
+  onLier: (ids: (number | string)[]) => void | Promise<void>;
 }): React.ReactElement {
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -88,6 +96,7 @@ export default function ImportDocument({
   const [aCreer, setACreer] = useState<Set<string>>(new Set());
   const [creation, setCreation] = useState<Map<string, Creation>>(new Map());
   const [creationEnCours, setCreationEnCours] = useState(false);
+  const [liees, setLiees] = useState(0);
 
   async function lire(fichier: File): Promise<void> {
     setEnCours(true);
@@ -111,12 +120,14 @@ export default function ImportDocument({
       setResultat(data);
       setReprendreTitre(Boolean(data.titre));
       setCreation(new Map());
-      // Cochées d'emblée : celles qui se lisent et qu'aucune entrée
-      // existante ne recouvre. Les autres demandent un geste.
+      // Cochées d'emblée : toutes celles qui peuvent rejoindre la
+      // bibliographie du billet — qu'il faille les créer d'abord ou
+      // qu'elles y soient déjà. C'est le document qui les cite, elles
+      // ont leur place en pied de billet.
       setACreer(
         new Set(
           data.biblio
-            .filter((l) => l.manques.length === 0 && !l.candidats.some((c) => c.sur))
+            .filter((l) => l.manques.length === 0 || l.candidats.some((c) => c.sur))
             .map((l) => l.texte),
         ),
       );
@@ -144,47 +155,80 @@ export default function ImportDocument({
     setNomFichier('');
     setACreer(new Set());
     setCreation(new Map());
+    setLiees(0);
   }
 
   /**
-   * Crée les références cochées dans la bibliographie.
+   * Porte les références cochées dans la bibliographie du billet.
    *
-   * Seuls les textes partent : c'est le serveur qui les relit. Le
+   * Deux gestes en un, parce que la distinction n'intéresse personne :
+   * celles qui manquent à la bibliographie y sont créées, puis toutes —
+   * les nouvelles comme celles qui existaient déjà — sont rattachées au
+   * billet. C'est ce rattachement qui les fera paraître en pied
+   * d'article ; sans lui, l'entrée existe quelque part et le billet
+   * n'en dit rien.
+   *
+   * Seuls les textes partent au serveur : c'est lui qui les relit. Le
    * découpage affiché ici vient de lui, le lui renvoyer n'apporterait
    * rien et ouvrirait la porte à autre chose.
    */
   async function creer(): Promise<void> {
-    const textes = [...aCreer];
-    if (textes.length === 0) return;
+    if (!resultat || aCreer.size === 0) return;
+
+    const retenues = resultat.biblio.filter((l) => aCreer.has(l.texte));
+    // Celles qu'une entrée existante recouvre déjà : rien à créer, tout
+    // à rattacher.
+    const dejaLa = retenues
+      .map((l) => l.candidats.find((c) => c.sur)?.id)
+      .filter((id): id is number | string => id != null);
+    const aEcrire = retenues
+      .filter((l) => !l.candidats.some((c) => c.sur) && l.manques.length === 0)
+      .map((l) => l.texte);
+
     setCreationEnCours(true);
     try {
-      const res = await fetch('/cms/api/import-bibliographie', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textes }),
-      });
-      const data = (await res.json()) as {
-        ok?: boolean;
-        error?: string;
-        resultats?: ({ texte: string } & Creation)[];
-      };
-      if (!res.ok || !data.ok) {
-        setErreur(data.error ?? 'Les références n’ont pas pu être créées.');
-        return;
+      const nouvelles: (number | string)[] = [];
+
+      if (aEcrire.length > 0) {
+        const res = await fetch('/cms/api/import-bibliographie', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ textes: aEcrire }),
+        });
+        const data = (await res.json()) as {
+          ok?: boolean;
+          error?: string;
+          resultats?: ({ texte: string } & Creation)[];
+        };
+        if (!res.ok || !data.ok) {
+          setErreur(data.error ?? 'Les références n’ont pas pu être créées.');
+          return;
+        }
+        const suite = new Map(creation);
+        const restant = new Set(aCreer);
+        for (const r of data.resultats ?? []) {
+          suite.set(r.texte, { id: r.id, label: r.label, erreur: r.erreur });
+          // Ce qui est fait sort de la sélection : recliquer ne doit
+          // pas en faire un doublon.
+          if (r.id != null) {
+            nouvelles.push(r.id);
+            restant.delete(r.texte);
+          }
+        }
+        setCreation(suite);
+        setACreer(restant);
+      } else {
+        setACreer(new Set());
       }
-      const suite = new Map(creation);
-      const restant = new Set(aCreer);
-      for (const r of data.resultats ?? []) {
-        suite.set(r.texte, { id: r.id, label: r.label, erreur: r.erreur });
-        // Ce qui est créé sort de la sélection : recliquer ne doit pas
-        // en faire un doublon.
-        if (r.id != null) restant.delete(r.texte);
+
+      const tout = [...nouvelles, ...dejaLa];
+      if (tout.length > 0) {
+        await onLier(tout);
+        setLiees((n) => n + tout.length);
       }
-      setCreation(suite);
-      setACreer(restant);
     } catch {
-      setErreur('La création a échoué — le serveur n’a pas répondu.');
+      setErreur('L’opération a échoué — le serveur n’a pas répondu.');
     } finally {
       setCreationEnCours(false);
     }
@@ -290,9 +334,10 @@ export default function ImportDocument({
           <div className="ed-import__biblio">
             <h4>Bibliographie détachée</h4>
             <p className="ed-import__biblio-note">
-              Ces références ne sont pas insérées dans le texte&nbsp;: elles vont dans
-              votre bibliographie, d’où vous les appellerez depuis l’éditeur avec
-              <kbd>/</kbd>. Vérifiez ce qui sera créé&nbsp;— seul ce qui se lit sans
+              Ces références ne sont pas insérées dans le texte&nbsp;: elles rejoignent
+              votre bibliographie et la liste en pied de billet. Pour en{' '}
+              <em>citer</em> une dans le corps, appelez-la ensuite depuis l’éditeur avec{' '}
+              <kbd>/</kbd>. Vérifiez ce qui sera écrit&nbsp;— seul ce qui se lit sans
               ambiguïté est repris, le reste se complète ensuite.
             </p>
             <ul>
@@ -300,10 +345,13 @@ export default function ImportDocument({
                 const faite = creation.get(l.texte);
                 const sur = l.candidats.find((c) => c.sur);
                 const creable = l.manques.length === 0 && !sur && !faite?.id;
+                // Cochable = peut rejoindre le billet, qu'il faille la
+                // créer d'abord ou qu'elle existe déjà.
+                const cochable = creable || (Boolean(sur) && !faite);
                 return (
                   <li key={`${i}-${l.texte.slice(0, 20)}`}>
                     <label className="ed-import__ref-ligne">
-                      {creable ? (
+                      {cochable ? (
                         <input
                           type="checkbox"
                           checked={aCreer.has(l.texte)}
@@ -333,7 +381,7 @@ export default function ImportDocument({
 
                     {faite?.id != null && (
                       <span className="ed-import__match">
-                        Créée dans la bibliographie&nbsp;: {faite.label}
+                        Créée et liée au billet&nbsp;: {faite.label}
                       </span>
                     )}
                     {faite?.erreur && (
@@ -343,7 +391,7 @@ export default function ImportDocument({
                     )}
                     {!faite && sur && (
                       <span className="ed-import__match">
-                        Déjà dans la bibliographie&nbsp;: {sur.label}
+                        Déjà dans votre bibliographie&nbsp;: {sur.label} — à lier au billet
                       </span>
                     )}
                     {!faite && !sur && l.manques.length > 0 && (
@@ -370,8 +418,8 @@ export default function ImportDocument({
                 onClick={() => void creer()}
               >
                 {creationEnCours
-                  ? 'Création…'
-                  : `Créer ${compte(aCreer.size, 'référence')} dans la bibliographie`}
+                  ? 'En cours…'
+                  : `Ajouter ${compte(aCreer.size, 'référence')} à la bibliographie du billet`}
               </button>
               {aCreer.size > 0 && !creationEnCours && (
                 <button
@@ -379,8 +427,14 @@ export default function ImportDocument({
                   className="ed-import__cancel"
                   onClick={() => setACreer(new Set())}
                 >
-                  Ne rien créer
+                  Ne rien ajouter
                 </button>
+              )}
+              {liees > 0 && (
+                <span className="ed-import__match">
+                  {compte(liees, 'référence')} dans « Bibliographie liée »&nbsp;—
+                  enregistrez le billet pour la conserver.
+                </span>
               )}
             </div>
           </div>
