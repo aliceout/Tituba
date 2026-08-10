@@ -31,64 +31,33 @@ const {
   famille = 'neutre',
   gap = true,
 } = Astro.props;
+// La famille ne colore que l’étiquette. Le repère de droite reste gris :
+// c’est une précision, pas un titre.
+const FAMILLES: Record<string, string> = {
+  neutre: 'text-muted',
+  bleu: 'text-[var(--c-bleu-deep)]',
+  vert: 'text-[var(--c-vert-deep)]',
+  jaune: 'text-[var(--c-jaune-deep)]',
+  violet: 'text-[var(--c-violet-deep)]',
+};
 ---
 
-<section class:list={['bloc', { 'bloc--gap': gap }]} data-famille={famille}>
-  <div class="head">
-    <span class="label">{label}</span>
+<section class:list={[gap && 'mb-(--block-gap)']}>
+  <div
+    class="font-mono text-label tracking-label mb-[22px] flex items-baseline justify-between gap-4 uppercase"
+  >
+    <span class:list={[FAMILLES[famille]]}>{label}</span>
     {eyebrow &&
       (eyebrowHref ? (
-        <a class="eyebrow" href={eyebrowHref}>{eyebrow}</a>
+        <a
+          class="text-muted hover:text-ink tracking-[0.08em] whitespace-nowrap normal-case transition-colors duration-100"
+          href={eyebrowHref}
+        >
+          {eyebrow}
+        </a>
       ) : (
-        <span class="eyebrow">{eyebrow}</span>
+        <span class="text-muted tracking-[0.08em] whitespace-nowrap normal-case">{eyebrow}</span>
       ))}
   </div>
   <slot />
 </section>
-
-<style>
-  .bloc--gap {
-    margin-bottom: var(--block-gap);
-  }
-
-  .head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 16px;
-    font-family: var(--font-mono);
-    font-size: var(--t-label);
-    letter-spacing: var(--ls-label);
-    text-transform: uppercase;
-    margin-bottom: 22px;
-  }
-
-  /* La famille ne colore que l'étiquette. Le repère de droite reste
-     gris : c'est une précision, pas un titre. */
-  .bloc[data-famille='neutre'] .label {
-    color: var(--color-muted);
-  }
-  .bloc[data-famille='bleu'] .label {
-    color: var(--c-bleu-deep);
-  }
-  .bloc[data-famille='vert'] .label {
-    color: var(--c-vert-deep);
-  }
-  .bloc[data-famille='jaune'] .label {
-    color: var(--c-jaune-deep);
-  }
-  .bloc[data-famille='violet'] .label {
-    color: var(--c-violet-deep);
-  }
-
-  .eyebrow {
-    color: var(--color-muted);
-    letter-spacing: 0.08em;
-    text-transform: none;
-    white-space: nowrap;
-    transition: color 0.12s;
-  }
-  a.eyebrow:hover {
-    color: var(--color-ink);
-  }
-</style>

@@ -16,11 +16,19 @@ const { entries } = Astro.props;
 ---
 
 <section id="biblio">
-  <h3>Bibliographie</h3>
-  <ol class="biblio">
+  <h3
+    class="text-ink mt-0 mb-3.5 font-sans text-[calc(13px*var(--a11y-echelle))] font-semibold tracking-[0.1em] uppercase"
+  >
+    Bibliographie
+  </h3>
+  {/* Numérotée explicitement : c’est le numéro que cite le corps, il ne
+      doit pas dépendre d’une remise à zéro des styles. */}
+  <ol
+    class="text-body-soft marker:text-body-soft m-0 list-decimal pl-7 font-serif text-[calc(14px*var(--a11y-echelle))] leading-[1.65] marker:font-sans marker:text-meta"
+  >
     {entries.map((b) => (
-      <li id={`bib-${b.slug}`}>
-        <span class="ba">{formatAuthorsChicago(b.authors)}</span>
+      <li id={`bib-${b.slug}`} class="mb-1.5">
+        <span class="text-ink font-medium">{formatAuthorsChicago(b.authors)}</span>
         {`, ${b.year}, `}
         <em>{b.title}</em>
         {formatTranslators(b.authors) && `, ${formatTranslators(b.authors)}`}
@@ -31,13 +39,13 @@ const { entries } = Astro.props;
         {b.url && (
           <>
             {' '}
-            <a href={b.url} class="ext" rel="noopener">{b.url}</a>
+            <a href={b.url} class="border-accent border-b text-inherit" rel="noopener">{b.url}</a>
           </>
         )}
         {!b.url && b.doi && (
           <>
             {' doi:'}
-            <a href={`https://doi.org/${b.doi}`} class="ext" rel="noopener">
+            <a href={`https://doi.org/${b.doi}`} class="border-accent border-b text-inherit" rel="noopener">
               {b.doi}
             </a>
           </>
@@ -47,42 +55,3 @@ const { entries } = Astro.props;
     ))}
   </ol>
 </section>
-
-<style>
-  h3 {
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--color-ink);
-    margin: 0 0 14px;
-  }
-  .biblio {
-    font-family: var(--font-serif);
-    font-size: calc(14px * var(--a11y-echelle));
-    line-height: 1.65;
-    color: var(--color-body-soft);
-    /* Numérotée explicitement : c'est le numéro que cite le corps, il
-       ne doit pas dépendre d'une remise à zéro des styles. */
-    list-style: decimal;
-    padding-left: 28px;
-    margin: 0;
-  }
-  .biblio li {
-    margin-bottom: 6px;
-  }
-  .biblio li::marker {
-    color: var(--color-body-soft);
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-  }
-  .biblio .ba {
-    font-weight: 500;
-    color: var(--color-ink);
-  }
-  .biblio a.ext {
-    border-bottom: 1px solid var(--color-accent);
-    color: inherit;
-  }
-</style>
