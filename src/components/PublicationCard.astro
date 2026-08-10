@@ -75,23 +75,38 @@ const spec = PUBLICATIONS[collection] ?? PUBLICATIONS.articles;
 const href = publicationHref(collection, docId);
 ---
 
+{/* La classe `item` reste : c’est le crochet du filtrage client (cf
+    CardFilterBar), pas une accroche de style. `group` sert au survol du
+    titre, qui se déclenche sur toute la carte.
+
+    Sous 900 px la troisième colonne passe sous les deux autres, alignée
+    à gauche : à 80 px de large elle ne tenait plus son libellé. */}
 <article
-  class="item"
+  class="item group border-rule grid grid-cols-[120px_1fr_80px] items-baseline gap-12 border-b py-[calc(40px*var(--density-feed))] max-mobile:grid-cols-[90px_1fr] max-mobile:gap-6"
   data-type={collection}
   data-themes={themeSlugs}
 >
-  <a class="lcol" href={href} aria-hidden="true" tabindex="-1">
-    <div class="fmt"><FormatIcon collection={collection} />{spec.badge}</div>
-    <div class="meta-bottom">
-      <div class="date">{dateDay}</div>
+  {/* Colonne de gauche masquée aux lecteurs d’écran : format et date y
+      répètent ce que la colonne centrale annonce déjà. */}
+  <a
+    class="text-muted text-meta flex min-h-full flex-col justify-between font-sans no-underline"
+    href={href}
+    aria-hidden="true"
+    tabindex="-1"
+  >
+    <div class="text-label mb-2.5 tracking-[0.1em] text-[var(--c-bleu-deep)] uppercase">
+      <FormatIcon collection={collection} />{spec.badge}
+    </div>
+    <div>
+      <div class="text-ink text-[calc(13px*var(--a11y-echelle))] font-medium">{dateDay}</div>
       <div>{dateYear}</div>
-      {readingLabel && <div class="read">{readingLabel}</div>}
+      {readingLabel && <div class="text-label mt-3">{readingLabel}</div>}
     </div>
   </a>
-  <a class="ccol" href={href}>
+  <a class="text-inherit no-underline" href={href}>
     {showThemes && populatedThemes.length > 0 && (
-      <div class="kicker">
-        <span class="theme">
+      <div class="text-label mb-2.5 font-sans tracking-[0.1em] text-[var(--c-bleu-deep)] uppercase">
+        <span class="text-muted">
           {populatedThemes.map((t, i) => (
             <>
               {i > 0 && ', '}
@@ -101,113 +116,25 @@ const href = publicationHref(collection, docId);
         </span>
       </div>
     )}
-    {/* Les `*` d'un titre ne sont interprétés que dans le h1 de la page
+    {/* Les `*` d’un titre ne sont interprétés que dans le h1 de la page
         de lecture (cf formatHeroTitle) : partout ailleurs on affiche le
-        texte nu, sinon on lirait « L'*homonationalisme* » dans les
+        texte nu, sinon on lirait « L’*homonationalisme* » dans les
         listes. Fait ici et non chez les appelants pour que le cas soit
         traité une fois pour toutes les surfaces qui passent par la
         carte. */}
-    <h2>{stripHeroMarkers(title)}</h2>
-    <p>{lede}</p>
+    <h2 class="m-0 mb-3 text-[calc(26px*var(--a11y-echelle))] leading-[1.2] font-semibold tracking-[-0.3px] transition-colors duration-[120ms] group-hover:text-[var(--c-bleu-deep)]">
+      {stripHeroMarkers(title)}
+    </h2>
+    {/* Retours à la ligne du chapô conservés — même parti que sur les
+        autres surfaces qui affichent un champ multiligne. */}
+    <p class="text-body-soft m-0 text-[calc(16px*var(--a11y-echelle))] leading-[1.55] whitespace-pre-line">
+      {lede}
+    </p>
   </a>
-  <a class="rcol" href={href}>
-    <div class="lk">{spec.actionLabel} →</div>
+  <a
+    class="text-muted text-meta flex min-h-full flex-col justify-between text-right font-sans no-underline max-mobile:col-span-full max-mobile:pt-2 max-mobile:text-left"
+    href={href}
+  >
+    <div class="font-medium text-[var(--c-bleu-deep)]">{spec.actionLabel} →</div>
   </a>
 </article>
-
-<style>
-  .item {
-    display: grid;
-    grid-template-columns: 120px 1fr 80px;
-    gap: 48px;
-    padding: calc(40px * var(--density-feed)) 0;
-    border-bottom: 1px solid var(--color-rule);
-    align-items: baseline;
-  }
-  .item a {
-    color: inherit;
-    text-decoration: none;
-  }
-  .item:hover h2 {
-    color: var(--c-bleu-deep);
-  }
-  .item .lcol {
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--color-muted);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 100%;
-  }
-  .item .fmt {
-    font-size: calc(11px * var(--a11y-echelle));
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--c-bleu-deep);
-    margin-bottom: 10px;
-  }
-  .item .date {
-    font-size: calc(13px * var(--a11y-echelle));
-    color: var(--color-ink);
-    font-weight: 500;
-  }
-  .item .read {
-    margin-top: 12px;
-    font-size: calc(11px * var(--a11y-echelle));
-  }
-  .item .kicker {
-    font-family: var(--font-sans);
-    font-size: calc(11px * var(--a11y-echelle));
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--c-bleu-deep);
-    margin-bottom: 10px;
-  }
-  .item .kicker .theme {
-    color: var(--color-muted);
-  }
-  .item h2 {
-    font-size: calc(26px * var(--a11y-echelle));
-    line-height: 1.2;
-    font-weight: 600;
-    margin: 0 0 12px;
-    letter-spacing: -0.3px;
-    transition: color 0.12s;
-  }
-  .item p {
-    /* Retours à la ligne du chapô conservés — cf le même parti sur les
-       autres surfaces qui affichent un champ multiligne. */
-    white-space: pre-line;
-    font-size: calc(16px * var(--a11y-echelle));
-    line-height: 1.55;
-    color: var(--color-body-soft);
-    margin: 0;
-  }
-  .item .rcol {
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--color-muted);
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 100%;
-  }
-  .item .rcol .lk {
-    color: var(--c-bleu-deep);
-    font-weight: 500;
-  }
-
-  @media (max-width: 900px) {
-    .item {
-      grid-template-columns: 90px 1fr;
-      gap: 24px;
-    }
-    .item .rcol {
-      grid-column: 1 / -1;
-      text-align: left;
-      padding-top: 8px;
-    }
-  }
-</style>
