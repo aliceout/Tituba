@@ -58,6 +58,7 @@ import UnsplashImagePicker from './publications/UnsplashImagePicker.client';
 import AudioUploadField from './publications/AudioUploadField.client';
 import FichierUploadField from './publications/FichierUploadField.client';
 import ImportDocument from './publications/ImportDocument.client';
+import { formatAuthorsInitiales } from '@/lib/format-authors';
 import { stripHeroMarkers } from '@/lib/hero-markers';
 
 type PostType = string;
@@ -1273,7 +1274,7 @@ export default function PublicationEditViewClient({
                     <div key={String(id)} className="b-row">
                       <div className="n">[{i + 1}]</div>
                       <div className="body">
-                        <span className="au">{e.authorLabel || '—'}</span>
+                        <span className="au">{formatAuthorsInitiales(e.authors) || e.authorLabel || '—'}</span>
                         {e.year && <> ({e.year})</>}
                         {e.title && (
                           <>
@@ -1765,7 +1766,7 @@ function BiblioSearchPicker({
                 setQuery('');
               }}
             >
-              <span className="au">{b.authorLabel || '—'}</span>
+              <span className="au">{formatAuthorsInitiales(b.authors) || b.authorLabel || '—'}</span>
               {b.year != null && <> ({b.year})</>}
               {b.title && (
                 <>

@@ -116,3 +116,43 @@ export function getFirstAuthorLastName(authors: BibAuthor[] | null | undefined):
   if (list.length === 0) return '';
   return (list[0].lastName ?? '').trim();
 }
+
+/**
+ * Forme compacte avec l'initiale du prénom — « Le Cain, B. ».
+ *
+ * Les listes d'admin n'affichaient que le nom, et deux textes du même
+ * nom s'y ressemblaient trait pour trait. L'initiale suffit à les
+ * départager sans allonger la ligne, et c'est ainsi qu'on les écrit
+ * dans une note.
+ *
+ * Un prénom déjà abrégé dans la source (« A. ») est repris tel quel :
+ * le réduire à sa première lettre reviendrait au même, mais un prénom
+ * composé (« Jean-Pierre ») y perdrait son trait d'union.
+ */
+export function formatAuthorsInitiales(authors: BibAuthor[] | null | undefined): string {
+  const list = (authors ?? [])
+    .filter((a) => a?.role === 'author' || a?.role === undefined)
+    .filter((a) => (a?.lastName ?? '').trim().length > 0);
+  if (list.length === 0) return '';
+
+  const compact = (a: BibAuthor): string => {
+    const nom = a.lastName.trim();
+    const prenom = (a.firstName ?? '').trim();
+    if (!prenom) return nom;
+    // « Jean-Pierre » → « J.-P. » ; « Sara R. » → « S. R. »
+    const initiales = prenom
+      .split(/\s+/)
+      .map((mot) =>
+        mot
+          .split('-')
+          .map((bout) => (bout.endsWith('.') ? bout : `${bout.charAt(0).toUpperCase()}.`))
+          .join('-'),
+      )
+      .join(' ');
+    return `${nom}, ${initiales}`;
+  };
+
+  if (list.length === 1) return compact(list[0]);
+  if (list.length === 2) return `${compact(list[0])} et ${compact(list[1])}`;
+  return `${compact(list[0])} et al.`;
+}
