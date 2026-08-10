@@ -11,6 +11,7 @@
 import PageShell from '../../components/ui/PageShell.astro';
 import PublicationCard from '../../components/PublicationCard.astro';
 import CardFilterBar from '../../components/CardFilterBar.astro';
+import Empty from '../../components/ui/Empty.astro';
 import { PUBLICATIONS, PUBLICATION_ORDER } from '../../lib/publications';
 import { fetchBySlug, fetchIndexPages } from '../../lib/payload';
 import { fetchFeed } from '../../lib/publications';
@@ -93,7 +94,7 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
   </Fragment>
 
   {posts.length === 0 ? (
-    <p class="empty">Aucune publication sous cette thématique pour l'instant.</p>
+    <Empty>Aucune publication sous cette thématique pour l'instant.</Empty>
   ) : (
     posts.map((p) => (
       <PublicationCard
@@ -109,12 +110,3 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
     ))
   )}
 </PageShell>
-
-<style>
-  .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
-  }
-</style>

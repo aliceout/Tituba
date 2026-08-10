@@ -10,6 +10,7 @@
 import PageShell from '../../components/ui/PageShell.astro';
 import PublicationCard from '../../components/PublicationCard.astro';
 import CardFilterBar from '../../components/CardFilterBar.astro';
+import Empty from '../../components/ui/Empty.astro';
 import { PUBLICATIONS, PUBLICATION_ORDER, fetchFeed } from '../../lib/publications';
 import { fetchUserDisplayName, uploadedImageUrl } from '../../lib/payload';
 // Le nom part dans `title`, que PageTitle rend en `set:html` : il doit
@@ -100,7 +101,7 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
   </Fragment>
 
   {posts.length === 0 ? (
-    <p class="empty">Aucune publication pour l'instant.</p>
+    <Empty>Aucune publication pour l'instant.</Empty>
   ) : (
     posts.map((p) => (
       <PublicationCard
@@ -163,12 +164,5 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
     color: var(--color-muted);
     /* Saisie dans un textarea : les retours à la ligne sont voulus. */
     white-space: pre-line;
-  }
-
-  .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
   }
 </style>

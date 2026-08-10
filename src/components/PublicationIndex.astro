@@ -9,6 +9,7 @@
  */
 import PageShell from '../components/ui/PageShell.astro';
 import PublicationCard from './PublicationCard.astro';
+import Empty from './ui/Empty.astro';
 import FormatIcon from './FormatIcon.astro';
 import CardFilterBar from './CardFilterBar.astro';
 import { fetchCollection, publishedOnly } from '../lib/payload';
@@ -120,10 +121,10 @@ const LEDES: Record<PublicationCollection, string> = {
 
   <section class="feed">
     {docs.length === 0 ? (
-      <p class="empty">
+      <Empty>
         <FormatIcon collection={collection} />
         Aucune publication dans ce format pour l'instant.
-      </p>
+      </Empty>
     ) : (
       docs.map((d) => (
         <PublicationCard
@@ -158,11 +159,5 @@ const LEDES: Record<PublicationCollection, string> = {
   }
   .abo-aide {
     color: var(--color-muted);
-  }
-  .feed .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
   }
 </style>

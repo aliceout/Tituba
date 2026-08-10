@@ -1,0 +1,23 @@
+---
+/**
+ * « Aucune publication pour l'instant. »
+ *
+ * La même phrase à cinq endroits — archives, thèmes, page d'un thème,
+ * page d'un tag, page d'une autrice — et donc la même règle recopiée
+ * cinq fois, à charge pour qui la modifie de retrouver les quatre
+ * autres. Elle est ici une fois.
+ *
+ * En sans et en gris : ce n'est pas du texte à lire mais l'état d'une
+ * liste, au même titre qu'un compteur. Centré et largement aéré, faute
+ * de quoi il se lirait comme le début du contenu attendu.
+ */
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<p class:list={['text-muted py-16 text-center font-sans', className]}>
+  <slot />
+</p>

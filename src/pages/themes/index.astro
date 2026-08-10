@@ -9,6 +9,7 @@
  * Réf : design_handoff_tituba/Tituba B.html → PolePage (overview).
  */
 import PageShell from '../../components/ui/PageShell.astro';
+import Empty from '../../components/ui/Empty.astro';
 import {
   fetchCollection,
   fetchIndexPages,
@@ -84,7 +85,7 @@ const heroLedeHtml = formatHeroLede(
   famille="violet"
 >
   {sorted.length === 0 ? (
-    <p class="empty">Aucun thème pour l'instant.</p>
+    <Empty>Aucun thème pour l'instant.</Empty>
   ) : (
     <div class="grid">
       {sorted.map((t) => {
@@ -108,12 +109,6 @@ const heroLedeHtml = formatHeroLede(
 
 <style>
   /* Gouttière et rythme vertical viennent de PageShell. */
-  .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
-  }
   .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

@@ -9,6 +9,7 @@
  */
 import PageShell from '../../components/ui/PageShell.astro';
 import PublicationCard from '../../components/PublicationCard.astro';
+import Empty from '../../components/ui/Empty.astro';
 import {
   fetchBySlug,
   fetchCollection,
@@ -54,14 +55,19 @@ const total = posts.length;
   title={tag.name}
   famille="violet"
 >
-  <div class="hero-bottom-meta" slot="titre-pied">
+  {/* Pied du hero, propre à cette page — compteur et lien retour,
+      rendus dans le slot par défaut de PageTitle. */}
+  <div class="text-muted mt-6 flex items-center gap-6 font-sans text-[calc(13px*var(--a11y-echelle))]" slot="titre-pied">
     <span>{total} publication{total > 1 ? 's' : ''}</span>
     <span aria-hidden="true">·</span>
-    <a class="back mono" href="/tags/">← tous les tags</a>
+    {/* Violet, comme /tags/ et /themes/. */}
+    <a class="mono hover:text-ink text-[var(--c-violet-deep)] transition-colors duration-[120ms]" href="/tags/">
+      ← tous les tags
+    </a>
   </div>
 
   {posts.length === 0 ? (
-    <p class="empty">Aucune publication sous ce tag pour l'instant.</p>
+    <Empty>Aucune publication sous ce tag pour l'instant.</Empty>
   ) : (
     posts.map((p) => (
       <PublicationCard
@@ -76,32 +82,3 @@ const total = posts.length;
     ))
   )}
 </PageShell>
-
-<style>
-  /* Pied du hero, propre à cette page — compteur + lien retour. Rendu
-     dans le slot par défaut de PageTitle (cf. titre-pied ci-dessus). */
-  .hero-bottom-meta {
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-    color: var(--color-muted);
-    margin-top: 24px;
-    display: flex;
-    gap: 24px;
-    align-items: center;
-  }
-  /* Violet, comme /tags/ et /themes/. */
-  .hero-bottom-meta .back {
-    color: var(--c-violet-deep);
-    transition: color 0.12s;
-  }
-  .hero-bottom-meta .back:hover {
-    color: var(--color-ink);
-  }
-
-  .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
-  }
-</style>

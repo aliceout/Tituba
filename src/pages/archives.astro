@@ -10,6 +10,7 @@
  * Réf : design_handoff_tituba/Tituba B.html → Archives.
  */
 import PageShell from '../components/ui/PageShell.astro';
+import Empty from '../components/ui/Empty.astro';
 import { fetchIndexPages, type FeedDoc } from '../lib/payload';
 import { PUBLICATIONS, fetchFeed, publicationHref } from '../lib/publications';
 import { formatDateIso, formatHeroLede, formatHeroTitle, stripHeroMarkers } from '../lib/site';
@@ -72,7 +73,7 @@ const heroLedeHtml = formatHeroLede(
   lede={heroLedeHtml}
 >
   {years.length === 0 ? (
-    <p class="empty">Aucune publication pour l'instant.</p>
+    <Empty>Aucune publication pour l'instant.</Empty>
   ) : (
     years.map((y) => {
       const list = byYear.get(y)!;
@@ -105,12 +106,6 @@ const heroLedeHtml = formatHeroLede(
      dominante : les archives traversent les cinq formats et n'ont pas
      de couleur propre, comme le titre de l'accueil dont les mots se
      relaient plutôt qu'imposer une seule teinte. */
-  .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
-  }
 
   /* Groupes par année. Le corps du titre d'année reste hors de
      l'échelle standard des titres de section (--t-h2) : c'est un repère
