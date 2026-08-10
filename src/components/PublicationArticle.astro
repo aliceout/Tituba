@@ -64,6 +64,10 @@ import {
   type PostAuthorEntry,
 } from '../lib/site';
 import { highwireMeta } from '../lib/citations';
+import { afficherBrief, afficherSommaire, dateDansColonne } from '../lib/article/affichage';
+import { lireCouverture } from '../lib/article/couverture';
+import { lireEpisode } from '../lib/article/episode';
+import { libellePublic, lireRessources } from '../lib/article/ressources';
 
 export interface Props {
   collection: PublicationCollection;
@@ -97,89 +101,24 @@ const primaryTheme = themes[0];
 const titleHtml = formatHeroTitle(post.title);
 const titlePlain = stripHeroMarkers(post.title);
 
-// Image de couverture — billets d'analyse et podcasts. Sans image, le
-// hero reste le bloc pleine largeur d'aujourd'hui.
-const coverImageUrl = uploadedImageUrl(post.image);
-
-// Image de la série, quand le billet en a une. Elle sert de fond au hero
-// d'un épisode : au premier plan la couverture de l'épisode, derrière
-// l'identité de l'émission — ce qui fait qu'on reconnaît la seconde
-// avant même d'avoir lu le titre du premier.
-//
-// Sans série, ou sans image sur elle, on retombe sur la couverture de
-// l'épisode : c'est le comportement qui existait avant, et il vaut mieux
-// qu'un hero sans fond.
+// Image de couverture, cadrage, crédit — cf lib/article/couverture.
+// L'image de la série sert de fond au hero d'un épisode : au premier
+// plan la couverture de l'épisode, derrière l'identité de l'émission,
+// ce qui fait qu'on reconnaît la seconde avant d'avoir lu le titre du
+// premier. Sans série, on retombe sur la couverture de l'épisode.
 const serie = post.series && typeof post.series === 'object' ? post.series : null;
-const serieImageUrl = uploadedImageUrl(serie?.image ?? null);
-const coverImageObj = typeof post.image === 'object' && post.image ? post.image : null;
-const coverImageAlt = coverImageObj?.alt || '';
-// Le hero affiche l'image dans un carré : d'une photo non carrée, il
-// n'en montre qu'une partie. La zone choisie dans l'admin décide
-// laquelle (cf CropModal côté Payload).
-//
-// Traduite en agrandissement + décalage plutôt qu'en `object-position` :
-// la zone est redimensionnable, donc il y a un facteur d'échelle à
-// appliquer, ce qu'un point focal ne sait pas exprimer. L'image est
-// posée en absolu dans un carré à `overflow: hidden`, agrandie de sorte
-// que la zone retenue occupe exactement ce carré.
-//
-// Sans zone enregistrée, on laisse `object-fit: cover` faire son cadrage
-// centré habituel — c'est le cas de toutes les images d'avant l'option.
-const cropRaw = coverImageObj?.crop ?? null;
-const crop =
-  cropRaw &&
-  typeof cropRaw.w === 'number' &&
-  cropRaw.w > 0 &&
-  typeof cropRaw.h === 'number' &&
-  cropRaw.h > 0
-    ? {
-        x: cropRaw.x ?? 0,
-        y: cropRaw.y ?? 0,
-        w: cropRaw.w,
-        h: cropRaw.h,
-      }
-    : null;
-// Largeur/hauteur en % du carré conteneur, et décalage du coin
-// haut-gauche : montrer une zone large de `w` % revient à afficher
-// l'image à `100 / w × 100` % de la taille du cadre.
-const cropStyle = crop
-  ? `width:${(100 / crop.w) * 100}%;height:${(100 / crop.h) * 100}%;` +
-    `left:${(-crop.x / crop.w) * 100}%;top:${(-crop.y / crop.h) * 100}%;`
-  : null;
-// Crédit obligatoire (conditions d'utilisation Unsplash) — absent pour
-// un upload manuel, le champ `unsplash` n'est rempli qu'à l'import
-// (cf endpoints/unsplash.ts). UTM requis par Unsplash sur les deux liens.
-const UNSPLASH_UTM = 'utm_source=tituba&utm_medium=referral';
-const unsplashCredit = coverImageObj?.unsplash?.photographerName
-  ? {
-      name: coverImageObj.unsplash.photographerName,
-      profileUrl: coverImageObj.unsplash.photographerProfileUrl
-        ? `${coverImageObj.unsplash.photographerProfileUrl}?${UNSPLASH_UTM}`
-        : null,
-      unsplashUrl: `https://unsplash.com/?${UNSPLASH_UTM}`,
-    }
-  : null;
+const couverture = lireCouverture(post.image, serie?.image ?? null);
+const coverImageUrl = couverture.url;
+const serieImageUrl = couverture.fondUrl;
+const coverImageAlt = couverture.alt;
+const cropStyle = couverture.cadrage;
+const unsplashCredit = couverture.credit;
 
-// Épisode de podcast — le fichier audio et les personnes reçues. Les
-// deux ne concernent que cette collection : ailleurs, `post.audio` et
-// `post.guests` sont absents et les blocs correspondants ne sont pas
-// montés.
-const audioObj = typeof post.audio === 'object' && post.audio ? post.audio : null;
-const audioSrc = audioFileUrl(audioObj?.filename);
-// Dernière virgule remplacée par « et » : c'est une phrase à lire, pas
-// une liste à dépouiller.
-const guestList = (post.guests ?? []).map((g) => String(g).trim()).filter(Boolean);
-const guestLabel =
-  guestList.length > 1
-    ? `${guestList.slice(0, -1).join(', ')} et ${guestList[guestList.length - 1]}`
-    : guestList[0] ?? '';
-
-// Le lecteur monte dans le hero quand l'épisode a une couverture :
-// l'image, plus haute que le cadre du titre, laisse en dessous de lui un
-// espace vide que le lecteur vient occuper — les deux colonnes se
-// terminent alors à la même ligne. Sans image, il n'y a pas de colonne à
-// remplir : le lecteur reste sous le bandeau de métadonnées.
-const heroPlayer = !!audioSrc && !!coverImageUrl;
+// Épisode de podcast — cf lib/article/episode.
+const episode = lireEpisode(post.audio, post.guests, Boolean(coverImageUrl));
+const audioSrc = episode.audioSrc;
+const guestLabel = episode.invitees;
+const heroPlayer = episode.lecteurDansHero;
 
 const publishedFr = formatDateFr(post.publishedAt);
 const publishedIso = new Date(post.publishedAt).toISOString().slice(0, 10);
@@ -280,66 +219,23 @@ const estActu = collection === 'actus';
  * qu'elle annonce.
  */
 const estOutil = collection === 'outils';
-/**
- * Toujours un fichier que nous hébergeons, jamais un lien vers
- * l'extérieur : le bouton dit donc « Télécharger » sans condition, et
- * il n'y a ni onglet à ouvrir ni domaine tiers à annoncer.
- *
- * Le document étant désormais déposé dans la médiathèque et non désigné
- * par une adresse tapée à la main, on connaît son format et son poids —
- * les deux choses qu'on veut savoir avant de cliquer.
- */
-/** « 1,4 Mo », « 320 Ko » — jamais « 0 Ko » faute de valeur. */
-function poidsLisible(o: number | null | undefined): string {
-  if (typeof o !== 'number' || o <= 0) return '';
-  const mo = o / (1024 * 1024);
-  return mo >= 1 ? `${mo.toFixed(1).replace('.', ',')} Mo` : `${Math.round(o / 1024)} Ko`;
-}
-const ressources = (estOutil && Array.isArray(post.resources) ? post.resources : [])
-  .map((entree) => {
-    const doc = entree?.fichier && typeof entree.fichier === 'object' ? entree.fichier : null;
-    return {
-      url: mediaUrl(doc?.filename) ?? '',
-      // Le titre du média, saisi dans la médiathèque : « Grille de
-      // relecture » se lit mieux que « grille-v3-final.pdf », qui ne
-      // sert que de repli.
-      nom: (doc?.title ?? '').trim() || doc?.filename || 'Document',
-      description: (entree?.description ?? '').trim(),
-      format: (doc?.filename ?? '').split('.').pop()?.toUpperCase() ?? '',
-      poids: poidsLisible(doc?.filesize),
-    };
-  })
-  .filter((r) => r.url);
-const PUBLIC_LABEL: Record<string, string> = {
-  tous: 'Tous publics',
-  militantes: 'Militant·es et collectifs',
-  pros: 'Professionnel·les',
-  structures: 'Structures et institutions',
+const ressources = estOutil ? lireRessources(post.resources) : [];
+const publicVise = estOutil ? libellePublic(post.audience) : '';
+
+// Ce que la page montre — cf lib/article/affichage.
+const contexteAffichage = {
+  collection,
+  citable: spec.citationType === 'article',
+  nbEntreesSommaire: tocEntries.length,
+  aUneDuree: Boolean(readingLabel),
+  aDesNotes: Boolean(footnotesHtml),
+  nbReferences: biblio.length,
+  aUnBrief: Boolean(post.enBref?.trim()),
+  lecteurDansHero: heroPlayer,
 };
-const publicVise = estOutil ? (PUBLIC_LABEL[post.audience ?? ''] ?? '') : '';
-
-const afficherToc =
-  !estActu &&
-  (tocEntries.length > 0 ||
-    !!readingLabel ||
-    !!footnotesHtml ||
-    biblio.length > 0 ||
-    spec.citationType === 'article');
-
-/**
- * Le rappel des faits occupe la colonne latérale d'un billet d'actu, à
- * la place du sommaire. Il ne s'affiche que s'il a été rédigé : sans
- * lui, le billet reprend toute la largeur et la colonne ne se monte pas
- * — c'est ce que fait `no-toc` pour les autres formats.
- */
-const afficherBrief = estActu && Boolean(post.enBref?.trim());
-
-// Où vit la date de publication : dans l'aside pour les formats qui en
-// ont toujours un, dans le bandeau sinon. Le calcul est fait ici et
-// partagé par les deux composants — sans lui, un format dont l'aside ne
-// se monte pas (un outil sans sommaire ni bibliographie) perdrait sa
-// date sans que rien ne le signale.
-const dateDansAside =
+const afficherToc = afficherSommaire(contexteAffichage);
+const afficherLeBrief = afficherBrief(contexteAffichage);
+const dateDansAside = dateDansColonne(contexteAffichage);
   afficherToc && (heroPlayer || collection === 'analyses' || collection === 'articles');
 
 const related = await fetchRelatedPosts(collection, primaryTheme?.slug, post.id);
@@ -395,7 +291,7 @@ const postTags = (post.tags ?? []).filter(
     class:list={[
       'article-shell',
       {
-        'no-toc': !afficherToc && !afficherBrief,
+        'no-toc': !afficherToc && !afficherLeBrief,
         'shell--phero': heroPlayer,
         'shell--actu': estActu,
         'shell--ras': collection === 'analyses' || collection === 'articles' || estActu,
@@ -486,7 +382,7 @@ const postTags = (post.tags ?? []).filter(
             {estActu ? null : heroPlayer ? (
               <div class="hero-amorce">
                 <PodcastLaunch
-                  src={audioSrc}
+                  src={audioSrc ?? ''}
                   durationSeconds={post.durationSeconds}
                   title={titlePlain}
                   coverUrl={coverImageUrl}
@@ -518,7 +414,7 @@ const postTags = (post.tags ?? []).filter(
         </div>
         {coverImageUrl && !estActu && (
           <figure class="hero-figure">
-            <div class:list={['hero-frame', { cropped: !!crop }]}>
+            <div class:list={['hero-frame', { cropped: !!cropStyle }]}>
               <img class="hero-image" src={coverImageUrl} alt={coverImageAlt} style={cropStyle} />
             </div>
           </figure>
@@ -568,7 +464,7 @@ const postTags = (post.tags ?? []).filter(
             être rencontrée en premier au clavier et au lecteur d'écran.
             Le rappel des faits ouvre la lecture — il précède donc le
             billet dans les deux ordres. */}
-        {afficherBrief && (
+        {afficherLeBrief && (
           <div class="brief-colonne">
             <ActuBrief texte={post.enBref!} sources={post.sources ?? null} />
             {/* Le même bloc que les autres formats, monté sans entrées :
