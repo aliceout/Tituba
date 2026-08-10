@@ -38,7 +38,9 @@ import { odtVersHtml } from './import-odt';
 import {
   analyserReference,
   cleDeDoublon,
-  noteEstReference,
+  referencesDansNote,
+  resoudreRenvois,
+  type EtatRenvois,
   type ReferenceLue,
 } from './import-references';
 
@@ -65,6 +67,8 @@ export type ResultatImport = {
    * incompréhensible pour qui lit l'article.
    */
   notesRefs: LigneBiblio[];
+  /** Ce que deviennent les « art. cit. » et « Ibid. » des notes. */
+  renvois: EtatRenvois;
   /** Ce que mammoth n'a pas su traduire — affiché à l'import. */
   avertissements: string[];
 };
@@ -78,6 +82,29 @@ export type ResultatImport = {
  */
 export const MARQUE_NOTE = (n: number): string => `⁣NOTE${n}⁣`;
 export const RE_MARQUE = /⁣NOTE(\d+)⁣/;
+
+/**
+ * Ramène les entités HTML au texte qu'elles représentent.
+ *
+ * Le HTML de conversion en est plein, et les retirer les balises ne
+ * suffit pas : « Cultures &amp;amp; Conflits » se lisait tel quel dans
+ * la note, avec son `&amp;amp;` en toutes lettres. Le point-virgule
+ * final trompait de surcroît le découpage des citations, qui coupait
+ * une référence en deux au milieu du nom d'une revue.
+ */
+function decoderEntites(s: string): string {
+  return s
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, '’')
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(Number.parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number.parseInt(d, 10)))
+    // L'esperluette en dernier : la décoder plus tôt ferait relire les
+    // entités qu'elle ouvre (« &amp;amp;lt; » deviendrait « < »).
+    .replace(/&amp;/gi, '&');
+}
 
 /** Titres qui annoncent une bibliographie, quelle que soit la casse. */
 const RE_TITRE_BIBLIO =
@@ -98,10 +125,8 @@ function detacherBiblio(html: string): { corps: string; lignes: string[] } {
   const apres = html.slice(dernier.index + dernier[0].length);
   const lignes = [...apres.matchAll(/<(?:p|li)[^>]*>([\s\S]*?)<\/(?:p|li)>/gi)]
     .map((m) =>
-      m[1]
-        .replace(/<[^>]+>/g, '')
-        .replace(/&amp;/g, '&')
-        .replace(/&nbsp;/g, ' ')
+      decoderEntites(m[1].replace(/<[^>]+>/g, ''))
+        .replace(/\s+/g, ' ')
         .trim(),
     )
     .filter((l) => l.length > 8);
@@ -178,14 +203,13 @@ function retirerSommaire(html: string): { corps: string; retire: number } {
 function extraireNotes(html: string): { corps: string; notes: string[] } {
   const textes = new Map<string, string>();
   for (const m of html.matchAll(/<li id="(footnote-\d+)">([\s\S]*?)<\/li>/gi)) {
-    const texte = m[2]
+    const sansBalises = m[2]
       // La flèche de retour vers l'appel n'a de sens que dans le HTML
       // de mammoth ; le site rend ses propres renvois.
       .replace(/<a[^>]*href="#footnote-ref[^"]*"[^>]*>[\s\S]*?<\/a>/gi, '')
       .replace(/<\/?p[^>]*>/gi, ' ')
-      .replace(/<[^>]+>/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+      .replace(/<[^>]+>/g, '');
+    const texte = decoderEntites(sansBalises).replace(/\s+/g, ' ').trim();
     textes.set(m[1], texte);
   }
 
@@ -342,12 +366,14 @@ export async function lireDocument(
   const vues = new Set(biblio.map(cleDeDoublon));
   const notesRefs: LigneBiblio[] = [];
   for (const note of notes) {
-    if (!noteEstReference(note)) continue;
-    const ref = analyserReference(note);
-    const cle = cleDeDoublon(ref);
-    if (vues.has(cle)) continue;
-    vues.add(cle);
-    notesRefs.push(ref);
+    // Citation par citation : une note donne souvent une source en
+    // entier puis renvoie à une autre.
+    for (const ref of referencesDansNote(note)) {
+      const cle = cleDeDoublon(ref);
+      if (vues.has(cle)) continue;
+      vues.add(cle);
+      notesRefs.push(ref);
+    }
   }
 
   return {
@@ -356,6 +382,7 @@ export async function lireDocument(
     notes,
     biblio,
     notesRefs,
+    renvois: resoudreRenvois(notes),
     // Ce qui n'a pas suivi est dit, pas tu : quelqu'un qui a illustré ou
     // mis en forme son texte doit savoir ce qu'il lui reste à faire. Ce
     // qui a été retiré à dessein est dit aussi — sans quoi on chercherait

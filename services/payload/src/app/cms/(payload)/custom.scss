@@ -4874,6 +4874,34 @@ button.btn--style-primary,
       padding-left: 18px;
     }
 
+    // Les renvois entre notes qui ne retombent sur rien. Ni une erreur
+    // de lecture ni une alerte technique : un point à trancher dans le
+    // texte, présenté comme tel.
+    &__renvois {
+      border-left: 2px solid var(--b-rule);
+      margin: 0 0 14px;
+      padding-left: 12px;
+
+      p {
+        font-size: 12px;
+        line-height: 1.5;
+        margin: 0 0 8px;
+      }
+
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      li {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 4px 0;
+      }
+    }
+
     &__biblio {
       margin: 0 0 14px;
 

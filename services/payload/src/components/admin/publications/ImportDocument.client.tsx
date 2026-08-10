@@ -64,6 +64,8 @@ type Resultat = {
   biblio: LigneBiblio[];
   /** Sources citées en entier dans les notes — elles y restent. */
   notesRefs: LigneBiblio[];
+  /** Ce que deviennent les « art. cit. » et « Ibid. » des notes. */
+  renvois: { resolus: number; ambigus: string[]; orphelins: string[] };
   avertissements: string[];
 };
 
@@ -359,6 +361,40 @@ export default function ImportDocument({
             ))}
           </ul>
         )}
+
+        {/* Les renvois entre notes — « art. cit. », « Ibid. ». Rien à
+            créer : leur source a déjà été reprise à sa première
+            mention. Mais ceux qui ne retombent sur rien méritent d'être
+            dits : sur le web, la lectrice ne peut pas feuilleter en
+            arrière, et un renvoi qui ne mène nulle part est perdu. */}
+        {resultat.renvois &&
+          (resultat.renvois.ambigus.length > 0 || resultat.renvois.orphelins.length > 0) && (
+            <div className="ed-import__renvois">
+              <p>
+                {compte(resultat.renvois.resolus, 'renvoi')} entre notes (« art. cit. »,
+                « Ibid. ») {resultat.renvois.resolus > 1 ? 'retrouvent' : 'retrouve'} bien
+                leur source plus haut. Les suivants, non&nbsp;:
+              </p>
+              <ul>
+                {resultat.renvois.ambigus.map((t) => (
+                  <li key={`a-${t}`}>
+                    <span className="ed-import__ref">{t}</span>
+                    <span className="ed-import__match ed-import__match--absent">
+                      Ce nom a signé plusieurs textes cités&nbsp;— on ne sait pas lequel.
+                    </span>
+                  </li>
+                ))}
+                {resultat.renvois.orphelins.map((t) => (
+                  <li key={`o-${t}`}>
+                    <span className="ed-import__ref">{t}</span>
+                    <span className="ed-import__match ed-import__match--absent">
+                      Aucune mention complète de cette source avant ce renvoi.
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
         {groupes.length > 0 && (
           <div className="ed-import__biblio">

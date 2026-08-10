@@ -98,6 +98,22 @@ function lireNom(texte: string): { nom: string | null; prenom: string | null } {
     };
   }
 
+  // Auteur collectif : « Union européenne », « Conseil de l'Europe ».
+  //
+  // Ce qui les distingue d'une personne, c'est la casse : « Agier
+  // Michel » porte deux majuscules, une institution n'en porte qu'à sa
+  // tête. Faute de cette distinction, les rapports et documents de
+  // travail — souvent les sources les plus citées d'un mémoire —
+  // n'entraient dans aucune bibliographie.
+  if (
+    mots.length >= 2 &&
+    mots.length <= 8 &&
+    MAJUSCULE.test(mots[0]) &&
+    mots.slice(1).some((m) => !MAJUSCULE.test(m))
+  ) {
+    return { nom: avant, prenom: null };
+  }
+
   // Un seul mot suivi d'un point : « Farris. 2017. … ».
   const seul = texte.match(/^\s*([A-ZÀ-Ý][\p{L}'’-]+)\s*\./u);
   return { nom: seul ? seul[1] : null, prenom: null };
@@ -229,6 +245,128 @@ export function noteEstReference(texte: string): boolean {
   if (RE_FORME_COURTE.test(texte)) return false;
   const r = analyserReference(texte);
   return r.manques.length === 0 && Boolean(r.titre || r.url);
+}
+
+/**
+ * Découpe une note en citations.
+ *
+ * Une note en porte souvent plusieurs, séparées par des points-virgules :
+ * une source donnée en entier, puis un renvoi vers une autre. Juger la
+ * note d'un bloc revenait à tout jeter dès qu'elle contenait un « rap.
+ * cit. » quelque part — et l'on perdait la source complète qui ouvrait
+ * la phrase.
+ *
+ * Le point-virgule est le séparateur d'usage. Les morceaux trop courts
+ * pour porter une citation sont recollés au précédent : un point-virgule
+ * peut aussi apparaître à l'intérieur d'un titre.
+ */
+export function citationsDeNote(texte: string): string[] {
+  const bruts = texte.split(/\s*;\s*/);
+  const out: string[] = [];
+  for (const bout of bruts) {
+    if (out.length > 0 && bout.trim().length < 15) {
+      out[out.length - 1] += ` ; ${bout.trim()}`;
+      continue;
+    }
+    if (bout.trim()) out.push(bout.trim());
+  }
+  return out;
+}
+
+/** Les références complètes que porte une note, citation par citation. */
+export function referencesDansNote(texte: string): ReferenceLue[] {
+  return citationsDeNote(texte)
+    .filter(noteEstReference)
+    .map(analyserReference);
+}
+
+/** « Weber, S., art. cit. » — un renvoi nommé vers une source antérieure. */
+const RE_RENVOI_NOMME =
+  /\b(art\.\s*cit|op\.\s*cit|loc\.\s*cit|rap\.\s*cit|ouvr\.\s*cit|art\.\s*cité)\b/i;
+
+/** « Ibid. », « Idem » — renvoi à la note qui précède. */
+const RE_IBID = /^\s*(ibid|idem)\b/i;
+
+/** Nom de famille qui ouvre un renvoi. Le prénom abrégé n'en fait pas partie. */
+function nomDuRenvoi(texte: string): string | null {
+  const m = texte.match(/^\s*([A-ZÀ-Ý][\p{L}'’-]+(?:\s+[A-ZÀ-Ý][\p{L}'’-]+)?)\s*[,.]/u);
+  if (!m) return null;
+  return m[1].replace(/\s+[A-ZÀ-Ý]\.?$/u, '').trim();
+}
+
+export type EtatRenvois = {
+  /** Renvois qui retombent sur une source citée en entier plus haut. */
+  resolus: number;
+  /**
+   * Renvois qui pourraient désigner deux œuvres du même auteur.
+   *
+   * Ce n'est pas un défaut de lecture mais un défaut du texte : « art.
+   * cit. » ne suffit plus dès qu'un même nom a signé deux choses. Le
+   * signaler vaut mieux que deviner — sur le web, où la lectrice ne
+   * peut pas feuilleter en arrière, un renvoi ambigu ne se rattrape pas.
+   */
+  ambigus: string[];
+  /** Renvois dont la source n'a jamais été donnée en entier. */
+  orphelins: string[];
+};
+
+/**
+ * Suit les renvois d'une suite de notes jusqu'à leur source.
+ *
+ * « Weber, S., art. cit., p. 33 » désigne le dernier article de Weber
+ * cité en entier plus haut : il suffit donc de parcourir les notes dans
+ * l'ordre en tenant à jour, pour chaque nom, la dernière source
+ * complète rencontrée. « Ibid. » renvoie, lui, à la note précédente.
+ *
+ * On ne s'en sert pas pour créer quoi que ce soit — la source a déjà
+ * été reprise à sa première mention — mais pour dire ce qui ne se
+ * résout pas. C'est là que se cachent les vraies difficultés : un
+ * renvoi ambigu ou orphelin est une référence que le lectorat ne pourra
+ * pas retrouver.
+ */
+export function resoudreRenvois(notes: string[]): EtatRenvois {
+  const parNom = new Map<string, Set<string>>();
+  let courante: string | null = null;
+  const etat: EtatRenvois = { resolus: 0, ambigus: [], orphelins: [] };
+
+  // Citation par citation, et non note par note : une même note donne
+  // souvent une source en entier puis renvoie à une autre.
+  for (const note of notes) {
+    for (const citation of citationsDeNote(note)) {
+      if (noteEstReference(citation)) {
+        const r = analyserReference(citation);
+        if (r.nom) {
+          const titres = parNom.get(r.nom) ?? new Set<string>();
+          titres.add(r.titre ?? r.texte.slice(0, 40));
+          parNom.set(r.nom, titres);
+          courante = r.nom;
+        }
+        continue;
+      }
+
+      if (RE_IBID.test(citation)) {
+        if (courante) etat.resolus += 1;
+        else etat.orphelins.push(citation);
+        continue;
+      }
+      if (!RE_RENVOI_NOMME.test(citation)) continue;
+
+      const nom = nomDuRenvoi(citation);
+      const titres = nom ? parNom.get(nom) : undefined;
+      if (!titres) {
+        etat.orphelins.push(citation);
+        continue;
+      }
+      if (titres.size > 1) {
+        etat.ambigus.push(citation);
+        continue;
+      }
+      etat.resolus += 1;
+      courante = nom;
+    }
+  }
+
+  return etat;
 }
 
 /**

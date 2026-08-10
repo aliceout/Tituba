@@ -173,6 +173,7 @@ export const importDocumentEndpoint: Endpoint = {
           },
           biblio: await proposer(req, lu.biblio),
           notesRefs: await proposer(req, lu.notesRefs),
+          renvois: lu.renvois,
           avertissements: lu.avertissements,
         },
         { status: 200 },
