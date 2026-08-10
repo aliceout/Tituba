@@ -1914,8 +1914,54 @@ button.btn--style-primary,
   // dans la vue édition de chaque référence (champ slug en mono accent
   // en haut). On affiche à la place l'éditeur (livres) ou la revue
   // (articles). La colonne Actions est étroite (× supprimer).
+  // ── Sélection multiple ───────────────────────────────────────
+  // La colonne des cases ouvre la ligne. Elle disparaît sous 1440px,
+  // comme le faisait la croix : les actions groupées sont un travail
+  // d'écran large, et les grilles compactes n'ont pas la place.
+  &__row .pick {
+    display: flex;
+    align-items: center;
+
+    input {
+      cursor: pointer;
+      margin: 0;
+    }
+  }
+
+  // Barre d'actions, sous les filtres. Absente tant que rien n'est
+  // coché — elle n'aurait rien à proposer.
+  &__lot {
+    align-items: center;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    border-radius: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0 0 12px;
+    padding: 10px 14px;
+  }
+
+  &__lot-compte {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: auto;
+  }
+
+  &__lot-annuler {
+    background: none;
+    border: 0;
+    color: var(--b-muted);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    padding: 0;
+    text-decoration: underline;
+  }
+
   &--biblio &__row {
-    grid-template-columns: 110px 130px 60px 1fr 200px 100px 36px;
+    grid-template-columns: 16px 110px 130px 60px 1fr 200px 100px;
   }
   &--biblio &__row .firstname,
   &--biblio &__row .lastname {
@@ -2012,43 +2058,43 @@ button.btn--style-primary,
       align-self: center;
       text-align: right;  // contenu collé au bord droit de la cellule
     }
-    &--biblio &__row > .type-cell,
-    &--biblio &__row > *:last-child {
+    &--biblio &__row > .pick,
+    &--biblio &__row > .type-cell {
       display: none;
     }
 
     // Head row (nth-child positional, columnheader sans className)
     // Ordre HTML : 1=Prénom, 2=Nom, 3=Année, 4=Titre, 5=Éditeur, 6=Type, 7=Actions
-    &--biblio &__row--head > *:nth-child(1) {
+    &--biblio &__row--head > *:nth-child(2) {
       // Prénom
       grid-column: 1;
       grid-row: 1;
     }
-    &--biblio &__row--head > *:nth-child(2) {
+    &--biblio &__row--head > *:nth-child(3) {
       // Nom
       grid-column: 1;
       grid-row: 2;
     }
-    &--biblio &__row--head > *:nth-child(3) {
+    &--biblio &__row--head > *:nth-child(4) {
       // Année
       grid-column: 2;
       grid-row: 1 / span 2;
       align-self: center;
     }
-    &--biblio &__row--head > *:nth-child(4) {
+    &--biblio &__row--head > *:nth-child(5) {
       // Titre
       grid-column: 3;
       grid-row: 1 / span 2;
       align-self: center;
     }
-    &--biblio &__row--head > *:nth-child(5) {
+    &--biblio &__row--head > *:nth-child(6) {
       // Éditeur / Revue
       grid-column: 4;
       grid-row: 1 / span 2;
       align-self: center;
       text-align: right;  // en-tête aligné sur les valeurs
     }
-    &--biblio &__row--head > *:nth-child(6),
+    &--biblio &__row--head > *:nth-child(1),
     &--biblio &__row--head > *:last-child {
       display: none;
     }
@@ -2093,33 +2139,33 @@ button.btn--style-primary,
       grid-row: 1 / span 2;
       align-self: center;
     }
+    &--biblio &__row > .pick,
     &--biblio &__row > .year,
     &--biblio &__row > .venue,
-    &--biblio &__row > .type-cell,
-    &--biblio &__row > *:last-child {
+    &--biblio &__row > .type-cell {
       display: none;
     }
 
     // Head row : mêmes positions, ciblées par nth-child puisque les
     // <div role="columnheader"> n'ont pas de className.
     // Ordre HTML : 1=Prénom, 2=Nom, 3=Année, 4=Titre, 5=Éditeur, 6=Type, 7=Actions.
-    &--biblio &__row--head > *:nth-child(1) {
+    &--biblio &__row--head > *:nth-child(2) {
       grid-column: 2;
       grid-row: 1;
       text-align: right;
     }
-    &--biblio &__row--head > *:nth-child(2) {
+    &--biblio &__row--head > *:nth-child(3) {
       grid-column: 2;
       grid-row: 2;
       text-align: right;
     }
-    &--biblio &__row--head > *:nth-child(4) {
+    &--biblio &__row--head > *:nth-child(5) {
       grid-column: 1;
       grid-row: 1 / span 2;
       align-self: center;
     }
-    &--biblio &__row--head > *:nth-child(3),
-    &--biblio &__row--head > *:nth-child(5),
+    &--biblio &__row--head > *:nth-child(1),
+    &--biblio &__row--head > *:nth-child(4),
     &--biblio &__row--head > *:nth-child(6),
     &--biblio &__row--head > *:last-child {
       display: none;
@@ -2411,6 +2457,24 @@ button.btn--style-primary,
     display: flex;
     flex-direction: column;
     gap: 14px;
+  }
+
+  // Ce sur quoi va porter une action groupée, nommé.
+  &__liste {
+    color: var(--b-muted);
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 10px 0 0;
+    max-height: 190px;
+    overflow: auto;
+    padding-left: 18px;
+  }
+
+  &__reste {
+    color: var(--b-muted);
+    font-size: 12px;
+    font-style: italic;
+    margin: 6px 0 0;
   }
 
   &__footer {
