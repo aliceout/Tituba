@@ -9,7 +9,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lireNotes } from './import-citations';
+import { convertirCorps, lireNotes } from './import-citations';
 
 describe('lecture des notes', () => {
   it('relie une référence, puis « Ibid. », puis un renvoi nommé', () => {
@@ -67,5 +67,82 @@ describe('lecture des notes', () => {
       'Giuliani Jean-Dominique, « L’Europe et les migrations », Revue du Droit de l’UE, n° 3, 2015, pp. 343‑345.',
     ]);
     assert.equal(n.citations[0].pages, '343-345');
+  });
+});
+
+describe('conversion du corps', () => {
+  /** Un corps minimal : un paragraphe et ses notes. */
+  const corpsAvec = (notes: string[]) => ({
+    root: {
+      type: 'root',
+      children: [
+        {
+          type: 'paragraph',
+          children: [
+            { type: 'text', text: 'Un propos' },
+            ...notes.map((t) => ({
+              type: 'inlineBlock',
+              fields: { blockType: 'footnote', content: t },
+            })),
+          ],
+        },
+      ],
+    },
+  });
+
+  const compter = (body: unknown): Record<string, number> => {
+    const out: Record<string, number> = {};
+    (function walk(n: Record<string, unknown> | undefined): void {
+      if (!n || typeof n !== 'object') return;
+      const f = n.fields as { blockType?: string } | undefined;
+      if (n.type === 'inlineBlock' && f?.blockType) out[f.blockType] = (out[f.blockType] ?? 0) + 1;
+      for (const c of (n.children as Record<string, unknown>[]) ?? []) walk(c);
+    })((body as { root: Record<string, unknown> }).root);
+    return out;
+  };
+
+  const NOTES = [
+    'Weber Serge, « L’Europe discrimine à ses frontières », Revue Projet, n° 311, 2009, p. 32.',
+    'Ibid., p. 36.',
+    'Souiah Farida, « Les harraga », Hommes & migrations, n° 1304, octobre 2013, p. 95 Le terme vient du marocain.',
+  ];
+
+  it('remplace les notes citables et garde les autres', () => {
+    const lues = lireNotes(NOTES);
+    const cles = new Map<string, number | string>(
+      lues.filter((l) => !l.garde).flatMap((l) => l.citations.map((c) => [c.cle, 42] as const)),
+    );
+    const body = corpsAvec(NOTES);
+    const posees = convertirCorps(body, lues, cles);
+
+    assert.equal(posees, 2);
+    // La note qui commente reste une note.
+    assert.deepEqual(compter(body), { biblio_inline: 2, footnote: 1 });
+  });
+
+  it('reporte la pagination sur la citation', () => {
+    const lues = lireNotes(NOTES);
+    const cles = new Map<string, number | string>(
+      lues.filter((l) => !l.garde).flatMap((l) => l.citations.map((c) => [c.cle, 7] as const)),
+    );
+    const body = corpsAvec(NOTES);
+    convertirCorps(body, lues, cles);
+
+    const pages: string[] = [];
+    (function walk(n: Record<string, unknown> | undefined): void {
+      if (!n || typeof n !== 'object') return;
+      const f = n.fields as { blockType?: string; pages?: string; entry?: unknown } | undefined;
+      if (f?.blockType === 'biblio_inline') pages.push(String(f.pages ?? ''));
+      for (const c of (n.children as Record<string, unknown>[]) ?? []) walk(c);
+    })(body.root as never);
+    assert.deepEqual(pages, ['32', '36']);
+  });
+
+  it('ne convertit rien sans entrée vers quoi pointer', () => {
+    const lues = lireNotes(NOTES);
+    const body = corpsAvec(NOTES);
+    // Une citation qui renverrait dans le vide serait pire que la note.
+    assert.equal(convertirCorps(body, lues, new Map()), 0);
+    assert.deepEqual(compter(body), { footnote: 3 });
   });
 });

@@ -47,6 +47,8 @@
 
 import React, { useRef, useState } from 'react';
 
+import { convertirCorps } from '@/lib/import-citations';
+
 /** Une référence détachée du document, et ce qu'on lui a trouvé. */
 type LigneBiblio = {
   texte: string;
@@ -237,7 +239,7 @@ export default function ImportDocument({
     // citation deviennent des citations liées, les autres restent des
     // notes.
     const corps = JSON.parse(JSON.stringify(resultat.body)) as unknown;
-    convertirNotes(corps, cles);
+    convertirCorps(corps, resultat.notesLues ?? [], cles);
     onInsert({ body: corps, titre: reprendreTitre ? resultat.titre : null });
     fermer();
   }
@@ -252,64 +254,6 @@ export default function ImportDocument({
     setCleVersId(new Map());
   }
 
-  /**
-   * Remplace les notes qui ne sont qu'une citation par des citations
-   * bibliographiques.
-   *
-   * Dans un mémoire, la note EST la référence — nécessaire sur le
-   * papier, où l'on ne peut pas cliquer. Ici la bibliographie est en
-   * pied d'article : chaque note refait alors le travail qu'elle fait
-   * déjà, et cent quarante-six notes disent cinquante-cinq références.
-   *
-   * Ne sont converties que les notes dont la source est identifiée ET
-   * qui ne disent rien d'autre. Une note qui ajoute un propos reste une
-   * note : un commentaire perdu dans la conversion serait irrattrapable,
-   * là où une note de trop se retire en un geste.
-   */
-  function convertirNotes(body: unknown, cleVersId: Map<string, number | string>): number {
-    const lues = new Map((resultat?.notesLues ?? []).map((n) => [n.texte, n]));
-    let posees = 0;
-
-    const parcourir = (noeud: Record<string, unknown>): void => {
-      const enfants = noeud.children as Record<string, unknown>[] | undefined;
-      if (!Array.isArray(enfants)) return;
-
-      const suite: Record<string, unknown>[] = [];
-      for (const enfant of enfants) {
-        const champs = enfant.fields as { blockType?: string; content?: string } | undefined;
-        const note = champs?.blockType === 'footnote' ? lues.get(String(champs.content ?? '')) : null;
-        const ids = note?.citations.map((c) => cleVersId.get(c.cle));
-
-        if (!note || note.garde || !ids || ids.length === 0 || ids.some((x) => x == null)) {
-          parcourir(enfant);
-          suite.push(enfant);
-          continue;
-        }
-
-        // Une note peut porter plusieurs citations : elles se suivent.
-        note.citations.forEach((c, i) => {
-          suite.push({
-            type: 'inlineBlock',
-            version: 1,
-            fields: {
-              id: Math.random().toString(36).slice(2, 12),
-              blockName: '',
-              blockType: 'biblio_inline',
-              entry: ids[i],
-              prefix: '',
-              pages: c.pages,
-              suffix: '',
-            },
-          });
-          posees += 1;
-        });
-      }
-      noeud.children = suite;
-    };
-
-    parcourir((body as { root: Record<string, unknown> }).root);
-    return posees;
-  }
 
   /**
    * Porte les références cochées dans la bibliographie du billet.

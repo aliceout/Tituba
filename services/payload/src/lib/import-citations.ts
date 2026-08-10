@@ -182,3 +182,76 @@ export function lireNotes(notes: string[]): NoteLue[] {
 
   return out;
 }
+
+/** Un nœud de l'arbre de l'éditeur, réduit à ce qui nous concerne. */
+type Noeud = {
+  type?: string;
+  children?: Noeud[];
+  fields?: { blockType?: string; content?: string; [k: string]: unknown };
+  [k: string]: unknown;
+};
+
+/**
+ * Remplace, dans le corps, les notes qui ne sont qu'une citation.
+ *
+ * Écrit ici et non dans la vue d'édition pour être vérifiable seul :
+ * on peut lui donner un corps et regarder ce qui en sort, sans
+ * navigateur ni serveur. Le corps est modifié sur place — l'appelante
+ * en fait une copie si elle veut garder l'original.
+ *
+ * Une note n'est convertie que si TOUTES ses citations pointent vers
+ * une entrée connue. À défaut, elle reste une note : une citation qui
+ * renverrait dans le vide serait pire que la note qu'elle remplace.
+ *
+ * @returns le nombre de citations posées.
+ */
+export function convertirCorps(
+  body: unknown,
+  notesLues: NoteLue[],
+  cleVersId: Map<string, number | string>,
+): number {
+  const lues = new Map(notesLues.map((n) => [n.texte, n]));
+  let posees = 0;
+
+  const parcourir = (noeud: Noeud): void => {
+    if (!Array.isArray(noeud.children)) return;
+
+    const suite: Noeud[] = [];
+    for (const enfant of noeud.children) {
+      const note =
+        enfant.fields?.blockType === 'footnote'
+          ? lues.get(String(enfant.fields.content ?? ''))
+          : undefined;
+      const ids = note?.citations.map((c) => cleVersId.get(c.cle));
+
+      if (!note || note.garde || !ids || ids.length === 0 || ids.some((x) => x == null)) {
+        parcourir(enfant);
+        suite.push(enfant);
+        continue;
+      }
+
+      // Une note peut porter plusieurs citations : elles se suivent.
+      note.citations.forEach((c, i) => {
+        suite.push({
+          type: 'inlineBlock',
+          version: 1,
+          fields: {
+            id: Math.random().toString(36).slice(2, 12),
+            blockName: '',
+            blockType: 'biblio_inline',
+            entry: ids[i],
+            prefix: '',
+            pages: c.pages,
+            suffix: '',
+          },
+        });
+        posees += 1;
+      });
+    }
+    noeud.children = suite;
+  };
+
+  const racine = (body as { root?: Noeud })?.root;
+  if (racine) parcourir(racine);
+  return posees;
+}
