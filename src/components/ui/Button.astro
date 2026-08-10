@@ -36,84 +36,40 @@ const {
 } = Astro.props;
 
 const Tag = href ? 'a' : 'button';
+
+// La famille pose trois variables, le ton les lit. L’indirection vaut
+// d’être gardée : sans elle, chaque ton devrait redire chaque famille,
+// soit dix combinaisons à tenir d’accord au lieu de sept déclarations.
+const FAMILLES: Record<string, string> = {
+  bleu: '[--fam:var(--c-bleu-deep)] [--fam-fill:var(--c-bleu-fill)] [--fam-on:var(--c-bleu-on)]',
+  vert: '[--fam:var(--c-vert-deep)] [--fam-fill:var(--c-vert-fill)] [--fam-on:var(--c-vert-on)]',
+  jaune: '[--fam:var(--c-jaune-deep)] [--fam-fill:var(--c-jaune-fill)] [--fam-on:var(--c-jaune-on)]',
+  violet: '[--fam:var(--c-violet-deep)] [--fam-fill:var(--c-violet)] [--fam-on:#fff]',
+  // Couleur de marque configurable depuis l’admin : seul `--fam` est
+  // posé, et `contour` est le seul ton qui s’en contente — son survol
+  // retombe sur le papier, pas sur `--fam-on`. Une valeur arbitraire
+  // n’offre aucun contraste garanti pour un fond plein.
+  marque: '[--fam:var(--color-accent)]',
+};
+
+const TONS: Record<string, string> = {
+  plein: 'bg-(--fam-fill) text-(--fam-on) border border-transparent hover:brightness-[1.12]',
+  contour: 'bg-transparent text-(--fam) border border-(--fam) hover:bg-(--fam) hover:text-paper',
+};
 ---
 
 <Tag
-  class:list={['btn', `t-${ton}`, className]}
-  data-famille={famille}
+  class:list={[
+    'inline-flex flex-none cursor-pointer items-center gap-1.5 rounded-full px-4 py-[7px]',
+    'font-sans text-meta leading-[1.2] whitespace-nowrap transition duration-100',
+    'disabled:cursor-default disabled:opacity-50 disabled:filter-none',
+    FAMILLES[famille],
+    TONS[ton],
+    className,
+  ]}
   href={href}
   type={href ? undefined : type}
   {...reste}
 >
   <slot />
 </Tag>
-
-<style>
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex: 0 0 auto;
-    padding: 7px 16px;
-    border-radius: 999px;
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    line-height: 1.2;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s, filter 0.12s;
-  }
-
-  [data-famille='bleu'] {
-    --fam: var(--c-bleu-deep);
-    --fam-fill: var(--c-bleu-fill);
-    --fam-on: var(--c-bleu-on);
-  }
-  [data-famille='vert'] {
-    --fam: var(--c-vert-deep);
-    --fam-fill: var(--c-vert-fill);
-    --fam-on: var(--c-vert-on);
-  }
-  [data-famille='jaune'] {
-    --fam: var(--c-jaune-deep);
-    --fam-fill: var(--c-jaune-fill);
-    --fam-on: var(--c-jaune-on);
-  }
-  [data-famille='violet'] {
-    --fam: var(--c-violet-deep);
-    --fam-fill: var(--c-violet);
-    --fam-on: #ffffff;
-  }
-  /* Couleur de marque configurable — seul `--fam` est défini, `t-contour`
-     est le seul ton qui l'utilise ici (son survol retombe sur
-     --color-paper, pas sur --fam-on) : --color-accent est une valeur
-     admin arbitraire, pas de --fam-fill/--fam-on sans contraste garanti. */
-  [data-famille='marque'] {
-    --fam: var(--color-accent);
-  }
-
-  .t-plein {
-    background: var(--fam-fill);
-    color: var(--fam-on);
-    border: 1px solid transparent;
-  }
-  .t-plein:hover {
-    filter: brightness(1.12);
-  }
-
-  .t-contour {
-    background: transparent;
-    color: var(--fam);
-    border: 1px solid var(--fam);
-  }
-  .t-contour:hover {
-    background: var(--fam);
-    color: var(--color-paper);
-  }
-
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: default;
-    filter: none;
-  }
-</style>
