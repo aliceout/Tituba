@@ -50,6 +50,21 @@
   --text-meta: calc(12px * var(--a11y-echelle));
   --text-label: calc(11px * var(--a11y-echelle));
 
+  /* ── Points de rupture ────────────────────────────────────────────
+     Ceux du site, et rien d'autre. Les valeurs par défaut de Tailwind
+     (640 / 768 / 1024…) ne sont pas celles de cette maquette : écrire
+     `max-md:` en croyant viser 900 px aurait basculé la mise en page à
+     768, à côté du point où elle a été dessinée.
+
+     `mobile` couvre les vingt-quatre `@media (max-width: 900px)` du
+     projet ; `poche` les six à 720 ; `large` le passage à trois
+     colonnes de l'accueil. On les écrit `max-mobile:` pour descendre
+     et `mobile:` pour monter. */
+  --breakpoint-poche: 720px;
+  --breakpoint-mobile: 900px;
+  --breakpoint-tablette: 1100px;
+  --breakpoint-large: 1300px;
+
   /* Interlignes et interlettrages, mêmes valeurs, en classes :
      `leading-display`, `tracking-label`… */
   --leading-display: 1.08;

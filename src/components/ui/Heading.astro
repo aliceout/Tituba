@@ -32,46 +32,29 @@ const {
 
 const Tag = `h${niveau}` as 'h2' | 'h3' | 'h4';
 const apparence = taille ?? (niveau === 2 ? 'h2' : 'h3');
+const FAMILLES: Record<string, string> = {
+  encre: 'text-ink',
+  bleu: 'text-[var(--c-bleu-deep)]',
+  vert: 'text-[var(--c-vert-deep)]',
+  jaune: 'text-[var(--c-jaune-deep)]',
+  violet: 'text-[var(--c-violet-deep)]',
+};
+
+// Marge haute nettement plus grande que la basse : un titre appartient
+// à ce qui le suit, pas à ce qui le précède.
+const APPARENCES: Record<string, string> = {
+  h2: 'text-h2 mt-[52px] mb-3.5',
+  h3: 'text-h3 mt-9 mb-3',
+};
 ---
 
-<Tag class:list={['titre', `t-${apparence}`, className]} data-famille={famille}>
+<Tag
+  class:list={[
+    'font-serif font-(--font-weight-heading) leading-heading tracking-display first:mt-0',
+    APPARENCES[apparence],
+    FAMILLES[famille],
+    className,
+  ]}
+>
   <slot />
 </Tag>
-
-<style>
-  .titre {
-    font-family: var(--font-serif);
-    font-weight: var(--w-heading);
-    line-height: var(--lh-heading);
-    letter-spacing: var(--ls-display);
-    /* Marge haute nettement plus grande que la basse : un titre
-       appartient à ce qui le suit, pas à ce qui le précède. */
-    margin-block: 52px 14px;
-  }
-  .t-h2 {
-    font-size: var(--t-h2);
-  }
-  .t-h3 {
-    font-size: var(--t-h3);
-    margin-block: 36px 12px;
-  }
-  .titre:first-child {
-    margin-top: 0;
-  }
-
-  [data-famille='encre'] {
-    color: var(--color-ink);
-  }
-  [data-famille='bleu'] {
-    color: var(--c-bleu-deep);
-  }
-  [data-famille='vert'] {
-    color: var(--c-vert-deep);
-  }
-  [data-famille='jaune'] {
-    color: var(--c-jaune-deep);
-  }
-  [data-famille='violet'] {
-    color: var(--c-violet-deep);
-  }
-</style>
