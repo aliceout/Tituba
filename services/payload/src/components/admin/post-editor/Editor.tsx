@@ -59,6 +59,7 @@ import {
 } from './nodes';
 import {
   BiblioOptionsContext,
+  BiblioOrdreContext,
   type BibEntry,
   MediaOptionsContext,
   type MediaEntry,
@@ -729,12 +730,15 @@ export default function PostBodyEditor({
   value,
   onChange,
   biblioOptions,
+  biblioOrdre,
   mediaOptions,
   onEditor,
 }: {
   value: LexicalState | null;
   onChange: (v: LexicalState) => void;
   biblioOptions: BibEntry[];
+  /** Ordre des références du billet — c'est lui qui les numérote. */
+  biblioOrdre: Array<number | string>;
   mediaOptions: MediaEntry[];
   onEditor?: (editor: LexicalEditor) => void;
 }): React.ReactElement {
@@ -784,6 +788,7 @@ export default function PostBodyEditor({
 
   return (
     <BiblioOptionsContext.Provider value={biblioOptions}>
+      <BiblioOrdreContext.Provider value={biblioOrdre}>
       <MediaOptionsContext.Provider value={mediaOptions}>
       <div className="ed-body">
         <LexicalComposer initialConfig={initialConfig}>
@@ -808,6 +813,7 @@ export default function PostBodyEditor({
         </LexicalComposer>
       </div>
       </MediaOptionsContext.Provider>
+      </BiblioOrdreContext.Provider>
     </BiblioOptionsContext.Provider>
   );
 }

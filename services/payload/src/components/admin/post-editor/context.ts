@@ -29,6 +29,18 @@ export function useBiblioOptions(): BibEntry[] {
   return React.useContext(BiblioOptionsContext);
 }
 
+// Ordre des références DANS CE BILLET : c'est lui qui numérote les
+// renvois du corps. L'éditeur doit montrer le même numéro que le site,
+// sans quoi on relit « [12] » à l'écran et « [7] » une fois publié.
+export const BiblioOrdreContext = React.createContext<Array<number | string>>([]);
+
+export function useBiblioRang(id: number | string | null): number | null {
+  const ordre = React.useContext(BiblioOrdreContext);
+  if (id == null) return null;
+  const i = ordre.findIndex((x) => String(x) === String(id));
+  return i < 0 ? null : i + 1;
+}
+
 // ─── Médias ───────────────────────────────────────────────────────
 // Liste des médias chargée par PublicationEditView au mount, propagée aux
 // FigureRenderer pour qu'ils puissent peupler leur picker (search +

@@ -1,6 +1,10 @@
 ---
 /** Bibliographie d'un article — ancres #bib-<slug> ciblées par les
- *  renvois inline (.biblio-inline) rendus dans le corps. */
+ *  renvois inline (.biblio-inline) rendus dans le corps.
+ *
+ *  Liste NUMÉROTÉE, et l'ordre compte : le corps cite « [12] », ce
+ *  douze est le rang de l'entrée ici. Les deux numérotations sortent
+ *  du même tableau, elles ne peuvent pas se décaler. */
 import { formatAuthorsChicago, formatTranslators } from '../../lib/format-authors';
 import type { BiblioEntry } from '../../lib/publications';
 
@@ -13,7 +17,7 @@ const { entries } = Astro.props;
 
 <section id="biblio">
   <h3>Bibliographie</h3>
-  <ul class="biblio">
+  <ol class="biblio">
     {entries.map((b) => (
       <li id={`bib-${b.slug}`}>
         <span class="ba">{formatAuthorsChicago(b.authors)}</span>
@@ -41,7 +45,7 @@ const { entries } = Astro.props;
         .
       </li>
     ))}
-  </ul>
+  </ol>
 </section>
 
 <style>
@@ -59,11 +63,19 @@ const { entries } = Astro.props;
     font-size: calc(14px * var(--a11y-echelle));
     line-height: 1.65;
     color: var(--color-body-soft);
-    padding-left: 22px;
+    /* Numérotée explicitement : c'est le numéro que cite le corps, il
+       ne doit pas dépendre d'une remise à zéro des styles. */
+    list-style: decimal;
+    padding-left: 28px;
     margin: 0;
   }
   .biblio li {
     margin-bottom: 6px;
+  }
+  .biblio li::marker {
+    color: var(--color-body-soft);
+    font-family: var(--font-sans);
+    font-size: calc(12px * var(--a11y-echelle));
   }
   .biblio .ba {
     font-weight: 500;

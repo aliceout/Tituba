@@ -1140,6 +1140,7 @@ export default function PublicationEditViewClient({
                   }
                 }}
                 biblioOptions={biblioOptions}
+                biblioOrdre={biblioIds}
                 mediaOptions={mediaOptions}
                 onEditor={(editor) => {
                   editorRef.current = editor;

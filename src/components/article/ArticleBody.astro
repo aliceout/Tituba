@@ -108,16 +108,19 @@ const { html } = Astro.props;
     text-decoration: underline;
   }
 
-  /* BiblioInline : (Auteur, année) → #bib-<slug> */
+  /* BiblioInline : « [12, p. 15] » → #bib-<slug>.
+     Le trait pointillé du lien disparaît : sur un texte qui cite à
+     chaque phrase, cent cinquante soulignements font un texte rayé.
+     Le numéro entre crochets se voit bien assez. */
   .body-grid .col :global(.biblio-inline) {
     color: var(--color-accent);
-    border-bottom: 1px dotted var(--color-accent);
     text-decoration: none;
     transition: color 0.12s;
+    white-space: nowrap;
   }
   .body-grid .col :global(.biblio-inline:hover) {
     color: var(--color-ink);
-    border-bottom-style: solid;
+    text-decoration: underline;
   }
   .body-grid .col :global(.biblio-inline-empty) {
     color: var(--color-muted);

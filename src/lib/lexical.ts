@@ -94,10 +94,19 @@ export function slugify(s: string): string {
 type RenderContext = {
   /** Notes de bas de page collectées pendant le walk, dans l'ordre d'apparition. */
   footnotes: Array<{ n: number; html: string }>;
+  /**
+   * Rang de chaque référence dans la bibliographie du billet, par slug.
+   *
+   * C'est ce qui permet d'écrire « [12] » plutôt que « (Auteur, année) » :
+   * le numéro n'a de sens que rapporté à la liste de ce billet-là.
+   * Absent, on retombe sur la forme auteur-date — un numéro sans liste
+   * où le retrouver ne dirait rien.
+   */
+  biblioRang: Map<string, number>;
 };
 
-function newContext(): RenderContext {
-  return { footnotes: [] };
+function newContext(biblioRang?: Map<string, number>): RenderContext {
+  return { footnotes: [], biblioRang: biblioRang ?? new Map() };
 }
 
 function renderText(node: LexicalNode): string {
@@ -150,9 +159,24 @@ function renderBlock(node: LexicalNode, ctx: RenderContext): string {
         // Référence non populated — fallback minimal.
         return `<span class="biblio-inline-empty">(réf.)</span>`;
       }
-      // Format Chicago author-date court : « (Butler 2017, p. 47) ». On
-      // utilise `authorLabel` calculé serveur-side (« Butler », « Butler
-      // & Spivak », « Butler et al. »).
+      // Numéro plutôt qu'auteur-date : « [12, p. 47] ».
+      //
+      // L'auteur-date suppose des citations rares — il dit qui et quand
+      // sans quitter la ligne, ce qui est précieux quand on cite trois
+      // fois par page. Sur un texte qui cite à chaque phrase, il enterre
+      // la prose sous les patronymes : cent cinquante « (Machin, 2017,
+      // p. 15) » ne se lisent plus.
+      //
+      // Le rang vient de la bibliographie du billet — la même liste, le
+      // même ordre, donc le même numéro des deux côtés.
+      const rang = ctx.biblioRang.get(entry.slug);
+      if (rang) {
+        const inner = `${prefix}${rang}${pagesPart}${suffix}`;
+        return `<a class="biblio-inline" href="#bib-${escapeHtml(entry.slug)}">[${inner}]</a>`;
+      }
+
+      // Référence citée mais absente de la liste du billet : un numéro
+      // ne mènerait nulle part, on nomme donc la source.
       const shortAuthors = (entry.authorLabel ?? '').trim();
       const yearPart = entry.year ? `, ${entry.year}` : '';
       const inner = `${prefix}${escapeHtml(shortAuthors || '—')}${yearPart}${pagesPart}${suffix}`;
@@ -246,8 +270,11 @@ function renderNode(node: LexicalNode | unknown, ctx: RenderContext): string {
  * mais la liste en pied n'est pas générée). Convient pour les contenus
  * Pages.sections.prose qui n'ont pas de notes.
  */
-export function renderLexical(node: LexicalNode | unknown): string {
-  return renderNode(node, newContext());
+export function renderLexical(
+  node: LexicalNode | unknown,
+  biblioRang?: Map<string, number>,
+): string {
+  return renderNode(node, newContext(biblioRang));
 }
 
 /**
@@ -260,8 +287,9 @@ export function renderLexical(node: LexicalNode | unknown): string {
  */
 export function renderLexicalWithFootnotes(
   node: LexicalNode | unknown,
+  biblioRang?: Map<string, number>,
 ): { bodyHtml: string; footnotesHtml: string } {
-  const ctx = newContext();
+  const ctx = newContext(biblioRang);
   const bodyHtml = renderNode(node, ctx);
   if (ctx.footnotes.length === 0) return { bodyHtml, footnotesHtml: '' };
   const items = ctx.footnotes
@@ -284,7 +312,10 @@ export function renderLexicalWithFootnotes(
  * Style « Tufte » — chaque note est positionnée en regard du
  * paragraphe qui l'appelle, plutôt qu'empilée en pied d'article.
  */
-export function renderLexicalSidenotes(node: LexicalNode | unknown): string {
+export function renderLexicalSidenotes(
+  node: LexicalNode | unknown,
+  biblioRang?: Map<string, number>,
+): string {
   if (!node || typeof node !== 'object') return '';
   const x = node as LexicalNode & { root?: LexicalNode };
   // Trouve le root.children — body Lexical = { root: { children: [...] } }
@@ -293,10 +324,10 @@ export function renderLexicalSidenotes(node: LexicalNode | unknown): string {
   else if (x.type === 'root') rootNode = x;
   if (!rootNode || !rootNode.children) {
     // Fallback : pas de root, on rend en mode classique sans collecte
-    return renderNode(node, newContext());
+    return renderNode(node, newContext(biblioRang));
   }
 
-  const ctx = newContext();
+  const ctx = newContext(biblioRang);
   const out: string[] = [];
   let collected = 0;
   for (const child of rootNode.children) {

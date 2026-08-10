@@ -213,17 +213,23 @@ const siteName = identity.siteName?.trim() || 'Tituba';
 // récupère bodyHtml + footnotesHtml (notes empilées en pied). En mode
 // sidenotes, le rendu interleave les <aside class="marg"> juste après
 // chaque bloc concerné — pas de footnotesHtml séparé.
-const bodyHtml =
-  notesMode === 'sidenotes'
-    ? renderLexicalSidenotes(post.body)
-    : renderLexicalWithFootnotes(post.body).bodyHtml;
-const footnotesHtml =
-  notesMode === 'classic' ? renderLexicalWithFootnotes(post.body).footnotesHtml : '';
-const tocEntries = extractToc(post.body);
-
+// La bibliographie d'abord : c'est elle qui numérote les renvois du
+// corps. Même liste, même ordre, donc « [12] » dans le texte et « 12 »
+// en bas désignent bien la même référence.
 const biblio = (post.bibliography ?? []).filter(
   (b): b is BiblioEntry => typeof b === 'object' && b !== null && 'slug' in b,
 );
+const biblioRang = new Map(biblio.map((b, i) => [b.slug, i + 1]));
+
+const bodyHtml =
+  notesMode === 'sidenotes'
+    ? renderLexicalSidenotes(post.body, biblioRang)
+    : renderLexicalWithFootnotes(post.body, biblioRang).bodyHtml;
+const footnotesHtml =
+  notesMode === 'classic'
+    ? renderLexicalWithFootnotes(post.body, biblioRang).footnotesHtml
+    : '';
+const tocEntries = extractToc(post.body);
 
 // Affichage de l'aside — décidé ici et nulle part ailleurs : c'est la
 // même valeur qui monte le composant et qui réserve sa colonne dans la

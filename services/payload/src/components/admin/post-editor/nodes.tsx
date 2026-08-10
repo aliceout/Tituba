@@ -35,7 +35,12 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { LinkNode, type SerializedLinkNode } from '@lexical/link';
 
 import { formatAuthorsShort } from '@/lib/format-authors';
-import { useBiblioOptions, useMediaOptions, type MediaEntry } from './context';
+import {
+  useBiblioOptions,
+  useBiblioRang,
+  useMediaOptions,
+  type MediaEntry,
+} from './context';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -224,6 +229,7 @@ function BiblioInlineRenderer({
   // Position verticale du popover en mobile (cf. FootnoteRenderer).
   const [popoverTop, setPopoverTop] = useState<number | null>(null);
   const biblioOptions = useBiblioOptions();
+  const rang = useBiblioRang(local.entry);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -242,15 +248,19 @@ function BiblioInlineRenderer({
     setOpen((o) => !o);
   }
 
-  // Affichage : (auteur, année) si la référence est trouvée, sinon
-  // « (réf. à choisir) ».
+  // Affichage : le numéro de la référence dans la bibliographie du
+  // billet, « [12] » — le même que sur le site. Tant qu'elle n'y figure
+  // pas, ce numéro n'existe pas : on nomme alors la source, ce qui dit
+  // aussi qu'il reste un geste à faire.
   const selected = local.entry
     ? biblioOptions.find((b) => String(b.id) === String(local.entry))
     : null;
   const shortAuthors = selected ? formatAuthorsShort(selected.authors) : '';
-  const label = selected
-    ? `(${shortAuthors || '—'}${selected.year ? `, ${selected.year}` : ''})`
-    : '(réf. à choisir)';
+  const label = rang
+    ? `[${rang}]`
+    : selected
+      ? `(${shortAuthors || '—'}${selected.year ? `, ${selected.year}` : ''})`
+      : '(réf. à choisir)';
 
   // Liste filtrée par la recherche : substring match insensible à la
   // casse sur authorLabel, year, title. Cap à 30 résultats pour éviter
