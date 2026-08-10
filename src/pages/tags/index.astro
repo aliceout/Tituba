@@ -45,17 +45,17 @@ const sorted = tags.slice().sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   famille="violet"
 >
     {sorted.length === 0 ? (
-      <p class="empty">Aucun tag pour l'instant.</p>
+      <p class="text-muted py-16 text-center font-sans">Aucun tag pour l'instant.</p>
     ) : (
-      <ul class="grid">
+      <ul class="border-rule m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-0 border-t p-0 [&>li]:border-b [&>li]:border-rule">
         {sorted.map((t) => {
           const count = counts.get(t.slug) ?? 0;
           return (
             <li>
-              <a class="tag-card" href={`/tag/${t.slug}/`}>
-                <span class="slug">#{t.slug}</span>
-                <span class="name">{t.name}</span>
-                <span class="count">
+              <a class="hover:bg-[var(--color-citation-bg)] group grid grid-cols-[auto_1fr_auto] items-baseline gap-4 px-3 py-3.5 text-inherit no-underline transition-colors duration-100" href={`/tag/${t.slug}/`}>
+                <span class="text-muted font-mono text-meta">#{t.slug}</span>
+                <span class="text-ink group-hover:text-[var(--c-violet-deep)] font-serif text-courant transition-colors duration-100">{t.name}</span>
+                <span class="text-muted font-mono text-label">
                   {count} publication{count > 1 ? 's' : ''}
                 </span>
               </a>
@@ -65,60 +65,3 @@ const sorted = tags.slice().sort((a, b) => a.name.localeCompare(b.name, 'fr'));
       </ul>
     )}
 </PageShell>
-
-<style>
-  /* Gouttière et rythme vertical viennent de PageShell. */
-  .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
-  }
-
-  .grid {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 0;
-    border-top: 1px solid var(--color-rule);
-  }
-  .grid li {
-    border-bottom: 1px solid var(--color-rule);
-  }
-
-  .tag-card {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: baseline;
-    gap: 16px;
-    padding: 14px 12px;
-    text-decoration: none;
-    color: inherit;
-    transition: background 0.12s;
-  }
-  .tag-card:hover {
-    background: var(--color-citation-bg);
-  }
-  /* Violet, comme /themes/ : les tags sont l'autre taxonomie du site. */
-  .tag-card:hover .name {
-    color: var(--c-violet-deep);
-  }
-  .tag-card .slug {
-    font-family: var(--font-mono);
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--color-muted);
-  }
-  .tag-card .name {
-    font-family: var(--font-serif);
-    font-size: calc(17px * var(--a11y-echelle));
-    color: var(--color-ink);
-    transition: color 0.12s;
-  }
-  .tag-card .count {
-    font-family: var(--font-mono);
-    font-size: calc(11px * var(--a11y-echelle));
-    color: var(--color-muted);
-  }
-</style>
