@@ -8,19 +8,24 @@
  * leurs notes de bas de page et leur bibliographie. Les ressaisir à la
  * main coûte une heure par texte et perd des notes en chemin.
  *
- * Le déroulé, en trois temps :
+ * Le déroulé, en deux temps :
  *
- *  1. On dépose le document. Le serveur le lit et renvoie ce qu'il y a
- *     trouvé — sans rien écrire.
- *  2. On regarde : tant d'intertitres, tant de notes, la bibliographie
- *     détachée référence par référence, et ce qui n'a pas suivi.
- *  3. On insère, ou pas.
+ *  1. Le bouton ouvre directement le sélecteur de fichiers du système.
+ *     Le serveur lit le document et renvoie ce qu'il y a trouvé — sans
+ *     rien écrire.
+ *  2. On regarde — tant d'intertitres, tant de notes, la bibliographie
+ *     détachée référence par référence, ce qui n'a pas suivi — puis on
+ *     insère, ou pas.
  *
- * Rien n'est inséré tant que personne n'a regardé, et c'est le point
- * important : l'import remplace le corps entier. Le faire dès le dépôt
- * effacerait sans prévenir un texte en cours de rédaction. Il reste
- * annulable par Ctrl+Z une fois inséré (cf `remplacerContenu`), mais
- * mieux vaut ne pas avoir à s'en servir.
+ * Deux temps et pas trois : un panneau intermédiaire pour héberger le
+ * champ de fichier n'apprenait rien que le sélecteur du système ne
+ * montre déjà, et coûtait un clic à chaque import.
+ *
+ * L'arrêt, en revanche, se situe APRÈS la lecture, et il compte :
+ * l'import remplace le corps entier. Insérer dès le dépôt effacerait
+ * sans prévenir un texte en cours de rédaction. Cela reste annulable
+ * par Ctrl+Z une fois inséré (cf `remplacerContenu`), mais mieux vaut
+ * ne pas avoir à s'en servir.
  *
  * La bibliographie est affichée, jamais reliée d'office : on montre les
  * entrées existantes qui pourraient correspondre, et quelqu'un tranche.
@@ -63,7 +68,6 @@ export default function ImportDocument({
   corpsRempli: boolean;
   onInsert: (r: { body: unknown; titre: string | null }) => void;
 }): React.ReactElement {
-  const [ouvert, setOuvert] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [resultat, setResultat] = useState<Resultat | null>(null);
@@ -111,25 +115,58 @@ export default function ImportDocument({
   }
 
   function fermer(): void {
-    setOuvert(false);
     setResultat(null);
     setErreur(null);
     setNomFichier('');
   }
 
-  if (!ouvert) {
+  // Le champ de fichier reste monté et invisible : le bouton l'actionne.
+  // Un panneau intermédiaire pour l'héberger n'aurait rien dit de plus
+  // que le sélecteur du système, en coûtant un clic de plus.
+  const champ = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept={EXTENSIONS}
+      className="ed-import__file"
+      tabIndex={-1}
+      aria-hidden="true"
+      onChange={(e) => {
+        const f = e.target.files?.[0];
+        if (f) void lire(f);
+      }}
+    />
+  );
+
+  if (!resultat) {
     return (
       <div className="ed-import">
-        <button type="button" className="ed-import__open" onClick={() => setOuvert(true)}>
-          Importer un document
+        {champ}
+        <button
+          type="button"
+          className="ed-import__open"
+          disabled={enCours}
+          onClick={() => inputRef.current?.click()}
+        >
+          {enCours ? `Lecture de ${nomFichier}…` : 'Importer un document'}
         </button>
-        <span className="ed-import__hint">Word (.docx) ou LibreOffice (.odt)</span>
+        {erreur ? (
+          <span className="ed-import__error" role="alert">
+            {erreur}
+          </span>
+        ) : (
+          <span className="ed-import__hint">
+            Word (.docx) ou LibreOffice&nbsp;(.odt) — intertitres, notes et bibliographie
+            repris.
+          </span>
+        )}
       </div>
     );
   }
 
   return (
     <div className="ed-import ed-import--open">
+      {champ}
       <div className="ed-import__head">
         <strong>Importer un document</strong>
         <button type="button" className="ed-import__close" onClick={fermer}>
@@ -137,110 +174,83 @@ export default function ImportDocument({
         </button>
       </div>
 
-      <p className="ed-import__lede">
-        Les intertitres, les notes de bas de page et la mise en forme sont repris. La
-        bibliographie est détachée du texte&nbsp;: elle vous sera présentée pour que vous
-        la rapprochiez de vos entrées existantes.
-      </p>
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept={EXTENSIONS}
-        className="ed-import__file"
-        disabled={enCours}
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void lire(f);
-        }}
-      />
-
-      {enCours && <p className="ed-import__status">Lecture de {nomFichier}…</p>}
-      {erreur && (
-        <p className="ed-import__error" role="alert">
-          {erreur}
+      <div className="ed-import__result">
+        <p className="ed-import__found">
+          <strong>{nomFichier}</strong> —{' '}
+          {[
+            compte(resultat.resume.paragraphes, 'paragraphe'),
+            compte(resultat.resume.titres, 'intertitre'),
+            compte(resultat.resume.notes, 'note'),
+            compte(resultat.biblio.length, 'référence'),
+          ].join(', ')}
+          .
         </p>
-      )}
 
-      {resultat && (
-        <div className="ed-import__result">
-          <p className="ed-import__found">
-            <strong>{nomFichier}</strong> —{' '}
-            {[
-              compte(resultat.resume.paragraphes, 'paragraphe'),
-              compte(resultat.resume.titres, 'intertitre'),
-              compte(resultat.resume.notes, 'note'),
-              compte(resultat.biblio.length, 'référence'),
-            ].join(', ')}
-            .
-          </p>
+        {resultat.titre && (
+          <label className="ed-import__titre">
+            <input
+              type="checkbox"
+              checked={reprendreTitre}
+              onChange={(e) => setReprendreTitre(e.target.checked)}
+            />
+            <span>
+              Reprendre le titre du document&nbsp;: «&nbsp;{resultat.titre}&nbsp;»
+            </span>
+          </label>
+        )}
 
-          {resultat.titre && (
-            <label className="ed-import__titre">
-              <input
-                type="checkbox"
-                checked={reprendreTitre}
-                onChange={(e) => setReprendreTitre(e.target.checked)}
-              />
-              <span>
-                Reprendre le titre du document&nbsp;: «&nbsp;{resultat.titre}&nbsp;»
-              </span>
-            </label>
-          )}
+        {resultat.avertissements.length > 0 && (
+          <ul className="ed-import__warnings">
+            {resultat.avertissements.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        )}
 
-          {resultat.avertissements.length > 0 && (
-            <ul className="ed-import__warnings">
-              {resultat.avertissements.map((a) => (
-                <li key={a}>{a}</li>
+        {resultat.biblio.length > 0 && (
+          <div className="ed-import__biblio">
+            <h4>Bibliographie détachée</h4>
+            <p className="ed-import__biblio-note">
+              Ces références ne sont pas insérées dans le texte. Créez-les dans la
+              bibliographie si elles y manquent, puis appelez-les depuis l’éditeur avec
+              <kbd>/</kbd>.
+            </p>
+            <ul>
+              {resultat.biblio.map((l, i) => (
+                <li key={`${i}-${l.texte.slice(0, 20)}`}>
+                  <span className="ed-import__ref">{l.texte}</span>
+                  {l.candidats.length > 0 ? (
+                    <span className="ed-import__match">
+                      {l.candidats[0].sur ? 'Déjà dans la bibliographie' : 'Peut-être'}
+                      &nbsp;: {l.candidats[0].label}
+                    </span>
+                  ) : (
+                    <span className="ed-import__match ed-import__match--absent">
+                      Absente de la bibliographie
+                    </span>
+                  )}
+                </li>
               ))}
             </ul>
-          )}
-
-          {resultat.biblio.length > 0 && (
-            <div className="ed-import__biblio">
-              <h4>Bibliographie détachée</h4>
-              <p className="ed-import__biblio-note">
-                Ces références ne sont pas insérées dans le texte. Créez-les dans la
-                bibliographie si elles y manquent, puis appelez-les depuis l’éditeur avec
-                <kbd>/</kbd>.
-              </p>
-              <ul>
-                {resultat.biblio.map((l, i) => (
-                  <li key={`${i}-${l.texte.slice(0, 20)}`}>
-                    <span className="ed-import__ref">{l.texte}</span>
-                    {l.candidats.length > 0 ? (
-                      <span className="ed-import__match">
-                        {l.candidats[0].sur ? 'Déjà dans la bibliographie' : 'Peut-être'}
-                        &nbsp;: {l.candidats[0].label}
-                      </span>
-                    ) : (
-                      <span className="ed-import__match ed-import__match--absent">
-                        Absente de la bibliographie
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {corpsRempli && (
-            <p className="ed-import__warn-body" role="alert">
-              Le corps du billet n’est pas vide&nbsp;: l’insertion le remplacera
-              entièrement. <kbd>Ctrl</kbd>+<kbd>Z</kbd> permet de revenir en arrière.
-            </p>
-          )}
-
-          <div className="ed-import__actions">
-            <button type="button" className="ed-import__insert" onClick={inserer}>
-              {corpsRempli ? 'Remplacer le corps' : 'Insérer dans le billet'}
-            </button>
-            <button type="button" className="ed-import__cancel" onClick={fermer}>
-              Annuler
-            </button>
           </div>
+        )}
+
+        {corpsRempli && (
+          <p className="ed-import__warn-body" role="alert">
+            Le corps du billet n’est pas vide&nbsp;: l’insertion le remplacera
+            entièrement. <kbd>Ctrl</kbd>+<kbd>Z</kbd> permet de revenir en arrière.
+          </p>
+        )}
+
+        <div className="ed-import__actions">
+          <button type="button" className="ed-import__insert" onClick={inserer}>
+            {corpsRempli ? 'Remplacer le corps' : 'Insérer dans le billet'}
+          </button>
+          <button type="button" className="ed-import__cancel" onClick={fermer}>
+            Annuler
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

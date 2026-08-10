@@ -4756,6 +4756,8 @@ button.btn--style-primary,
     gap: 10px;
     margin: 0 0 20px;
     font-family: var(--font-sans);
+    // Ancre le champ de fichier, retiré de la vue par la géométrie.
+    position: relative;
 
     &__open {
       background: none;
@@ -4763,19 +4765,26 @@ button.btn--style-primary,
       border-radius: 4px;
       color: var(--b-muted);
       cursor: pointer;
+      flex: none;
       font-family: inherit;
       font-size: 12px;
       padding: 5px 10px;
 
-      &:hover {
+      &:hover:not(:disabled) {
         border-color: var(--b-accent);
         color: var(--b-accent);
+      }
+
+      &:disabled {
+        cursor: progress;
+        opacity: 0.7;
       }
     }
 
     &__hint {
       color: var(--b-muted);
       font-size: 11px;
+      line-height: 1.45;
     }
 
     &--open {
@@ -4805,28 +4814,21 @@ button.btn--style-primary,
       padding: 0;
     }
 
-    &__lede {
-      color: var(--b-muted);
-      font-size: 12px;
-      line-height: 1.55;
-      margin: 8px 0 14px;
-    }
-
+    // Le champ de fichier est actionné par le bouton, jamais montré :
+    // `display: none` empêcherait le clic programmatique sur certains
+    // navigateurs, d'où le retrait par la géométrie plutôt que par
+    // l'affichage.
     &__file {
-      font-size: 12px;
-      max-width: 100%;
-    }
-
-    &__status {
-      color: var(--b-muted);
-      font-size: 12px;
-      margin: 12px 0 0;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
     }
 
     &__error {
       color: #b63a3a;
-      font-size: 12px;
-      margin: 12px 0 0;
+      font-size: 11px;
     }
 
     &__result {
