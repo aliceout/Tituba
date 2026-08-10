@@ -10,32 +10,13 @@ interface Props {
 const { tags } = Astro.props;
 ---
 
-<section class="post-tags" aria-label="Tags">
+<section class="mt-8 flex flex-wrap gap-2" aria-label="Tags">
   {tags.map((t) => (
-    <a class="post-tag" href={`/tag/${t.slug}/`}>
+    <a
+      class="border-rule text-muted hover:text-accent hover:border-accent font-mono text-meta border px-1.5 py-0.5 no-underline transition-colors duration-100"
+      href={`/tag/${t.slug}/`}
+    >
       #{t.slug}
     </a>
   ))}
 </section>
-
-<style>
-  .post-tags {
-    margin-top: 32px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .post-tag {
-    font-family: var(--font-mono);
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--color-muted);
-    text-decoration: none;
-    padding: 2px 6px;
-    border: 1px solid var(--color-rule);
-    transition: color 0.12s, border-color 0.12s;
-  }
-  .post-tag:hover {
-    color: var(--color-accent);
-    border-color: var(--color-accent);
-  }
-</style>

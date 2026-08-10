@@ -41,7 +41,11 @@
   --text-h2: calc(30px * var(--a11y-echelle));
   --text-h3: calc(21px * var(--a11y-echelle));
   --text-lede: calc(18px * var(--a11y-echelle));
-  --text-body: calc(17px * var(--a11y-echelle));
+  /* `courant` et non `body` : le thème porte déjà `--color-body`, et
+     Tailwind sert `text-*` pour la taille COMME pour la couleur. Les
+     deux jetons se disputaient `text-body`, la couleur gagnait, et la
+     taille n'existait tout simplement pas — sans le moindre message. */
+  --text-courant: calc(17px * var(--a11y-echelle));
   --text-sublede: calc(16px * var(--a11y-echelle));
   --text-meta: calc(12px * var(--a11y-echelle));
   --text-label: calc(11px * var(--a11y-echelle));
