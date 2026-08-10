@@ -49,13 +49,33 @@ const {
   action,
   famille = 'vert',
 } = Astro.props;
+const FAMILLES: Record<string, string> = {
+  bleu: '[--fam:var(--c-bleu-deep)] [--fam-fill:var(--c-bleu-fill)] [--fam-on:var(--c-bleu-on)]',
+  vert: '[--fam:var(--c-vert-deep)] [--fam-fill:var(--c-vert-fill)] [--fam-on:var(--c-vert-on)]',
+  jaune: '[--fam:var(--c-jaune-deep)] [--fam-fill:var(--c-jaune-fill)] [--fam-on:var(--c-jaune-on)]',
+  violet: '[--fam:var(--c-violet-deep)] [--fam-fill:var(--c-violet)] [--fam-on:#fff]',
+};
 ---
 
-<div class="champ" data-famille={famille}>
-  <label class:list={['lbl', { 'visually-hidden': !labelVisible }]} for={id}>
+<div class:list={[FAMILLES[famille]]}>
+  <label
+    class:list={[
+      'font-mono text-label tracking-label text-muted mb-2.5 block uppercase',
+      !labelVisible && 'sr-only',
+    ]}
+    for={id}
+  >
     {label}
   </label>
-  <div class="rangee">
+  {/* Une seule pastille contenant le champ et le bouton, comme celle de
+      la bande « Nous suivre ». Le rembourrage droit est réduit pour que
+      le bouton vienne se loger dans le filet sans le toucher.
+
+      Sous 560 px la pastille comprimerait le champ à quelques signes :
+      les deux se séparent et s’empilent. */}
+  <div
+    class="bg-paper focus-within:border-(--fam) flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--fam)_35%,transparent)] py-[5px] pr-[5px] pl-4 transition-colors duration-100 max-etroit:flex-col max-etroit:items-stretch max-etroit:gap-3 max-etroit:rounded-[22px] max-etroit:p-3.5"
+  >
     <input
       id={id}
       type={type}
@@ -64,94 +84,10 @@ const {
       required={required}
       autocomplete={autocomplete}
       spellcheck="false"
+      class="text-ink placeholder:text-muted min-w-0 flex-auto border-0 bg-none px-0 py-[7px] font-sans text-[calc(14px*var(--a11y-echelle))] focus:outline-none max-etroit:px-2 max-etroit:py-1"
     />
     {action && (
       <Button type="submit" ton="plein" famille={famille}>{action}</Button>
     )}
   </div>
 </div>
-
-<style>
-  .champ[data-famille='bleu'] {
-    --fam: var(--c-bleu-deep);
-    --fam-fill: var(--c-bleu-fill);
-    --fam-on: var(--c-bleu-on);
-  }
-  .champ[data-famille='vert'] {
-    --fam: var(--c-vert-deep);
-    --fam-fill: var(--c-vert-fill);
-    --fam-on: var(--c-vert-on);
-  }
-  .champ[data-famille='jaune'] {
-    --fam: var(--c-jaune-deep);
-    --fam-fill: var(--c-jaune-fill);
-    --fam-on: var(--c-jaune-on);
-  }
-  .champ[data-famille='violet'] {
-    --fam: var(--c-violet-deep);
-    --fam-fill: var(--c-violet);
-    --fam-on: #ffffff;
-  }
-
-  .lbl {
-    display: block;
-    font-family: var(--font-mono);
-    font-size: var(--t-label);
-    letter-spacing: var(--ls-label);
-    text-transform: uppercase;
-    color: var(--color-muted);
-    margin-bottom: 10px;
-  }
-
-  /* Une seule pastille contenant le champ et le bouton, comme celle de
-     la bande « Nous suivre ». Le rembourrage droit est réduit pour que
-     le bouton vienne se loger dans le filet sans le toucher. */
-  .rangee {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 5px 5px 16px;
-    border: 1px solid color-mix(in srgb, var(--fam) 35%, transparent);
-    border-radius: 999px;
-    background: var(--color-paper);
-    transition: border-color 0.12s;
-  }
-  .rangee:focus-within {
-    border-color: var(--fam);
-  }
-
-  input {
-    flex: 1 1 auto;
-    min-width: 0;
-    border: 0;
-    background: none;
-    padding: 7px 0;
-    font-family: var(--font-sans);
-    font-size: calc(14px * var(--a11y-echelle));
-    color: var(--color-ink);
-  }
-  input::placeholder {
-    color: var(--color-muted);
-  }
-  /* Le contour de focus est porté par la pastille, pas par le champ :
-     un liseré rectangulaire à l'intérieur d'une forme arrondie. */
-  input:focus {
-    outline: none;
-  }
-
-
-  @media (max-width: 560px) {
-    /* Sous cette largeur la pastille comprimerait le champ à quelques
-       caractères : les deux se séparent et s'empilent. */
-    .rangee {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 12px;
-      border-radius: 22px;
-      padding: 14px;
-    }
-    input {
-      padding: 4px 8px;
-    }
-  }
-</style>

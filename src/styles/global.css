@@ -66,6 +66,7 @@
      projet ; `poche` les six à 720 ; `large` le passage à trois
      colonnes de l'accueil. On les écrit `max-mobile:` pour descendre
      et `mobile:` pour monter. */
+  --breakpoint-etroit: 560px;
   --breakpoint-poche: 720px;
   --breakpoint-mobile: 900px;
   --breakpoint-tablette: 1100px;
