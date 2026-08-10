@@ -4268,6 +4268,22 @@ button.btn--style-primary,
     font-size: 12px;
   }
 
+  // Le wrapper partagé rendu par <CarnetPage> s'intercale entre la
+  // barre du haut et la grille. Bloc ordinaire, il n'a ni hauteur à
+  // distribuer ni raison de grandir : le `flex: 1` de __doc ne
+  // s'appliquait donc à rien, et sur un billet plus court que la
+  // fenêtre le filet s'arrêtait au bas du contenu — une trentaine de
+  // pixels avant le bas de l'écran, ce qui se voit.
+  //
+  // On rétablit la chaîne : le wrapper prend la hauteur restante et la
+  // passe à la grille.
+  > .tituba-page__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
   // Le filet qui sépare le corps de la barre latérale est peint par la
   // grille et non par la barre elle-même : celle-ci est `sticky` et
   // haute de son seul contenu, si bien qu'une bordure portée par elle
