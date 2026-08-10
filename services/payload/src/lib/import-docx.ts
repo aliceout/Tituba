@@ -1,5 +1,8 @@
 /**
- * Import d'un document Word — la conversion, sans la plomberie HTTP.
+ * Import d'un document rédigé ailleurs — la conversion, sans la
+ * plomberie HTTP.
+ *
+ * Deux formats acceptés : le .docx de Word et l'.odt de LibreOffice.
  *
  * Séparée de l'endpoint pour être vérifiable seule : on peut lui donner
  * un .docx et regarder ce qui en sort, sans serveur ni session.
@@ -30,6 +33,8 @@
  * ensuite qui s'en charge, avec un humain devant.
  */
 import mammoth from 'mammoth';
+
+import { odtVersHtml } from './import-odt';
 
 /** Une ligne de la bibliographie détachée du document. */
 export type LigneBiblio = {
@@ -160,9 +165,35 @@ function descendreTitres(html: string): string {
   });
 }
 
-/** Convertit un .docx en éléments prêts à devenir un billet. */
-export async function lireDocx(buffer: Buffer): Promise<ResultatImport> {
-  const { value, messages } = await mammoth.convertToHtml({ buffer });
+/** Formats acceptés, et ce qu'on en dit à qui dépose autre chose. */
+export const EXTENSIONS = ['.docx', '.odt'] as const;
+
+/**
+ * Convertit un document en éléments prêts à devenir un billet.
+ *
+ * Deux formats, une seule suite d'opérations : le lecteur .odt rend
+ * volontairement le même HTML que mammoth — mêmes balises, mêmes ancres
+ * de note. Traiter les deux séparément aurait garanti qu'ils finissent
+ * par diverger sur un détail, et qu'un défaut ne soit corrigé que d'un
+ * côté.
+ */
+export async function lireDocument(
+  buffer: Buffer,
+  nomFichier: string,
+): Promise<ResultatImport> {
+  const estOdt = /\.odt$/i.test(nomFichier);
+
+  let value: string;
+  let messages: string[];
+  if (estOdt) {
+    const r = await odtVersHtml(buffer);
+    value = r.html;
+    messages = r.avertissements;
+  } else {
+    const r = await mammoth.convertToHtml({ buffer });
+    value = r.value;
+    messages = r.messages.map((m) => m.message);
+  }
 
   // Les notes d'abord, la bibliographie ensuite — et l'ordre n'est pas
   // indifférent : mammoth place la liste des notes tout à la fin du
@@ -179,6 +210,6 @@ export async function lireDocx(buffer: Buffer): Promise<ResultatImport> {
     biblio: lignes.map((texte) => ({ texte, ...deviner(texte) })),
     // Les styles inconnus sont signalés, pas tus : quelqu'un qui a mis
     // en forme son texte doit savoir ce qui n'a pas suivi.
-    avertissements: [...new Set(messages.map((m) => m.message))],
+    avertissements: [...new Set(messages)],
   };
 }
