@@ -897,9 +897,16 @@ export interface Outil {
    */
   bibliography?: (number | Bibliography)[] | null;
   /**
-   * URL du fichier à télécharger (média Tituba ou hébergement externe), ou de la page qui l'héberge.
+   * Les documents mis à disposition — PDF, ODT, tableur. C’est ce que l’outil sert à transmettre ; le texte du billet ne fait que les présenter. Un outil peut en réunir plusieurs : un guide et sa grille, un support et son corrigé.
    */
-  resourceUrl: string;
+  resources: {
+    fichier: number | Media;
+    /**
+     * Une ou deux lignes sur ce que contient ce document, et à quoi il sert. Affichée sous son intitulé.
+     */
+    description?: string | null;
+    id?: string | null;
+  }[];
   audience?: ('tous' | 'militantes' | 'pros' | 'structures') | null;
   /**
    * Calculé automatiquement depuis le corps au save.
@@ -939,6 +946,10 @@ export interface Page {
    * Décochée, la page disparaît du menu du site. Sa route continue d’exister — c’est le lien qui s’en va, pas la page.
    */
   enabled?: boolean | null;
+  /**
+   * Cochée, la page n’est plus servie sur le site — elle reste modifiable ici. À décocher pour la publier.
+   */
+  draft?: boolean | null;
   /**
    * URL-safe, ex : 'about', 'colophon', 'mentions-legales'. Sert de match de route Astro.
    */
@@ -987,6 +998,34 @@ export interface Page {
             id?: string | null;
             blockName?: string | null;
             blockType: 'prose';
+          }
+        | {
+            /**
+             * La ligne toujours visible, sur laquelle on clique pour ouvrir. Obligatoire : sans elle, il n’y aurait rien à cliquer.
+             */
+            titre: string;
+            /**
+             * Coché, le contenu est visible dès l’arrivée sur la page — le bloc ne sert plus qu’à pouvoir le replier.
+             */
+            ouvert?: boolean | null;
+            content: {
+              root: {
+                type: string;
+                children: {
+                  type: any;
+                  version: number;
+                  [k: string]: unknown;
+                }[];
+                direction: ('ltr' | 'rtl') | null;
+                format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                indent: number;
+                version: number;
+              };
+              [k: string]: unknown;
+            };
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'depliant';
           }
         | {
             image?: (number | null) | Media;
@@ -1318,7 +1357,13 @@ export interface OutilsSelect<T extends boolean = true> {
   lede?: T;
   body?: T;
   bibliography?: T;
-  resourceUrl?: T;
+  resources?:
+    | T
+    | {
+        fichier?: T;
+        description?: T;
+        id?: T;
+      };
   audience?: T;
   readingTime?: T;
   featured?: T;
@@ -1412,6 +1457,7 @@ export interface PagesSelect<T extends boolean = true> {
   kind?: T;
   title?: T;
   enabled?: T;
+  draft?: T;
   slug?: T;
   description?: T;
   noindex?: T;
@@ -1424,6 +1470,15 @@ export interface PagesSelect<T extends boolean = true> {
           | T
           | {
               titre?: T;
+              content?: T;
+              id?: T;
+              blockName?: T;
+            };
+        depliant?:
+          | T
+          | {
+              titre?: T;
+              ouvert?: T;
               content?: T;
               id?: T;
               blockName?: T;
@@ -1658,6 +1713,17 @@ export interface Navigation {
         id?: string | null;
       }[]
     | null;
+  /**
+   * L’envers du site plutôt que son contenu : l’administration, le suivi des tickets, le formulaire de contact. Un lien sans adresse ne s’affiche pas — laissez-la vide tant que le service n’existe pas.
+   */
+  navFooterCoulisses?:
+    | {
+        label: string;
+        href: string;
+        external?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1775,6 +1841,14 @@ export interface NavigationSelect<T extends boolean = true> {
             };
       };
   navFooter?:
+    | T
+    | {
+        label?: T;
+        href?: T;
+        external?: T;
+        id?: T;
+      };
+  navFooterCoulisses?:
     | T
     | {
         label?: T;

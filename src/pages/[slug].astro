@@ -25,6 +25,7 @@ type PageDoc = {
   eyebrow?: string | null;
   lede?: string | null;
   sections?: Array<Record<string, unknown>> | null;
+  draft?: boolean | null;
 };
 
 const { slug } = Astro.params;
@@ -36,7 +37,17 @@ const page = await fetchBySlug<PageDoc>('pages', slug);
 // propre fichier (`archives.astro`, `abonnement.astro`…). Sans ce
 // filtre, /home/ et /subscribe/ afficheraient une page vide — un
 // gabarit sans sections, donc sans rien à montrer.
-if (!page || page.kind === 'fixe') {
+// Un brouillon n'est pas servi : la page existe dans l'admin, pas sur
+// le site. Comme pour une publication en brouillon, on répond 404 et
+// non une page vide — une adresse qui répond 200 sur du vide serait
+// indexée comme telle.
+//
+// `SHOW_DRAFTS=1` lève le filtre, comme pour les publications (cf
+// `publishedOnly` et `filterPublished`). Sans cet accord, une page en
+// cours de rédaction serait invisible même en local : il faudrait la
+// publier pour la relire, ce qui vide le brouillon de son intérêt.
+const brouillonsVisibles = process.env.SHOW_DRAFTS === '1';
+if (!page || page.kind === 'fixe' || (page.draft === true && !brouillonsVisibles)) {
   return Astro.rewrite('/404');
 }
 ---

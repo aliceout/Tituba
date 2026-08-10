@@ -105,7 +105,9 @@ import { formatHeroTitle } from '../lib/site';
       <h2>Signaler un obstacle</h2>
       <p>
         Si quelque chose vous empêche de lire, d’écouter ou de naviguer sur ce site,
-        <a href="/nous-rejoindre/">écrivez-nous</a>. Ce n’est pas une formule : cette liste s’est
+        {/* L'objet arrive présélectionné : une personne qui vient de
+            buter sur un obstacle n'a pas à le ranger dans une case. */}
+        <a href="/contact/?objet=accessibilite">écrivez-nous</a>. Ce n’est pas une formule : cette liste s’est
         construite en tâtonnant, et ce que nous n’avons pas rencontré nous-mêmes, nous ne le
         connaissons pas.
       </p>

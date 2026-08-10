@@ -48,7 +48,7 @@ import {
   type PublicationTheme,
   type PublicationTag,
 } from '../lib/publications';
-import { audioFileUrl, fetchByPublicId, fetchIdentity, fetchSite, uploadedImageUrl } from '../lib/payload';
+import { audioFileUrl, fetchIdentity, fetchSite, mediaUrl, uploadedImageUrl } from '../lib/payload';
 import {
   extractToc,
   renderLexicalSidenotes,
@@ -67,27 +67,22 @@ import { highwireMeta } from '../lib/citations';
 
 export interface Props {
   collection: PublicationCollection;
-  publicId: string;
+  /**
+   * Le billet, déjà chargé par la route.
+   *
+   * Ce composant allait le chercher lui-même et répondait 404 quand il
+   * ne le trouvait pas — mais un composant est rendu une fois la
+   * réponse commencée : le `rewrite` levait alors un
+   * `ResponseSentError`, et les adresses mortes repartaient en 200,
+   * donc indexables. Décider qu'une page n'existe pas revient à la
+   * route (cf `fetchPublicationPubliee`), qui peut encore choisir sa
+   * réponse.
+   */
+  post: PublicationPost;
 }
 
-const { collection, publicId } = Astro.props as Props;
+const { collection, post } = Astro.props as Props;
 const spec = PUBLICATIONS[collection];
-
-const post = await fetchByPublicId<PublicationPost>(collection, publicId);
-
-// NOTE : `Astro.rewrite('/404')` affiche la bonne page mais laisse la
-// réponse en 200 — un lien mort annonce donc aux moteurs que la page
-// existe. Comportement préexistant, non corrigé ici : forcer
-// `Astro.response.status` avant le rewrite fait échouer le rendu
-// (« Internal server error »). À traiter à part.
-if (!post || post.draft) {
-  return Astro.rewrite('/404');
-}
-// Une publication datée dans le futur ne doit pas être lisible avant
-// l'heure, même par URL directe.
-if (post.publishedAt && new Date(post.publishedAt).getTime() > Date.now()) {
-  return Astro.rewrite('/404');
-}
 
 const themes = (post.themes ?? []).filter(
   (t): t is PublicationTheme => typeof t === 'object' && t !== null && 'slug' in t,
@@ -251,6 +246,54 @@ const biblio = (post.bibliography ?? []).filter(
  * lisible. L'actu doit donc se resserrer elle-même (cf .shell--actu).
  */
 const estActu = collection === 'actus';
+
+/**
+ * Ressource d'un outil.
+ *
+ * Ce format existe pour transmettre un fichier ou une adresse ; son
+ * corps de texte est facultatif et ne fait que la présenter. Le champ
+ * est d'ailleurs obligatoire à la saisie — mais il n'était lu nulle
+ * part, si bien que la page d'un outil ne donnait aucun accès à ce
+ * qu'elle annonce.
+ */
+const estOutil = collection === 'outils';
+/**
+ * Toujours un fichier que nous hébergeons, jamais un lien vers
+ * l'extérieur : le bouton dit donc « Télécharger » sans condition, et
+ * il n'y a ni onglet à ouvrir ni domaine tiers à annoncer.
+ *
+ * Le document étant désormais déposé dans la médiathèque et non désigné
+ * par une adresse tapée à la main, on connaît son format et son poids —
+ * les deux choses qu'on veut savoir avant de cliquer.
+ */
+/** « 1,4 Mo », « 320 Ko » — jamais « 0 Ko » faute de valeur. */
+function poidsLisible(o: number | null | undefined): string {
+  if (typeof o !== 'number' || o <= 0) return '';
+  const mo = o / (1024 * 1024);
+  return mo >= 1 ? `${mo.toFixed(1).replace('.', ',')} Mo` : `${Math.round(o / 1024)} Ko`;
+}
+const ressources = (estOutil && Array.isArray(post.resources) ? post.resources : [])
+  .map((entree) => {
+    const doc = entree?.fichier && typeof entree.fichier === 'object' ? entree.fichier : null;
+    return {
+      url: mediaUrl(doc?.filename) ?? '',
+      // Le titre du média, saisi dans la médiathèque : « Grille de
+      // relecture » se lit mieux que « grille-v3-final.pdf », qui ne
+      // sert que de repli.
+      nom: (doc?.title ?? '').trim() || doc?.filename || 'Document',
+      description: (entree?.description ?? '').trim(),
+      format: (doc?.filename ?? '').split('.').pop()?.toUpperCase() ?? '',
+      poids: poidsLisible(doc?.filesize),
+    };
+  })
+  .filter((r) => r.url);
+const PUBLIC_LABEL: Record<string, string> = {
+  tous: 'Tous publics',
+  militantes: 'Militant·es et collectifs',
+  pros: 'Professionnel·les',
+  structures: 'Structures et institutions',
+};
+const publicVise = estOutil ? (PUBLIC_LABEL[post.audience ?? ''] ?? '') : '';
 
 const afficherToc =
   !estActu &&
@@ -538,6 +581,37 @@ const postTags = (post.tags ?? []).filter(
         </p>
       )}
 
+      {/* La ressource, en tête du billet et non en pied : c'est ce que
+          l'outil sert à transmettre, le texte n'en est que la
+          présentation. Quelqu'un qui connaît déjà l'outil doit pouvoir
+          y accéder sans lire, et quelqu'un qui découvre doit voir tout
+          de suite qu'il y a quelque chose à prendre. */}
+      {ressources.length > 0 && (
+        <section class="ressource" aria-labelledby="ressource-titre">
+          <p class="ressource-lbl" id="ressource-titre">
+            {ressources.length > 1 ? 'Les ressources' : 'La ressource'}
+            {publicVise && <span class="ressource-public"> · {publicVise}</span>}
+          </p>
+          <ul class="ressource-liste">
+            {ressources.map((r) => (
+              <li class="ressource-item">
+                <span class="ressource-desc">
+                  <span class="ressource-nom">{r.nom}</span>
+                  {r.description && <span class="ressource-texte">{r.description}</span>}
+                  <span class="ressource-meta">
+                    {[r.format, r.poids].filter(Boolean).join(' · ')}
+                  </span>
+                </span>
+                <a class="ressource-lien" href={r.url} download>
+                  Télécharger
+                  <span class="ressource-fleche" aria-hidden="true">↓</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Chapô et ligne de méta d'une actu — en tête de la colonne
           principale et non dans le hero, pour partager leur rangée avec
           le rappel des faits d'à côté (cf ActuBrief). */}
@@ -613,6 +687,37 @@ const postTags = (post.tags ?? []).filter(
 <style>
   .article-shell {
     padding-top: 75px;
+    /**
+     * Hauteur du bloc qui ouvre chaque colonne, et respiration avant
+     * son filet.
+     *
+     * Deux blocs ouvrent la page côte à côte : le générique dans la
+     * colonne de texte (« Un épisode avec … ») et les repères dans
+     * l'aside (« Temps d'écoute », « Publié »). Leurs filets doivent
+     * tomber sur la même ligne — deux traits décalés de vingt pixels se
+     * lisent comme un défaut de calage, pas comme une intention.
+     *
+     * La valeur est posée ICI, une seule fois, et lue par les deux
+     * (cf `.generique` plus bas, et ArticleToc → `.duree`). C'est le
+     * point : chacun calculait auparavant sa hauteur dans son coin, à
+     * partir de son propre contenu — une ligne d'un côté, deux de
+     * l'autre — et rien ne garantissait qu'ils tombent d'accord. Une
+     * hauteur partagée ne peut pas diverger.
+     *
+     * Sa valeur est celle de l'aside : deux lignes de 10 px à
+     * interligne 1,5, les 18 px qui les séparent, et les 18 px avant le
+     * filet. Écrite en clair plutôt qu'en nombre rond, elle suit le
+     * réglage de taille du panneau d'accessibilité — un `66px` figé
+     * aurait décroché au premier agrandissement.
+     *
+     * C'est une hauteur TOTALE, marge intérieure comprise, parce que
+     * Tailwind pose `box-sizing: border-box` sur tout : un `min-height`
+     * englobe ici le `padding`, il ne s'y ajoute pas. La version
+     * précédente comptait l'inverse, d'où un générique de 48 px en face
+     * d'un aside de 66 — l'écart valait exactement la marge oubliée.
+     */
+    --repere-h: calc(10px * var(--a11y-echelle) * 1.5 * 2 + 18px + 18px);
+    --repere-pad: 18px;
   }
   /* Le hero pleine largeur d'un épisode s'appuie contre le header : la
      page ne lui ménage donc aucun écart au-dessus, ni celui de <main>
@@ -1062,11 +1167,17 @@ const postTags = (post.tags ?? []).filter(
      paragraphe très court, collé à la lettrine du vrai premier. */
   .generique {
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 12px;
+    /* Empilé plutôt que sur une ligne : l'étiquette au-dessus, les noms
+       en dessous, exactement comme les repères de l'aside en face. Les
+       deux blocs qui ouvrent la page prennent ainsi la même forme, et
+       pas seulement la même hauteur. */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
     margin: 0 0 34px;
-    padding-bottom: 16px;
+    /* Hauteur commune avec les repères de l'aside — cf --repere-h. */
+    min-height: var(--repere-h);
+    padding-bottom: var(--repere-pad);
     border-bottom: 1px solid var(--color-rule);
   }
   .generique-lbl {
@@ -1081,6 +1192,141 @@ const postTags = (post.tags ?? []).filter(
     font-family: var(--font-serif);
     font-size: calc(16px * var(--a11y-echelle));
     color: var(--color-ink);
+  }
+
+  /* ── Ressources d'un outil ─────────────────────────────────────────
+     Un encadré, pas une note de bas de page : ce billet existe pour
+     transmettre des documents, et le texte n’en est que la
+     présentation. Il se lit donc avant le corps, et se voit sans être
+     cherché.
+
+     Le vert du site plutôt que la couleur de format : ce sont des
+     actions, elles doivent se distinguer du texte qui les entoure. */
+  .ressource {
+    margin: 0 0 40px;
+    padding: 20px 24px 22px;
+    border: 1px solid var(--c-vert);
+    border-radius: 4px;
+    background: var(--c-vert-tint);
+  }
+  .ressource-lbl {
+    margin: 0 0 14px;
+    font-family: var(--font-sans);
+    font-size: calc(10px * var(--a11y-echelle));
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-vert-deep);
+  }
+  .ressource-public {
+    font-weight: 400;
+    color: var(--color-muted);
+  }
+  .ressource-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  /* Une ligne par document : son nom à gauche, son bouton à droite.
+     Les lignes se séparent d’un filet plutôt que d’un écart seul —
+     à deux ou trois documents, l’œil doit voir où finit l’un et où
+     commence l’autre. */
+  .ressource-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+  }
+  .ressource-item + .ressource-item {
+    padding-top: 10px;
+    border-top: 1px solid color-mix(in srgb, var(--c-vert) 30%, transparent);
+  }
+  .ressource-desc {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .ressource-nom {
+    font-family: var(--font-serif);
+    font-size: calc(16px * var(--a11y-echelle));
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+  /* La description tient entre l’intitulé et la ligne technique :
+     ce qu’on lit avant de décider de télécharger. */
+  .ressource-texte {
+    font-family: var(--font-serif);
+    font-size: calc(14px * var(--a11y-echelle));
+    line-height: 1.45;
+    color: var(--color-muted);
+    max-width: 62ch;
+    /* Saisie dans un textarea : les retours à la ligne sont voulus. */
+    white-space: pre-line;
+  }
+  .ressource-meta {
+    font-family: var(--font-mono);
+    font-size: calc(11px * var(--a11y-echelle));
+    letter-spacing: 0.06em;
+    color: var(--color-muted);
+  }
+  /* Bouton plein : l’action principale de la page. */
+  .ressource-lien {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 20px;
+    border-radius: 3px;
+    background: var(--c-vert-fill);
+    color: var(--c-vert-on);
+    font-family: var(--font-sans);
+    font-size: calc(13px * var(--a11y-echelle));
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.12s;
+  }
+  .ressource-lien:hover {
+    opacity: 0.88;
+  }
+  .ressource-lien:focus-visible {
+    outline: 2px solid var(--c-vert-deep);
+    outline-offset: 2px;
+  }
+  .ressource-fleche {
+    transition: transform 0.12s;
+  }
+  .ressource-lien:hover .ressource-fleche {
+    transform: translateY(2px);
+  }
+  /* Sous 560 px, le bouton passe sous le nom et prend toute la
+     largeur : à cette taille, un bouton flottant à droite d’un nom
+     tronqué se lit mal et se vise mal. */
+  @media (max-width: 560px) {
+    .ressource-item {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .ressource-lien {
+      justify-content: center;
+    }
+  }
+
+  /* Contenu réservé aux technologies d'assistance. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .tail {

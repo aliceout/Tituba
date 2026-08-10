@@ -198,6 +198,31 @@ export const Pages: CollectionConfig = {
       },
     },
     {
+      /**
+       * Brouillon — même sémantique que sur les publications : la page
+       * existe dans l'admin, elle n'est pas servie au public.
+       *
+       * Réservé aux pages libres. Une page fixe est une route du site
+       * (l'accueil, les archives, les formats…) : la mettre en
+       * brouillon reviendrait à casser une page que la navigation
+       * annonce. Ces quatre-là ont `enabled` pour les retirer du menu,
+       * ce qui n'est pas la même chose et ne casse rien.
+       *
+       * Par défaut à faux : les pages existantes étaient publiques
+       * avant l'ajout de ce champ, et une valeur par défaut à vrai les
+       * aurait toutes dépubliées d'un coup à la migration.
+       */
+      name: 'draft',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Brouillon',
+      admin: {
+        condition: (data) => data?.kind !== 'fixe',
+        description:
+          'Cochée, la page n’est plus servie sur le site — elle reste modifiable ici. À décocher pour la publier.',
+      },
+    },
+    {
       name: 'slug',
       type: 'text',
       required: true,

@@ -1,14 +1,27 @@
 ---
 /**
- * Détail d'une publication du format « analyses » — /analyses/<code>/
+ * Détail d'un billet d'analyse — /analyses/<code>/
  *
- * Enveloppe mince : tout le rendu vit dans PublicationArticle, partagé
- * par les cinq formats. Seule la collection change.
+ * La route charge le billet et décide s'il existe ; l'affichage vit
+ * dans PublicationArticle, partagé par les cinq formats.
+ *
+ * Ce partage des rôles n'est pas cosmétique : le composant s'en
+ * chargeait, et comme il est rendu une fois la réponse commencée, son
+ * `Astro.rewrite('/404')` levait un `ResponseSentError` et laissait
+ * partir un statut 200 — une adresse morte s'annonçait donc valide aux
+ * moteurs. Une route, elle, peut encore choisir sa réponse.
  */
 import PublicationArticle from '../../components/PublicationArticle.astro';
+import { fetchPublicationPubliee } from '../../lib/publications';
 
 const { publicId } = Astro.params;
 if (!publicId) return Astro.redirect('/');
+
+// Écarte l'introuvable, le brouillon et la publication datée dans le
+// futur. Le rewrite depuis le frontmatter rend la page 404 avec son
+// statut, celui-ci étant posé par 404.astro.
+const post = await fetchPublicationPubliee('analyses', publicId);
+if (!post) return Astro.rewrite('/404');
 ---
 
-<PublicationArticle collection="analyses" publicId={publicId} />
+<PublicationArticle collection="analyses" post={post} />

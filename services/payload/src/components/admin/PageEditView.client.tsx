@@ -33,6 +33,14 @@ type ProseBlock = {
   titre?: string;
   content?: LexicalState | null;
 };
+/** Même forme que la prose, plus l'état initial du pli. */
+type DepliantBlock = {
+  blockType: 'depliant';
+  id?: string;
+  titre?: string;
+  ouvert?: boolean;
+  content?: LexicalState | null;
+};
 type FigureBlock = {
   blockType: 'figure';
   id?: string;
@@ -52,7 +60,7 @@ type CitationBlock = {
 // tel quel au save sans tenter de l'éditer.
 type UnknownBlock = { blockType: string; id?: string; [k: string]: unknown };
 
-type AnyBlock = ProseBlock | FigureBlock | CitationBlock | UnknownBlock;
+type AnyBlock = ProseBlock | DepliantBlock | FigureBlock | CitationBlock | UnknownBlock;
 
 type Page = {
   id?: number | string;
@@ -66,6 +74,7 @@ type Page = {
   kind?: 'libre' | 'fixe';
   /** Affichage au menu — n'a de sens que pour une page fixe. */
   enabled?: boolean;
+  draft?: boolean;
   description?: string;
   noindex?: boolean;
   eyebrow?: string;
@@ -78,6 +87,7 @@ const EMPTY: Page = {
   slug: '',
   kind: 'libre',
   enabled: true,
+  draft: false,
   description: '',
   noindex: false,
   eyebrow: '',
@@ -87,6 +97,7 @@ const EMPTY: Page = {
 
 const BLOCK_LABEL: Record<string, string> = {
   prose: 'Texte (prose)',
+  depliant: 'Dépliant',
   figure: 'Figure',
   citation_bloc: 'Citation longue',
 };
@@ -99,6 +110,9 @@ const FIGURE_ALIGN_LABEL: Record<NonNullable<FigureBlock['align']>, string> = {
 
 function makeProse(): ProseBlock {
   return { blockType: 'prose', titre: '', content: null };
+}
+function makeDepliant(): DepliantBlock {
+  return { blockType: 'depliant', titre: '', ouvert: false, content: null };
 }
 function makeFigure(): FigureBlock {
   return {
@@ -116,7 +130,7 @@ function makeCitation(): CitationBlock {
 // Aperçu compact 1 ligne pour l'en-tête de carte quand elle est
 // repliée. « Untitled » si rien à afficher.
 function previewOf(b: AnyBlock): string {
-  if (b.blockType === 'prose') {
+  if (b.blockType === 'prose' || b.blockType === 'depliant') {
     const p = b as ProseBlock;
     if (p.titre && p.titre.trim()) return p.titre.trim();
     return 'Untitled';
@@ -227,10 +241,16 @@ export default function PageEditViewClient({
     });
   }
 
-  function addSection(kind: 'prose' | 'figure' | 'citation_bloc') {
+  function addSection(kind: 'prose' | 'depliant' | 'figure' | 'citation_bloc') {
     setData((d) => {
       const newBlock: AnyBlock =
-        kind === 'prose' ? makeProse() : kind === 'figure' ? makeFigure() : makeCitation();
+        kind === 'prose'
+        ? makeProse()
+        : kind === 'depliant'
+          ? makeDepliant()
+          : kind === 'figure'
+            ? makeFigure()
+            : makeCitation();
       const sections = [...(d.sections ?? []), newBlock];
       return { ...d, sections };
     });
@@ -497,6 +517,24 @@ export default function PageEditViewClient({
               </span>
             </label>
 
+            {/* Le brouillon ne concerne que les pages libres : une page
+                fixe est une route que la navigation annonce, la
+                dépublier casserait un lien du site. C’est « Affichée au
+                menu » qui joue ce rôle pour elles, et qui ne casse rien. */}
+            {!estFixe && (
+              <label className="tituba-editview__field tituba-editview__field--toggle">
+                <input
+                  type="checkbox"
+                  checked={data.draft === true}
+                  onChange={(e) => patch('draft', e.target.checked)}
+                />
+                <span className="lbl">Brouillon</span>
+                <span className="hint">
+                  Cochée, la page n’est plus servie sur le site — elle reste modifiable ici. À
+                  décocher pour la publier.
+                </span>
+              </label>
+            )}
             {estFixe && (
               <label className="tituba-editview__field tituba-editview__field--toggle">
                 <input
@@ -656,6 +694,12 @@ export default function PageEditViewClient({
                             onPatch={(p) => patchSection<ProseBlock>(i, p)}
                           />
                         )}
+                        {s.blockType === 'depliant' && (
+                          <DepliantFields
+                            value={s as DepliantBlock}
+                            onPatch={(p) => patchSection<DepliantBlock>(i, p)}
+                          />
+                        )}
                         {s.blockType === 'figure' && (
                           <FigureFields
                             value={s as FigureBlock}
@@ -689,6 +733,13 @@ export default function PageEditViewClient({
                   onClick={() => addSection('prose')}
                 >
                   + Prose
+                </button>
+                <button
+                  type="button"
+                  className="tituba-btn tituba-btn--ghost"
+                  onClick={() => addSection('depliant')}
+                >
+                  + Dépliant
                 </button>
                 <button
                   type="button"
@@ -852,6 +903,40 @@ export default function PageEditViewClient({
 }
 
 // ─── Field-sets par type de bloc ────────────────────────────────
+
+/**
+ * Champs d'un dépliant. Le titre et le contenu passent par ProseFields
+ * — c'est le même formulaire, et en écrire un second aurait garanti
+ * qu'ils divergent. Seul l'état initial du pli s'ajoute.
+ */
+function DepliantFields({
+  value,
+  onPatch,
+}: {
+  value: DepliantBlock;
+  onPatch: (p: Partial<DepliantBlock>) => void;
+}): React.ReactElement {
+  return (
+    <>
+      <ProseFields
+        value={{ blockType: 'prose', titre: value.titre, content: value.content }}
+        onPatch={(p) => onPatch(p as Partial<DepliantBlock>)}
+      />
+      <label className="tituba-editview__field tituba-editview__field--toggle">
+        <input
+          type="checkbox"
+          checked={value.ouvert === true}
+          onChange={(e) => onPatch({ ouvert: e.target.checked })}
+        />
+        <span className="lbl">Déplié par défaut</span>
+        <span className="hint">
+          Coché, le contenu est visible dès l’arrivée sur la page — le bloc ne sert plus qu’à
+          pouvoir le replier.
+        </span>
+      </label>
+    </>
+  );
+}
 
 function ProseFields({
   value,

@@ -56,7 +56,7 @@ export default function MediaListViewClient(): React.ReactElement {
   // deux collections. Le filtre est ce qui rend la fusion vivable :
   // sans lui, un épisode s'intercale au milieu des couvertures quand on
   // en cherche une.
-  const [type, setType] = useState<'tous' | 'image' | 'audio'>('tous');
+  const [type, setType] = useState<'tous' | 'image' | 'audio' | 'document'>('tous');
 
   useEffect(() => {
     setLoading(true);
@@ -71,7 +71,17 @@ export default function MediaListViewClient(): React.ReactElement {
     // « audio/mpeg », un m4a en « audio/x-m4a », et une image en
     // « image/jpeg » ou « image/png » — c'est la famille qui compte, pas
     // le format exact.
-    if (type !== 'tous') params.append('where[mimeType][like]', type);
+    // Les documents n'ont pas de famille MIME commune — un PDF est
+    // « application/pdf », un docx « application/vnd.openxmlformats-… »,
+    // un tableur « text/csv ». On les prend donc par exclusion : tout ce
+    // qui n'est ni image ni audio. Deux conditions sur le même champ,
+    // d'où la forme « and » de l'API REST.
+    if (type === 'document') {
+      params.append('where[and][0][mimeType][not_like]', 'image');
+      params.append('where[and][1][mimeType][not_like]', 'audio');
+    } else if (type !== 'tous') {
+      params.append('where[mimeType][like]', type);
+    }
 
     fetch(`/cms/api/media?${params.toString()}`, { credentials: 'include' })
       .then((r) => {
@@ -129,11 +139,12 @@ export default function MediaListViewClient(): React.ReactElement {
           <span className="lbl">Type :</span>
           <select
             value={type}
-            onChange={(e) => setType(e.target.value as 'tous' | 'image' | 'audio')}
+            onChange={(e) => setType(e.target.value as 'tous' | 'image' | 'audio' | 'document')}
           >
             <option value="tous">tous</option>
             <option value="image">images</option>
             <option value="audio">fichiers audio</option>
+            <option value="document">documents</option>
           </select>
         </label>
       </div>

@@ -258,9 +258,23 @@ const nomAudio = `${(audioTitle ?? 'episode').replace(/[\\/:*?"<>|]+/g, '-').sli
      d'avoir plus d'air d'un côté que de l'autre, et l'œil lit
      l'asymétrie comme un défaut d'alignement. */
   .duree {
-    padding-bottom: 18px;
+    /* Hauteur et respiration communes avec le générique de la colonne
+       de texte, pour que les deux filets tombent sur la même ligne.
+       La valeur vit dans PublicationArticle (`--repere-h`), qui porte
+       les deux colonnes ; le repli couvre le cas où ce bloc servirait
+       un jour hors de cet article. Le `min-height` compte aussi ici :
+       sans lui, une page qui n'affiche pas « Publié » n'aurait qu'une
+       ligne, et le calage sauterait. */
+    min-height: var(--repere-h, auto);
+    padding-bottom: var(--repere-pad, 18px);
     margin-bottom: 18px;
     border-bottom: 1px solid var(--color-rule);
+    /* Épinglé plutôt qu'hérité : `--repere-h` est calculé à partir de
+       cet interligne, et une valeur héritée peut changer sans que le
+       calcul en face le sache. La hauteur mesurée tombait à 66,67 px
+       pour 66 attendus — deux tiers de pixel, invisibles à l'œil mais
+       assez pour que les deux filets ne coïncident jamais tout à fait. */
+    line-height: 1.5;
   }
   .toc a {
     display: block;

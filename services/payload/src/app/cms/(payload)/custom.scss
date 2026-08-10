@@ -5835,6 +5835,109 @@ button.btn--style-primary,
 
   }
 
+  // fichier-block : document mis à disposition par un outil. Plus
+  // simple que le bloc audio dont il descend — rien à écouter, rien à
+  // décoder : on montre ce qui est déposé, et de quoi le remplacer.
+  .fichier-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  // Liste des documents : un outil peut en réunir plusieurs.
+  .fichier-block__liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .fichier-block__current {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--b-rule);
+    border-radius: 3px;
+    background: var(--b-paper);
+  }
+  .fichier-block__infos {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    min-width: 0;
+  }
+  // Le format en premier et en capitales : c’est ce qu’on vérifie
+  // d’un coup d’œil, avant même le nom du fichier.
+  .fichier-block__type {
+    font-family: var(--font-mono, ui-monospace);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: var(--b-bg);
+    color: var(--b-muted);
+  }
+  .fichier-block__nom {
+    font-size: 13px;
+    color: var(--b-ink);
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .fichier-block__poids {
+    font-size: 11.5px;
+    color: var(--b-muted);
+  }
+  .fichier-block__links {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .fichier-block__link,
+  .fichier-block__remove {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--b-muted);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .fichier-block__link:hover {
+    color: var(--b-accent);
+  }
+  .fichier-block__remove:hover {
+    color: #b63a3a;
+  }
+  .fichier-block__empty {
+    padding: 12px 14px;
+    border: 1px dashed var(--b-rule);
+    border-radius: 3px;
+    font-size: 12.5px;
+    color: var(--b-muted);
+  }
+  .fichier-block__jauge {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--b-bg);
+    overflow: hidden;
+  }
+  .fichier-block__jauge-fill {
+    height: 100%;
+    background: var(--b-accent);
+    transition: width 0.15s linear;
+  }
+  .fichier-block__actions .tituba-btn {
+    width: 100%;
+  }
+  .fichier-block__error {
+    font-size: 12px;
+    color: #b63a3a;
+  }
+
   // audio-block : fichier d'un épisode de podcast. Même parti que
   // .img-block juste au-dessus — le <label> et l'aide viennent de la
   // boucle de champs, pas d'en-tête propre.

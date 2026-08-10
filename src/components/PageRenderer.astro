@@ -15,9 +15,11 @@ import { renderLexical } from '../lib/lexical';
 type Block = {
   blockType?: string;
   id?: string;
-  // Prose
+  // Prose et Dépliant — même forme, un titre et du rich text.
   titre?: string;
   content?: unknown;
+  /** Dépliant : ouvert dès l'arrivée sur la page. */
+  ouvert?: boolean;
   // Figure
   image?: { filename?: string; alt?: string } | string | number | null;
   legende?: string;
@@ -55,6 +57,24 @@ function imageUrl(field: Block['image']): string | null {
             <div class="prose-body" set:html={renderLexical(block.content)} />
           )}
         </section>
+      );
+
+    // Dépliant — `<details>` natif plutôt qu'un accordéon en script :
+    // il s'ouvre sans JavaScript, le clavier et les lecteurs d'écran le
+    // connaissent, et Ctrl+F déplie tout seul le contenu qu'il y
+    // trouve. Le corps réutilise `.prose-body` : une fois ouvert, on y
+    // lit le même texte qu'ailleurs sur la page.
+    case 'depliant':
+      return (
+        <details class="block-depliant" open={block.ouvert === true}>
+          <summary>
+            <span class="titre">{block.titre}</span>
+            <span class="chevron" aria-hidden="true"></span>
+          </summary>
+          {block.content && (
+            <div class="prose-body" set:html={renderLexical(block.content)} />
+          )}
+        </details>
       );
 
     case 'figure': {
@@ -103,34 +123,130 @@ function imageUrl(field: Block['image']): string | null {
     margin: 0 0 32px;
     max-width: 920px;
   }
+  /* Titre de section — un vrai titre, pas une étiquette.
+     Il était en sans 12 px capitales, soit un tiers plus PETIT que le
+     texte qu'il annonce (18 px) : sur une page dont les paragraphes
+     commencent par des mots en gras, il passait pour une mention
+     secondaire et disparaissait. Un titre doit se voir avant ce qu'il
+     titre. */
   .block-prose h2 {
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-family: var(--font-serif);
+    font-size: calc(26px * var(--a11y-echelle));
+    font-weight: var(--w-heading);
+    line-height: var(--lh-heading);
+    letter-spacing: -0.01em;
     color: var(--color-ink);
-    margin: 0 0 24px;
+    margin: 0 0 18px;
   }
-  .block-prose .prose-body {
+  /* Les sections s'enchaînent : celles qui suivent la première ont
+     besoin d'air au-dessus, sinon leur titre colle au paragraphe
+     précédent et la coupure ne se lit plus. */
+  .block-prose + .block-prose h2 {
+    margin-top: 12px;
+  }
+  .block-prose .prose-body,
+  .block-depliant .prose-body {
     font-family: var(--font-serif);
     font-size: calc(18px * var(--a11y-echelle));
     line-height: 1.65;
     color: var(--color-body);
   }
   .block-prose .prose-body :global(p),
-  .block-prose .prose-body :global(li) {
+  .block-prose .prose-body :global(li),
+  .block-depliant .prose-body :global(p),
+  .block-depliant .prose-body :global(li) {
     text-align: justify;
     hyphens: auto;
     -webkit-hyphens: auto;
   }
-  .block-prose .prose-body :global(p) {
+  .block-prose .prose-body :global(p),
+  .block-depliant .prose-body :global(p) {
     margin: 0 0 16px;
     max-width: 920px;
   }
-  .block-prose .prose-body :global(a.ext) {
+  /* Tout lien de prose se voit, interne comme externe. Seul `a.ext`
+     était stylé : un lien vers une autre page du site ne se
+     distinguait donc en rien du texte courant — invisible, donc
+     inexistant pour qui lit. C'est ce qui a fait passer le renvoi vers
+     la charte pour un oubli. */
+  .block-prose .prose-body :global(a.ext),
+  .block-prose .prose-body :global(a.int),
+  .block-depliant .prose-body :global(a.ext),
+  .block-depliant .prose-body :global(a.int) {
     border-bottom: 1px solid var(--color-accent);
     color: inherit;
+    transition: background-color 0.12s;
+  }
+  .block-prose .prose-body :global(a.ext:hover),
+  .block-prose .prose-body :global(a.int:hover),
+  .block-depliant .prose-body :global(a.ext:hover),
+  .block-depliant .prose-body :global(a.int:hover) {
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  }
+
+  /* ── Dépliant ──────────────────────────────────────────────────────
+     Un encadré qui se distingue du texte courant sans crier : filet
+     complet et fond très légèrement teinté, pour qu'on le lise comme
+     un objet à part et non comme un paragraphe de plus.
+
+     La ligne cliquable couvre toute la largeur du bloc — une cible de
+     la taille de l'encadré, pas du seul mot. */
+  .block-depliant {
+    max-width: 920px;
+    margin: 0 0 32px;
+    border: 1px solid var(--color-rule);
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--color-accent) 4%, var(--color-bg));
+  }
+  .block-depliant > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 22px;
+    cursor: pointer;
+    font-family: var(--font-serif);
+    font-size: calc(20px * var(--a11y-echelle));
+    line-height: var(--lh-heading);
+    color: var(--color-ink);
+    /* Le triangle par défaut du navigateur cède la place au chevron
+       ci-dessous, qui suit la typographie de la page. */
+    list-style: none;
+  }
+  .block-depliant > summary::-webkit-details-marker {
+    display: none;
+  }
+  .block-depliant > summary:focus-visible {
+    outline: 2px solid var(--c-vert-deep);
+    outline-offset: -2px;
+  }
+  .block-depliant > summary:hover .titre {
+    color: var(--color-accent);
+  }
+  /* Chevron dessiné en bordures : rien à charger, et il suit la
+     couleur du texte — donc le thème sombre comme le contraste
+     renforcé du panneau d'accessibilité. */
+  .block-depliant .chevron {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-right: 1.5px solid var(--color-muted);
+    border-bottom: 1.5px solid var(--color-muted);
+    transform: rotate(45deg);
+    transition: transform 0.16s ease;
+    margin-bottom: 4px;
+  }
+  .block-depliant[open] .chevron {
+    transform: rotate(-135deg);
+    margin-bottom: 0;
+    margin-top: 4px;
+  }
+  .block-depliant .prose-body {
+    padding: 0 22px 6px;
+  }
+  .block-depliant .prose-body :global(p:last-child),
+  .block-depliant .prose-body :global(ul:last-child) {
+    margin-bottom: 16px;
   }
 
   .block-figure {

@@ -71,6 +71,11 @@ export type FieldSpec = {
    *  chez un tiers et se contrôle à l'oreille : dépôt et écoute sur
    *  place, plus la durée lue dans le fichier. */
   | { type: 'audio' }
+  /** Relation vers un document de `media` (id). Rendu par
+   *  FichierUploadField — le fichier d'un outil se dépose, il ne se
+   *  désigne pas par une adresse tapée à la main : Payload garantit
+   *  alors qu'il existe, et en connaît le poids et le type. */
+  | { type: 'fichier' }
   /** Liste de valeurs libres, saisies une par une (Entrée) et rendues
    *  en pastilles — cf ChipsInput. Stockée en `hasMany` côté Payload,
    *  donc un vrai tableau : une chaîne à virgules obligerait chaque
@@ -251,11 +256,11 @@ export const PUBLICATIONS: Record<string, PublicationSpec> = {
     labelPlural: 'Outils',
     extraFields: [
       {
-        name: 'resourceUrl',
-        type: 'url',
-        label: 'Lien de la ressource',
-        placeholder: 'https://…/guide.pdf',
-        help: 'Fichier à télécharger ou page qui l’héberge.',
+        name: 'resources',
+        type: 'fichier',
+        zone: 'main',
+        label: 'Les fichiers',
+        help: 'Les documents mis à disposition — c’est ce que l’outil sert à transmettre. Chacun porte son intitulé et sa description.',
       },
       {
         name: 'audience',
@@ -303,7 +308,7 @@ export function emptyExtraValues(spec: PublicationSpec): Record<string, unknown>
     out[f.name] =
       f.type === 'number' || f.type === 'upload' || f.type === 'audio'
         ? null
-        : f.type === 'list' || f.type === 'links'
+        : f.type === 'list' || f.type === 'links' || f.type === 'fichier'
         ? []
         : f.type === 'checkbox'
         ? false
@@ -349,6 +354,29 @@ export function pickExtraValues(
               url: typeof e?.url === 'string' ? e.url.trim() : '',
             }))
             .filter((e) => e.label && e.url)
+        : [];
+    } else if (f.type === 'fichier') {
+      // Un tableau d'entrées {fichier, titre, description}. Le fichier
+      // arrive peuplé (fetch du billet) ou en identifiant brut (juste
+      // après un dépôt) : les deux se ramènent ici à un identifiant,
+      // seule forme que Payload accepte en écriture.
+      out[f.name] = Array.isArray(raw)
+        ? (raw as { fichier?: unknown; titre?: unknown; description?: unknown }[])
+            .map((e) => {
+              const fic = e?.fichier;
+              const id =
+                fic && typeof fic === 'object' && 'id' in (fic as Record<string, unknown>)
+                  ? (fic as { id: number | string }).id
+                  : (fic as number | string | null | undefined);
+              return {
+                fichier: id ?? null,
+                titre: typeof e?.titre === 'string' ? e.titre.trim() : '',
+                description: typeof e?.description === 'string' ? e.description.trim() : '',
+              };
+            })
+            // Une entrée sans fichier n'a rien à enregistrer : elle
+            // serait refusée par Payload, le fichier étant obligatoire.
+            .filter((e) => e.fichier !== null && e.fichier !== undefined)
         : [];
     } else if (f.type === 'upload' || f.type === 'audio') {
       // La valeur peut être un id brut (déjà sélectionné puis re-tapé

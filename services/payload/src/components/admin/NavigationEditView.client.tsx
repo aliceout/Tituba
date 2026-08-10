@@ -96,11 +96,14 @@ type FooterLink = {
 type NavigationData = {
   navHeader?: HeaderNavItem[];
   navFooter?: FooterLink[];
+  /** Colonne « Coulisses » : administration, tickets, contact. */
+  navFooterCoulisses?: FooterLink[];
 };
 
 const EMPTY: NavigationData = {
   navHeader: [],
   navFooter: [],
+  navFooterCoulisses: [],
 };
 
 type RawNavItem = {
@@ -140,6 +143,11 @@ function normalize(doc: NavigationData): NavigationData {
       .map(normalizeNavItem)
       .filter((x): x is HeaderNavItem => x !== null),
     navFooter: (doc.navFooter ?? []).map((n) => ({
+      label: n.label ?? '',
+      href: n.href ?? '',
+      external: Boolean(n.external),
+    })),
+    navFooterCoulisses: (doc.navFooterCoulisses ?? []).map((n) => ({
       label: n.label ?? '',
       href: n.href ?? '',
       external: Boolean(n.external),
@@ -289,35 +297,170 @@ export default function NavigationEditViewClient(): React.ReactElement {
   }
 
   // ─── Footer ───────────────────────────────────────────────────────
-  function updateFooter(idx: number, patch: Partial<FooterLink>) {
+  //
+  // Le pied compte deux colonnes de liens éditables — « Naviguer » et
+  // « Coulisses ». Les manipulateurs prennent donc le nom de la colonne
+  // plutôt que d'exister en double : cent lignes dupliquées auraient
+  // fini par diverger, et une correction n'aurait été appliquée qu'à
+  // l'une des deux.
+  type ColonneFooter = 'navFooter' | 'navFooterCoulisses';
+
+  function updateFooter(champ: ColonneFooter, idx: number, patch: Partial<FooterLink>) {
     setData((d) => {
-      const nav = [...(d.navFooter ?? [])];
+      const nav = [...(d[champ] ?? [])];
       nav[idx] = { ...nav[idx], ...patch };
-      return { ...d, navFooter: nav };
+      return { ...d, [champ]: nav };
     });
   }
-  function addFooter() {
+  function addFooter(champ: ColonneFooter) {
     setData((d) => ({
       ...d,
-      navFooter: [...(d.navFooter ?? []), { label: '', href: '', external: false }],
+      [champ]: [...(d[champ] ?? []), { label: '', href: '', external: false }],
     }));
   }
-  function removeFooter(idx: number) {
+  function removeFooter(champ: ColonneFooter, idx: number) {
     setData((d) => ({
       ...d,
-      navFooter: (d.navFooter ?? []).filter((_, i) => i !== idx),
+      [champ]: (d[champ] ?? []).filter((_, i) => i !== idx),
     }));
   }
-  function moveFooter(idx: number, delta: -1 | 1) {
+  function moveFooter(champ: ColonneFooter, idx: number, delta: -1 | 1) {
     setData((d) => {
-      const nav = [...(d.navFooter ?? [])];
+      const nav = [...(d[champ] ?? [])];
       const target = idx + delta;
       if (target < 0 || target >= nav.length) return d;
       [nav[idx], nav[target]] = [nav[target], nav[idx]];
-      return { ...d, navFooter: nav };
+      return { ...d, [champ]: nav };
     });
   }
 
+  /**
+   * Rend une colonne de liens du pied. Appelée deux fois — « Naviguer »
+   * et « Coulisses » — plutôt que recopiée : c'est le même formulaire,
+   * et deux copies auraient fini par ne plus se ressembler.
+   *
+   * `prefixe` sépare les clés d'erreur des deux colonnes : sans lui,
+   * un lien incomplet dans l'une signalerait le lien de même rang dans
+   * l'autre.
+   */
+  function colonneLiens(
+    champ: ColonneFooter,
+    prefixe: string,
+    titre: string,
+    aide: string,
+  ): React.ReactElement {
+    const longueur = (data[champ] ?? []).length;
+    return (
+              <section className="tituba-editview__section">
+                <h2 className="tituba-editview__section-title">{titre}</h2>
+                <p className="tituba-editview__section-help">{aide}</p>
+
+                <div className="tituba-editview__rows">
+                  {longueur === 0 && (
+                    <div className="tituba-editview__empty">Aucun lien.</div>
+                  )}
+                  {(data[champ] ?? []).map((row, idx) => (
+                    <div key={idx} className="tituba-editview__rowitem">
+                      {/* Chaque lien de pied porte ses propres erreurs : sur
+                          une liste de huit, un message général laisserait
+                          chercher laquelle est incomplète. D'où des clés
+                          indexées, `footer.<n>.label` et `.href`. */}
+                      <label
+                        className={`tituba-editview__field tituba-editview__field--inline${
+                          champsEnErreur[`${prefixe}.${idx}.label`] ? ' tituba-editview__field--invalid' : ''
+                        }`}
+                      >
+                        <span className="lbl">
+                          Label <span className="req" aria-hidden="true">*</span>
+                          <span className="sr-only"> (obligatoire)</span>
+                        </span>
+                        <input
+                          type="text"
+                          value={row.label}
+                          aria-invalid={champsEnErreur[`${prefixe}.${idx}.label`] ? true : undefined}
+                          onChange={(e) => {
+                            updateFooter(champ, idx, { label: e.target.value });
+                            oublierErreur(`${prefixe}.${idx}.label`);
+                          }}
+                        />
+                        {champsEnErreur[`${prefixe}.${idx}.label`] && (
+                          <span className="err">{champsEnErreur[`${prefixe}.${idx}.label`]}</span>
+                        )}
+                      </label>
+                      <label
+                        className={`tituba-editview__field tituba-editview__field--inline${
+                          champsEnErreur[`${prefixe}.${idx}.href`] ? ' tituba-editview__field--invalid' : ''
+                        }`}
+                      >
+                        <span className="lbl">
+                          Href <span className="req" aria-hidden="true">*</span>
+                          <span className="sr-only"> (obligatoire)</span>
+                        </span>
+                        <input
+                          type="text"
+                          value={row.href}
+                          aria-invalid={champsEnErreur[`${prefixe}.${idx}.href`] ? true : undefined}
+                          onChange={(e) => {
+                            updateFooter(champ, idx, { href: e.target.value });
+                            oublierErreur(`${prefixe}.${idx}.href`);
+                          }}
+                        />
+                        {champsEnErreur[`${prefixe}.${idx}.href`] && (
+                          <span className="err">{champsEnErreur[`${prefixe}.${idx}.href`]}</span>
+                        )}
+                      </label>
+                      <label className="tituba-editview__field tituba-editview__field--inline tituba-editview__field--check">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(row.external)}
+                          onChange={(e) => updateFooter(champ, idx, { external: e.target.checked })}
+                        />
+                        <span className="lbl">Externe</span>
+                      </label>
+                      <div className="tituba-editview__rowitem-actions">
+                        <button
+                          type="button"
+                          className="tituba-btn tituba-btn--ghost"
+                          onClick={() => moveFooter(champ, idx, -1)}
+                          disabled={idx === 0}
+                          aria-label="Monter"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="tituba-btn tituba-btn--ghost"
+                          onClick={() => moveFooter(champ, idx, 1)}
+                          disabled={idx === longueur - 1}
+                          aria-label="Descendre"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          className="tituba-btn tituba-btn--ghost"
+                          onClick={() => removeFooter(champ, idx)}
+                          aria-label="Supprimer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="tituba-editview__rows-actions">
+                  <button
+                    type="button"
+                    className="tituba-btn tituba-btn--ghost"
+                    onClick={() => addFooter(champ)}
+                  >
+                    + Ajouter un lien
+                  </button>
+                </div>
+              </section>
+    );
+  }
   /** Retire l'erreur d'un champ dès qu'on le corrige. */
   function oublierErreur(cle: string) {
     setChampsEnErreur((prev) => {
@@ -333,14 +476,21 @@ export default function NavigationEditViewClient(): React.ReactElement {
     // remontait en 400 dont le corps JSON s'affichait tel quel, sans
     // dire lequel des liens était en cause.
     const manquants: Record<string, string> = {};
-    (data.navFooter ?? []).forEach((l, i) => {
-      if (!String(l.label ?? '').trim()) {
-        manquants[`footer.${i}.label`] = 'Le libellé est obligatoire.';
-      }
-      if (!String(l.href ?? '').trim()) {
-        manquants[`footer.${i}.href`] = 'L’adresse est obligatoire.';
-      }
-    });
+    // Les deux colonnes du pied se valident pareil ; le préfixe des
+    // clés est ce qui distingue leurs messages à l'affichage.
+    for (const [champ, prefixe] of [
+      ['navFooter', 'footer'],
+      ['navFooterCoulisses', 'coulisses'],
+    ] as const) {
+      (data[champ] ?? []).forEach((l, i) => {
+        if (!String(l.label ?? '').trim()) {
+          manquants[`${prefixe}.${i}.label`] = 'Le libellé est obligatoire.';
+        }
+        if (!String(l.href ?? '').trim()) {
+          manquants[`${prefixe}.${i}.href`] = 'L’adresse est obligatoire.';
+        }
+      });
+    }
     if (Object.keys(manquants).length > 0) {
       setChampsEnErreur(manquants);
       setError(null);
@@ -362,6 +512,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
           label: item.label || undefined,
         })),
         navFooter: data.navFooter ?? [],
+        navFooterCoulisses: data.navFooterCoulisses ?? [],
       };
       const res = await fetch(NAV_API, {
         method: 'POST',
@@ -544,117 +695,19 @@ export default function NavigationEditViewClient(): React.ReactElement {
             </div>
           </section>
 
-          <section className="tituba-editview__section">
-            <h2 className="tituba-editview__section-title">Footer</h2>
-            <p className="tituba-editview__section-help">
-              Liens affichés dans la colonne « Naviguer » du footer du site.
-              L&apos;ordre ici détermine l&apos;ordre d&apos;affichage.
-            </p>
+          {colonneLiens(
+            'navFooter',
+            'footer',
+            'Footer — colonne « Naviguer »',
+            'Les grandes destinations du site. L’ordre ici détermine l’ordre d’affichage.',
+          )}
 
-            <div className="tituba-editview__rows">
-              {footerLen === 0 && (
-                <div className="tituba-editview__empty">Aucun lien.</div>
-              )}
-              {(data.navFooter ?? []).map((row, idx) => (
-                <div key={idx} className="tituba-editview__rowitem">
-                  {/* Chaque lien de pied porte ses propres erreurs : sur
-                      une liste de huit, un message général laisserait
-                      chercher laquelle est incomplète. D'où des clés
-                      indexées, `footer.<n>.label` et `.href`. */}
-                  <label
-                    className={`tituba-editview__field tituba-editview__field--inline${
-                      champsEnErreur[`footer.${idx}.label`] ? ' tituba-editview__field--invalid' : ''
-                    }`}
-                  >
-                    <span className="lbl">
-                      Label <span className="req" aria-hidden="true">*</span>
-                      <span className="sr-only"> (obligatoire)</span>
-                    </span>
-                    <input
-                      type="text"
-                      value={row.label}
-                      aria-invalid={champsEnErreur[`footer.${idx}.label`] ? true : undefined}
-                      onChange={(e) => {
-                        updateFooter(idx, { label: e.target.value });
-                        oublierErreur(`footer.${idx}.label`);
-                      }}
-                    />
-                    {champsEnErreur[`footer.${idx}.label`] && (
-                      <span className="err">{champsEnErreur[`footer.${idx}.label`]}</span>
-                    )}
-                  </label>
-                  <label
-                    className={`tituba-editview__field tituba-editview__field--inline${
-                      champsEnErreur[`footer.${idx}.href`] ? ' tituba-editview__field--invalid' : ''
-                    }`}
-                  >
-                    <span className="lbl">
-                      Href <span className="req" aria-hidden="true">*</span>
-                      <span className="sr-only"> (obligatoire)</span>
-                    </span>
-                    <input
-                      type="text"
-                      value={row.href}
-                      aria-invalid={champsEnErreur[`footer.${idx}.href`] ? true : undefined}
-                      onChange={(e) => {
-                        updateFooter(idx, { href: e.target.value });
-                        oublierErreur(`footer.${idx}.href`);
-                      }}
-                    />
-                    {champsEnErreur[`footer.${idx}.href`] && (
-                      <span className="err">{champsEnErreur[`footer.${idx}.href`]}</span>
-                    )}
-                  </label>
-                  <label className="tituba-editview__field tituba-editview__field--inline tituba-editview__field--check">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(row.external)}
-                      onChange={(e) => updateFooter(idx, { external: e.target.checked })}
-                    />
-                    <span className="lbl">Externe</span>
-                  </label>
-                  <div className="tituba-editview__rowitem-actions">
-                    <button
-                      type="button"
-                      className="tituba-btn tituba-btn--ghost"
-                      onClick={() => moveFooter(idx, -1)}
-                      disabled={idx === 0}
-                      aria-label="Monter"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="tituba-btn tituba-btn--ghost"
-                      onClick={() => moveFooter(idx, 1)}
-                      disabled={idx === footerLen - 1}
-                      aria-label="Descendre"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="tituba-btn tituba-btn--ghost"
-                      onClick={() => removeFooter(idx)}
-                      aria-label="Supprimer"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="tituba-editview__rows-actions">
-              <button
-                type="button"
-                className="tituba-btn tituba-btn--ghost"
-                onClick={addFooter}
-              >
-                + Ajouter un lien
-              </button>
-            </div>
-          </section>
+          {colonneLiens(
+            'navFooterCoulisses',
+            'coulisses',
+            'Footer — colonne « Coulisses »',
+            'L’envers du site plutôt que son contenu : l’administration, le suivi des tickets, le formulaire de contact.',
+          )}
         </form>
       )}
     </CarnetPage>

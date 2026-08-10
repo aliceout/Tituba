@@ -19,6 +19,13 @@ import * as migration_20260804_165235_actus_image from './20260804_165235_actus_
 import * as migration_20260805_091529_actus_en_bref from './20260805_091529_actus_en_bref';
 import * as migration_20260805_130139_auteurice_profil from './20260805_130139_auteurice_profil';
 import * as migration_20260805_223955_auto_20260806_003740 from './20260805_223955_auto_20260806_003740';
+import * as migration_20260806_082447_footer_coulisses from './20260806_082447_footer_coulisses';
+import * as migration_20260806_120433_pages_brouillon from './20260806_120433_pages_brouillon';
+import * as migration_20260808_074654_page_depliant from './20260808_074654_page_depliant';
+import * as migration_20260809_211636_outil_sans_url from './20260809_211636_outil_sans_url';
+import * as migration_20260809_211919_outil_fichier from './20260809_211919_outil_fichier';
+import * as migration_20260809_220021_outil_fichiers_multiples from './20260809_220021_outil_fichiers_multiples';
+import * as migration_20260810_071925_outil_ressources from './20260810_071925_outil_ressources';
 
 export const migrations = [
   {
@@ -124,6 +131,41 @@ export const migrations = [
   {
     up: migration_20260805_223955_auto_20260806_003740.up,
     down: migration_20260805_223955_auto_20260806_003740.down,
-    name: '20260805_223955_auto_20260806_003740'
+    name: '20260805_223955_auto_20260806_003740',
+  },
+  {
+    up: migration_20260806_082447_footer_coulisses.up,
+    down: migration_20260806_082447_footer_coulisses.down,
+    name: '20260806_082447_footer_coulisses',
+  },
+  {
+    up: migration_20260806_120433_pages_brouillon.up,
+    down: migration_20260806_120433_pages_brouillon.down,
+    name: '20260806_120433_pages_brouillon',
+  },
+  {
+    up: migration_20260808_074654_page_depliant.up,
+    down: migration_20260808_074654_page_depliant.down,
+    name: '20260808_074654_page_depliant',
+  },
+  {
+    up: migration_20260809_211636_outil_sans_url.up,
+    down: migration_20260809_211636_outil_sans_url.down,
+    name: '20260809_211636_outil_sans_url',
+  },
+  {
+    up: migration_20260809_211919_outil_fichier.up,
+    down: migration_20260809_211919_outil_fichier.down,
+    name: '20260809_211919_outil_fichier',
+  },
+  {
+    up: migration_20260809_220021_outil_fichiers_multiples.up,
+    down: migration_20260809_220021_outil_fichiers_multiples.down,
+    name: '20260809_220021_outil_fichiers_multiples',
+  },
+  {
+    up: migration_20260810_071925_outil_ressources.up,
+    down: migration_20260810_071925_outil_ressources.down,
+    name: '20260810_071925_outil_ressources'
   },
 ];

@@ -55,6 +55,7 @@ import {
 } from './publications/registry';
 import UnsplashImagePicker from './publications/UnsplashImagePicker.client';
 import AudioUploadField from './publications/AudioUploadField.client';
+import FichierUploadField from './publications/FichierUploadField.client';
 import { stripHeroMarkers } from '@/lib/hero-markers';
 
 type PostType = string;
@@ -838,6 +839,12 @@ export default function PublicationEditViewClient({
             // AudioUploadField) : le champ « Durée » à côté se remplit
             // tout seul, sans cesser d'être corrigeable à la main.
             onDuration={(sec) => patch('durationSeconds' as keyof Post, sec as never)}
+          />
+        ) : f.type === 'fichier' ? (
+          <FichierUploadField
+            value={(post as WithExtras)[f.name] as never}
+            // Le tableau d entrees, dans l ordre affiche.
+            onChange={(entrees) => patch(f.name as keyof Post, entrees as never)}
           />
         ) : (
           <input

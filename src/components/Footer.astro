@@ -1,7 +1,11 @@
 ---
 /**
- * Footer 3 colonnes — signature + baseline + licence (col 1),
- * « Formats » (col 2), « Naviguer » (col 3).
+ * Footer 4 colonnes — signature + baseline + licence (col 1),
+ * « Formats » (col 2), « Naviguer » (col 3), « Coulisses » (col 4).
+ *
+ * Les deux dernières se distinguent par ce qu'elles désignent :
+ * « Naviguer » mène au contenu du site, « Coulisses » à son envers —
+ * l'administration, le suivi des tickets, le formulaire de contact.
  *
  * La colonne des formats est dérivée de la table PUBLICATIONS plutôt que
  * saisie : ajouter un sixième format le ferait apparaître ici sans autre
@@ -29,6 +33,7 @@ type IdentityGlobal = {
 
 type NavigationGlobal = {
   navFooter?: NavFooterLink[];
+  navFooterCoulisses?: NavFooterLink[];
 };
 
 // Fallbacks génériques — utilisés uniquement si Payload est down ou
@@ -36,14 +41,21 @@ type NavigationGlobal = {
 const DEFAULT_BASELINE = 'Collectif féministe intersectionnel. Auto-hébergé.';
 const DEFAULT_COPYRIGHT = 'CC BY-NC-SA 4.0';
 
-// Reprend les onglets du header, plus l'accès à l'administration.
+// Les grandes destinations du site — ce qu'on va y lire.
 const DEFAULT_NAV: NavFooterLink[] = [
   { label: 'Formats', href: '/formats/' },
   { label: 'Thématiques', href: '/themes/' },
   { label: 'Auteur·ices', href: '/auteurices/' },
   { label: 'Archives', href: '/archives/' },
   { label: "L'association", href: '/association/' },
+];
+
+// Colonne « Coulisses » — l'envers du site plutôt que son contenu. Le
+// lien de ticketing n'y figure pas : son adresse dépend du service
+// retenu, elle se saisit depuis l'admin.
+const DEFAULT_COULISSES: NavFooterLink[] = [
   { label: 'Nous rejoindre', href: '/nous-rejoindre/' },
+  { label: 'Nous écrire', href: '/contact/' },
   { label: 'Admin', href: '/cms/admin' },
 ];
 
@@ -67,6 +79,13 @@ const baseline = identity.baseline || DEFAULT_BASELINE;
 const gitTag = process.env.GIT_TAG || 'dev';
 const copyrightLine = identity.copyrightLine || DEFAULT_COPYRIGHT;
 const navFooter = nav.navFooter && nav.navFooter.length > 0 ? nav.navFooter : DEFAULT_NAV;
+// Un lien sans adresse est écarté plutôt qu'affiché mort : le ticketing
+// existe dans la liste avant d'avoir une URL.
+const navCoulisses = (
+  nav.navFooterCoulisses && nav.navFooterCoulisses.length > 0
+    ? nav.navFooterCoulisses
+    : DEFAULT_COULISSES
+).filter((l) => l.href && l.href.trim());
 
 // Un paragraphe par ligne saisie dans l'admin, plutôt qu'un seul bloc
 // laissé à `white-space: pre-line`. Deux raisons : ce sont deux énoncés
@@ -117,6 +136,25 @@ const formatLinks = PUBLICATION_ORDER.map((c) => ({
           ))}
         </div>
       </div>
+      {/* L'envers du site plutôt que son contenu. La colonne disparaît
+          si elle est vide — un titre seul ne vaut pas d'occuper un
+          quart du pied. */}
+      {navCoulisses.length > 0 && (
+        <div>
+          <h4>Coulisses</h4>
+          <div class="links">
+            {navCoulisses.map((link) => (
+              <a
+                href={link.href}
+                rel={link.external ? 'noopener' : undefined}
+                target={link.external ? '_blank' : undefined}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   </div>
 </footer>
@@ -135,8 +173,12 @@ const formatLinks = PUBLICATION_ORDER.map((c) => ({
   }
   footer.site .grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
-    gap: 56px;
+    /* La signature garde deux parts, les trois colonnes de liens une
+       chacune. Passer de deux à trois colonnes de liens sans élargir la
+       première l'aurait écrasée : la baseline s'y hachait en lignes de
+       quatre mots. */
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 56px 40px;
     font-family: var(--font-sans);
     font-size: calc(13px * var(--a11y-echelle));
     color: var(--color-ink);

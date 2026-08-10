@@ -12,13 +12,7 @@ import PageShell from '../../components/ui/PageShell.astro';
 import PublicationCard from '../../components/PublicationCard.astro';
 import CardFilterBar from '../../components/CardFilterBar.astro';
 import { PUBLICATIONS, PUBLICATION_ORDER } from '../../lib/publications';
-import {
-  fetchBySlug,
-  fetchCollection,
-  fetchIndexPages,
-  filterPublished,
-  publishedOnly,
-} from '../../lib/payload';
+import { fetchBySlug, fetchIndexPages } from '../../lib/payload';
 import { fetchFeed } from '../../lib/publications';
 // La description d'un thème est saisie dans un textarea et rendue par
 // PageTitle en `set:html` : elle doit être échappée, et ses retours à la
@@ -89,12 +83,6 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
   lede={theme.description ? formatHeroLede(theme.description) : undefined}
   famille="violet"
 >
-  <div class="hero-bottom-meta" slot="titre-pied">
-    <span>{total} publication{total > 1 ? 's' : ''}</span>
-    <span aria-hidden="true">·</span>
-    <a class="back mono" href="/themes/">← tous les thèmes</a>
-  </div>
-
   <Fragment slot="sous-titre">
     <CardFilterBar
       dimension="type"
@@ -123,26 +111,6 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
 </PageShell>
 
 <style>
-  /* Pied du hero, propre à cette page — compteur + lien retour. Rendu
-     dans le slot par défaut de PageTitle (cf. titre-pied ci-dessus). */
-  .hero-bottom-meta {
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-    color: var(--color-muted);
-    margin-top: 24px;
-    display: flex;
-    gap: 24px;
-    align-items: center;
-  }
-  /* Violet, comme la famille de la page. */
-  .hero-bottom-meta .back {
-    color: var(--c-violet-deep);
-    transition: color 0.12s;
-  }
-  .hero-bottom-meta .back:hover {
-    color: var(--color-ink);
-  }
-
   .empty {
     padding: 64px 0;
     color: var(--color-muted);

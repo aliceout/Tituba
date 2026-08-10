@@ -122,6 +122,25 @@ export const Navigation: GlobalConfig = {
         { label: 'Thèmes', href: '/themes/', external: false },
         { label: 'Auteur·ices', href: '/auteurices/', external: false },
         { label: 'Archives', href: '/archives/', external: false },
+      ],
+    },
+    {
+      name: 'navFooterCoulisses',
+      type: 'array',
+      label: 'Liens du footer (col 3 « Coulisses »)',
+      labels: { singular: 'Lien', plural: 'Liens' },
+      admin: {
+        description:
+          'L’envers du site plutôt que son contenu : l’administration, le suivi des tickets, le formulaire de contact. Un lien sans adresse ne s’affiche pas — laissez-la vide tant que le service n’existe pas.',
+      },
+      fields: [
+        { name: 'label', type: 'text', required: true },
+        { name: 'href', type: 'text', required: true },
+        { name: 'external', type: 'checkbox', defaultValue: false },
+      ],
+      defaultValue: [
+        { label: 'Nous rejoindre', href: '/nous-rejoindre/', external: false },
+        { label: 'Nous écrire', href: '/contact/', external: false },
         { label: 'Admin', href: '/cms/admin', external: false },
       ],
     },

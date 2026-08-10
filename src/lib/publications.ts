@@ -11,7 +11,7 @@
  * liens partagés, et il vaut mieux qu'elle n'existe qu'à un endroit.
  */
 
-import { fetchCollection, fetchPublicationsFeed, publishedOnly, type FeedDoc, type PublicationCollection } from './payload';
+import { fetchByPublicId, fetchCollection, fetchPublicationsFeed, publishedOnly, type FeedDoc, type PublicationCollection } from './payload';
 import type { PostAuthorEntry } from './site';
 
 export type { PublicationCollection, FeedDoc };
@@ -75,6 +75,37 @@ export type PublicationPost = {
   /** Personnes reçues dans l'épisode — podcasts uniquement. Distinct
    *  des auteur·ices, qui signent la production. */
   guests?: string[] | null;
+  /**
+   * Les documents mis à disposition — outils uniquement, et obligatoire
+   * à la saisie : c'est ce que le billet sert à transmettre, son texte
+   * ne faisant que les présenter.
+   *
+   * Une liste, parce qu'un outil en réunit souvent plusieurs : un guide
+   * et sa grille, un support et son corrigé. Chaque entrée porte sa
+   * description ; l'intitulé affiché est le titre du média, saisi une
+   * fois dans la médiathèque.
+   *
+   * Peuplée au fetch (depth ≥ 1). `filesize` et `mimeType` servent à
+   * annoncer le poids et le format avant le clic — ce qu'une adresse
+   * saisie à la main ne pouvait pas dire.
+   */
+  resources?:
+    | {
+        fichier?:
+          | {
+              filename?: string;
+              title?: string | null;
+              filesize?: number | null;
+              mimeType?: string | null;
+            }
+          | number
+          | string
+          | null;
+        description?: string | null;
+      }[]
+    | null;
+  /** Public visé — outils uniquement (cf Outils.ts). */
+  audience?: 'tous' | 'militantes' | 'pros' | 'structures' | null;
   /**
    * Série de rattachement — articles de recherche, billets d'analyse et
    * podcasts (où elle s'appelle une émission). Peuplée au fetch
@@ -241,6 +272,32 @@ export const PUBLICATION_ORDER: PublicationCollection[] = [
 
 export function isPublicationCollection(v: unknown): v is PublicationCollection {
   return typeof v === 'string' && v in PUBLICATIONS;
+}
+
+/**
+ * Charge une publication destinée au public, ou `null`.
+ *
+ * Appelée depuis la **route** et non depuis le composant d'affichage,
+ * et c'est tout l'intérêt : décider qu'une page n'existe pas est
+ * l'affaire d'une route, qui peut encore choisir sa réponse. Un
+ * composant, lui, est appelé une fois le rendu commencé — d'où le
+ * `ResponseSentError` que produisait un `Astro.rewrite` déclenché
+ * depuis PublicationArticle, et le statut 200 servi sur des adresses
+ * mortes.
+ *
+ * Deux exclusions, communes aux cinq formats :
+ *  - le brouillon, qui vit dans l'admin et pas sur le site ;
+ *  - la publication datée dans le futur, qui ne doit pas être lisible
+ *    avant l'heure, même par adresse directe.
+ */
+export async function fetchPublicationPubliee(
+  collection: PublicationCollection,
+  publicId: string,
+): Promise<PublicationPost | null> {
+  const post = await fetchByPublicId<PublicationPost>(collection, publicId);
+  if (!post || post.draft) return null;
+  if (post.publishedAt && new Date(post.publishedAt).getTime() > Date.now()) return null;
+  return post;
 }
 
 /**

@@ -187,6 +187,14 @@ const signature =
     /* Ancre du lien étendu ci-dessous. */
     position: relative;
     transition: filter 0.12s;
+    /* Colonne, pour que le pied puisse être poussé en bas (cf .foot).
+       Le carré podcast voisin le fait déjà par `space-between` : ici le
+       pied suivait le chapô, si bien que « lire le texte » et
+       « écouter » ne tombaient sur la même ligne que par coïncidence —
+       tant que les deux contenus faisaient la même hauteur. Changer le
+       corps du titre a suffi à la rompre. */
+    display: flex;
+    flex-direction: column;
   }
   /* Même survol que le carré podcast voisin — et surtout, même surface
      cliquable : le lien du titre s'étend à toute la carte par un
@@ -240,8 +248,8 @@ const signature =
        hero qu'elle est censée suivre. C'est la longueur du texte, pas la
        maquette, qui commande ici. */
     font-family: var(--font-serif);
-    font-size: calc(clamp(26px, 3vw, 42px) * var(--a11y-echelle));
-    line-height: 1.12;
+    font-size: calc(clamp(24px, 2.6vw, 36px) * var(--a11y-echelle));
+    line-height: 1.15;
     font-weight: 300;
     letter-spacing: -0.02em;
     text-wrap: balance;
@@ -277,6 +285,18 @@ const signature =
     display: flex;
     align-items: center;
     gap: 16px;
+    /* Collé au bas de la carte, dont la hauteur est celle de la rangée
+       de la grille (`align-items: stretch`). Le carré podcast fait de
+       même : les deux pieds sont donc à 36 px du bas de deux boîtes de
+       même hauteur, tous deux hauts de 38 px et centrés — ils tombent
+       sur la même ligne quel que soit le texte au-dessus, ce qui n'était
+       pas le cas tant que ce pied suivait le chapô. */
+    margin-top: auto;
+    /* Même plancher que le carré. La rangée tient d'ordinaire sa
+       hauteur de la pastille d'initiales, mais celle-ci ne s'affiche
+       pas pour un billet non signé : sans ce plancher, l'alignement
+       reposerait sur la présence d'un auteur·ice. */
+    min-height: 38px;
   }
 
   /* Pastille d'initiales — le seul aplat rond de la page, et le seul
