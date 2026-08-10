@@ -5156,6 +5156,16 @@ button.btn--style-primary,
       }
     }
 
+    // Ce que l'insertion fera des notes — dit avant, pas après.
+    &__notes {
+      background: var(--b-accent-tint);
+      border-left: 2px solid var(--b-accent);
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0 0 12px;
+      padding: 8px 10px;
+    }
+
     &__warn-body {
       background: rgba(184, 132, 42, 0.08);
       border-left: 2px solid var(--theme-warning-500, #b8842a);

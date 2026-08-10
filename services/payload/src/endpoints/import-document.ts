@@ -19,7 +19,9 @@
 import type { Endpoint } from 'payload';
 
 import { errorResponse, jsonResponse, requireUser } from '../auth/helpers';
+import { lireNotes } from '../lib/import-citations';
 import { EXTENSIONS, lireDocument, type LigneBiblio } from '../lib/import-docx';
+import { cleDeDoublon } from '../lib/import-references';
 import { htmlVersLexical } from '../lib/import-lexical';
 
 /** Au-delà, ce n'est plus un article — et la conversion durerait. */
@@ -32,7 +34,11 @@ type Candidat = {
   sur: boolean;
 };
 
-type LigneProposee = LigneBiblio & { candidats: Candidat[] };
+/**
+ * Une référence proposée, avec sa clé : c'est elle qui reliera plus
+ * tard l'entrée créée aux notes qui la citent.
+ */
+type LigneProposee = LigneBiblio & { cle: string; candidats: Candidat[] };
 
 /**
  * Cherche, pour chaque référence du document, les entrées de la
@@ -51,7 +57,7 @@ async function proposer(
 
   for (const ligne of lignes) {
     if (!ligne.nom) {
-      out.push({ ...ligne, candidats: [] });
+      out.push({ ...ligne, cle: cleDeDoublon(ligne), candidats: [] });
       continue;
     }
     try {
@@ -80,13 +86,13 @@ async function proposer(
       }));
       // Les concordances certaines d'abord : c'est ce qu'on veut voir.
       candidats.sort((a, b) => Number(b.sur) - Number(a.sur));
-      out.push({ ...ligne, candidats });
+      out.push({ ...ligne, cle: cleDeDoublon(ligne), candidats });
     } catch (err) {
       req.payload.logger.warn(
         { err: (err as Error).message },
         'Recherche bibliographique impossible pendant un import',
       );
-      out.push({ ...ligne, candidats: [] });
+      out.push({ ...ligne, cle: cleDeDoublon(ligne), candidats: [] });
     }
   }
   return out;
@@ -174,6 +180,10 @@ export const importDocumentEndpoint: Endpoint = {
           biblio: await proposer(req, lu.biblio),
           notesRefs: await proposer(req, lu.notesRefs),
           renvois: lu.renvois,
+          // Ce que chaque note cite, et avec quelle pagination : de quoi
+          // la remplacer par une citation qui renvoie à la bibliographie
+          // plutôt que de la recopier.
+          notesLues: lireNotes(lu.notes),
           avertissements: lu.avertissements,
         },
         { status: 200 },

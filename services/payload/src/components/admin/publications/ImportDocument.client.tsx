@@ -53,6 +53,8 @@ type LigneBiblio = {
   anonyme: boolean;
   /** Ce qui manque pour pouvoir créer l'entrée. Vide = créable. */
   manques: string[];
+  /** Clé de la source — relie la référence aux notes qui la citent. */
+  cle: string;
   candidats: { id: number | string; label: string; sur: boolean }[];
 };
 
@@ -68,6 +70,12 @@ type Resultat = {
   notesRefs: LigneBiblio[];
   /** Ce que deviennent les « art. cit. » et « Ibid. » des notes. */
   renvois: { resolus: number; ambigus: string[]; orphelins: string[] };
+  /** Ce que chaque note cite, dans l'ordre du document. */
+  notesLues: {
+    texte: string;
+    citations: { cle: string; pages: string }[];
+    garde: string | null;
+  }[];
   avertissements: string[];
 };
 
@@ -103,6 +111,10 @@ export default function ImportDocument({
   const [creation, setCreation] = useState<Map<string, Creation>>(new Map());
   const [creationEnCours, setCreationEnCours] = useState(false);
   const [liees, setLiees] = useState(0);
+  // Clé de source → entrée de la bibliographie. Se remplit quand les
+  // références rejoignent le billet, et sert ensuite à convertir les
+  // notes qui les citent.
+  const [cleVersId, setCleVersId] = useState<Map<string, number | string>>(new Map());
   // Ce qu'on a saisi à la place de ce qui ne se lisait pas.
   const [complements, setComplements] = useState<Map<string, { nom?: string; annee?: string }>>(
     new Map(),
@@ -178,12 +190,19 @@ export default function ImportDocument({
     }
   }
 
+  /** Notes qui deviendraient des citations si l'on insérait maintenant. */
+  const convertibles = (resultat?.notesLues ?? []).filter(
+    (n) => !n.garde && n.citations.length > 0 && n.citations.every((c) => cleVersId.has(c.cle)),
+  ).length;
+
   function inserer(): void {
     if (!resultat) return;
-    onInsert({
-      body: resultat.body,
-      titre: reprendreTitre ? resultat.titre : null,
-    });
+    // Le corps est modifié sur une copie avant d'être posé : les notes
+    // qui ne sont qu'une citation deviennent des citations liées, les
+    // autres restent des notes.
+    const corps = JSON.parse(JSON.stringify(resultat.body)) as unknown;
+    convertirNotes(corps, cleVersId);
+    onInsert({ body: corps, titre: reprendreTitre ? resultat.titre : null });
     fermer();
   }
 
@@ -194,6 +213,66 @@ export default function ImportDocument({
     setACreer(new Set());
     setCreation(new Map());
     setLiees(0);
+    setCleVersId(new Map());
+  }
+
+  /**
+   * Remplace les notes qui ne sont qu'une citation par des citations
+   * bibliographiques.
+   *
+   * Dans un mémoire, la note EST la référence — nécessaire sur le
+   * papier, où l'on ne peut pas cliquer. Ici la bibliographie est en
+   * pied d'article : chaque note refait alors le travail qu'elle fait
+   * déjà, et cent quarante-six notes disent cinquante-cinq références.
+   *
+   * Ne sont converties que les notes dont la source est identifiée ET
+   * qui ne disent rien d'autre. Une note qui ajoute un propos reste une
+   * note : un commentaire perdu dans la conversion serait irrattrapable,
+   * là où une note de trop se retire en un geste.
+   */
+  function convertirNotes(body: unknown, cleVersId: Map<string, number | string>): number {
+    const lues = new Map((resultat?.notesLues ?? []).map((n) => [n.texte, n]));
+    let posees = 0;
+
+    const parcourir = (noeud: Record<string, unknown>): void => {
+      const enfants = noeud.children as Record<string, unknown>[] | undefined;
+      if (!Array.isArray(enfants)) return;
+
+      const suite: Record<string, unknown>[] = [];
+      for (const enfant of enfants) {
+        const champs = enfant.fields as { blockType?: string; content?: string } | undefined;
+        const note = champs?.blockType === 'footnote' ? lues.get(String(champs.content ?? '')) : null;
+        const ids = note?.citations.map((c) => cleVersId.get(c.cle));
+
+        if (!note || note.garde || !ids || ids.length === 0 || ids.some((x) => x == null)) {
+          parcourir(enfant);
+          suite.push(enfant);
+          continue;
+        }
+
+        // Une note peut porter plusieurs citations : elles se suivent.
+        note.citations.forEach((c, i) => {
+          suite.push({
+            type: 'inlineBlock',
+            version: 1,
+            fields: {
+              id: Math.random().toString(36).slice(2, 12),
+              blockName: '',
+              blockType: 'biblio_inline',
+              entry: ids[i],
+              prefix: '',
+              pages: c.pages,
+              suffix: '',
+            },
+          });
+          posees += 1;
+        });
+      }
+      noeud.children = suite;
+    };
+
+    parcourir((body as { root: Record<string, unknown> }).root);
+    return posees;
   }
 
   /**
@@ -233,6 +312,7 @@ export default function ImportDocument({
       });
 
     setCreationEnCours(true);
+    const creationParTexte = new Map<string, number | string>();
     try {
       const nouvelles: (number | string)[] = [];
 
@@ -259,6 +339,7 @@ export default function ImportDocument({
           // Ce qui est fait sort de la sélection : recliquer ne doit
           // pas en faire un doublon.
           if (r.id != null) {
+            creationParTexte.set(r.texte, r.id);
             nouvelles.push(r.id);
             restant.delete(r.texte);
           }
@@ -268,6 +349,16 @@ export default function ImportDocument({
       } else {
         setACreer(new Set());
       }
+
+      // Chaque référence retenue connaît sa clé : on la relie à
+      // l'entrée, ce qui permettra de convertir les notes qui la
+      // citent.
+      const suiteCles = new Map(cleVersId);
+      for (const l of retenues) {
+        const id = creationParTexte.get(l.texte) ?? l.candidats.find((c) => c.sur)?.id;
+        if (id != null) suiteCles.set(l.cle, id);
+      }
+      setCleVersId(suiteCles);
 
       const tout = [...nouvelles, ...dejaLa];
       if (tout.length > 0) {
@@ -591,6 +682,22 @@ export default function ImportDocument({
           <p className="ed-import__warn-body" role="alert">
             Le corps du billet n’est pas vide&nbsp;: l’insertion le remplacera
             entièrement. <kbd>Ctrl</kbd>+<kbd>Z</kbd> permet de revenir en arrière.
+          </p>
+        )}
+
+        {/* Ce que l'insertion fera des notes, dit avant de la faire.
+            Une note qui n'est qu'une citation devient une citation liée
+            à la bibliographie — ce qui suppose que la référence y soit
+            déjà, d'où la phrase quand ce n'est pas encore le cas. */}
+        {resultat.resume.notes > 0 && (
+          <p className="ed-import__notes">
+            {convertibles > 0
+              ? `${compte(convertibles, 'note')} sur ${resultat.resume.notes} ne ${
+                  convertibles > 1 ? 'sont' : 'est'
+                } qu’une citation : ${
+                  convertibles > 1 ? 'elles deviendront des citations liées' : 'elle deviendra une citation liée'
+                } à la bibliographie, pagination comprise. Les autres restent des notes.`
+              : `Les ${resultat.resume.notes} notes seront reprises telles quelles. Ajoutez d’abord les références à la bibliographie du billet pour que celles qui ne sont qu’une citation y renvoient au lieu de la recopier.`}
           </p>
         )}
 
