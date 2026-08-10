@@ -24,7 +24,7 @@
  * d'un seuil de signes — pas un choix laissé à la page, une règle qui
  * s'applique à tout titre, où qu'il soit.
  *
- * Deux exceptions, assumées et nommées, via le prop `taille` — le
+ * Une seule exception, assumée et nommée, via le prop `taille` — le
  * comptage de signes ne peut pas tout décider :
  *  - `pleine` : ignore le seuil, toujours --t-display. Réservé au hero
  *    de l'accueil. Un compte de signes ne peut pas distinguer « le
@@ -33,11 +33,15 @@
  *    les deux resterait fragile au moindre changement de libellé dans
  *    l'admin. L'accueil est le seul endroit du site pensé pour porter
  *    un titre en pleine grandeur même long.
- *  - `compacte` : ignore le seuil, toujours --t-display-long. Réservé
- *    aux pages d'index de format (« Articles de recherche », « Podcasts »…)
- *    — des titres courts qui n'auraient jamais déclenché le seuil tout
- *    seuls, mais pour lesquels cette échelle est le rendu voulu.
  * Sans `taille`, la règle de seuil s'applique normalement.
+ *
+ * Il y en avait une seconde, `compacte`, qui forçait l'échelle réduite
+ * sur les cinq index de format. Résultat : « Articles de recherche »
+ * s'écrivait plus petit que « Genre & solidarité internationale », deux
+ * pages du même genre listant des publications sous un intitulé court.
+ * Elle est retirée plutôt que généralisée aux six autres index — le
+ * défaut du site redevient le défaut, ce que l'en-tête ci-dessus
+ * réclame.
  *
  * Pas de gouttière posée ici : PageTitle vit toujours dans <main>, qui
  * la porte déjà (cf Layout.astro).
@@ -61,7 +65,7 @@ interface Props {
    * (cf commentaire d'en-tête). Ne pas poser ailleurs que sur les cas
    * déjà identifiés.
    */
-  taille?: 'pleine' | 'compacte';
+  taille?: 'pleine';
 }
 
 const { title, lede, famille, taille } = Astro.props;
@@ -72,7 +76,7 @@ const { title, lede, famille, taille } = Astro.props;
 const SEUIL_TITRE_LONG = 70;
 const longueur = title.replace(/<[^>]+>/g, '').trim().length;
 const estLong =
-  taille === 'compacte' ? true : taille === 'pleine' ? false : longueur > SEUIL_TITRE_LONG;
+  taille === 'pleine' ? false : longueur > SEUIL_TITRE_LONG;
 ---
 
 <section class="titre" data-famille={famille} data-longueur={estLong ? 'long' : 'court'}>
