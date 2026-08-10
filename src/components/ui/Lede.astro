@@ -20,17 +20,11 @@ interface Props {
 const { class: className } = Astro.props;
 ---
 
-<p class:list={['lede', className]}>
+<p
+  class:list={[
+    'font-sans text-sublede leading-body text-muted max-w-mesure mt-0 mb-[22px]',
+    className,
+  ]}
+>
   <slot />
 </p>
-
-<style>
-  .lede {
-    font-family: var(--font-sans);
-    font-size: var(--t-sublede);
-    line-height: 1.6;
-    color: var(--color-muted);
-    max-width: var(--mesure);
-    margin: 0 0 22px;
-  }
-</style>

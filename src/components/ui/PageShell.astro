@@ -72,15 +72,21 @@ const { documentTitle, description, noindex, bodyClass, title, lede, famille, ta
 </Layout>
 
 <style is:global>
-  /* Rythme vertical du corps de page. `is:global` parce que le contenu
-     arrive par un slot : les styles à portée de composant ne
-     l'atteindraient pas. Volontairement limité à .page-body, donc sans
-     effet ailleurs. */
-  .page-body {
-    /* PageTitle ne porte aucune marge basse : sur tout le site, c est
-       le bloc suivant qui porte l ecart. C est ici que ca se joue pour
-       le corps de page. */
-    padding-top: var(--block-gap);
-    padding-bottom: 72px;
+  /* Couche `components` : ces règles habillent du contenu qui arrive
+     par un slot — y compris le HTML rendu depuis Lexical, sur lequel
+     on ne peut poser aucune classe. Elles doivent donc rester du CSS,
+     mais céder devant un utilitaire écrit à la main. */
+  @layer components {
+    /* Rythme vertical du corps de page. `is:global` parce que le contenu
+       arrive par un slot : les styles à portée de composant ne
+       l'atteindraient pas. Volontairement limité à .page-body, donc sans
+       effet ailleurs. */
+    .page-body {
+      /* PageTitle ne porte aucune marge basse : sur tout le site, c est
+         le bloc suivant qui porte l ecart. C est ici que ca se joue pour
+         le corps de page. */
+      padding-top: var(--block-gap);
+      padding-bottom: 72px;
+    }
   }
 </style>

@@ -26,6 +26,43 @@
   --font-sans: 'Bricolage Grotesque Variable', system-ui, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, monospace;
 
+  /* ── Échelle typographique, en utilitaires ────────────────────────
+     Les mêmes valeurs que `--t-*` plus bas, mais déclarées ici pour
+     que Tailwind en fasse des classes : `text-display`, `text-h2`,
+     `text-body`…
+
+     Elles gardent leur `calc(… * var(--a11y-echelle))`, et c'est tout
+     l'enjeu : le panneau d'accessibilité change cette variable, et
+     toutes les tailles suivent — y compris celles écrites en classe.
+     Une échelle figée à la compilation aurait rendu le panneau
+     inopérant du jour où l'on cesse d'écrire du CSS à la main. */
+  --text-display: calc(clamp(32px, 5.2vw, 76px) * var(--a11y-echelle));
+  --text-display-long: calc(clamp(28px, 3.6vw, 48px) * var(--a11y-echelle));
+  --text-h2: calc(30px * var(--a11y-echelle));
+  --text-h3: calc(21px * var(--a11y-echelle));
+  --text-lede: calc(18px * var(--a11y-echelle));
+  --text-body: calc(17px * var(--a11y-echelle));
+  --text-sublede: calc(16px * var(--a11y-echelle));
+  --text-meta: calc(12px * var(--a11y-echelle));
+  --text-label: calc(11px * var(--a11y-echelle));
+
+  /* Interlignes et interlettrages, mêmes valeurs, en classes :
+     `leading-display`, `tracking-label`… */
+  --leading-display: 1.08;
+  --leading-heading: 1.15;
+  --leading-body: 1.6;
+  --tracking-display: -0.02em;
+  --tracking-label: 0.2em;
+
+  /* Graisses nommées : `font-display` dirait « famille » en Tailwind,
+     d'où `font-w-display` pour la graisse. */
+  --font-weight-display: 300;
+  --font-weight-heading: 400;
+
+  /* Largeur de lecture d'un paragraphe : `max-w-mesure`. */
+  --container-mesure: 68ch;
+
+
   /* Densité du flux d'accueil — multiplicateur sur paddings d'item.
      Valeur figée par le client : 0.7 (serré). */
   --density-feed: 0.7;
@@ -320,64 +357,77 @@
   --color-accent: #8ec4a4;
 }
 
-/* Reset minimal */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* ── Les règles de fond, en couche `base` ─────────────────────────
+   Sans couche, elles battaient les utilitaires Tailwind : du CSS non
+   layered l'emporte toujours sur du CSS layered, quelle que soit la
+   spécificité. Une classe `mb-[22px]` posée sur un paragraphe rendait
+   donc la marge du CSS global, et la classe n'avait l'air de rien
+   faire — le pire des symptômes, puisqu'il ressemble à une faute de
+   frappe.
 
-html,
-body {
-  margin: 0;
-  background: var(--color-bg);
-  color: var(--color-ink);
-  font-family: var(--font-serif);
-  /* Rognage horizontal au niveau du document, pour les blocs qui sortent
-     de la gouttière et vont jusqu'aux bords de la fenêtre (le hero d'un
-     épisode). Leurs marges se calculent en `vw`, qui compte la barre de
-     défilement : sans ce rognage, il resterait un défilement horizontal
-     de la largeur de celle-ci.
-     Posé ici et non sur <main>, qui est plafonné à --page-max : au-delà
-     de cette largeur, il rognait le bloc à sa propre boîte et la pleine
-     largeur devenait celle du composant.
-     `clip` et non `hidden` : `hidden` ferait de <body> un conteneur de
-     défilement et casserait le `position: sticky` de l'aside. */
-  overflow-x: clip;
-  /* Transition douce sur le changement de thème — uniquement les
-     couleurs, pas tout (pour éviter de transitionner les layouts). */
-  transition: background-color 0.18s ease, color 0.18s ease;
-}
+   Dans `base`, ces mêmes règles gardent leur rôle — poser le fond —
+   et cèdent devant une classe posée à la main. C'est l'ordre que
+   Tailwind attend. */
+@layer base {
+  /* Reset minimal */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  html,
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-serif);
+    /* Rognage horizontal au niveau du document, pour les blocs qui sortent
+       de la gouttière et vont jusqu'aux bords de la fenêtre (le hero d'un
+       épisode). Leurs marges se calculent en `vw`, qui compte la barre de
+       défilement : sans ce rognage, il resterait un défilement horizontal
+       de la largeur de celle-ci.
+       Posé ici et non sur <main>, qui est plafonné à --page-max : au-delà
+       de cette largeur, il rognait le bloc à sa propre boîte et la pleine
+       largeur devenait celle du composant.
+       `clip` et non `hidden` : `hidden` ferait de <body> un conteneur de
+       défilement et casserait le `position: sticky` de l'aside. */
+    overflow-x: clip;
+    /* Transition douce sur le changement de thème — uniquement les
+       couleurs, pas tout (pour éviter de transitionner les layouts). */
+    transition: background-color 0.18s ease, color 0.18s ease;
+  }
 
-/* Masque un element a l ecran en le laissant lisible par les lecteurs
-   d ecran. La classe etait utilisee par les libelles de formulaire mais
-   n etait definie nulle part : ils s affichaient donc en clair. */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-/* Helpers utilitaires repris du prototype */
-.sans {
-  font-family: var(--font-sans);
-}
+  /* Masque un element a l ecran en le laissant lisible par les lecteurs
+     d ecran. La classe etait utilisee par les libelles de formulaire mais
+     n etait definie nulle part : ils s affichaient donc en clair. */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
 
-.mono {
-  font-family: var(--font-mono);
-}
+  /* Helpers utilitaires repris du prototype */
+  .sans {
+    font-family: var(--font-sans);
+  }
 
-.accent {
-  color: var(--color-accent);
+  .mono {
+    font-family: var(--font-mono);
+  }
+
+  .accent {
+    color: var(--color-accent);
+  }
 }
