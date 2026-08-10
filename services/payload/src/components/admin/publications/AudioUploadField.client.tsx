@@ -23,37 +23,20 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
-// Les épisodes vivent dans la médiathèque commune depuis la fusion des
-// deux collections : même point d'entrée que les images, le tri se fait
-// par type de fichier (cf Podcasts.ts, filterOptions).
-const API_AUDIO = '/cms/api/media';
+// Plomberie commune aux champs de dépôt : envoi authentifié avec
+// jauge, adresse de même origine, poids lisible. Elle vivait ici, et
+// le champ « fichier » des outils allait la recopier — deux copies
+// d'un envoi authentifié finissent toujours par diverger sur un
+// détail qui compte (l'`alt` vide en est un).
+import {
+  API_MEDIA,
+  envoyerVersMedia as envoyer,
+  fichierUrl,
+  poidsLisible,
+  type MediaDoc as AudioValue,
+} from './media-upload';
 
-type AudioValue = {
-  id: number | string;
-  filename?: string | null;
-  url?: string | null;
-  filesize?: number | null;
-  mimeType?: string | null;
-  title?: string | null;
-} | null;
 
-/**
- * Chemin same-origin plutôt que le champ `url` : Payload le construit en
- * absolu sur ADDRESS (le domaine public du site), qui n'est pas
- * l'origine de l'admin — en développement les deux sont sur des ports
- * différents et l'aperçu ne charge pas.
- */
-function fichierUrl(v: AudioValue): string | null {
-  if (!v) return null;
-  if (v.filename) return `${API_AUDIO}/file/${encodeURIComponent(v.filename)}`;
-  return v.url ?? null;
-}
-
-function poidsLisible(octets: number | null | undefined): string {
-  if (typeof octets !== 'number' || octets <= 0) return '';
-  const mo = octets / (1024 * 1024);
-  return mo >= 1 ? `${mo.toFixed(1)} Mo` : `${Math.round(octets / 1024)} Ko`;
-}
 
 /**
  * Durée du fichier, lue par le décodeur du navigateur sans l'envoyer
@@ -79,47 +62,6 @@ function lireDuree(file: File): Promise<number | null> {
   });
 }
 
-/** Envoi avec jauge de progression. Cf commentaire d'en-tête. */
-function envoyer(
-  file: File,
-  onProgress: (pourcent: number) => void,
-): Promise<NonNullable<AudioValue>> {
-  return new Promise((resolve, reject) => {
-    const fd = new FormData();
-    fd.append('file', file);
-    // `alt` explicitement vide et non omis : la colonne est NOT NULL en
-    // base, héritée du temps où seules des images y vivaient. La
-    // validation, elle, ne l'exige que pour une image (cf Media.ts) —
-    // un épisode n'a rien à décrire.
-    fd.append('_payload', JSON.stringify({ title: file.name, alt: '' }));
-
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', API_AUDIO);
-    xhr.withCredentials = true;
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      let corps: { doc?: AudioValue; errors?: { message?: string }[]; message?: string } = {};
-      try {
-        corps = JSON.parse(xhr.responseText);
-      } catch {
-        /* réponse non-JSON : on retombe sur le statut */
-      }
-      if (xhr.status >= 200 && xhr.status < 300 && corps.doc) {
-        resolve(corps.doc);
-        return;
-      }
-      reject(
-        new Error(
-          corps.errors?.[0]?.message || corps.message || `Envoi refusé (HTTP ${xhr.status}).`,
-        ),
-      );
-    };
-    xhr.onerror = () => reject(new Error('Envoi interrompu.'));
-    xhr.send(fd);
-  });
-}
 
 export default function AudioUploadField({
   value,

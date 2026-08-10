@@ -1,46 +1,12 @@
 /**
- * Ce que la page /contact/ et son proxy partagent : la transmission de
- * l'IP réelle jusqu'à Payload, et l'authentification du proxy.
+ * Les messages d'erreur du formulaire de contact, partagés par la page
+ * et son proxy.
  *
- * Les deux chemins d'envoi — la soumission native sans JavaScript,
- * traitée dans le frontmatter de la page, et l'appel fetch, passé par
- * /api/contact — doivent poser exactement les mêmes en-têtes. Les
- * écrire deux fois, c'est se garantir qu'ils divergeront.
+ * Le transport de l'IP et l'authentification du proxy vivaient ici ;
+ * ils ont rejoint lib/payload.ts (`entetesProxy`), parce qu'ils ne
+ * concernent pas le contact mais toute route qui relaie vers Payload —
+ * l'abonnement en avait besoin aussi.
  */
-
-/**
- * IP réelle de l'appelant, telle qu'on peut la connaître derrière un
- * proxy inverse.
- *
- * `x-forwarded-for` est une liste, du client vers le proxy le plus
- * proche : le premier saut est le seul qui nous intéresse. Il est
- * falsifiable par le client, mais nginx le réécrit — la valeur ne vaut
- * donc que ce que vaut la configuration du serveur, et c'est pourquoi
- * le coupe-circuit global existe à côté de la limitation par IP.
- */
-export function ipReelle(request: Request, clientAddress?: string): string {
-  const xff = request.headers.get('x-forwarded-for');
-  if (xff) {
-    const premier = xff.split(',')[0]?.trim();
-    if (premier) return premier;
-  }
-  return request.headers.get('x-real-ip')?.trim() || clientAddress || 'unknown';
-}
-
-/**
- * En-têtes à transmettre à Payload : l'IP, et la preuve que l'appel
- * vient bien du site.
- *
- * Le secret partagé n'est posé que s'il est configuré. Payload, de son
- * côté, ne l'exige que dans le même cas — les deux se mettent d'accord
- * sur son absence plutôt que de tomber en panne (cf. endpoints/contact.ts).
- */
-export function entetesContact(request: Request, clientAddress?: string): Record<string, string> {
-  const entetes: Record<string, string> = { 'x-real-ip': ipReelle(request, clientAddress) };
-  const secret = process.env.INTERNAL_PROXY_SECRET;
-  if (secret) entetes['x-tituba-proxy'] = secret;
-  return entetes;
-}
 
 /** Réponses possibles de l'endpoint, et ce qu'on en dit à la personne. */
 export const MESSAGES_ERREUR: Record<string, string> = {

@@ -93,6 +93,48 @@ async function fetchPayload<T>(path: string): Promise<T> {
  * confirm, unsubscribe). Ne lève pas sur statut HTTP non-2xx : on
  * remonte `{ status, body }` à l'appelant qui décide de l'UX.
  */
+/**
+ * IP réelle de l'appelant, telle qu'on peut la connaître derrière un
+ * proxy inverse.
+ *
+ * `x-forwarded-for` est une liste, du client vers le proxy le plus
+ * proche : le premier saut est le seul qui nous intéresse. Il est
+ * falsifiable par le client, mais nginx le réécrit — la valeur ne vaut
+ * donc que ce que vaut la configuration du serveur.
+ */
+export function ipReelle(request: Request, clientAddress?: string): string {
+  const xff = request.headers.get('x-forwarded-for');
+  if (xff) {
+    const premier = xff.split(',')[0]?.trim();
+    if (premier) return premier;
+  }
+  return request.headers.get('x-real-ip')?.trim() || clientAddress || 'unknown';
+}
+
+/**
+ * En-têtes à transmettre à Payload depuis une route de proxy : l'IP de
+ * l'appelant, et la preuve que l'appel vient bien du site.
+ *
+ * Sans eux, aucune information sur l'appelant ne franchit le proxy, et
+ * les endpoints protégés « par IP » voient toutes les requêtes arriver
+ * de la même origine inconnue — leur plafond devient global au site
+ * entier. C'était le cas de l'inscription aux alertes depuis toujours :
+ * cinq inscriptions par quart d'heure pour la planète.
+ *
+ * Le secret partagé n'est posé que s'il est configuré ; Payload ne
+ * l'exige que dans le même cas, les deux s'accordant sur son absence
+ * plutôt que de tomber en panne (cf endpoints/contact.ts).
+ */
+export function entetesProxy(
+  request: Request,
+  clientAddress?: string,
+): Record<string, string> {
+  const entetes: Record<string, string> = { 'x-real-ip': ipReelle(request, clientAddress) };
+  const secret = process.env.INTERNAL_PROXY_SECRET;
+  if (secret) entetes['x-tituba-proxy'] = secret;
+  return entetes;
+}
+
 export async function postPayload<T = unknown>(
   path: string,
   body: unknown,

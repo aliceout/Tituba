@@ -21,8 +21,7 @@
  */
 import type { APIRoute } from 'astro';
 
-import { getPayloadRaw, postPayload } from '../../lib/payload';
-import { entetesContact } from '../../lib/contact';
+import { entetesProxy, getPayloadRaw, postPayload } from '../../lib/payload';
 
 const ENTETES_JSON = {
   'Content-Type': 'application/json',
@@ -33,7 +32,7 @@ export const GET: APIRoute = async ({ request, clientAddress }) => {
   try {
     const { status, body } = await getPayloadRaw<unknown>(
       '/contact-challenge',
-      entetesContact(request, clientAddress),
+      entetesProxy(request, clientAddress),
     );
     return new Response(JSON.stringify(body), { status, headers: ENTETES_JSON });
   } catch (err) {
@@ -57,7 +56,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const { status, body } = await postPayload<unknown>(
       '/contact',
       corps,
-      entetesContact(request, clientAddress),
+      entetesProxy(request, clientAddress),
     );
     return new Response(JSON.stringify(body), { status, headers: ENTETES_JSON });
   } catch (err) {

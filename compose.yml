@@ -63,6 +63,12 @@ services:
     environment:
       NODE_ENV: production
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?PAYLOAD_SECRET is required}
+      # Formulaire de contact — cf .env.example. Optionnels tous les
+      # deux : sans le secret, l'endpoint reste joignable sans passer
+      # par le site (et le signale dans les journaux) ; sans la
+      # difficulté, la valeur par défaut du code s'applique.
+      INTERNAL_PROXY_SECRET: ${INTERNAL_PROXY_SECRET:-}
+      CONTACT_POW_MAX: ${CONTACT_POW_MAX:-}
       ADDRESS: ${ADDRESS:?ADDRESS is required}
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -124,6 +130,9 @@ services:
       ADDRESS: ${ADDRESS:?ADDRESS is required}
       # Optionnel — quand "1", l'Astro renvoie aussi les drafts Payload.
       SHOW_DRAFTS: ${SHOW_DRAFTS:-}
+      # Même secret que côté Payload : c'est lui qui prouve que l'appel
+      # vient bien du site. Défini d'un seul côté, il ne sert à rien.
+      INTERNAL_PROXY_SECRET: ${INTERNAL_PROXY_SECRET:-}
     ports:
       - '127.0.0.1:${PORT_SITE}:4321'
     networks:

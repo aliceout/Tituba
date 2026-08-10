@@ -42,6 +42,7 @@
 #   /services/tituba/smtp      → SMTP_*
 #   /services/tituba/web       → ADDRESS, PORT_*
 #   /services/tituba/unsplash  → UNSPLASH_ACCESS_KEY
+#   /services/tituba/contact   → INTERNAL_PROXY_SECRET, CONTACT_POW_MAX
 # Les noms de vars n'ont pas changé, seuls les paths Infisical bougent.
 #
 # Cette liste est reprise telle quelle par la boucle de fetch plus bas :
@@ -108,7 +109,7 @@ if [ "$USE_INFISICAL" = "true" ]; then
   : > "$ENV_FILE"
   chmod 600 "$ENV_FILE"
 
-  for subpath in "" payload postgres smtp web unsplash; do
+  for subpath in "" payload postgres smtp web unsplash contact; do
     path="/services/tituba${subpath:+/$subpath}"
     echo "[deploy] fetching $path"
     infisical export \

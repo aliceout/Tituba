@@ -22,9 +22,9 @@
  */
 import type { APIRoute } from 'astro';
 
-import { postPayload } from '../../lib/payload';
+import { entetesProxy, postPayload } from '../../lib/payload';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   let email = '';
   try {
     const data = (await request.json()) as { email?: unknown };
@@ -37,6 +37,11 @@ export const POST: APIRoute = async ({ request }) => {
     const { status, body } = await postPayload<unknown>(
       '/subscribers/subscribe',
       { email },
+      // Sans cet en-tête, Payload voyait toutes les inscriptions
+      // arriver de la même origine inconnue : son plafond « 5 par
+      // quart d'heure et par IP » était en réalité un plafond global
+      // au site entier, donc une surface de déni de service.
+      entetesProxy(request, clientAddress),
     );
     return new Response(JSON.stringify(body), {
       status,

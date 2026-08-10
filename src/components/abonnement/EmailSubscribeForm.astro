@@ -10,6 +10,12 @@ import Heading from '../ui/Heading.astro';
 import Lede from '../ui/Lede.astro';
 import Panel from '../ui/Panel.astro';
 import Field from '../ui/Field.astro';
+
+/** Message d'une soumission sans JavaScript, rendu par la page. */
+interface Props {
+  statut?: string;
+}
+const { statut = '' } = Astro.props;
 ---
 
 <Heading>Par mail</Heading>
@@ -19,7 +25,12 @@ import Field from '../ui/Field.astro';
 </Lede>
 
 <Panel famille="vert" padding="serre" class="offre">
-  <form class="subscribe-form" novalidate>
+  {/* `method` et `action` ne sont pas décoratifs : sans eux, un
+      navigateur sans JavaScript soumet en GET sur l'URL courante, et
+      l'adresse saisie part dans la barre d'adresse, l'historique et les
+      journaux du serveur. Avec eux, elle voyage dans le corps de la
+      requête, et le frontmatter de la page traite l'envoi. */}
+  <form class="subscribe-form" method="post" action="/abonnement/" novalidate>
     <fieldset class="choix">
       <legend>Ce que vous voulez recevoir</legend>
       <label>
@@ -45,7 +56,9 @@ import Field from '../ui/Field.astro';
       action="S'abonner"
       famille="vert"
     />
-    <p class="status" data-status aria-live="polite"></p>
+    {/* Résultat d'une soumission native ; le script le remplace au
+        vol quand JavaScript est disponible. */}
+    <p class="status" data-status aria-live="polite">{statut}</p>
   </form>
 </Panel>
 

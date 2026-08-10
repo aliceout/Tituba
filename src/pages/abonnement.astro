@@ -15,7 +15,7 @@ import Prose from '../components/ui/Prose.astro';
 import EmailSubscribeForm from '../components/abonnement/EmailSubscribeForm.astro';
 import SocialLinksList from '../components/abonnement/SocialLinksList.astro';
 import RssFeedBlock from '../components/abonnement/RssFeedBlock.astro';
-import { fetchIndexPages, fetchSubscriptions } from '../lib/payload';
+import { entetesProxy, fetchIndexPages, fetchSubscriptions, postPayload } from '../lib/payload';
 import { formatHeroLede, formatHeroTitle } from '../lib/site';
 
 type SubscriptionsGlobal = {
@@ -66,6 +66,37 @@ const socialEntries = [
 ].filter((x): x is { label: string; href: string; hint: string } => x !== null);
 
 const feedUrl = new URL('/rss.xml', Astro.site).toString();
+
+/**
+ * Soumission sans JavaScript du formulaire d'abonnement.
+ *
+ * Le formulaire poste ici plutôt que d'aller en GET sur l'URL
+ * courante, où l'adresse saisie finissait dans l'historique du
+ * navigateur et les journaux du serveur. On relaie à Payload, qui
+ * applique la limitation de débit et envoie le mail de confirmation.
+ */
+let statutAbonnement = '';
+if (Astro.request.method === 'POST') {
+  try {
+    const form = await Astro.request.formData();
+    const email = String(form.get('email') ?? '').trim();
+    const { body } = await postPayload<{ ok?: boolean; code?: string }>(
+      '/subscribers/subscribe',
+      { email },
+      entetesProxy(Astro.request, Astro.clientAddress),
+    );
+    statutAbonnement = body?.ok
+      ? 'Presque : ouvrez le message que nous venons de vous envoyer pour confirmer.'
+      : body?.code === 'rate_limited'
+        ? 'Trop de tentatives récentes. Réessayez dans un quart d’heure.'
+        : body?.code === 'invalid_email'
+          ? 'Cette adresse ne semble pas valide.'
+          : 'L’inscription a échoué. Réessayez dans quelques minutes.';
+  } catch (err) {
+    console.warn('[abonnement] soumission native impossible :', (err as Error).message);
+    statutAbonnement = 'L’inscription a échoué. Réessayez dans quelques minutes.';
+  }
+}
 ---
 
 <PageShell
@@ -76,7 +107,7 @@ const feedUrl = new URL('/rss.xml', Astro.site).toString();
   famille="vert"
 >
   <Prose mesure="pleine" class="suivre-page">
-    {emailEnabled && <EmailSubscribeForm />}
+    {emailEnabled && <EmailSubscribeForm statut={statutAbonnement} />}
     {socialEntries.length > 0 && <SocialLinksList entries={socialEntries} />}
     {rssEnabled && <RssFeedBlock feedUrl={feedUrl} />}
   </Prose>
