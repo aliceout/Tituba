@@ -411,10 +411,16 @@ export default function ImportDocument({
         {resultat.renvois &&
           (resultat.renvois.ambigus.length > 0 || resultat.renvois.orphelins.length > 0) && (
             <div className="ed-import__renvois">
+              {/* Seuls les renvois qui posent problème sont dits. Les
+                  annoncer par le compte de ceux qui vont bien noyait
+                  l'unique ligne à regarder sous une phrase de bilan
+                  dont personne n'a rien à faire. */}
               <p>
-                {compte(resultat.renvois.resolus, 'renvoi')} entre notes (« art. cit. »,
-                « Ibid. ») {resultat.renvois.resolus > 1 ? 'retrouvent' : 'retrouve'} bien
-                leur source plus haut. Les suivants, non&nbsp;:
+                {compte(
+                  resultat.renvois.ambigus.length + resultat.renvois.orphelins.length,
+                  'renvoi',
+                )}{' '}
+                entre notes sans source retrouvée&nbsp;:
               </p>
               <ul>
                 {resultat.renvois.ambigus.map((t) => (
