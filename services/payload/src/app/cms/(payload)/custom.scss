@@ -1918,9 +1918,32 @@ button.btn--style-primary,
   // La colonne des cases ouvre la ligne. Elle disparaît sous 1440px,
   // comme le faisait la croix : les actions groupées sont un travail
   // d'écran large, et les grilles compactes n'ont pas la place.
-  &__row .pick {
-    display: flex;
+  // Le lien ne couvre plus la ligne entière mais ses seules colonnes
+  // de données : la case à cocher est en dehors, faute de quoi il
+  // fallait annuler son clic — et annuler le clic d'une case en
+  // rétablit l'état antérieur, que React ne réapplique pas.
+  //
+  // `display: contents` efface le lien de la grille : ses cellules
+  // redeviennent celles de la ligne, et la mise en page ne change pas.
+  &__rowlink {
+    display: contents;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  &__row .pick {    display: flex;
     align-items: center;
+
+    // La zone qui n'ouvre pas la fiche déborde de la colonne : seize
+    // pixels de large, c'est la case et rien autour, et manquer la case
+    // de trois pixels ouvrait la référence. La cellule prend donc toute
+    // la hauteur de la ligne, la marge intérieure gauche du tableau et
+    // la moitié de la gouttière — les marges négatives lui rendent
+    // ensuite sa largeur de colonne, si bien que rien ne se déplace à
+    // l'écran.
+    align-self: stretch;
+    margin: -14px -12px -14px -20px;
+    padding: 14px 12px 14px 20px;
 
     input {
       cursor: pointer;

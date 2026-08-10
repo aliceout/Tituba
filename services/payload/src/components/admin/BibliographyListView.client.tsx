@@ -297,18 +297,23 @@ export default function BibliographyListViewClient(): React.ReactElement {
             const first = b.authors?.[0];
             const hasMore = (b.authors?.length ?? 0) > 1;
             return (
-              <Link
-                key={b.id}
-                href={`/cms/admin/collections/bibliography/${b.id}`}
-                className="tituba-listview__row"
-                role="row"
-              >
-                {/* La case vit dans le lien de la ligne : le clic doit
-                    s'arrêter là, sinon cocher ouvrirait la fiche. On
-                    l'arrête sans l'annuler — la case garde ainsi son
-                    comportement propre, et c'est elle seule qui compte
-                    le geste. */}
-                <div role="cell" className="pick" onClick={(e) => e.stopPropagation()}>
+              <div key={b.id} className="tituba-listview__row" role="row">
+                {/* La case est HORS du lien, et c'est la seule façon
+                    correcte de s'y prendre.
+
+                    Tant qu'elle vivait dedans, il fallait annuler le
+                    clic pour que cocher n'ouvre pas la fiche — or
+                    annuler le clic d'une case à cocher en rétablit
+                    l'état antérieur, que React ne réapplique pas
+                    puisque le sien n'a pas changé. Trois cases cochées,
+                    deux affichées : le décompte disait vrai, l'écran
+                    mentait.
+
+                    Le lien couvre donc les colonnes de données et rien
+                    d'autre. `display: contents` le fait disparaître de
+                    la grille, si bien que ses cellules restent celles
+                    de la ligne. */}
+                <div role="cell" className="pick">
                   <input
                     type="checkbox"
                     checked={selection.has(String(b.id))}
@@ -316,26 +321,32 @@ export default function BibliographyListViewClient(): React.ReactElement {
                     aria-label={`Sélectionner ${b.title}`}
                   />
                 </div>
-                <div role="cell" className="firstname">
-                  {first?.firstName || '—'}
-                </div>
-                <div role="cell" className="lastname">
-                  {first?.lastName || '—'}
-                  {hasMore && <span className="lastname__etal"> et al.</span>}
-                </div>
-                <div role="cell" className="year">
-                  {b.year}
-                </div>
-                <div role="cell" className="title">
-                  {b.title}
-                </div>
-                <div role="cell" className="venue">
-                  {b.publisher || b.journal || '—'}
-                </div>
-                <div role="cell" className="type-cell">
-                  {TYPE_LABEL[b.type as Exclude<FilterType, 'all'>] ?? b.type}
-                </div>
-              </Link>
+                <Link
+                  href={`/cms/admin/collections/bibliography/${b.id}`}
+                  className="tituba-listview__rowlink"
+                  tabIndex={0}
+                >
+                  <div role="cell" className="firstname">
+                    {first?.firstName || '—'}
+                  </div>
+                  <div role="cell" className="lastname">
+                    {first?.lastName || '—'}
+                    {hasMore && <span className="lastname__etal"> et al.</span>}
+                  </div>
+                  <div role="cell" className="year">
+                    {b.year}
+                  </div>
+                  <div role="cell" className="title">
+                    {b.title}
+                  </div>
+                  <div role="cell" className="venue">
+                    {b.publisher || b.journal || '—'}
+                  </div>
+                  <div role="cell" className="type-cell">
+                    {TYPE_LABEL[b.type as Exclude<FilterType, 'all'>] ?? b.type}
+                  </div>
+                </Link>
+              </div>
             );
           })
         )}
