@@ -667,21 +667,23 @@ export default function ImportDocument({
           </p>
         )}
 
-        {/* Ce que l'insertion fera des notes, dit avant de la faire.
-            Une note qui n'est qu'une citation devient une citation liée
-            à la bibliographie — ce qui suppose que la référence y soit
-            déjà, d'où la phrase quand ce n'est pas encore le cas. */}
+        {/* Ce que l'insertion fera des notes, dit avant de la faire —
+            et dit par son résultat, pas par son intermédiaire.
+
+            La phrase annonçait « 142 notes sur 146 ne sont qu'une
+            citation » : le nombre qui saute aux yeux est alors celui
+            qui va disparaître, et l'on comprend qu'il restera 142 notes
+            quand il en restera quatre. Ce qui intéresse, c'est l'état
+            d'après. */}
         {resultat.resume.notes > 0 && (
           <p className="ed-import__notes">
-            {convertibles > 0
-              ? `${compte(convertibles, 'note')} sur ${resultat.resume.notes} ne ${
-                  convertibles > 1 ? 'sont' : 'est'
-                } qu’une citation : ${
-                  convertibles > 1
-                    ? 'elles deviendront des citations liées'
-                    : 'elle deviendra une citation liée'
-                } à la bibliographie, pagination comprise. Les autres restent des notes.`
-              : `Les ${resultat.resume.notes} notes seront reprises telles quelles : aucune ne renvoie à une référence identifiée.`}
+            {convertibles === 0
+              ? `Les ${resultat.resume.notes} notes seront reprises telles quelles : aucune ne renvoie à une référence identifiée.`
+              : convertibles === resultat.resume.notes
+                ? `Le billet n’aura plus aucune note : les ${resultat.resume.notes} deviennent des renvois vers la bibliographie, pagination comprise.`
+                : `Il restera ${compte(resultat.resume.notes - convertibles, 'note')} sur ${
+                    resultat.resume.notes
+                  }. Les ${convertibles} autres ne sont que des citations : elles deviennent des renvois vers la bibliographie, pagination comprise.`}
           </p>
         )}
 
