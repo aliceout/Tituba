@@ -897,10 +897,15 @@ export default function PublicationEditViewClient({
   // d'auto-peupler le panneau Bibliographie liée — l'utilisatrice
   // n'a pas à re-lister manuellement une référence déjà citée.
   const inlineBiblioIds = useMemo(() => extractBiblioInlineIds(post.body), [post.body]);
+  // Ordre d'APPARITION dans le texte : les citées d'abord, dans l'ordre
+  // où le corps les appelle, puis celles qui sont listées sans être
+  // citées. C'est ainsi que le site les numérote, et l'éditeur doit
+  // montrer les mêmes numéros — sinon on relit « [12] » à l'écran et
+  // « [7] » une fois publié.
   const biblioIds = useMemo(() => {
     const seen = new Set<string>();
     const out: Array<number | string> = [];
-    for (const id of [...explicitBiblioIds, ...inlineBiblioIds]) {
+    for (const id of [...inlineBiblioIds, ...explicitBiblioIds]) {
       const k = String(id);
       if (!seen.has(k)) {
         seen.add(k);

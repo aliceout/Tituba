@@ -91,22 +91,48 @@ export function slugify(s: string): string {
     .slice(0, 80);
 }
 
+/**
+ * Numérotation des références, à l'usage du corps ET de la liste.
+ *
+ * Les numéros suivent l'ordre d'APPARITION dans le texte : la première
+ * source citée est la 1, la deuxième la 2. C'est ce qu'un numéro promet
+ * — numéroter selon l'ordre d'ajout en base donnait un texte qui ouvre
+ * sur « [37] » et saute ensuite au hasard.
+ *
+ * `rang` est REMPLI pendant le rendu ; l'appelante le relit ensuite pour
+ * ranger la bibliographie dans le même ordre.
+ */
+export type BiblioNumerotation = {
+  /** Slugs présents dans la bibliographie du billet — seuls numérotables. */
+  permis: Set<string>;
+  /** slug → numéro, dans l'ordre où le texte les cite. */
+  rang: Map<string, number>;
+};
+
 type RenderContext = {
   /** Notes de bas de page collectées pendant le walk, dans l'ordre d'apparition. */
   footnotes: Array<{ n: number; html: string }>;
-  /**
-   * Rang de chaque référence dans la bibliographie du billet, par slug.
-   *
-   * C'est ce qui permet d'écrire « [12] » plutôt que « (Auteur, année) » :
-   * le numéro n'a de sens que rapporté à la liste de ce billet-là.
-   * Absent, on retombe sur la forme auteur-date — un numéro sans liste
-   * où le retrouver ne dirait rien.
-   */
-  biblioRang: Map<string, number>;
+  numerotation: BiblioNumerotation | null;
 };
 
-function newContext(biblioRang?: Map<string, number>): RenderContext {
-  return { footnotes: [], biblioRang: biblioRang ?? new Map() };
+function newContext(numerotation?: BiblioNumerotation | null): RenderContext {
+  return { footnotes: [], numerotation: numerotation ?? null };
+}
+
+/**
+ * Le numéro d'une référence, attribué à sa première citation.
+ *
+ * Une source hors de la bibliographie du billet n'en reçoit pas : un
+ * numéro qui ne mène à aucune ligne ne dit rien.
+ */
+function numeroDe(ctx: RenderContext, slug: string): number | null {
+  const n = ctx.numerotation;
+  if (!n || !n.permis.has(slug)) return null;
+  const deja = n.rang.get(slug);
+  if (deja) return deja;
+  const suivant = n.rang.size + 1;
+  n.rang.set(slug, suivant);
+  return suivant;
 }
 
 function renderText(node: LexicalNode): string {
@@ -169,7 +195,7 @@ function renderBlock(node: LexicalNode, ctx: RenderContext): string {
       //
       // Le rang vient de la bibliographie du billet — la même liste, le
       // même ordre, donc le même numéro des deux côtés.
-      const rang = ctx.biblioRang.get(entry.slug);
+      const rang = numeroDe(ctx, entry.slug);
       if (rang) {
         const inner = `${prefix}${rang}${pagesPart}${suffix}`;
         return `<a class="biblio-inline" href="#bib-${escapeHtml(entry.slug)}">[${inner}]</a>`;
@@ -272,9 +298,9 @@ function renderNode(node: LexicalNode | unknown, ctx: RenderContext): string {
  */
 export function renderLexical(
   node: LexicalNode | unknown,
-  biblioRang?: Map<string, number>,
+  numerotation?: BiblioNumerotation | null,
 ): string {
-  return renderNode(node, newContext(biblioRang));
+  return renderNode(node, newContext(numerotation));
 }
 
 /**
@@ -287,9 +313,9 @@ export function renderLexical(
  */
 export function renderLexicalWithFootnotes(
   node: LexicalNode | unknown,
-  biblioRang?: Map<string, number>,
+  numerotation?: BiblioNumerotation | null,
 ): { bodyHtml: string; footnotesHtml: string } {
-  const ctx = newContext(biblioRang);
+  const ctx = newContext(numerotation);
   const bodyHtml = renderNode(node, ctx);
   if (ctx.footnotes.length === 0) return { bodyHtml, footnotesHtml: '' };
   const items = ctx.footnotes
@@ -314,7 +340,7 @@ export function renderLexicalWithFootnotes(
  */
 export function renderLexicalSidenotes(
   node: LexicalNode | unknown,
-  biblioRang?: Map<string, number>,
+  numerotation?: BiblioNumerotation | null,
 ): string {
   if (!node || typeof node !== 'object') return '';
   const x = node as LexicalNode & { root?: LexicalNode };
@@ -324,10 +350,10 @@ export function renderLexicalSidenotes(
   else if (x.type === 'root') rootNode = x;
   if (!rootNode || !rootNode.children) {
     // Fallback : pas de root, on rend en mode classique sans collecte
-    return renderNode(node, newContext(biblioRang));
+    return renderNode(node, newContext(numerotation));
   }
 
-  const ctx = newContext(biblioRang);
+  const ctx = newContext(numerotation);
   const out: string[] = [];
   let collected = 0;
   for (const child of rootNode.children) {

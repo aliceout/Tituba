@@ -213,23 +213,40 @@ const siteName = identity.siteName?.trim() || 'Tituba';
 // récupère bodyHtml + footnotesHtml (notes empilées en pied). En mode
 // sidenotes, le rendu interleave les <aside class="marg"> juste après
 // chaque bloc concerné — pas de footnotesHtml séparé.
-// La bibliographie d'abord : c'est elle qui numérote les renvois du
-// corps. Même liste, même ordre, donc « [12] » dans le texte et « 12 »
-// en bas désignent bien la même référence.
-const biblio = (post.bibliography ?? []).filter(
+// La bibliographie du billet, puis sa numérotation.
+//
+// Les numéros suivent l'ordre d'apparition dans le texte, et c'est le
+// rendu qui les attribue au fil de sa lecture : la première source
+// citée est la 1. La liste est ensuite rangée dans ce même ordre, si
+// bien que « [12] » dans le corps et la douzième ligne en bas sont la
+// même référence.
+const biblioBrute = (post.bibliography ?? []).filter(
   (b): b is BiblioEntry => typeof b === 'object' && b !== null && 'slug' in b,
 );
-const biblioRang = new Map(biblio.map((b, i) => [b.slug, i + 1]));
+const numerotation = {
+  permis: new Set(biblioBrute.map((b) => b.slug)),
+  rang: new Map<string, number>(),
+};
 
 const bodyHtml =
   notesMode === 'sidenotes'
-    ? renderLexicalSidenotes(post.body, biblioRang)
-    : renderLexicalWithFootnotes(post.body, biblioRang).bodyHtml;
+    ? renderLexicalSidenotes(post.body, numerotation)
+    : renderLexicalWithFootnotes(post.body, numerotation).bodyHtml;
 const footnotesHtml =
   notesMode === 'classic'
-    ? renderLexicalWithFootnotes(post.body, biblioRang).footnotesHtml
+    ? renderLexicalWithFootnotes(post.body, numerotation).footnotesHtml
     : '';
 const tocEntries = extractToc(post.body);
+
+// Les citées d'abord, dans l'ordre où le texte les appelle ; les autres
+// à la suite. Une référence listée mais jamais citée garde ainsi sa
+// place, sans décaler la numérotation de celles qui le sont.
+const biblio = [
+  ...biblioBrute
+    .filter((b) => numerotation.rang.has(b.slug))
+    .sort((a, b) => numerotation.rang.get(a.slug)! - numerotation.rang.get(b.slug)!),
+  ...biblioBrute.filter((b) => !numerotation.rang.has(b.slug)),
+];
 
 // Affichage de l'aside — décidé ici et nulle part ailleurs : c'est la
 // même valeur qui monte le composant et qui réserve sa colonne dans la
