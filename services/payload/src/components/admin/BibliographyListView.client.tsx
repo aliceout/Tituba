@@ -5,13 +5,11 @@
 // multiple pour agir sur plusieurs entrées d'un coup.
 //
 // La croix en bout de ligne a cédé la place aux cases : ce qu'on vient
-// faire dans cette liste, c'est du ménage — retirer des doublons,
-// corriger les entrées où la revue a pris la place de l'auteur·ice — et
-// une par une, on renonce.
+// faire dans cette liste, c'est du ménage — retirer une série de
+// doublons, par exemple — et une par une, on renonce.
 //
-// Les refs Zotero supprimées reviennent au prochain sync ; celles qu'on
-// tente de modifier sont refusées par la collection, et l'échec est
-// compté puis affiché plutôt que tu.
+// Les refs Zotero supprimées reviennent au prochain sync ; les échecs
+// sont comptés puis affichés plutôt que tus.
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -101,8 +99,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
   //
   // La croix en bout de ligne ne servait qu'à une chose à la fois. Or
   // ce qu'on vient faire dans cette liste, c'est du ménage : retirer
-  // dix doublons, corriger onze entrées où la revue s'est retrouvée à
-  // la place de l'auteur·ice. Une par une, on renonce.
+  // une série de doublons d'un coup. Une par une, on renonce.
   //
   // La sélection traverse les pages : on repère des entrées de proche
   // en proche, la pagination ne doit pas défaire ce qu'on a coché. En
@@ -110,7 +107,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
   // en jeu, et lesquelles — sans quoi on agirait sur ce qu'on ne voit
   // plus.
   const [selection, setSelection] = useState<Set<string>>(new Set());
-  const [action, setAction] = useState<'supprimer' | 'anonymiser' | null>(null);
+  const [aConfirmer, setAConfirmer] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [echecs, setEchecs] = useState<string[]>([]);
 
@@ -142,37 +139,28 @@ export default function BibliographyListViewClient(): React.ReactElement {
 
   function fermerAction() {
     if (enCours) return;
-    setAction(null);
+    setAConfirmer(false);
     setEchecs([]);
   }
 
   /**
-   * Applique l'action à chaque entrée cochée.
+   * Supprime chaque entrée cochée.
    *
-   * Une par une, et les échecs sont comptés plutôt qu'ignorés : une
-   * référence venue de Zotero refuse d'être modifiée ici, et il vaut
-   * mieux le dire que laisser croire que tout est passé.
+   * Une par une, et les échecs sont comptés plutôt qu'ignorés : il
+   * vaut mieux dire que trois références ont résisté que laisser
+   * croire que tout est passé.
    */
   async function executer() {
-    if (!action) return;
     setEnCours(true);
     setEchecs([]);
     const rates: string[] = [];
 
     for (const id of selection) {
       try {
-        const res =
-          action === 'supprimer'
-            ? await fetch(`${API_BIBLIO}/${encodeURIComponent(id)}`, {
-                method: 'DELETE',
-                credentials: 'include',
-              })
-            : await fetch(`${API_BIBLIO}/${encodeURIComponent(id)}`, {
-                method: 'PATCH',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ authors: [] }),
-              });
+        const res = await fetch(`${API_BIBLIO}/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
         if (!res.ok) {
           const t = await res.text();
           rates.push(`#${id} — ${t.slice(0, 120)}`);
@@ -186,7 +174,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
     setEchecs(rates);
     if (rates.length === 0) {
       setSelection(new Set());
-      setAction(null);
+      setAConfirmer(false);
     }
     setReloadKey((k) => k + 1);
   }
@@ -262,15 +250,8 @@ export default function BibliographyListViewClient(): React.ReactElement {
               </span>
               <button
                 type="button"
-                className="tituba-btn tituba-btn--ghost"
-                onClick={() => setAction('anonymiser')}
-              >
-                Retirer l’auteur·ice
-              </button>
-              <button
-                type="button"
                 className="tituba-btn tituba-btn--danger"
-                onClick={() => setAction('supprimer')}
+                onClick={() => setAConfirmer(true)}
               >
                 Supprimer
               </button>
@@ -398,7 +379,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
         )}
       </div>
 
-      {action && (
+      {aConfirmer && (
         <div
           className="tituba-modal-backdrop"
           onClick={(e) => {
@@ -408,9 +389,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
           <div className="tituba-modal" role="dialog" aria-modal="true">
             <header className="tituba-modal__header">
               <h2>
-                {action === 'supprimer'
-                  ? `Supprimer ${selection.size} référence${selection.size > 1 ? 's' : ''} ?`
-                  : `Retirer l’auteur·ice de ${selection.size} référence${selection.size > 1 ? 's' : ''} ?`}
+                Supprimer {selection.size} référence{selection.size > 1 ? 's' : ''} ?
               </h2>
               <button
                 type="button"
@@ -425,7 +404,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
             {echecs.length > 0 && (
               <div className="tituba-modal__error">
                 {echecs.length} référence{echecs.length > 1 ? 's' : ''} n’
-                {echecs.length > 1 ? 'ont' : 'a'} pas pu être modifiée
+                {echecs.length > 1 ? 'ont' : 'a'} pas pu être supprimée
                 {echecs.length > 1 ? 's' : ''} :
                 <ul>
                   {echecs.slice(0, 5).map((e) => (
@@ -437,9 +416,8 @@ export default function BibliographyListViewClient(): React.ReactElement {
 
             <div className="tituba-modal__body">
               <p>
-                {action === 'supprimer'
-                  ? 'Elles seront retirées du Tituba. Celles qui viennent de Zotero reviendront au prochain sync.'
-                  : 'Leur champ auteur·ice sera vidé — pour les textes non signés, dont la revue avait pris la place. Le reste de la référence ne bouge pas.'}
+                Elles seront effacées du Tituba, définitivement. Celles qui viennent de
+                Zotero reviendront au prochain sync.
               </p>
 
               {/* Nommer ce qui est en jeu : la sélection traverse les
@@ -475,15 +453,11 @@ export default function BibliographyListViewClient(): React.ReactElement {
               </button>
               <button
                 type="button"
-                className={`tituba-btn ${action === 'supprimer' ? 'tituba-btn--danger' : ''}`}
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void executer()}
                 disabled={enCours}
               >
-                {enCours
-                  ? 'En cours…'
-                  : action === 'supprimer'
-                    ? 'Supprimer'
-                    : 'Retirer l’auteur·ice'}
+                {enCours ? 'Suppression…' : 'Supprimer'}
               </button>
             </footer>
           </div>
