@@ -43,6 +43,16 @@ type UserDoc = {
 };
 
 /**
+ * Zotero n'est pas branché sur ce compte.
+ *
+ * Distingué d'une panne, parce que ce n'en est pas une : la plupart
+ * des comptes n'utiliseront jamais Zotero, et leur répondre « erreur
+ * serveur » remplissait le journal d'alertes qui n'en étaient pas —
+ * de quoi masquer les vraies.
+ */
+export class ZoteroNonConfigure extends Error {}
+
+/**
  * Lit le user en bypassant l'access read (sinon afterRead masque la
  * clé, qu'on a besoin de déchiffrer). Renvoie les credentials prêts
  * à l'emploi ou lève une erreur explicite si la config est incomplète.
@@ -66,10 +76,10 @@ async function loadCreds(
 
   const z = raw.zotero;
   if (!z?.apiKey) {
-    throw new Error('Aucune clé API Zotero configurée pour ce compte.');
+    throw new ZoteroNonConfigure('Aucune clé API Zotero configurée pour ce compte.');
   }
   if (!z.libraryId) {
-    throw new Error('Aucun ID utilisateur Zotero configuré.');
+    throw new ZoteroNonConfigure('Aucun ID utilisateur Zotero configuré.');
   }
   const libType: ZoteroLibraryType = z.libraryType === 'group' ? 'group' : 'user';
 

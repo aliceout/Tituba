@@ -14,7 +14,7 @@ import type { Endpoint } from 'payload';
 import { errorResponse, jsonResponse, readJsonBody, requireUser } from '../auth/helpers';
 import { decrypt, isEncrypted } from '../lib/crypto';
 import { testConnection, type ZoteroLibraryType } from './api';
-import { syncZoteroForUser } from './sync';
+import { syncZoteroForUser, ZoteroNonConfigure } from './sync';
 
 type UserZoteroDoc = {
   zotero?: {
@@ -151,6 +151,15 @@ const zoteroSyncEndpoint: Endpoint = {
         newVersion: result.newVersion,
       });
     } catch (err) {
+      // Un compte sans Zotero n'est pas une panne, c'est le cas le plus
+      // courant. Répondre « erreur serveur » remplissait le journal
+      // d'alertes imaginaires — au risque d'y noyer les vraies — et
+      // laissait le sync automatique revenir toutes les demi-heures
+      // redemander la même chose. On répond donc calmement, et le
+      // client cesse d'insister pour cette session.
+      if (err instanceof ZoteroNonConfigure) {
+        return jsonResponse({ ok: true, skipped: 'not_configured', message: err.message });
+      }
       const msg = err instanceof Error ? err.message : 'Erreur inconnue.';
       return errorResponse(msg, 500);
     }
