@@ -71,6 +71,18 @@ function pageHref(p: number): string {
   const qs = params.toString();
   return qs ? `/recherche/?${qs}` : '/recherche/';
 }
+
+/**
+ * Bleu partout où l'ancien code lisait --color-accent : la recherche est
+ * un utilitaire neutre, pas rattachée à une famille éditoriale, et le
+ * bleu est celui qu'on retrouve déjà sur les autres liens neutres du
+ * site (pied de page, cartes de format par défaut).
+ */
+
+/** Phrase centrée : une erreur, ou une recherche sans résultat. */
+const REPONSE =
+  'text-muted py-12 text-center font-serif text-courant [&_em]:text-ink [&_em]:italic';
+
 ---
 
 <PageShell
@@ -79,8 +91,16 @@ function pageHref(p: number): string {
   title={heroTitleHtml}
   lede={heroLedeHtml}
 >
-  <div class="search">
-    <form method="get" action="/recherche/" class="search-form" role="search">
+  {/* Gouttière et rythme vertical viennent de PageShell. */}
+  <div class="pt-0 pb-20">
+    {/* Sous 720 px le champ et le bouton s'empilent : à deux, ils ne
+        laissaient plus assez de place à la saisie. */}
+    <form
+      method="get"
+      action="/recherche/"
+      class="mb-8 flex max-w-[720px] gap-2 max-poche:flex-col"
+      role="search"
+    >
       <input
         type="search"
         name="q"
@@ -88,20 +108,24 @@ function pageHref(p: number): string {
         placeholder="Cherchez sur Tituba…"
         autofocus={!q}
         aria-label="Rechercher"
+        class="border-rule bg-bg text-ink flex-1 border px-3.5 py-2.5 font-serif text-sublede leading-[1.4] focus:border-[var(--c-bleu-deep)] focus:outline-none"
       />
-      <button type="submit">Chercher</button>
+      <button
+        type="submit"
+        class="cursor-pointer border border-[var(--c-bleu-fill)] bg-[var(--c-bleu-fill)] px-[18px] py-2.5 font-sans text-[calc(13px*var(--a11y-echelle))] font-medium text-[var(--c-bleu-on)] hover:brightness-[0.94]"
+      >
+        Chercher
+      </button>
     </form>
 
-    {fetchError && (
-      <p class="empty">
-        Une erreur est survenue : {fetchError}.
-      </p>
-    )}
+    {fetchError && <p class={REPONSE}>Une erreur est survenue : {fetchError}.</p>}
 
     {!q && !fetchError && (
-      <div class="hints">
-        <h2>Astuces</h2>
-        <ul>
+      <div class="bg-bg text-muted my-6 border-l-2 border-[var(--c-bleu-deep)] py-[18px] pr-[22px] pl-[22px] font-sans text-[calc(13.5px*var(--a11y-echelle))]">
+        <h2 class="text-muted m-0 mb-2.5 font-mono text-label font-normal tracking-label uppercase">
+          Astuces
+        </h2>
+        <ul class="m-0 pl-[18px] leading-[1.7] [&_code]:text-ink [&_code]:rounded-[2px] [&_code]:bg-[color-mix(in_oklch,var(--color-ink),transparent_92%)] [&_code]:px-1 [&_code]:font-mono [&_code]:text-[calc(12.5px*var(--a11y-echelle))]">
           <li><code>spivak agency</code> → publications contenant les deux mots</li>
           <li><code>"théorie postcoloniale"</code> → expression exacte</li>
           <li><code>spivak -postcolonial</code> → exclure un terme</li>
@@ -111,21 +135,41 @@ function pageHref(p: number): string {
     )}
 
     {q && !fetchError && docs.length === 0 && (
-      <p class="empty">Aucun résultat pour <em>« {q} »</em>.</p>
+      <p class={REPONSE}>Aucun résultat pour <em>« {q} »</em>.</p>
     )}
 
     {q && docs.length > 0 && (
-      <ol class="results">
-        {docs.map((d) => (
-          <li class="result">
-            <a href={publicationHref(d.collection, d.publicId)} class="result__title">
+      <ol class="m-0 flex list-none flex-col gap-7 p-0">
+        {docs.map((d, rang) => (
+          <li
+            class:list={[
+              'pb-6',
+              // Le dernier résultat ne porte pas de filet : c'était
+              // `:last-child`, c'est le rang de la boucle.
+              rang < docs.length - 1 && 'border-rule border-b',
+            ]}
+          >
+            <a
+              href={publicationHref(d.collection, d.publicId)}
+              class="text-ink mb-1.5 block font-serif text-[calc(22px*var(--a11y-echelle))] leading-[1.3] font-normal no-underline hover:text-[var(--c-bleu-deep)] hover:underline"
+            >
               {stripHeroMarkers(d.title)}
             </a>
-            <div class="result__meta">
-              {d.publishedAt && <span class="d">{formatDateIso(d.publishedAt)}</span>}
+            <div class="text-muted mb-2 flex items-baseline gap-3 font-sans text-meta">
+              {/* En sans, comme le reste de la ligne. Une règle voulait la
+                  date en mono, mais elle visait `.id` quand le balisage
+                  écrit `.d` : elle n'a jamais rien fait, et l'appliquer
+                  aurait changé le rendu sans qu'on l'ait demandé. */}
+              {d.publishedAt && <span>{formatDateIso(d.publishedAt)}</span>}
             </div>
             {d.excerpt && (
-              <p class="result__excerpt" set:html={d.excerpt}></p>
+              /* ts_headline pose des <mark>…</mark> autour des mots
+                 trouvés : ils arrivent par set:html, donc stylés par
+                 variante descendante. */
+              <p
+                class="text-muted m-0 font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55] [&_mark]:text-ink [&_mark]:bg-[color-mix(in_oklch,var(--c-bleu-deep),transparent_80%)] [&_mark]:px-0.5 [&_mark]:font-medium"
+                set:html={d.excerpt}
+              />
             )}
           </li>
         ))}
@@ -133,191 +177,14 @@ function pageHref(p: number): string {
     )}
 
     {q && totalPages > 1 && (
-      <nav class="pagination" aria-label="Pages de résultats">
+      <nav
+        class="mt-12 flex items-center justify-between gap-4 font-sans text-[calc(13px*var(--a11y-echelle))] max-poche:flex-col max-poche:items-stretch max-poche:text-center [&_a]:text-ink [&_a]:border-rule [&_a]:border-b [&_a]:pb-0.5 [&_a]:no-underline [&_a:hover]:text-[var(--c-bleu-deep)] [&_a:hover]:border-b-[var(--c-bleu-deep)]"
+        aria-label="Pages de résultats"
+      >
         {page > 1 && <a href={pageHref(page - 1)} rel="prev">← Page précédente</a>}
-        <span class="pos">Page {page} sur {totalPages}</span>
+        <span class="text-muted">Page {page} sur {totalPages}</span>
         {page < totalPages && <a href={pageHref(page + 1)} rel="next">Page suivante →</a>}
       </nav>
     )}
   </div>
 </PageShell>
-
-<style>
-  /* Gouttière et rythme vertical viennent de PageShell. Bleu partout où
-     l'ancien code lisait --color-accent : la recherche est un utilitaire
-     neutre, pas rattachée à une famille éditoriale précise, et le bleu
-     est celui qu'on retrouve déjà sur les autres liens neutres du site
-     (pied de page, cartes de format par défaut). */
-  .search {
-    padding-top: 0;
-    padding-bottom: 80px;
-  }
-
-  .search-form {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 32px;
-    max-width: 720px;
-  }
-  .search-form input {
-    flex: 1;
-    padding: 10px 14px;
-    border: 1px solid var(--color-rule);
-    background: var(--color-bg);
-    color: var(--color-ink);
-    font-family: var(--font-serif);
-    font-size: calc(16px * var(--a11y-echelle));
-    line-height: 1.4;
-  }
-  .search-form input:focus {
-    outline: none;
-    border-color: var(--c-bleu-deep);
-  }
-  .search-form button {
-    padding: 10px 18px;
-    background: var(--c-bleu-fill);
-    color: var(--c-bleu-on);
-    border: 1px solid var(--c-bleu-fill);
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-    font-weight: 500;
-    cursor: pointer;
-  }
-  .search-form button:hover {
-    filter: brightness(0.94);
-  }
-
-  .hints {
-    margin: 24px 0;
-    padding: 18px 22px;
-    border-left: 2px solid var(--c-bleu-deep);
-    background: var(--color-bg);
-    font-family: var(--font-sans);
-    font-size: calc(13.5px * var(--a11y-echelle));
-    color: var(--color-muted);
-  }
-  .hints h2 {
-    font-family: var(--font-mono);
-    margin: 0 0 10px;
-    font-size: var(--t-label);
-    font-weight: 400;
-    letter-spacing: var(--ls-label);
-    text-transform: uppercase;
-    color: var(--color-muted);
-  }
-  .hints ul {
-    margin: 0;
-    padding-left: 18px;
-    line-height: 1.7;
-  }
-  .hints code {
-    font-family: var(--font-mono);
-    font-size: calc(12.5px * var(--a11y-echelle));
-    color: var(--color-ink);
-    background: color-mix(in oklch, var(--color-ink), transparent 92%);
-    padding: 0 4px;
-    border-radius: 2px;
-  }
-
-  .empty {
-    padding: 48px 0;
-    color: var(--color-muted);
-    font-family: var(--font-serif);
-    font-size: calc(17px * var(--a11y-echelle));
-    text-align: center;
-  }
-  .empty em {
-    color: var(--color-ink);
-    font-style: italic;
-  }
-
-  .results {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
-  }
-  .result {
-    border-bottom: 1px solid var(--color-rule);
-    padding-bottom: 24px;
-  }
-  .result:last-child {
-    border-bottom: 0;
-  }
-  .result__title {
-    display: block;
-    font-family: var(--font-serif);
-    font-size: calc(22px * var(--a11y-echelle));
-    font-weight: 400;
-    line-height: 1.3;
-    color: var(--color-ink);
-    text-decoration: none;
-    margin-bottom: 6px;
-  }
-  .result__title:hover {
-    color: var(--c-bleu-deep);
-    text-decoration: underline;
-  }
-  .result__meta {
-    display: flex;
-    gap: 12px;
-    align-items: baseline;
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--color-muted);
-    margin-bottom: 8px;
-  }
-  .result__meta .id {
-    font-family: var(--font-mono);
-  }
-  .result__excerpt {
-    margin: 0;
-    font-family: var(--font-serif);
-    font-size: calc(15px * var(--a11y-echelle));
-    line-height: 1.55;
-    color: var(--color-muted);
-  }
-  /* ts_headline pose des <mark>...</mark> autour des mots matchés. */
-  .result__excerpt :global(mark) {
-    background: color-mix(in oklch, var(--c-bleu-deep), transparent 80%);
-    color: var(--color-ink);
-    font-weight: 500;
-    padding: 0 2px;
-  }
-
-  .pagination {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-top: 48px;
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-  }
-  .pagination .pos {
-    color: var(--color-muted);
-  }
-  .pagination a {
-    color: var(--color-ink);
-    text-decoration: none;
-    border-bottom: 1px solid var(--color-rule);
-    padding-bottom: 2px;
-  }
-  .pagination a:hover {
-    border-bottom-color: var(--c-bleu-deep);
-    color: var(--c-bleu-deep);
-  }
-
-  @media (max-width: 720px) {
-    .search-form {
-      flex-direction: column;
-    }
-    .pagination {
-      flex-direction: column;
-      align-items: stretch;
-      text-align: center;
-    }
-  }
-</style>
