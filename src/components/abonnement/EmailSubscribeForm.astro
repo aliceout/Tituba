@@ -16,6 +16,12 @@ interface Props {
   statut?: string;
 }
 const { statut = '' } = Astro.props;
+
+/** Les deux lignes de choix sont identiques au libellé près. */
+const CHOIX = 'flex cursor-pointer items-baseline gap-2 py-1.5';
+const RADIO = 'm-0 flex-none self-center accent-[var(--c-vert-deep)]';
+const QUOI = 'font-serif text-courant text-ink';
+const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-panel-mute)]';
 ---
 
 <Heading>Par mail</Heading>
@@ -24,24 +30,30 @@ const { statut = '' } = Astro.props;
   chaque envoi.
 </Lede>
 
-<Panel famille="vert" padding="serre" class="offre">
+{/* Un seul panneau, largeur de lecture : le choix et le champ sont un
+    même geste, ils n’ont pas à courir sur toute la page. */}
+<Panel famille="vert" padding="serre" class="mb-9 max-w-[560px]">
   {/* `method` et `action` ne sont pas décoratifs : sans eux, un
-      navigateur sans JavaScript soumet en GET sur l'URL courante, et
-      l'adresse saisie part dans la barre d'adresse, l'historique et les
+      navigateur sans JavaScript soumet en GET sur l’URL courante, et
+      l’adresse saisie part dans la barre d’adresse, l’historique et les
       journaux du serveur. Avec eux, elle voyage dans le corps de la
-      requête, et le frontmatter de la page traite l'envoi. */}
+      requête, et le frontmatter de la page traite l’envoi. */}
   <form class="subscribe-form" method="post" action="/abonnement/" novalidate>
-    <fieldset class="choix">
-      <legend>Ce que vous voulez recevoir</legend>
-      <label>
-        <input type="radio" name="kind" value="newsletter" checked />
-        <span class="quoi">La lettre</span>
-        <span class="quand">une fois par trimestre</span>
+    <fieldset class="m-0 mb-[18px] border-0 p-0">
+      <legend class="mb-3 p-0 font-mono text-label tracking-label text-[var(--c-vert-deep)] uppercase">
+        Ce que vous voulez recevoir
+      </legend>
+      <label class={CHOIX}>
+        {/* Le bouton radio prend la couleur de famille plutôt que le bleu
+            du système, qui serait la seule note étrangère du panneau. */}
+        <input type="radio" name="kind" value="newsletter" class={RADIO} checked />
+        <span class={QUOI}>La lettre</span>
+        <span class={QUAND}>une fois par trimestre</span>
       </label>
-      <label>
-        <input type="radio" name="kind" value="publications" />
-        <span class="quoi">Chaque parution</span>
-        <span class="quand">dès sa mise en ligne</span>
+      <label class={CHOIX}>
+        <input type="radio" name="kind" value="publications" class={RADIO} />
+        <span class={QUOI}>Chaque parution</span>
+        <span class={QUAND}>dès sa mise en ligne</span>
       </label>
     </fieldset>
 
@@ -56,74 +68,20 @@ const { statut = '' } = Astro.props;
       action="S'abonner"
       famille="vert"
     />
-    {/* Résultat d'une soumission native ; le script le remplace au
-        vol quand JavaScript est disponible. */}
-    <p class="status" data-status aria-live="polite">{statut}</p>
+    {/* Résultat d’une soumission native ; le script le remplace au vol
+        quand JavaScript est disponible. Le ton passe par un attribut et
+        non par une classe : Tailwind ne génère que les classes qu’il lit
+        dans les sources, et le script écrasait de toute façon l’attribut
+        class entier à chaque message. */}
+    <p
+      class="text-muted mt-3 mb-0 min-h-[1.5em] font-sans text-[calc(13px*var(--a11y-echelle))] leading-[1.5] data-[ton=err]:text-[#b63a3a] data-[ton=ok]:text-[var(--c-vert-deep)]"
+      data-status
+      aria-live="polite"
+    >
+      {statut}
+    </p>
   </form>
 </Panel>
-
-<style>
-  /* Un seul panneau, largeur de lecture : le choix et le champ sont un
-     même geste, ils n'ont pas à courir sur toute la page. */
-  .offre {
-    max-width: 560px;
-    margin-bottom: 36px;
-  }
-
-  .choix {
-    border: 0;
-    padding: 0;
-    margin: 0 0 18px;
-  }
-  .choix legend {
-    font-family: var(--font-mono);
-    font-size: var(--t-label);
-    letter-spacing: var(--ls-label);
-    text-transform: uppercase;
-    color: var(--c-vert-deep);
-    padding: 0;
-    margin-bottom: 12px;
-  }
-  .choix label {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding: 6px 0;
-    cursor: pointer;
-  }
-  .choix input {
-    /* Le bouton radio prend la couleur de famille plutôt que le bleu
-       du système, qui serait la seule note étrangère du panneau. */
-    accent-color: var(--c-vert-deep);
-    margin: 0;
-    flex: 0 0 auto;
-    align-self: center;
-  }
-  .choix .quoi {
-    font-family: var(--font-serif);
-    font-size: calc(17px * var(--a11y-echelle));
-    color: var(--color-ink);
-  }
-  .choix .quand {
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-    color: var(--c-panel-mute);
-  }
-  .subscribe-form .status {
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-    line-height: 1.5;
-    margin: 12px 0 0;
-    min-height: 1.5em;
-    color: var(--color-muted);
-  }
-  .subscribe-form .status--ok {
-    color: var(--c-vert-deep);
-  }
-  .subscribe-form .status--err {
-    color: #b63a3a;
-  }
-</style>
 
 <script>
   // Progressive enhancement : on intercepte le submit pour POSTer en
@@ -150,9 +108,13 @@ const { statut = '' } = Astro.props;
         return coche?.value ?? 'newsletter';
       }
 
+      // On pose un attribut au lieu de réécrire `class` : les
+      // utilitaires du paragraphe vivent là, les écraser le laisserait
+      // sans mise en forme dès le premier message.
       function setStatus(text: string, kind: 'ok' | 'err' | '' = ''): void {
         status.textContent = text;
-        status.className = kind ? `status status--${kind}` : 'status';
+        if (kind) status.dataset.ton = kind;
+        else delete status.dataset.ton;
       }
 
       form.addEventListener('submit', async (e) => {

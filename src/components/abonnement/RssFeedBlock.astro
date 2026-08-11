@@ -11,6 +11,19 @@ interface Props {
 }
 
 const { feedUrl } = Astro.props;
+
+/**
+ * Les quatre liens de la liste des lecteurs, tous vers l'extérieur.
+ * `ext` est la marque des liens externes du site : elle ne porte rien
+ * ici, mais des règles de prose s'en servent ailleurs, et un lien
+ * sortant se reconnaît au même signe partout.
+ */
+const LIEN_LECTEUR =
+  'ext text-ink border-b border-[var(--c-vert-deep)] font-medium hover:text-[var(--c-vert-deep)]';
+
+/** La pastille « open source », accolée au nom du lecteur. */
+const PASTILLE_LIBRE =
+  'ml-1.5 inline-block cursor-help rounded-full border border-[var(--c-vert-deep)] px-2 py-px align-[2px] font-mono text-[calc(10px*var(--a11y-echelle))] tracking-[0.08em] text-[var(--c-vert-deep)] uppercase';
 ---
 
 <Heading>Par flux RSS</Heading>
@@ -20,51 +33,75 @@ const { feedUrl } = Astro.props;
   flux, et chaque nouveau billet apparaît automatiquement.
 </Lede>
 
-<Panel famille="vert" padding="serre" class="url-block">
-  <div class="lbl">URL du flux</div>
-  <div class="url-row">
-    <code>{feedUrl}</code>
+{/* La forme vient de Panel : fond de famille dilué, rayon des panneaux
+    du site. Il ne reste ici que la marge basse. */}
+<Panel famille="vert" padding="serre" class="mb-8">
+  <div class="mb-3 font-mono text-label tracking-label text-[var(--c-vert-deep)] uppercase">
+    URL du flux
+  </div>
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <code class="text-ink min-w-0 flex-[1_1_280px] font-mono text-[calc(14px*var(--a11y-echelle))] break-all">
+      {feedUrl}
+    </code>
+    {/* L'état « copié » passe par un attribut plutôt que par une classe
+        ajoutée à la main : Tailwind ne génère que les classes qu'il lit
+        dans les sources, et une classe née dans un script lui échappe. */}
     <Button
       ton="contour"
       famille="vert"
-      class="copy-btn"
+      class="copy-btn data-[copie]:bg-[var(--c-vert-fill)] data-[copie]:text-[var(--c-vert-on)]"
       data-url={feedUrl}
       aria-label="Copier l'URL du flux"
     >
       Copier
     </Button>
   </div>
-  <p class="hint">
+  {/* --c-panel-mute et non --color-muted : le second est calibré sur le
+      fond de page, et tombe à 4,24:1 sur une teinte de panneau. */}
+  <p
+    class="mt-3.5 mb-0 font-sans text-meta text-[var(--c-panel-mute)] [&_a]:border-b [&_a]:border-dotted [&_a]:border-[var(--c-vert-deep)] [&_a]:text-[var(--c-vert-deep)]"
+  >
     Vous pouvez aussi <a href="/rss.xml">ouvrir le flux directement</a> —
     c'est un fichier XML, pas conçu pour la lecture humaine.
   </p>
 </Panel>
 
-<details class="readers-accordion">
-  <summary>Quelques lecteurs recommandés</summary>
-  <ul class="readers">
+{/* `group` sur le <details> : c'est lui qui porte [open], et le signe à
+    replier vit sur le <summary>, son enfant. */}
+<details class="group border-rule my-8 border-y">
+  {/* Le marqueur natif est masqué au profit du + / − posé en
+      pseudo-élément : sa forme et sa couleur varient d'un navigateur à
+      l'autre, et il ne suit pas la famille de la page. */}
+  <summary
+    class="text-ink flex cursor-pointer list-none items-center gap-3 py-4 font-serif text-[calc(20px*var(--a11y-echelle))] font-semibold before:w-[1ch] before:font-mono before:text-[calc(18px*var(--a11y-echelle))] before:font-normal before:text-[var(--c-vert-deep)] before:content-['+'] hover:text-[var(--c-vert-deep)] focus-visible:rounded-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--c-vert-deep)] group-open:before:content-['−'] [&::-webkit-details-marker]:hidden"
+  >
+    Quelques lecteurs recommandés
+  </summary>
+  <ul class="text-body m-0 grid list-none gap-2.5 p-0 pb-4 font-serif text-sublede leading-body">
     <li>
-      <a href="https://feedly.com/" rel="noopener" class="ext">Feedly</a>
+      <a href="https://feedly.com/" rel="noopener" class={LIEN_LECTEUR}>Feedly</a>
       — le plus connu, web et mobile, version gratuite suffisante.
     </li>
     <li>
-      <a href="https://netnewswire.com/" rel="noopener" class="ext">NetNewsWire</a>
-      <span class="oss" title="Logiciel libre / open source">open source</span>
+      <a href="https://netnewswire.com/" rel="noopener" class={LIEN_LECTEUR}>NetNewsWire</a>
+      <span class={PASTILLE_LIBRE} title="Logiciel libre / open source">open source</span>
       — léger, macOS et iOS.
     </li>
     <li>
-      <a href="https://www.inoreader.com/" rel="noopener" class="ext">Inoreader</a>
+      <a href="https://www.inoreader.com/" rel="noopener" class={LIEN_LECTEUR}>Inoreader</a>
       — multi-plateformes, organisation poussée.
     </li>
     <li>
-      <a href="https://www.thunderbird.net/" rel="noopener" class="ext">Thunderbird</a>
-      <span class="oss" title="Logiciel libre / open source">open source</span>
+      <a href="https://www.thunderbird.net/" rel="noopener" class={LIEN_LECTEUR}>Thunderbird</a>
+      <span class={PASTILLE_LIBRE} title="Logiciel libre / open source">open source</span>
       — le client mail de Mozilla lit aussi les flux RSS.
     </li>
   </ul>
 </details>
 
-<p class="footnote">
+<p
+  class="text-muted m-0 font-sans text-[calc(13px*var(--a11y-echelle))] [&_a]:border-b [&_a]:border-dotted [&_a]:border-current [&_a]:text-inherit [&_a:hover]:text-[var(--c-vert-deep)]"
+>
   Pas familier avec RSS ? La <a
     href="https://fr.wikipedia.org/wiki/RSS"
     rel="noopener"
@@ -72,169 +109,29 @@ const { feedUrl } = Astro.props;
   > donne une bonne vue d'ensemble.
 </p>
 
-<style>
-  /* La forme vient de Panel : fond de famille dilué, rayon des
-     panneaux du site. Il ne reste ici que la marge basse. */
-  .url-block {
-    margin-bottom: 32px;
-  }
-  /* Ciblage direct : .url-block vit sur la racine de Panel, qui a sa
-     propre portée de style. Un sélecteur descendant depuis elle ne
-     matcherait rien. */
-  .lbl {
-    font-family: var(--font-mono);
-    font-size: var(--t-label);
-    letter-spacing: var(--ls-label);
-    text-transform: uppercase;
-    color: var(--c-vert-deep);
-    margin-bottom: 12px;
-  }
-  .url-row {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-  }
-  .url-row code {
-    font-family: var(--font-mono);
-    font-size: calc(14px * var(--a11y-echelle));
-    color: var(--color-ink);
-    word-break: break-all;
-    flex: 1 1 280px;
-    min-width: 0;
-  }
-  .copy-btn.copied {
-    background: var(--c-vert-fill);
-    color: var(--c-vert-on);
-  }
-  /* --c-panel-mute et non --color-muted : le second est calibré sur le
-     fond de page, et tombe à 4,24:1 sur une teinte de panneau. */
-  .hint {
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--c-panel-mute);
-    margin: 14px 0 0;
-  }
-  .hint a {
-    color: var(--c-vert-deep);
-    border-bottom: 1px dotted var(--c-vert-deep);
-  }
-
-  .readers-accordion {
-    margin: 32px 0;
-    border-top: 1px solid var(--color-rule);
-    border-bottom: 1px solid var(--color-rule);
-  }
-  .readers-accordion summary {
-    font-family: var(--font-serif);
-    font-size: calc(20px * var(--a11y-echelle));
-    font-weight: 600;
-    padding: 16px 0;
-    cursor: pointer;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: var(--color-ink);
-  }
-  .readers-accordion summary::-webkit-details-marker {
-    display: none;
-  }
-  .readers-accordion summary::before {
-    content: '+';
-    font-family: var(--font-mono);
-    font-size: calc(18px * var(--a11y-echelle));
-    font-weight: 400;
-    color: var(--c-vert-deep);
-    width: 1ch;
-    transition: transform 0.15s;
-  }
-  .readers-accordion[open] summary::before {
-    content: '−';
-  }
-  .readers-accordion summary:hover {
-    color: var(--c-vert-deep);
-  }
-  .readers-accordion summary:focus-visible {
-    outline: 2px solid var(--c-vert-deep);
-    outline-offset: 2px;
-    border-radius: 2px;
-  }
-
-  .readers {
-    font-family: var(--font-serif);
-    font-size: calc(16px * var(--a11y-echelle));
-    line-height: 1.6;
-    color: var(--color-body);
-    list-style: none;
-    padding: 0 0 16px;
-    margin: 0;
-    display: grid;
-    gap: 10px;
-  }
-  .readers a.ext {
-    color: var(--color-ink);
-    border-bottom: 1px solid var(--c-vert-deep);
-    font-weight: 500;
-  }
-  .readers a.ext:hover {
-    color: var(--c-vert-deep);
-  }
-  .readers .oss {
-    display: inline-block;
-    font-family: var(--font-mono);
-    font-size: calc(10px * var(--a11y-echelle));
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--c-vert-deep);
-    border: 1px solid var(--c-vert-deep);
-    border-radius: 999px;
-    padding: 1px 8px;
-    margin-left: 6px;
-    vertical-align: 2px;
-    cursor: help;
-  }
-
-  .footnote {
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-    color: var(--color-muted);
-    margin: 0;
-  }
-  .footnote a.ext {
-    color: var(--color-muted);
-    border-bottom: 1px dotted var(--color-muted);
-  }
-  .footnote a.ext:hover {
-    color: var(--c-vert-deep);
-    border-bottom-color: var(--c-vert-deep);
-  }
-</style>
-
 <script>
   // Sur `astro:page-load` : avec le ClientRouter, un module ne
   // s'exécute qu'une fois par URL — sans cet évènement, le bouton de
   // la page suivante resterait sans écouteur.
   document.addEventListener('astro:page-load', () => {
     const btn = document.querySelector<HTMLButtonElement>('.copy-btn');
-    if (btn) {
-      const original = btn.textContent ?? 'Copier';
-      btn.addEventListener('click', async () => {
-        const url = btn.dataset.url;
-        if (!url) return;
-        try {
-          await navigator.clipboard.writeText(url);
-          btn.textContent = 'Copié ✓';
-          btn.classList.add('copied');
-          setTimeout(() => {
-            btn.textContent = original;
-            btn.classList.remove('copied');
-          }, 1800);
-        } catch (err) {
-          console.warn('clipboard:', err);
-        }
-      });
-    }
+    if (!btn) return;
+    const original = btn.textContent ?? 'Copier';
+    btn.addEventListener('click', async () => {
+      const url = btn.dataset.url;
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch (err) {
+        console.warn('clipboard:', err);
+        return;
+      }
+      btn.textContent = 'Copié ✓';
+      btn.dataset.copie = '';
+      setTimeout(() => {
+        btn.textContent = original;
+        delete btn.dataset.copie;
+      }, 1800);
+    });
   });
 </script>
