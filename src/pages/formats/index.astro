@@ -41,6 +41,17 @@ const heroLede = pagesFixes.formats?.heroLede?.trim() || LEDE_DEFAUT;
 /** Familles de couleur, distribuées dans l'ordre éditorial. */
 const FAMILLES = ['bleu', 'vert', 'jaune'] as const;
 
+/**
+ * La famille de chaque carte, posée en variable plutôt que par un
+ * attribut : c’est la forme qu’emploie déjà <Panel>, et elle sert ici
+ * deux fois — la racine d’URL et le titre au survol.
+ */
+const FAMILLE_FAM: Record<string, string> = {
+  bleu: '[--fam:var(--c-bleu-deep)]',
+  vert: '[--fam:var(--c-vert-deep)]',
+  jaune: '[--fam:var(--c-jaune-deep)]',
+};
+
 // Compteur par format. L'endpoint de comptage existant groupe par
 // thématique ou par tag, pas par collection : on prend donc le flux et
 // on compte, en une seule requête. La limite de 100 est celle de
@@ -73,158 +84,69 @@ function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
   title={formatHeroTitle(heroTitre)}
   lede={formatHeroLede(heroLede)}
 >
-  <div class="grid">
+  {/* Gouttière et rythme vertical viennent de PageShell : cette page ne
+      déclare plus que sa grille propre.
+
+      Deux colonnes, comme /themes/ : même registre de taxonomie, même
+      grille. Cinq entrées donnent une colonne impaire d’une carte de plus
+      que la paire — la dernière reste seule à gauche, cellule vide à sa
+      droite, ce que /themes/ ferait aussi avec un nombre impair. */}
+  <div class="grid grid-cols-2 gap-0 max-mobile:grid-cols-1">
     {PUBLICATION_ORDER.map((c, i) => {
       const spec = PUBLICATIONS[c];
       const n = counts[c] ?? 0;
+      // Colonne de gauche ou de droite : c’était deux règles
+      // :nth-child(odd/even). Le filet vertical n’existe que tant qu’il
+      // y a deux colonnes.
+      const gauche = i % 2 === 0;
+      // Les deux dernières cartes ferment la grille en bas ; en colonne
+      // unique, seule la toute dernière la ferme.
+      const avantDerniere = i >= PUBLICATION_ORDER.length - 2;
+      const derniere = i === PUBLICATION_ORDER.length - 1;
       return (
         <a
-          class="format-card"
-          data-famille={FAMILLES[i % FAMILLES.length]}
+          class:list={[
+            'group border-rule text-inherit grid grid-cols-[1fr_140px] items-baseline gap-6 border-t py-6 transition-colors duration-[120ms]',
+            'max-mobile:grid-cols-[1fr] max-mobile:gap-2.5',
+            gauche
+              ? 'border-rule border-r pr-6 max-mobile:border-r-0 max-mobile:pr-0'
+              : 'pl-6 max-mobile:pl-0',
+            avantDerniere && 'border-b',
+            // Un seul utilitaire par palier, jamais deux qui se
+            // contredisent : `border-b` et `border-b-0` sous la même
+            // variante se départageraient sur l'ordre de la feuille
+            // générée, pas sur celui où on les écrit.
+            derniere ? 'max-mobile:border-b' : 'max-mobile:border-b-0',
+            FAMILLE_FAM[FAMILLES[i % FAMILLES.length]],
+          ]}
           href={`${spec.routePrefix}/`}
         >
-          <div class="left">
-            <div class="ty mono">
+          <div>
+            {/* La famille ne colore que la racine d’URL et le titre au
+                survol. Le texte courant reste d’une seule encre — la
+                couleur signale le format, elle n’a pas à teinter ce qu’on
+                lit. */}
+            <div class="mono mb-2 flex items-center font-mono text-label tracking-[0.04em] text-(--fam)">
               <FormatIcon collection={c} />
               {spec.routePrefix}
             </div>
-            <div class="t">{spec.labelPlural}</div>
-            <p class="desc">{spec.description}</p>
+            <div class="m-0 mb-2 font-serif text-[calc(24px*var(--a11y-echelle))] leading-[1.2] font-heading tracking-[-0.02em] transition-colors duration-[120ms] group-hover:text-(--fam)">
+              {spec.labelPlural}
+            </div>
+            <p class="text-muted m-0 font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]">
+              {spec.description}
+            </p>
           </div>
-          <div class="right">{compteur(c, n)}</div>
+          <div class="text-muted text-right font-mono text-meta max-mobile:text-left">
+            {compteur(c, n)}
+          </div>
         </a>
       );
     })}
   </div>
 
-  <p class="total">
+  <p class="text-muted mt-7 mb-0 font-mono text-meta">
     {total} publication{total > 1 ? 's' : ''} en ligne, tous formats confondus.
-    <a href="/archives/">Voir les archives →</a>
+    <a class="ml-2 text-[var(--c-bleu-deep)]" href="/archives/">Voir les archives →</a>
   </p>
 </PageShell>
-
-<style>
-  /* Gouttière et rythme vertical viennent de PageShell : cette page ne
-     déclare plus que sa grille propre. */
-
-  /* Deux colonnes, comme /themes/ : même registre de taxonomie, même
-     grille. Cinq entrées donnent une colonne impaire d'une carte de
-     plus que la paire — la dernière reste seule à gauche, cellule vide
-     à sa droite, ce qui est aussi ce que /themes/ ferait avec un
-     nombre impair de thèmes. */
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-  }
-
-  .format-card {
-    display: grid;
-    grid-template-columns: 1fr 140px;
-    gap: 24px;
-    padding: 24px 0;
-    border-top: 1px solid var(--color-rule);
-    align-items: baseline;
-    color: inherit;
-    transition: color 0.12s;
-  }
-  .format-card:nth-child(odd) {
-    padding-right: 24px;
-    border-right: 1px solid var(--color-rule);
-  }
-  .format-card:nth-child(even) {
-    padding-left: 24px;
-  }
-  /* Les deux dernières cartes ferment la grille en bas — sur cinq
-     entrées, ce sont les positions 4 et 5. */
-  .format-card:nth-last-child(-n + 2) {
-    border-bottom: 1px solid var(--color-rule);
-  }
-
-  /* La famille ne colore que la racine d'URL et le titre au survol. Le
-     texte courant reste d'une seule encre — la couleur signale le
-     format, elle n'a pas à teinter ce qu'on lit. */
-  .format-card[data-famille='bleu'] {
-    --fam: var(--c-bleu-deep);
-  }
-  .format-card[data-famille='vert'] {
-    --fam: var(--c-vert-deep);
-  }
-  .format-card[data-famille='jaune'] {
-    --fam: var(--c-jaune-deep);
-  }
-  .format-card:hover .t {
-    color: var(--fam);
-  }
-
-  .format-card .ty {
-    display: flex;
-    align-items: center;
-    font-family: var(--font-mono);
-    font-size: calc(11px * var(--a11y-echelle));
-    color: var(--fam);
-    margin-bottom: 8px;
-    letter-spacing: 0.04em;
-  }
-  .format-card .t {
-    font-family: var(--font-serif);
-    font-size: calc(24px * var(--a11y-echelle));
-    line-height: 1.2;
-    font-weight: var(--w-heading);
-    letter-spacing: -0.02em;
-    margin: 0 0 8px;
-    transition: color 0.12s;
-  }
-  .format-card .desc {
-    font-family: var(--font-serif);
-    font-size: calc(15px * var(--a11y-echelle));
-    line-height: 1.55;
-    color: var(--color-muted);
-    margin: 0;
-  }
-  .format-card .right {
-    font-family: var(--font-mono);
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--color-muted);
-    text-align: right;
-  }
-
-  .total {
-    font-family: var(--font-mono);
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--color-muted);
-    margin: 28px 0 0;
-  }
-  .total a {
-    color: var(--c-bleu-deep);
-    margin-left: 8px;
-  }
-
-  @media (max-width: 900px) {
-    .grid {
-      grid-template-columns: 1fr;
-    }
-    .format-card:nth-child(odd) {
-      padding-right: 0;
-      border-right: 0;
-    }
-    .format-card:nth-child(even) {
-      padding-left: 0;
-    }
-    .format-card:nth-last-child(-n + 2) {
-      border-bottom: 0;
-    }
-    .format-card:last-child {
-      border-bottom: 1px solid var(--color-rule);
-    }
-    /* Le compteur passe sous la description plutôt que de comprimer le
-       titre dans une colonne de 140 px. */
-    .format-card {
-      grid-template-columns: 1fr;
-      gap: 10px;
-    }
-    .format-card .right {
-      text-align: left;
-    }
-  }
-</style>

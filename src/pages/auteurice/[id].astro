@@ -74,12 +74,22 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
     {/* Portrait et présentation avant le filtre : c'est la personne
         qu'on vient lire ici, la liste de ses textes vient ensuite. Le
         bloc entier disparaît si ni l'un ni l'autre n'est renseigné. */}
+    {/* Portrait au fer à gauche sur l’axe du nom, présentation sur tout ce
+        qui reste à droite — pas de cap de mesure : la ligne se règle sur la
+        largeur de la page, comme le reste.
+
+        Sous 640 px le portrait passe au-dessus : à cette largeur, la
+        colonne de texte restante ne tiendrait plus que trois ou quatre
+        mots. */}
     {(photoUrl || bio) && (
-      <div class="auteurice-profil">
-        <div class="col-portrait">
+      <div class="my-2 flex items-center gap-7 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-5">
+        {/* Déposé cadré en carré côté admin ; `object-cover` en tire le
+            cercle sans déformer, y compris pour un fichier plus ancien qui
+            ne serait pas tout à fait carré. */}
+        <div class="flex-none">
           {photoUrl && (
             <img
-              class="portrait"
+              class="bg-rule block size-[120px] rounded-full object-cover"
               src={photoUrl}
               alt={photoAlt || `Portrait de ${nameNu}`}
               width="120"
@@ -88,7 +98,12 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
             />
           )}
         </div>
-        {bio && <p class="bio">{bio}</p>}
+        {/* Saisie dans un textarea : les retours à la ligne sont voulus. */}
+        {bio && (
+          <p class="text-muted m-0 min-w-0 flex-1 font-serif text-lede leading-[1.7] whitespace-pre-line">
+            {bio}
+          </p>
+        )}
       </div>
     )}
 
@@ -116,53 +131,3 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
     ))
   )}
 </PageShell>
-
-<style>
-  /* Portrait et présentation sur une même ligne, le portrait au fer à
-     gauche sur l'axe du nom. La présentation occupe tout ce qui reste
-     à droite — pas de cap de mesure : la ligne se règle sur la
-     largeur de la page, comme le reste. */
-  .auteurice-profil {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    margin: 8px 0;
-  }
-  .auteurice-profil .col-portrait {
-    flex: 0 0 auto;
-  }
-  .auteurice-profil .bio {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  /* Sous le portrait plutôt qu'à côté : à cette largeur, la colonne de
-     texte restante ne tiendrait plus que trois ou quatre mots. */
-  @media (max-width: 640px) {
-    .auteurice-profil {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 20px;
-    }
-  }
-  /* Déposé cadré en carré côté admin ; `object-fit: cover` en tire le
-     cercle sans déformer, y compris pour un fichier plus ancien qui ne
-     serait pas tout à fait carré. */
-  .auteurice-profil .portrait {
-    display: block;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: var(--color-rule);
-  }
-  .auteurice-profil .bio {
-    margin: 0;
-    font-family: var(--font-serif);
-    font-size: calc(18px * var(--a11y-echelle));
-    line-height: 1.7;
-    color: var(--color-muted);
-    /* Saisie dans un textarea : les retours à la ligne sont voulus. */
-    white-space: pre-line;
-  }
-</style>

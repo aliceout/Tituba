@@ -16,6 +16,14 @@ import Layout from '../layouts/Layout.astro';
 // pas du nom de fichier. Les rewrite()s depuis les routes catch-all
 // ([slug].astro, billets/[slug].astro) tomberaient sinon sur un 200.
 Astro.response.status = 404;
+
+/**
+ * Les deux boutons de pied ne diffèrent que par le remplissage.
+ */
+const BOUTON =
+  'border-rule bg-paper text-ink border px-4 py-[9px] no-underline transition-[border-color,background,color] duration-[120ms] hover:border-ink';
+const BOUTON_ACCENT =
+  'border-accent bg-accent text-bg border px-4 py-[9px] no-underline transition-[border-color,background,color] duration-[120ms] hover:brightness-[0.85]';
 ---
 
 <Layout
@@ -23,27 +31,38 @@ Astro.response.status = 404;
   description="Cette page n'existe pas — ou plus."
   noindex={true}
 >
-  <section class="container">
-    <div class="kicker mono">Page introuvable · err/404</div>
-    <h1>La 404 <em>peut-elle parler</em>&nbsp;?</h1>
-    <p class="lede">
+  {/* Largeur canonique des pages éditoriales : 1080 px de cadre, 80 px
+      de retrait, donc 920 px utiles — la largeur du corps des billets. */}
+  <section class="mx-auto max-w-[1080px] px-20 pt-20 pb-16 max-mobile:px-6 max-mobile:pt-16 max-mobile:pb-12">
+    <div class="mono text-accent mb-3.5 font-mono text-meta tracking-[0.04em]">
+      Page introuvable · err/404
+    </div>
+    <h1 class="m-0 mb-5 text-[calc(48px*var(--a11y-echelle))] leading-[1.08] font-semibold tracking-[-0.5px] max-mobile:text-[calc(32px*var(--a11y-echelle))] [&_em]:text-accent [&_em]:font-medium [&_em]:italic">
+      La 404 <em>peut-elle parler</em>&nbsp;?
+    </h1>
+    <p class="text-muted m-0 mb-9 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55]">
       Cette page n&apos;existe pas (ou plus). Le lien que vous avez suivi est
       probablement cassé, ou l&apos;URL a été mal saisie. Ce qui suit est une
       tentative de consolation théorique — si vous êtes pressé·e, le bouton
       « Retour à l&apos;accueil » plus bas fait très bien l&apos;affaire.
     </p>
 
-    <div class="speak">
-      <p class="q">
+    {/* Citation italique, note de marge cursive. */}
+    <div class="m-0 mb-7 max-w-[820px]">
+      <p class="text-ink m-0 font-serif text-[calc(22px*var(--a11y-echelle))] leading-[1.45] italic [&_em]:text-accent [&_em]:font-medium">
         « On l&apos;a indexée, citée en passant, mentionnée dans un futur
         conditionnel ; mais on ne lui a jamais donné <em>la place
         d&apos;énonciation</em> qu&apos;elle aurait pu occuper. »
       </p>
-      <span class="marg">note de marge : la 404 hoche la tête, polie.</span>
+      {/* Caveat n’est pas embarquée dans le projet — repli sur la
+          cursive du système. */}
+      <span class="text-accent mt-[18px] block rotate-[-1deg] font-[Caveat,'Bradley_Hand','Brush_Script_MT',cursive] text-[calc(22px*var(--a11y-echelle))] before:font-serif before:content-['↳_']">
+        note de marge : la 404 hoche la tête, polie.
+      </span>
     </div>
 
-    <div class="body">
-      <p>
+    <div class="[&_em]:text-accent [&_em]:italic">
+      <p class="text-body m-0 mb-7 max-w-[820px] font-serif text-[calc(18px*var(--a11y-echelle))] leading-[1.65] hyphens-auto text-justify">
         Said nous rappellerait qu&apos;on l&apos;a <em>orientalisée</em> avant
         même qu&apos;elle existe — projection d&apos;un billet rêvé, jamais
         écrit. Spivak, elle, suggérerait de ne pas se précipiter pour parler à
@@ -52,131 +71,9 @@ Astro.response.status = 404;
       </p>
     </div>
 
-    <div class="actions">
-      <a href="/" class="btn accent">Retour à l&apos;accueil</a>
-      <a href="/archives/" class="btn">Voir les archives</a>
+    <div class="mt-3 flex flex-wrap gap-2.5 font-sans text-[calc(13px*var(--a11y-echelle))]">
+      <a href="/" class={BOUTON_ACCENT}>Retour à l&apos;accueil</a>
+      <a href="/archives/" class={BOUTON}>Voir les archives</a>
     </div>
   </section>
 </Layout>
-
-<style>
-  /* Largeur canonique des pages éditoriales : max-width 1080, padding
-     80px → contenu utile 920px (= largeur du corps des billets,
-     identique aux pages RSS et À propos). */
-  .container {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 80px 80px 64px;
-  }
-
-  .kicker {
-    font-family: var(--font-mono);
-    font-size: calc(12px * var(--a11y-echelle));
-    letter-spacing: 0.04em;
-    color: var(--color-accent);
-    margin-bottom: 14px;
-  }
-  h1 {
-    font-size: calc(48px * var(--a11y-echelle));
-    line-height: 1.08;
-    font-weight: 600;
-    letter-spacing: -0.5px;
-    margin: 0 0 20px;
-  }
-  h1 em {
-    font-style: italic;
-    font-weight: 500;
-    color: var(--color-accent);
-  }
-  .lede {
-    font-family: var(--font-serif);
-    font-size: calc(19px * var(--a11y-echelle));
-    line-height: 1.55;
-    color: var(--color-muted);
-    margin: 0 0 36px;
-  }
-
-  /* Citation italique + note de marge cursive. */
-  .speak {
-    margin: 0 0 28px;
-    max-width: 820px;
-  }
-  .speak .q {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: calc(22px * var(--a11y-echelle));
-    line-height: 1.45;
-    color: var(--color-ink);
-    margin: 0;
-  }
-  .speak .q em {
-    color: var(--color-accent);
-    font-weight: 500;
-  }
-  /* Caveat n'est pas embarqué dans le projet — fallback cursive système. */
-  .marg {
-    font-family: 'Caveat', 'Bradley Hand', 'Brush Script MT', cursive;
-    font-size: calc(22px * var(--a11y-echelle));
-    color: var(--color-accent);
-    margin-top: 18px;
-    display: block;
-    transform: rotate(-1deg);
-  }
-  .marg::before {
-    content: '↳ ';
-    font-family: var(--font-serif);
-  }
-
-  .body p {
-    font-family: var(--font-serif);
-    font-size: calc(18px * var(--a11y-echelle));
-    line-height: 1.65;
-    max-width: 820px;
-    margin: 0 0 28px;
-    text-align: justify;
-    hyphens: auto;
-    -webkit-hyphens: auto;
-    color: var(--color-body);
-  }
-  .body em {
-    color: var(--color-accent);
-    font-style: italic;
-  }
-
-  .actions {
-    margin-top: 12px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-  }
-  .btn {
-    padding: 9px 16px;
-    border: 1px solid var(--color-rule);
-    background: var(--color-paper);
-    color: var(--color-ink);
-    text-decoration: none;
-    transition: border-color 0.12s, background 0.12s, color 0.12s;
-  }
-  .btn:hover {
-    border-color: var(--color-ink);
-  }
-  .btn.accent {
-    background: var(--color-accent);
-    color: var(--color-bg);
-    border-color: var(--color-accent);
-  }
-  .btn.accent:hover {
-    filter: brightness(0.85);
-  }
-
-  @media (max-width: 900px) {
-    .container {
-      padding: 64px 24px 48px;
-    }
-    h1 {
-      font-size: calc(32px * var(--a11y-echelle));
-    }
-  }
-</style>
