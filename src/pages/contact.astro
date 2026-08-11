@@ -142,6 +142,48 @@ try {
 // Sans jeton, le formulaire ne peut rien envoyer : mieux vaut le dire
 // que présenter des champs qui échoueront à la soumission.
 const indisponible = !defi.jeton;
+
+/**
+ * Un champ du formulaire : l'intitulé, la saisie, parfois une précision.
+ * Les trois sortes de contrôle sont habillées ensemble par variante
+ * descendante — c'était `.contact-champ input, select, textarea`, et
+ * elles n'ont aucune raison de diverger.
+ *
+ * `appearance-auto` sur le <select> n'est pas décoratif : sans lui,
+ * certains navigateurs ignorent la police qu'on lui donne.
+ */
+const CHAMP = [
+  'flex flex-col gap-1.5',
+  '[&_input]:border-rule [&_select]:border-rule [&_textarea]:border-rule',
+  '[&_input]:bg-paper [&_select]:bg-paper [&_textarea]:bg-paper',
+  '[&_input]:text-ink [&_select]:text-ink [&_textarea]:text-ink',
+  '[&_input]:w-full [&_select]:w-full [&_textarea]:w-full',
+  '[&_input]:rounded-[2px] [&_select]:rounded-[2px] [&_textarea]:rounded-[2px]',
+  '[&_input]:border [&_select]:border [&_textarea]:border',
+  '[&_input]:px-3 [&_select]:px-3 [&_textarea]:px-3',
+  '[&_input]:py-2.5 [&_select]:py-2.5 [&_textarea]:py-2.5',
+  '[&_input]:font-serif [&_select]:font-serif [&_textarea]:font-serif',
+  '[&_input]:text-sublede [&_select]:text-sublede [&_textarea]:text-sublede',
+  '[&_input]:leading-[1.5] [&_select]:leading-[1.5] [&_textarea]:leading-[1.5]',
+  '[&_select]:appearance-auto',
+  '[&_textarea]:min-h-40 [&_textarea]:resize-y',
+  '[&_input:focus-visible]:outline-2 [&_input:focus-visible]:outline-offset-1 [&_input:focus-visible]:outline-[var(--c-vert-deep)]',
+  '[&_textarea:focus-visible]:outline-2 [&_textarea:focus-visible]:outline-offset-1 [&_textarea:focus-visible]:outline-[var(--c-vert-deep)]',
+  // Marqué par le script quand un champ obligatoire est vide.
+  '[&_input[aria-invalid=true]]:border-[#b63a3a] [&_textarea[aria-invalid=true]]:border-[#b63a3a]',
+].join(' ');
+
+/** L'intitulé d'un champ, et l'astérisque des champs obligatoires. */
+const INTITULE =
+  'text-muted font-sans text-meta font-medium tracking-[0.04em] uppercase [&_.req]:text-[var(--c-vert-deep)]';
+
+/** Une précision sous la saisie. */
+const PRECISION = 'text-muted font-sans text-[calc(11.5px*var(--a11y-echelle))]';
+
+/** Bandeau de réponse — succès en vert, échec en rouge. */
+const BANDEAU =
+  'text-ink m-0 mb-6 border-l-[3px] px-[18px] py-3.5 font-serif text-sublede leading-[1.55]';
+
 ---
 
 <PageShell
@@ -151,9 +193,9 @@ const indisponible = !defi.jeton;
   lede="Une question, une proposition, une erreur repérée dans un texte, un obstacle rencontré sur le site : ce formulaire arrive directement dans notre boîte."
   famille="vert"
 >
-  <div class="contact">
+  <div class="max-w-[46rem]">
     {envoye === 'direct' && (
-      <p class="contact-ok" role="status">
+      <p class:list={[BANDEAU, 'border-[var(--c-vert)] bg-[var(--c-vert-tint)]']} role="status">
         <strong>Message envoyé.</strong> Nous vous répondrons à l’adresse indiquée. Merci d’avoir
         pris le temps de nous écrire.
       </p>
@@ -164,7 +206,7 @@ const indisponible = !defi.jeton;
         quelqu'un qui croit son message parti n'ira pas ouvrir le mail,
         et il se perdra. */}
     {envoye === 'confirmation' && (
-      <p class="contact-ok" role="status">
+      <p class:list={[BANDEAU, 'border-[var(--c-vert)] bg-[var(--c-vert-tint)]']} role="status">
         <strong>Une dernière étape.</strong> Nous venons de vous envoyer un mail : ouvrez-le et
         cliquez sur le lien pour que votre message nous parvienne. Il est valable trente minutes,
         et le mail en contient le texte intégral.
@@ -172,16 +214,16 @@ const indisponible = !defi.jeton;
     )}
 
     {erreur && (
-      <p class="contact-erreur" role="alert">{erreur}</p>
+      <p class:list={[BANDEAU, 'border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3a_8%,var(--color-bg))]']} role="alert">{erreur}</p>
     )}
 
     {indisponible ? (
-      <p class="contact-erreur" role="alert">
+      <p class:list={[BANDEAU, 'border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3a_8%,var(--color-bg))]']} role="alert">
         Le formulaire est momentanément indisponible. Réessayez dans quelques minutes.
       </p>
     ) : (
       <form
-        class="contact-form"
+        class="contact-form mt-2 grid gap-5"
         method="post"
         action="/contact/"
         novalidate
@@ -205,14 +247,16 @@ const indisponible = !defi.jeton;
           dissuade au passage le remplissage automatique du navigateur.
           Ne jamais « corriger » ceci vers .visually-hidden.
         */}
-        <div class="contact-pot" aria-hidden="true">
+        <div class="hidden" aria-hidden="true">
           <label for="ct-reference">Référence</label>
           <input id="ct-reference" name="reference" type="text" tabindex="-1" autocomplete="off" />
         </div>
 
-        <div class="contact-ligne">
-          <label class="contact-champ">
-            <span class="lbl">Votre nom <span class="req" aria-hidden="true">*</span></span>
+        {/* Deux colonnes tant que la place le permet : nom et adresse sont
+            courts, les empiler étirerait le formulaire sans rien gagner. */}
+        <div class="grid grid-cols-2 gap-5 max-[640px]:grid-cols-1">
+          <label class={CHAMP}>
+            <span class={INTITULE}>Votre nom <span class="req" aria-hidden="true">*</span></span>
             <input
               type="text"
               name="nom"
@@ -223,8 +267,8 @@ const indisponible = !defi.jeton;
             />
           </label>
 
-          <label class="contact-champ">
-            <span class="lbl">Votre adresse e-mail <span class="req" aria-hidden="true">*</span></span>
+          <label class={CHAMP}>
+            <span class={INTITULE}>Votre adresse e-mail <span class="req" aria-hidden="true">*</span></span>
             <input
               type="email"
               name="email"
@@ -233,12 +277,12 @@ const indisponible = !defi.jeton;
               autocomplete="email"
               value={saisie.email}
             />
-            <span class="hint">Elle ne sert qu’à vous répondre.</span>
+            <span class={PRECISION}>Elle ne sert qu’à vous répondre.</span>
           </label>
         </div>
 
-        <label class="contact-champ">
-          <span class="lbl">Objet</span>
+        <label class={CHAMP}>
+          <span class={INTITULE}>Objet</span>
           <select name="objetChoix">
             <option value="">— choisissez un objet —</option>
             {OBJETS.map((o) => (
@@ -261,8 +305,8 @@ const indisponible = !defi.jeton;
           un navigateur qui ne connaîtrait pas `:has()` l'affiche
           toujours, ce qui est le défaut sûr.
         */}
-        <label class="contact-champ contact-autre">
-          <span class="lbl">Précisez l’objet</span>
+        <label class:list={[CHAMP, 'contact-autre']}>
+          <span class={INTITULE}>Précisez l’objet</span>
           <input
             type="text"
             name="objetAutre"
@@ -272,198 +316,56 @@ const indisponible = !defi.jeton;
           />
         </label>
 
-        <label class="contact-champ">
-          <span class="lbl">Votre message <span class="req" aria-hidden="true">*</span></span>
+        <label class={CHAMP}>
+          <span class={INTITULE}>Votre message <span class="req" aria-hidden="true">*</span></span>
           <textarea name="message" rows={10} required maxlength="5000" set:text={saisie.message} />
         </label>
 
-        <p class="contact-obligatoire">
+        <p class:list={[PRECISION, 'm-0']}>
           Les champs marqués d’une <span aria-hidden="true">*</span
           ><span class="sr-only">astérisque</span> sont obligatoires.
         </p>
 
-        <div class="contact-pied">
-          <button type="submit" class="contact-envoyer">Envoyer</button>
+        <div class="flex flex-wrap items-center gap-[18px]">
+          <button
+            type="submit"
+            class="cursor-pointer rounded-[2px] border-0 bg-[var(--c-vert-fill)] px-7 py-3 font-sans text-[calc(14px*var(--a11y-echelle))] font-medium text-[var(--c-vert-on)] transition-opacity duration-[120ms] hover:opacity-[0.88] disabled:cursor-progress disabled:opacity-55"
+          >
+            Envoyer
+          </button>
           {/* Région live : c'est par elle qu'un lecteur d'écran apprend
               que l'envoi est en cours, a réussi ou a échoué. */}
-          <p class="contact-statut" role="status" aria-live="polite" data-contact-statut></p>
+          <p
+            class="text-muted m-0 font-sans text-[calc(13px*var(--a11y-echelle))]"
+            role="status"
+            aria-live="polite"
+            data-contact-statut
+          ></p>
         </div>
       </form>
     )}
 
-    <p class="contact-note">
+    <p class="text-muted mt-8 mb-0 font-sans text-meta leading-[1.5]">
       Vos coordonnées ne servent qu’à vous répondre. Elles ne sont pas conservées sur le site :
       le message part directement dans notre boîte mail.
     </p>
   </div>
 </PageShell>
 
+{/* Le seul CSS qui reste, et il porte une décision : le champ libre de
+    l'objet est révélé par `:has()` et non par le script — sans
+    JavaScript il resterait sinon inaccessible, et « Autre » ne mènerait
+    nulle part. Il est visible par défaut et masqué quand un objet de la
+    liste est choisi ; dans cet ordre, un navigateur qui ne connaîtrait
+    pas `:has()` l'affiche toujours, ce qui est le défaut sûr.
+
+    Écrit ici plutôt qu'en variante arbitraire : la même chose en
+    utilitaire demanderait d'encoder ce sélecteur entier dans un nom de
+    classe, quotes et parenthèses comprises. */}
 <style>
-  .contact {
-    max-width: 46rem;
-  }
-  .contact-pot {
-    display: none;
-  }
-
-  .contact-form {
-    display: grid;
-    gap: 20px;
-    margin-top: 8px;
-  }
-  /* Deux colonnes tant que la place le permet : nom et adresse sont
-     courts, les empiler étirerait le formulaire sans rien gagner. */
-  .contact-ligne {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-  }
-  @media (max-width: 640px) {
-    .contact-ligne {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .contact-champ {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .contact-champ .lbl {
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--color-muted);
-  }
-  .contact-champ .req {
-    color: var(--c-vert-deep);
-  }
-  .contact-champ .hint {
-    font-family: var(--font-sans);
-    font-size: calc(11.5px * var(--a11y-echelle));
-    color: var(--color-muted);
-  }
-  .contact-champ input,
-  .contact-champ select,
-  .contact-champ textarea {
-    width: 100%;
-    padding: 10px 12px;
-    background: var(--color-paper);
-    border: 1px solid var(--color-rule);
-    border-radius: 2px;
-    font-family: var(--font-serif);
-    font-size: calc(16px * var(--a11y-echelle));
-    line-height: 1.5;
-    color: var(--color-ink);
-  }
-  /* Le <select> natif ignore `font-family` sur certains navigateurs
-     tant qu'on ne le lui redonne pas explicitement. */
-  .contact-champ select {
-    appearance: auto;
-    font-family: var(--font-serif);
-  }
-
-  /* Champ libre de l'objet — cf. le commentaire du balisage : visible
-     par défaut, masqué seulement quand un objet de la liste est
-     sélectionné. Le défaut sûr est l'affichage. */
   .contact-form:has(select[name='objetChoix'] option:not([value='autre']):checked)
     .contact-autre {
     display: none;
-  }
-  .contact-champ textarea {
-    resize: vertical;
-    min-height: 160px;
-  }
-  .contact-champ input:focus-visible,
-  .contact-champ textarea:focus-visible {
-    outline: 2px solid var(--c-vert-deep);
-    outline-offset: 1px;
-  }
-  /* Marqué par le script quand un champ obligatoire est vide. */
-  .contact-champ input[aria-invalid='true'],
-  .contact-champ textarea[aria-invalid='true'] {
-    border-color: #b63a3a;
-  }
-
-  .contact-obligatoire {
-    margin: 0;
-    font-family: var(--font-sans);
-    font-size: calc(11.5px * var(--a11y-echelle));
-    color: var(--color-muted);
-  }
-
-  .contact-pied {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    flex-wrap: wrap;
-  }
-  .contact-envoyer {
-    background: var(--c-vert-fill);
-    color: var(--c-vert-on);
-    border: 0;
-    border-radius: 2px;
-    padding: 12px 28px;
-    font-family: var(--font-sans);
-    font-size: calc(14px * var(--a11y-echelle));
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 0.12s;
-  }
-  .contact-envoyer:hover {
-    opacity: 0.88;
-  }
-  .contact-envoyer[disabled] {
-    opacity: 0.55;
-    cursor: progress;
-  }
-  .contact-statut {
-    margin: 0;
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-    color: var(--color-muted);
-  }
-
-  .contact-ok,
-  .contact-erreur {
-    margin: 0 0 24px;
-    padding: 14px 18px;
-    border-left: 3px solid;
-    font-family: var(--font-serif);
-    font-size: calc(16px * var(--a11y-echelle));
-    line-height: 1.55;
-  }
-  .contact-ok {
-    border-color: var(--c-vert);
-    background: var(--c-vert-tint);
-    color: var(--color-ink);
-  }
-  .contact-erreur {
-    border-color: #b63a3a;
-    background: color-mix(in srgb, #b63a3a 8%, var(--color-bg));
-    color: var(--color-ink);
-  }
-
-  .contact-note {
-    margin: 32px 0 0;
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    line-height: 1.5;
-    color: var(--color-muted);
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
   }
 </style>
 
