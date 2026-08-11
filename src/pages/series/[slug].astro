@@ -45,6 +45,13 @@ const compte =
   posts.length === 0
     ? `Aucun ${mot} publié pour l’instant`
     : `${posts.length} ${mot}${posts.length > 1 ? 's' : ''}`;
+
+/**
+ * Le point de séparation du surtitre. Écrit trois fois — une fois par
+ * séparateur — donc sorti ici pour que sa demi-opacité n'ait qu'un seul
+ * endroit où être décidée.
+ */
+const SEP = 'opacity-50';
 ---
 
 <PageShell
@@ -70,38 +77,65 @@ const compte =
   {/* Surtitre : la nature de l'objet avant son nom, comme sur la page
       d'un billet. « Émission » et non « Série » pour un podcast — c'est
       le mot du métier, et celui qu'emploie l'admin. */}
-  <p class="serie-format">
+  <p class="text-accent m-0 mb-6 flex items-center gap-[7px] font-mono text-label tracking-[0.16em] uppercase">
     <FormatIcon collection={serie.format} />
     {estEmission ? 'Émission' : 'Série'}
-    <span class="serie-sep" aria-hidden="true">·</span>
-    <span class="serie-compte">{compte}</span>
+    <span class={SEP} aria-hidden="true">·</span>
+    <span class="text-muted">{compte}</span>
     {/* S'abonner à cette émission seule, plutôt qu'à toute la
         production audio du site. Le lien n'a de sens que pour une
-        émission : une série de textes n'a pas de flux propre. */}
+        émission : une série de textes n'a pas de flux propre.
+
+        Souligné, contrairement au reste du surtitre : c'est le seul
+        élément cliquable de la ligne, et rien d'autre ne le signalerait
+        à cette taille. */}
     {estEmission && (
       <>
-        <span class="serie-sep" aria-hidden="true">·</span>
-        <a class="serie-flux" href={`/series/${serie.slug}/rss.xml`}>
+        <span class={SEP} aria-hidden="true">·</span>
+        <a
+          class="text-muted underline underline-offset-[0.25em] transition-colors duration-[120ms] hover:text-accent"
+          href={`/series/${serie.slug}/rss.xml`}
+        >
           s’abonner à cette émission
         </a>
       </>
     )}
   </p>
 
+  {/* L'image en bandeau et non en carré à côté du titre : la page d'une
+      série est une couverture de recueil, pas une fiche. Le filet en
+      fond de l'<img> tient la place du bandeau tant qu'il n'est pas
+      chargé, pour que la liste ne remonte pas. */}
   {imageUrl && (
-    <figure class="serie-image">
-      <img src={imageUrl} alt="" />
+    <figure class="m-0 mb-12">
+      <img
+        class="block aspect-[21/9] w-full rounded-(--radius-panel) bg-rule object-cover"
+        src={imageUrl}
+        alt=""
+      />
     </figure>
   )}
 
+  {/* Liste ordonnée et non grille : une série se parcourt dans un ordre,
+      et une grille en donnerait deux (celui des lignes, celui des
+      colonnes) sans dire lequel prime. */}
   {posts.length > 0 ? (
-    <ol class="serie-liste">
+    <ol class="m-0 flex list-none flex-col gap-0 p-0">
       {posts.map((doc, i) => (
-        <li>
+        <li class="grid grid-cols-[56px_1fr] items-start gap-2 border-t border-t-rule last:border-b last:border-b-rule max-poche:grid-cols-[34px_1fr] max-poche:gap-1">
           {/* Le rang est affiché même quand il n'a pas été saisi : c'est
               la position dans la série qui compte pour se repérer, pas
-              le numéro que quelqu'un aurait pensé à écrire. */}
-          <span class="serie-rang" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+              le numéro que quelqu'un aurait pensé à écrire.
+
+              Deux positions en chiffres tabulaires : c'est ce qui donne
+              à la colonne son aplomb, et ce qui fait lire la liste comme
+              une suite plutôt que comme un empilement. Le retrait haut
+              aligne le chiffre sur la première ligne du titre de la
+              carte voisine. */}
+          <span
+            class="text-muted pt-[26px] font-mono text-[calc(13px*var(--a11y-echelle))] tabular-nums max-poche:pt-[22px] max-poche:text-label"
+            aria-hidden="true"
+          >{String(i + 1).padStart(2, '0')}</span>
           <PublicationCard
             collection={serie.format}
             docId={doc.publicId}
@@ -116,104 +150,8 @@ const compte =
       ))}
     </ol>
   ) : (
-    <p class="serie-vide">
+    <p class="text-muted border-t border-t-rule py-8 font-sans">
       Cette {estEmission ? 'émission' : 'série'} n’a pas encore de {mot} publié.
     </p>
   )}
 </PageShell>
-
-<style>
-  .serie-format {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-family: var(--font-mono);
-    font-size: calc(11px * var(--a11y-echelle));
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--color-accent);
-    margin: 0 0 24px;
-  }
-  /* Souligné, contrairement au reste du surtitre : c'est le seul
-     élément cliquable de la ligne, et rien d'autre ne le signalerait à
-     cette taille. */
-  .serie-flux {
-    color: var(--color-muted);
-    text-decoration: underline;
-    text-underline-offset: 0.25em;
-    transition: color 0.12s;
-  }
-  .serie-flux:hover {
-    color: var(--color-accent);
-  }
-  .serie-sep {
-    opacity: 0.5;
-  }
-  .serie-compte {
-    color: var(--color-muted);
-  }
-
-  /* L'image en bandeau et non en carré à côté du titre : la page d'une
-     série est une couverture de recueil, pas une fiche. */
-  .serie-image {
-    margin: 0 0 48px;
-  }
-  .serie-image img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 21 / 9;
-    object-fit: cover;
-    border-radius: var(--radius-panel, 10px);
-    background: var(--color-rule);
-  }
-
-  /* Liste ordonnée et non grille : une série se parcourt dans un ordre,
-     et une grille en donnerait deux (celui des lignes, celui des
-     colonnes) sans dire lequel prime. */
-  .serie-liste {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-  .serie-liste li {
-    display: grid;
-    grid-template-columns: 56px 1fr;
-    align-items: start;
-    gap: 8px;
-    border-top: 1px solid var(--color-rule);
-  }
-  .serie-liste li:last-child {
-    border-bottom: 1px solid var(--color-rule);
-  }
-  /* Le rang en chiffres à deux positions, alignés : c'est ce qui donne à
-     la colonne son aplomb, et ce qui fait lire la liste comme une
-     suite plutôt que comme un empilement. */
-  .serie-rang {
-    font-family: var(--font-mono);
-    font-size: calc(13px * var(--a11y-echelle));
-    color: var(--color-muted);
-    font-variant-numeric: tabular-nums;
-    padding-top: 26px;
-  }
-
-  .serie-vide {
-    font-family: var(--font-sans);
-    color: var(--color-muted);
-    padding: 32px 0;
-    border-top: 1px solid var(--color-rule);
-  }
-
-  @media (max-width: 720px) {
-    .serie-liste li {
-      grid-template-columns: 34px 1fr;
-      gap: 4px;
-    }
-    .serie-rang {
-      font-size: calc(11px * var(--a11y-echelle));
-      padding-top: 22px;
-    }
-  }
-</style>

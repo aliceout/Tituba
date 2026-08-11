@@ -99,6 +99,16 @@ if (emissions.length === 0) {
     console.warn('[podcasts] fetchCollection failed:', (err as Error).message);
   }
 }
+
+/**
+ * Intitulé d'une section d'épisodes : petite capitale d'accent posée sur
+ * un filet. Les deux sections l'écrivent — hors émission d'un côté,
+ * repli sans émission de l'autre — et elles ne se voient jamais sur la
+ * même page. Sortie ici pour qu'elles ne puissent pas diverger sans que
+ * personne ne s'en aperçoive.
+ */
+const TITRE_SECTION =
+  'border-rule text-accent m-0 mb-6 border-b pb-3.5 font-mono text-label font-medium tracking-[0.16em] uppercase';
 ---
 
 <PageShell
@@ -107,23 +117,46 @@ if (emissions.length === 0) {
   title={formatHeroTitle('Nos *émissions*.')}
   lede="Des conversations enregistrées, réunies par émission. Chacune suit son fil, et chacune s’écoute ou s’abonne séparément."
 >
+  {/* Une émission se présente comme une pochette : le carré d'abord, le
+      texte à côté. C'est la convention de toutes les applications
+      d'écoute, et elle rend la vignette reconnaissable avant le nom.
+      Sous 720 px la grille tombe à une colonne et le carré rétrécit :
+      à 132 px, pochette et texte ne cohabitaient plus. */}
   {emissions.length > 0 && (
-    <section class="emissions" aria-label="Émissions">
+    <section
+      class="mb-18 grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-x-9 gap-y-7 max-poche:mb-12 max-poche:grid-cols-[1fr] max-poche:gap-x-[22px] max-poche:gap-y-[22px]"
+      aria-label="Émissions"
+    >
       {emissions.map((em) => {
         const img = uploadedImageUrl(em.image ?? null);
         const n = comptes.get(String(em.id)) ?? 0;
         return (
-          <a class="em" href={`/series/${em.slug}/`}>
+          <a
+            class="grid grid-cols-[132px_1fr] items-start gap-5 text-inherit transition-opacity duration-[120ms] hover:opacity-78 max-poche:grid-cols-[96px_1fr] max-poche:gap-3.5"
+            href={`/series/${em.slug}/`}
+          >
             {/* Faute d'image, le carré reste un aplat plutôt qu'un cadre
                 vide : une émission sans couverture doit avoir l'air
                 d'attendre la sienne, pas d'être cassée. */}
-            <div class:list={['em-vignette', { 'em-vignette--nue': !img }]}>
-              {img && <img src={img} alt="" />}
+            <div
+              class:list={[
+                'aspect-square overflow-hidden rounded-[10px]',
+                img ? 'bg-rule' : 'bg-[color-mix(in_srgb,var(--color-accent)_16%,var(--color-bg))]',
+              ]}
+            >
+              {img && <img class="block h-full w-full object-cover" src={img} alt="" />}
             </div>
-            <div class="em-texte">
-              <h2>{stripHeroMarkers(em.name)}</h2>
-              {em.lede && <p class="em-lede">{em.lede}</p>}
-              <p class="em-compte">
+            <div>
+              <h2 class="m-0 mb-2 font-serif text-h3 leading-[1.2] font-normal">
+                {stripHeroMarkers(em.name)}
+              </h2>
+              {/* Trois lignes : la carte annonce l'émission, sa page la présente. */}
+              {em.lede && (
+                <p class="text-muted m-0 mb-2.5 line-clamp-3 font-serif text-[calc(14px*var(--a11y-echelle))] leading-[1.5] whitespace-pre-line italic">
+                  {em.lede}
+                </p>
+              )}
+              <p class="text-muted m-0 font-mono text-label tracking-[0.08em] uppercase">
                 {n === 0 ? 'Aucun épisode publié' : `${n} épisode${n > 1 ? 's' : ''}`}
               </p>
             </div>
@@ -139,9 +172,16 @@ if (emissions.length === 0) {
       de tiroir — mais ils ne suivent aucun fil, et l'annoncer évite de
       chercher l'émission dont ils feraient partie. */}
   {emissions.length > 0 && orphelins.length > 0 && (
-    <section class="hors-serie" aria-labelledby="hors-serie-titre">
-      <h2 class="derniers-titre" id="hors-serie-titre">Épisodes hors émission</h2>
-      <div class="feed">
+    <section aria-labelledby="hors-serie-titre">
+      <h2 class={TITRE_SECTION} id="hors-serie-titre">Épisodes hors émission</h2>
+      {/* Une pile, et non une grille : PublicationCard est conçue pour
+          occuper une ligne entière — mise en case, elle se retrouvait
+          sur 305 px de large et 765 de haut. Même traitement que l'index
+          des autres formats (cf PublicationIndex), qui les empile.
+          C'est aussi ce qui garde les filets de séparation entre cartes,
+          posés par la carte elle-même sur son bord. Ne reste donc à
+          poser ici qu'une respiration en pied. */}
+      <div class="pb-10">
         {orphelins.map((d) => (
           <PublicationCard
             collection="podcasts"
@@ -163,12 +203,12 @@ if (emissions.length === 0) {
       c'est par elle qu'on entre — la liste faisait double emploi et
       occupait plus de place que les pochettes qu'elle doublait. */}
   {emissions.length === 0 && (
-  <section class="derniers" aria-labelledby="derniers-titre">
-    <h2 class="derniers-titre" id="derniers-titre">Épisodes</h2>
+  <section aria-labelledby="derniers-titre">
+    <h2 class={TITRE_SECTION} id="derniers-titre">Épisodes</h2>
     {episodes.length === 0 ? (
-      <p class="vide">Aucun épisode publié pour l’instant.</p>
+      <p class="text-muted font-sans">Aucun épisode publié pour l’instant.</p>
     ) : (
-      <div class="feed">
+      <div class="pb-10">
         {episodes.map((d) => (
           <PublicationCard
             collection="podcasts"
@@ -186,107 +226,3 @@ if (emissions.length === 0) {
   </section>
   )}
 </PageShell>
-
-<style>
-  /* Une émission se présente comme une pochette : le carré d'abord, le
-     texte à côté. C'est la convention de toutes les applications
-     d'écoute, et elle rend la vignette reconnaissable avant le nom. */
-  .emissions {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 28px 36px;
-    margin-bottom: 72px;
-  }
-  .em {
-    display: grid;
-    grid-template-columns: 132px 1fr;
-    gap: 20px;
-    align-items: start;
-    color: inherit;
-    transition: opacity 0.12s;
-  }
-  .em:hover {
-    opacity: 0.78;
-  }
-  .em-vignette {
-    aspect-ratio: 1 / 1;
-    border-radius: 10px;
-    overflow: hidden;
-    background: var(--color-rule);
-  }
-  .em-vignette--nue {
-    background: color-mix(in srgb, var(--color-accent) 16%, var(--color-bg));
-  }
-  .em-vignette img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .em-texte h2 {
-    font-family: var(--font-serif);
-    font-size: calc(21px * var(--a11y-echelle));
-    font-weight: 400;
-    line-height: 1.2;
-    margin: 0 0 8px;
-  }
-  .em-lede {
-    white-space: pre-line;
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: calc(14px * var(--a11y-echelle));
-    line-height: 1.5;
-    color: var(--color-muted);
-    margin: 0 0 10px;
-    /* Trois lignes : la carte annonce l'émission, sa page la présente. */
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .em-compte {
-    font-family: var(--font-mono);
-    font-size: calc(11px * var(--a11y-echelle));
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-muted);
-    margin: 0;
-  }
-
-  .derniers-titre {
-    font-family: var(--font-mono);
-    font-size: calc(11px * var(--a11y-echelle));
-    font-weight: 500;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--color-accent);
-    margin: 0 0 24px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--color-rule);
-  }
-  /* Bloc et non grille : PublicationCard est conçue pour occuper une
-     ligne entière — mise en case, elle se retrouvait sur 305 px de
-     large et 765 de haut. Même traitement que l'index des autres
-     formats (cf PublicationIndex, .feed), qui les empile.
-     C'est aussi ce qui garde les filets de séparation entre cartes,
-     posés par la carte elle-même sur son bord haut. */
-  .feed {
-    padding-bottom: 40px;
-  }
-  .vide {
-    font-family: var(--font-sans);
-    color: var(--color-muted);
-  }
-
-  @media (max-width: 720px) {
-    .emissions {
-      grid-template-columns: 1fr;
-      gap: 22px;
-      margin-bottom: 48px;
-    }
-    .em {
-      grid-template-columns: 96px 1fr;
-      gap: 14px;
-    }
-  }
-</style>

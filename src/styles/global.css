@@ -80,8 +80,11 @@
   --tracking-display: -0.02em;
   --tracking-label: 0.2em;
 
-  /* Graisses nommées : `font-display` dirait « famille » en Tailwind,
-     d'où `font-w-display` pour la graisse. */
+  /* Graisses nommées. Elles sortent bien en `font-display` /
+     `font-heading` : Tailwind sert `font-*` pour la famille COMME pour
+     la graisse, et départage sur le nom du jeton — aucune famille ne
+     s'appelle `display`, la graisse passe donc. (Vérifié : un div
+     `font-display` pèse 300, un `font-w-display` ne pèse rien.) */
   --font-weight-display: 300;
   --font-weight-heading: 400;
 
