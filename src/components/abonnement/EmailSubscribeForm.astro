@@ -30,9 +30,13 @@ const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-pan
   chaque envoi.
 </Lede>
 
-{/* Un seul panneau, largeur de lecture : le choix et le champ sont un
-    même geste, ils n’ont pas à courir sur toute la page. */}
-<Panel famille="vert" padding="serre" class="mb-9 max-w-[560px]">
+{/* Pleine largeur, comme le panneau du flux RSS juste en dessous. Une
+    largeur de lecture avait été écrite ici — 560 px — mais elle n’avait
+    jamais pris effet, faute de `:global()` sur une classe passée en prop.
+    Rendue active à la migration, elle donnait un panneau étroit posé
+    au-dessus d’un panneau large : deux blocs de même nature qui ne
+    s’alignent plus. */}
+<Panel famille="vert" padding="serre" class="mb-9">
   {/* `method` et `action` ne sont pas décoratifs : sans eux, un
       navigateur sans JavaScript soumet en GET sur l’URL courante, et
       l’adresse saisie part dans la barre d’adresse, l’historique et les
