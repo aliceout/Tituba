@@ -32,19 +32,90 @@ interface Props {
 const { progressBar = false, sansFilet = false } = Astro.props;
 
 const nav = await resolveHeaderNav(Astro.url.pathname);
+
+/**
+ * Le dégradé du filet, et le même repris par la barre de progression.
+ *
+ * Écrit deux fois en toutes lettres, et pas une fois dans une variable
+ * interpolée : Tailwind lit les sources comme du texte et ne génère que
+ * les classes qui y figurent entières. Une classe assemblée à
+ * l'exécution n'existerait dans aucune feuille.
+ */
+const FILET =
+  'after:bg-[linear-gradient(90deg,var(--c-bleu),var(--c-vert)_45%,var(--c-jaune)_80%)]';
+const BARRE =
+  'bg-[linear-gradient(90deg,var(--c-bleu),var(--c-vert)_45%,var(--c-jaune)_80%)]';
+
+/**
+ * Un onglet du menu. L'état courant se lit sur `aria-current`, déjà posé
+ * pour les lecteurs d'écran : inutile de doubler d'une classe ce que
+ * l'attribut dit déjà.
+ *
+ * L'onglet actif ne peut plus se distinguer par la couleur, puisque tous
+ * sont en encre : il ne lui reste que le filet, en bleu de famille — le
+ * violet jurerait avec le dégradé trois pixels plus bas.
+ */
+const ONGLET = [
+  'text-ink pb-1 transition-opacity duration-[120ms] hover:opacity-60',
+  'aria-[current=page]:border-b-[1.5px] aria-[current=page]:border-[var(--c-bleu)] aria-[current=page]:font-semibold',
+].join(' ');
+
 ---
 
-<header class:list={['site', { 'has-progress': progressBar, 'no-filet': sansFilet }]} id="site-header">
-  <div class="row">
-    <div class="lead">
-      <a class="brand" href="/">{nav.siteName}<span class="dot">.</span></a>
-    </div>
-    <nav>
+{/* `group` : l'état de défilement est posé sur le header par
+    sticky-header.client.ts, et le bandeau, la marque et la barre de
+    progression y réagissent chacun de leur côté.
+
+    Le filet traversant est en dégradé — bleu, vert, jaune — sans se caler
+    sur la gouttière : c'est ce qui en fait une ligne d'horizon plutôt
+    qu'une bordure de bloc. Points d'arrêt asymétriques (vert à 45 %, jaune
+    à 80 %) pour que ça ne se lise pas comme un drapeau. Il maigrit avec le
+    reste du bandeau, en nombres entiers (3 → 2 px) pour rester net sur un
+    écran sans densité.
+
+    Sur les pages à barre de progression, il reste affiché tant qu'on n'a
+    pas commencé à défiler — c'est au même seuil qu'il lui cède la place,
+    plutôt que d'empiler les deux dès le chargement. Sur une page à hero
+    pleine largeur, pas de filet du tout : la barre, elle, reste, c'est un
+    repère de lecture et pas un ornement. */}
+<header
+  class:list={[
+    'group bg-bg sticky top-0 z-10',
+    "after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:transition-[height] after:duration-[180ms] after:ease-[ease] after:content-['']",
+    FILET,
+    'data-[defile]:after:h-0.5',
+    progressBar && 'data-[defile]:after:hidden',
+    sansFilet && 'after:hidden',
+  ]}
+  id="site-header"
+>
+  {/* Trois zones : logo, menus, boutons. Colonnes latérales en 1fr, donc
+      les menus tombent au centre de la page sans bouger quand le logo ou
+      les boutons changent de largeur. Sous 720 px la grille cède la place à
+      une colonne. */}
+  <div
+    class="mx-auto grid max-w-(--page-max) grid-cols-[1fr_auto_1fr] items-center px-(--page-gutter) py-6 transition-[padding] duration-[180ms] ease-[ease] group-data-[defile]:py-3 max-mobile:px-(--page-gutter-narrow) max-mobile:py-4 max-mobile:group-data-[defile]:py-2.5 max-poche:relative max-poche:flex max-poche:flex-col max-poche:items-start max-poche:gap-3 max-poche:px-6 max-poche:pt-[18px] max-poche:pb-3.5 max-poche:group-data-[defile]:py-2.5"
+  >
+    <div class="flex items-center gap-[22px] justify-self-start">
+      {/* Wordmark en Fraunces italique bas de casse, posée en style et non
+          dans le contenu : le nom reste « Tituba » pour un lecteur d'écran,
+          l'onglet et les métadonnées de partage. Graisse 400 : à l'italique
+          de Fraunces, c'est déjà un caractère fort.
+
+          Le point est le seul élément de marque coloré du header, et le seul
+          caractère droit du mot — deux écarts sur un demi-cadratin, ce qui le
+          fait lire comme une signature. */}
       <a
+        class="text-ink font-serif text-[calc(24px*var(--a11y-echelle))] leading-none font-normal tracking-[-0.01em] lowercase italic transition-[opacity,font-size] duration-[120ms] ease-[ease] hover:opacity-70 group-data-[defile]:text-[calc(20px*var(--a11y-echelle))]"
         href="/"
-        class:list={[{ active: nav.homeActive }]}
-        aria-current={nav.homeActive ? 'page' : undefined}
       >
+        {nav.siteName}<span class="text-[var(--c-jaune-deep)] not-italic">.</span>
+      </a>
+    </div>
+    {/* Centré sur l'axe et non sur la ligne de base : un bouton-icône sans
+        ligne de base texte se retrouverait deux ou trois pixels plus haut. */}
+    <nav class="flex items-center gap-8 justify-self-center font-sans text-[calc(14px*var(--a11y-echelle))] font-medium max-poche:flex-wrap max-poche:gap-[18px]">
+      <a href="/" class={ONGLET} aria-current={nav.homeActive ? 'page' : undefined}>
         Accueil
       </a>
 
@@ -53,11 +124,7 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
           déroulants : ce sont des destinations, alors que « Formats » et
           « Thématiques » n'ouvrent qu'une liste. */}
       {nav.itemsAvant.map((item) => (
-        <a
-          href={item.href}
-          class:list={[{ active: nav.isActive(item) }]}
-          aria-current={nav.isActive(item) ? 'page' : undefined}
-        >
+        <a href={item.href} class={ONGLET} aria-current={nav.isActive(item) ? 'page' : undefined}>
           {item.label}
         </a>
       ))}
@@ -78,37 +145,34 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
             {PUBLICATIONS[c].labelPlural}
           </a>
         ))}
-        {/* Même pied que le menu des thématiques : les cinq entrées
-            mènent chacune à un format, celle-ci à la page qui les
-            présente tous. */}
+        {/* Même pied que le menu des thématiques : les cinq entrées mènent
+            chacune à un format, celle-ci à la page qui les présente tous. */}
         <a slot="footer" href="/formats/">Voir tous les formats →</a>
       </NavDropdown>
 
       {nav.itemsApres.map((item) => (
-        <a
-          href={item.href}
-          class:list={[{ active: nav.isActive(item) }]}
-          aria-current={nav.isActive(item) ? 'page' : undefined}
-        >
+        <a href={item.href} class={ONGLET} aria-current={nav.isActive(item) ? 'page' : undefined}>
           {item.label}
         </a>
       ))}
     </nav>
 
-    {/* Boutons-icônes sortis du <nav> : ils forment la troisième zone de
-        la grille, à droite. Les garder dans la nav les aurait entraînés
-        dans le centrage des menus. */}
-    <div class="actions">
+    {/* Boutons-icônes sortis du <nav> : ils forment la troisième zone de la
+        grille, à droite. Les garder dans la nav les aurait entraînés dans le
+        centrage des menus. */}
+    <div class="flex items-center gap-3.5 justify-self-end">
       <SearchLink active={nav.searchActive} />
       <ThemeToggle class="ml-1 max-poche:absolute max-poche:top-4 max-poche:right-6" />
-      {/* Ouvre le panneau de réglages d'accessibilité. Celui-ci est
-          rendu par le Layout et non ici : le header porte un
-          `z-index`, donc un contexte d'empilement dont un tiroir posé
-          à l'intérieur ne pourrait pas sortir. Le lien entre les deux
-          passe par `aria-controls`. */}
+      {/* Ouvre le panneau de réglages d'accessibilité. Celui-ci est rendu par
+          le Layout et non ici : le header porte un `z-index`, donc un
+          contexte d'empilement dont un tiroir posé à l'intérieur ne pourrait
+          pas sortir. Le lien entre les deux passe par `aria-controls`.
+
+          Le bouton doit se lire comme un onglet — même police, corps, graisse
+          et survol. D'où le reset natif propriété par propriété. */}
       <button
         type="button"
-        class="cta-link--primary"
+        class="text-ink cursor-pointer border-0 bg-none p-0 font-sans text-[calc(14px*var(--a11y-echelle))] font-medium whitespace-nowrap transition-opacity duration-[120ms] hover:opacity-60"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-controls="panneau-accessibilite"
@@ -120,207 +184,25 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
   </div>
 
   {progressBar && (
-    <div class="progress" id="progress" aria-hidden="true">
-      <div class="progress-fill"></div>
+    <div
+      class="absolute inset-x-0 bottom-0 hidden h-[3px] group-data-[defile]:block group-data-[defile]:h-0.5"
+      id="progress"
+      aria-hidden="true"
+    >
+      {/* Même dégradé que le filet qu'elle remplace, mais peint sur toute la
+          largeur de la fenêtre et simplement révélé au fil du défilement
+          (taille de fond en vw, pas en %) — sinon un dégradé recalculé sur
+          une largeur qui grandit se retrouverait « écrasé » différemment à
+          chaque avancement. */}
+      <div
+        class:list={[
+          'progress-fill h-full w-0 bg-[length:100vw_100%] transition-[width] duration-[120ms] ease-linear',
+          BARRE,
+        ]}
+      />
     </div>
   )}
 </header>
-
-<style>
-  header.site {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: var(--color-bg);
-  }
-
-  /* Filet traversant en dégradé — bleu, vert, jaune, sans se caler sur
-     la gouttière : c'est ce qui en fait une ligne d'horizon plutôt
-     qu'une bordure de bloc. Points d'arrêt asymétriques (vert à 45 %,
-     jaune à 80 %) pour que ça ne se lise pas comme un drapeau. */
-  header.site::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--c-bleu), var(--c-vert) 45%, var(--c-jaune) 80%);
-    transition: height 0.18s ease;
-  }
-  /* Le filet maigrit avec le reste du bandeau, en nombres entiers
-     (3 → 2 px) pour rester net sur un écran sans densité. */
-  header.site.is-scrolled::after {
-    height: 2px;
-  }
-  /* Sur les pages article, le filet dégradé reste affiché tel quel tant
-     qu'on n'a pas commencé à scroller — c'est seulement au même seuil
-     que .is-scrolled (scrollY > 4px) qu'il cède la place à la barre de
-     progression, plutôt que d'empiler les deux dès le chargement. */
-  header.site.has-progress.is-scrolled::after {
-    display: none;
-  }
-  /* Page à hero pleine largeur : pas de filet du tout, à aucun moment.
-     La barre de progression, elle, reste — c'est un repère de lecture,
-     pas un ornement. */
-  header.site.no-filet::after {
-    display: none;
-  }
-  header.site .progress {
-    display: none;
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 3px;
-  }
-  header.site.is-scrolled .progress {
-    display: block;
-    height: 2px;
-  }
-  header.site .progress-fill {
-    height: 100%;
-    width: 0%;
-    /* Même dégradé que le filet qu'elle remplace (bleu → vert → jaune),
-       mais peint sur toute la largeur de la fenêtre et simplement
-       révélé au fil du scroll (background-size en vw, pas en %) — sinon
-       un dégradé recalculé sur une largeur qui grandit se retrouverait
-       « écrasé » différemment à chaque avancement. */
-    background: linear-gradient(90deg, var(--c-bleu), var(--c-vert) 45%, var(--c-jaune) 80%);
-    background-size: 100vw 100%;
-    transition: width 0.12s linear;
-  }
-
-  header.site .row {
-    /* Trois zones : logo, menus, boutons. Colonnes latérales en 1fr,
-       donc les menus tombent au centre de la page sans bouger quand le
-       logo ou les boutons changent de largeur. */
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: 24px var(--page-gutter);
-    transition: padding 0.18s ease;
-  }
-  header.site.is-scrolled .row {
-    padding-top: 12px;
-    padding-bottom: 12px;
-  }
-
-  @media (max-width: 900px) {
-    header.site .row {
-      padding: 16px var(--page-gutter-narrow);
-    }
-    header.site.is-scrolled .row {
-      padding-top: 10px;
-      padding-bottom: 10px;
-    }
-  }
-
-  /* Wordmark en Fraunces italique bas-de-casse, posée en CSS et non
-     dans le contenu : le nom reste « Tituba » pour un lecteur d'écran,
-     l'onglet et les métadonnées de partage. Graisse 400 : à l'italique
-     de Fraunces, c'est déjà un caractère fort. */
-  header.site .brand {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: calc(24px * var(--a11y-echelle));
-    font-weight: 400;
-    text-transform: lowercase;
-    letter-spacing: -0.01em;
-    line-height: 1;
-    color: var(--color-ink);
-    transition: opacity 0.12s, font-size 0.18s ease;
-  }
-  header.site .brand:hover {
-    opacity: 0.7;
-  }
-  /* Le point est le seul élément de marque coloré du header, et le seul
-     caractère droit du mot — deux écarts sur un demi-cadratin, ce qui le
-     fait lire comme une signature. */
-  header.site .brand .dot {
-    color: var(--c-jaune-deep);
-    font-style: normal;
-  }
-  header.site.is-scrolled .brand {
-    font-size: calc(20px * var(--a11y-echelle));
-  }
-  header.site .lead {
-    display: flex;
-    align-items: center;
-    gap: 22px;
-    justify-self: start;
-  }
-
-  /* Bouton d'accessibilité : doit se lire comme un onglet — même
-     police, corps, graisse, survol que header.site nav a. Reset natif
-     propriété par propriété (pas de raccourci `font:`, qui écraserait
-     aussi la taille). */
-  header.site .cta-link--primary {
-    background: none;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    font-family: var(--font-sans);
-    font-size: calc(14px * var(--a11y-echelle));
-    font-weight: 500;
-    white-space: nowrap;
-    color: var(--color-ink);
-    transition: opacity 0.12s;
-  }
-  header.site .cta-link--primary:hover {
-    opacity: 0.6;
-  }
-  header.site .actions {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    justify-self: end;
-  }
-  header.site nav {
-    justify-self: center;
-    display: flex;
-    gap: 32px;
-    /* Center-aligned plutôt que baseline : un bouton-icône sans
-       baseline texte se retrouverait 2-3px plus haut sinon. */
-    align-items: center;
-    font-family: var(--font-sans);
-    font-size: calc(14px * var(--a11y-echelle));
-    font-weight: 500;
-  }
-  header.site nav a {
-    color: var(--color-ink);
-    padding-bottom: 4px;
-    transition: opacity 0.12s;
-  }
-  header.site nav a:hover {
-    opacity: 0.6;
-  }
-  /* L'onglet actif ne peut plus se distinguer par la couleur, puisque
-     tous sont en encre : il ne lui reste que le filet, en bleu de
-     famille (le violet jurerait avec le dégradé trois pixels plus bas). */
-  header.site nav a.active {
-    color: var(--color-ink);
-    font-weight: 600;
-    border-bottom: 1.5px solid var(--c-bleu);
-  }
-
-
-  @media (max-width: 720px) {
-    header.site .row {
-      padding: 18px 24px 14px;
-      flex-direction: column;
-      gap: 12px;
-      align-items: flex-start;
-      position: relative;
-    }
-    header.site nav {
-      gap: 18px;
-      flex-wrap: wrap;
-    }
-  }
-</style>
 
 <script>
   import '../scripts/nav-dropdowns.client';
