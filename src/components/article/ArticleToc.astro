@@ -62,30 +62,109 @@ const sansIntercalaire =
   entries.length === 0 && !hasFootnotes && !hasBiblio && !hasCitation;
 
 const nomAudio = `${(audioTitle ?? 'episode').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80).trim()}.mp3`;
+/**
+ * Micro-label du bloc — « SOMMAIRE », « LECTURE : … », « PUBLIÉ : … ».
+ * Les repères chiffrés et l'intitulé du sommaire sont au même niveau
+ * hiérarchique : ce sont des étiquettes, pas du texte courant.
+ */
+const LABEL =
+  'text-ink text-[calc(10px*var(--a11y-echelle))] font-semibold tracking-[0.12em] uppercase';
+
+/**
+ * Un lien de section. La section en cours se signale par
+ * `aria-current="location"`, posé par le script : un attribut plutôt
+ * qu'une classe, puisque Tailwind ne génère que les classes qu'il lit
+ * dans les sources — et le lecteur d'écran y gagne, la section courante
+ * n'étant jusqu'ici marquée que par une couleur et un filet.
+ */
+const LIEN = [
+  'text-muted -ml-2.5 block border-l-2 border-transparent py-1 pl-2.5',
+  'transition-[color,border-left-color] duration-[120ms]',
+  'aria-[current=location]:text-ink aria-[current=location]:border-l-accent',
+].join(' ');
+
+/**
+ * Un geste rapide du pied de bloc. Les <a> n'y reprennent PAS `LIEN` :
+ * son retrait et sa bordure gauche servent au repère de section active,
+ * et les recopier ici décalerait le pictogramme d'une colonne par
+ * rapport aux <button> voisins.
+ */
+const ACTION = [
+  'text-muted flex w-full cursor-pointer items-center gap-2 border-none bg-transparent px-0.5 py-[5px]',
+  'text-left font-sans text-meta transition-colors duration-[120ms]',
+  'hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+  '[&_svg]:shrink-0',
+].join(' ');
 ---
 
 {/* Pas de condition d'affichage ici : c'est PublicationArticle qui
     décide de monter ou non ce composant, et qui pose `no-toc` sur la
     grille en conséquence. Deux conditions séparées finiraient par
     diverger — une colonne réservée sans rien dedans, ou l'inverse. */}
-<aside class:list={['toc', { 'toc--sans-intercalaire': sansIntercalaire }]} id="toc" aria-label="Sommaire">
+{/* La position horizontale (colonne 2) et la hauteur du bloc viennent de
+    la grille du parent — rien à calculer ici.
+
+    Le `top` du collage est calé sur sa position naturelle au chargement
+    (header ~76 px + retrait haut de main 32 px + retrait de la coquille
+    d'article 75 px ≈ 183 px), et pas sur une valeur plus petite : avec un
+    seuil plus bas, le sommaire défilerait normalement sur la distance qui
+    sépare les deux, ce qui se voit comme un bloc qui « rattrape » sa
+    position avant de se figer. Calé sur son point de départ, il ne semble
+    jamais bouger.
+
+    Sous 1300 px la colonne n'existe plus et le bloc disparaît. */}
+{/* La classe `toc` ne porte plus rien : elle reste comme crochet. Le
+    scrollspy y cherche ses liens, et PublicationArticle s’en sert pour
+    décoller le bloc quand il le pose dans la colonne d’un billet
+    d’actu. La retirer avait éteint le repère de section — silencieusement,
+    puisque rien ne casse quand un sélecteur ne trouve personne. */}
+<aside
+  class="toc text-muted sticky top-[183px] z-4 font-sans text-meta leading-[1.5] max-large:hidden"
+  id="toc"
+  aria-label="Sommaire"
+>
     {/* Repères chiffrés en tête d'aside : combien de temps ça prend, et
         de quand ça date. La date n'est passée que par les pages dont le
         hero porte déjà les autres métadonnées et qui ne rendent donc pas
         le bandeau — sur les autres, elle y figure et la redire ici
         ferait doublon. */}
+    {/* Hauteur et respiration communes avec le générique de la colonne de
+        texte, pour que les deux filets tombent sur la même ligne. La valeur
+        vit dans PublicationArticle (`--repere-h`), qui porte les deux
+        colonnes ; le repli couvre le cas où ce bloc servirait un jour hors
+        de cet article. Le `min-height` compte aussi : sans lui, une page
+        qui n'affiche pas « Publié » n'aurait qu'une ligne, et le calage
+        sauterait.
+
+        L'interligne est épinglé plutôt qu'hérité : `--repere-h` est calculé
+        à partir de lui, et une valeur héritée peut changer sans que le
+        calcul en face le sache. La hauteur mesurée tombait à 66,67 px pour
+        66 attendus — deux tiers de pixel, invisibles à l'œil mais assez
+        pour que les deux filets ne coïncident jamais tout à fait.
+
+        18 px de part et d'autre du filet, comme partout ailleurs dans cet
+        aside : un trait qui sépare deux blocs n'a pas de raison d'avoir
+        plus d'air d'un côté que de l'autre. */}
     {(readingLabel || publishedFr) && (
-      <div class="duree">
+      <div
+        class:list={[
+          LABEL,
+          'border-rule mb-[18px] min-h-[var(--repere-h,auto)] border-b pb-[var(--repere-pad,18px)] leading-[1.5]',
+        ]}
+      >
         {readingLabel && (
           <div>
             <span class="duree-label">{readingLabel.label} : </span>
-            <span class="duree-value">{readingLabel.value}</span>
+            <span class="font-normal">{readingLabel.value}</span>
           </div>
         )}
+        {/* Même écart que celui qui sépare les blocs de l'aside, sans le
+            filet : les deux lignes portent sur le même objet, elles n'ont
+            pas à être séparées comme deux sections. */}
         {publishedFr && (
-          <div class="duree-ligne">
+          <div class="mt-[18px]">
             <span class="duree-label">Publié : </span>
-            <time class="duree-value" datetime={publishedIso}>{publishedFr}</time>
+            <time class="font-normal" datetime={publishedIso}>{publishedFr}</time>
           </div>
         )}
       </div>
@@ -97,32 +176,46 @@ const nomAudio = `${(audioTitle ?? 'episode').replace(/[\\/:*?"<>|]+/g, '-').sli
         intérêt. */}
     {entries.length > 0 && (
       <>
-        <div class="lbl">Sommaire</div>
-        <a href="#intro" class="on" data-toc="intro">Introduction</a>
+        <div class:list={[LABEL, 'mb-2.5']}>Sommaire</div>
+        <a href="#intro" class={LIEN} data-toc="intro" aria-current="location">
+          Introduction
+        </a>
         {entries.map((entry) => (
           <a
             href={`#${entry.id}`}
             data-toc={entry.id}
-            class:list={[`level-${entry.level}`]}
+            class:list={[LIEN, entry.level === 3 && 'pl-[22px]']}
           >
             {entry.text}
           </a>
         ))}
       </>
     )}
-    {hasFootnotes && <a href="#notes" data-toc="notes">Notes</a>}
-    {hasBiblio && <a href="#biblio" data-toc="biblio">Bibliographie</a>}
-    {hasCitation && <a href="#cite" data-toc="cite">Pour citer</a>}
+    {hasFootnotes && <a href="#notes" data-toc="notes" class={LIEN}>Notes</a>}
+    {hasBiblio && <a href="#biblio" data-toc="biblio" class={LIEN}>Bibliographie</a>}
+    {hasCitation && <a href="#cite" data-toc="cite" class={LIEN}>Pour citer</a>}
 
-    <div class="actions">
-      <button type="button" class="action-btn" aria-label="Copier le lien de l'article">
+    {/* Actions rapides — non câblées : le design est posé, le clic ne fait
+        rien pour l'instant. En bas de bloc plutôt qu'en haut : ce sont des
+        gestes secondaires (copier, citer, télécharger), qui viennent après
+        s'être repéré et avoir navigué, pas avant.
+
+        Sans intercalaire, le filet des repères tient lieu de séparation à
+        lui seul ; l'écart, lui, reste porté par leur marge basse. */}
+    <div
+      class:list={[
+        'flex flex-col gap-0.5',
+        sansIntercalaire ? 'mt-0 pt-0' : 'border-rule mt-[18px] border-t pt-3.5',
+      ]}
+    >
+      <button type="button" class={ACTION} aria-label="Copier le lien de l'article">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <rect x="9" y="9" width="12" height="12" rx="2"/>
           <path d="M5.5 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v0.5"/>
         </svg>
         Copier le lien
       </button>
-      <button type="button" class="action-btn" aria-label="Copier la citation de l'article">
+      <button type="button" class={ACTION} aria-label="Copier la citation de l'article">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M7 8.5c-2 0-3.2 1.4-3.2 3.4S5 15.2 7 15.2c0 2-1.2 2.8-3 2.8"/>
           <path d="M16.2 8.5c-2 0-3.2 1.4-3.2 3.4s1.2 3.3 3.2 3.3c0 2-1.2 2.8-3 2.8"/>
@@ -137,7 +230,7 @@ const nomAudio = `${(audioTitle ?? 'episode').replace(/[\\/:*?"<>|]+/g, '-').sli
           Seul de ce bloc à être réellement câblé pour l'instant, d'où le
           <a> là où les autres sont des <button>. */}
       {audioSrc && (
-        <a class="action-btn" href={audioSrc} download={nomAudio}>
+        <a class={ACTION} href={audioSrc} download={nomAudio}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 3v11" />
             <path d="m7.5 10 4.5 4.5 4.5-4.5" />
@@ -146,7 +239,7 @@ const nomAudio = `${(audioTitle ?? 'episode').replace(/[\\/:*?"<>|]+/g, '-').sli
           Télécharger l'épisode
         </a>
       )}
-      <button type="button" class="action-btn" aria-label="Télécharger l'article en PDF">
+      <button type="button" class={ACTION} aria-label="Télécharger l'article en PDF">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 3v11"/>
           <path d="m7.5 10 4.5 4.5 4.5-4.5"/>
@@ -156,8 +249,20 @@ const nomAudio = `${(audioTitle ?? 'episode').replace(/[\\/:*?"<>|]+/g, '-').sli
       </button>
     </div>
 
-    <div class="haut-wrap">
-      <a href="#haut" data-toc="haut" class="haut">
+    {/* Même répartition à deux niveaux que les actions juste au-dessus :
+        le filet et les écarts portés par le conteneur, le retrait interne
+        par le lien — pas un seul bloc qui rejoue approximativement le même
+        total en une règle. */}
+    <div class="border-rule mt-[18px] border-t pt-[18px]">
+      {/* Le scrollspy finit par désigner ce lien — `#haut` est en tête de
+          document, donc « la dernière section dépassée » une fois qu’on est
+          descendu assez loin. Il passe alors à l’encre, comme n’importe
+          quelle entrée courante ; le filet, lui, n’existe pas ici. */}
+      <a
+        href="#haut"
+        data-toc="haut"
+        class:list={[ACTION, 'aria-[current=location]:text-ink']}
+      >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 19V5"/>
           <path d="m5 12 7-7 7 7"/>
@@ -166,176 +271,6 @@ const nomAudio = `${(audioTitle ?? 'episode').replace(/[\\/:*?"<>|]+/g, '-').sli
       </a>
     </div>
 </aside>
-
-<style>
-  /* La position horizontale (colonne 2) et la hauteur du bloc viennent
-     de la grille du parent (.article-shell) — rien à calculer ici.
-     Le `top` du sticky est calé sur sa position naturelle au chargement
-     (header ~76px + padding-top de main 32px + padding-top de
-     .article-shell 75px ≈ 183px), pas sur une valeur plus petite : avec
-     un seuil plus bas, le sommaire défilerait normalement sur la
-     distance qui sépare les deux, ce qui se voit comme un bloc qui
-     « rattrape » sa position avant de se figer. Casé sur son point de
-     départ, il ne semble jamais bouger. */
-  .toc {
-    position: sticky;
-    top: 183px;
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--color-muted);
-    line-height: 1.5;
-    z-index: 4;
-  }
-  /* Actions rapides — non câblées : le design est posé, le clic ne
-     fait rien pour l'instant (cf commentaire d'en-tête). En bas de
-     bloc plutôt qu'en haut : ce sont des gestes secondaires (copier,
-     citer, télécharger), qui viennent après s'être repéré (durée) et
-     avoir navigué (sommaire), pas avant. */
-  /* Le filet des repères tient alors lieu de séparation à lui seul.
-     L'écart, lui, reste porté par la marge basse des repères. */
-  .toc--sans-intercalaire .actions {
-    border-top: 0;
-    margin-top: 0;
-    padding-top: 0;
-  }
-  .actions {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin-top: 18px;
-    padding-top: 14px;
-    border-top: 1px solid var(--color-rule);
-  }
-  .action-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 5px 2px;
-    background: transparent;
-    border: none;
-    color: var(--color-muted);
-    font-family: var(--font-sans);
-    font-size: calc(12px * var(--a11y-echelle));
-    text-align: left;
-    cursor: pointer;
-    transition: color 0.12s;
-  }
-  .action-btn svg {
-    flex-shrink: 0;
-  }
-  .action-btn:hover {
-    color: var(--color-accent);
-  }
-  .action-btn:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-
-  /* Même style que .lbl (le label « Sommaire ») plutôt qu'une ligne à
-     part avec icône — les deux sont des micro-labels au même niveau
-     hiérarchique, pas un texte courant. */
-  .toc .lbl,
-  .duree {
-    font-size: calc(10px * var(--a11y-echelle));
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--color-ink);
-    margin-bottom: 10px;
-  }
-  .duree-value {
-    font-weight: 400;
-  }
-  /* Même écart que celui qui sépare les blocs de l'aside (18 px), sans
-     le filet : les deux lignes portent sur le même objet, elles n'ont
-     pas à être séparées comme deux sections. */
-  .duree-ligne {
-    margin-top: 18px;
-  }
-  /* 18 px de part et d'autre du filet, comme partout ailleurs dans
-     cet aside : un trait qui sépare deux blocs n'a pas de raison
-     d'avoir plus d'air d'un côté que de l'autre, et l'œil lit
-     l'asymétrie comme un défaut d'alignement. */
-  .duree {
-    /* Hauteur et respiration communes avec le générique de la colonne
-       de texte, pour que les deux filets tombent sur la même ligne.
-       La valeur vit dans PublicationArticle (`--repere-h`), qui porte
-       les deux colonnes ; le repli couvre le cas où ce bloc servirait
-       un jour hors de cet article. Le `min-height` compte aussi ici :
-       sans lui, une page qui n'affiche pas « Publié » n'aurait qu'une
-       ligne, et le calage sauterait. */
-    min-height: var(--repere-h, auto);
-    padding-bottom: var(--repere-pad, 18px);
-    margin-bottom: 18px;
-    border-bottom: 1px solid var(--color-rule);
-    /* Épinglé plutôt qu'hérité : `--repere-h` est calculé à partir de
-       cet interligne, et une valeur héritée peut changer sans que le
-       calcul en face le sache. La hauteur mesurée tombait à 66,67 px
-       pour 66 attendus — deux tiers de pixel, invisibles à l'œil mais
-       assez pour que les deux filets ne coïncident jamais tout à fait. */
-    line-height: 1.5;
-  }
-  .toc a {
-    display: block;
-    padding: 4px 0;
-    color: var(--color-muted);
-    border-left: 2px solid transparent;
-    padding-left: 10px;
-    margin-left: -10px;
-    transition: color 0.12s, border-left-color 0.12s;
-  }
-  .toc a.level-3 {
-    padding-left: 22px;
-  }
-  .toc a.on {
-    color: var(--color-ink);
-    border-left-color: var(--color-accent);
-  }
-  /* Séparé du reste du sommaire par un filet : ce n'est pas une section
-     du texte comme les autres liens, plutôt un utilitaire de nav — au
-     même titre que les actions juste en dessous. */
-  /* Même typographie et même indentation qu'un lien de sommaire — juste
-     une icône 16px devant (même gabarit que les actions) et un filet
-     au-dessus pour le séparer du bloc actions. */
-  /* Même répartition à deux niveaux que .actions/.action-btn juste
-     au-dessus : le filet + l'écart avant/après portés par le
-     conteneur (18px/14px, identiques à .actions), le padding interne
-     du lien (5px 2px, identique à .action-btn) — pas un seul bloc qui
-     rejoue approximativement le même total en une seule règle. */
-  .haut-wrap {
-    margin-top: 18px;
-    padding-top: 18px;
-    border-top: 1px solid var(--color-rule);
-  }
-  /* .toc a.haut hérite de .toc a un margin-left/border-left destinés
-     au repère actif des liens de sommaire (cf plus haut) — annulés ici
-     pour retrouver exactement le même modèle de boîte que .action-btn
-     (pas de marge ni de bordure, juste le padding), sans quoi son
-     icône ne tombe pas à la même colonne que celles des boutons. */
-  /* `a.action-btn` tombe dans le même piège : tout <a> du sommaire
-     hérite d'un retrait et d'une bordure gauche destinés au repère de
-     section active. On les annule pour retrouver exactement le modèle
-     de boîte d'un .action-btn <button>, sinon son pictogramme ne tombe
-     pas à la même colonne que les autres. */
-  .toc a.haut,
-  .toc a.action-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: 0;
-    padding: 5px 2px;
-    border-left: none;
-  }
-  .toc a.haut svg {
-    flex-shrink: 0;
-  }
-  @media (max-width: 1299px) {
-    .toc {
-      display: none;
-    }
-  }
-</style>
 
 <script>
   // Scrollspy basé sur la position : on prend la dernière section dont
@@ -368,7 +303,12 @@ const nomAudio = `${(audioTitle ?? 'episode').replace(/[\\/:*?"<>|]+/g, '-').sli
 
     function setActive(id: string) {
       for (const a of tocLinks) {
-        a.classList.toggle('on', a.dataset.toc === id);
+        // Un attribut et non une classe : la mise en forme est en
+        // utilitaires Tailwind, qui ne génère que les classes lues dans
+        // les sources. `location` et non `page` : c'est un endroit dans
+        // le document, pas une page dans un site.
+        if (a.dataset.toc === id) a.setAttribute('aria-current', 'location');
+        else a.removeAttribute('aria-current');
       }
     }
 
