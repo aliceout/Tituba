@@ -20,30 +20,118 @@
  * d'ajuster. D'où l'absence de piège à focus — mais Échap ferme, et le
  * focus revient au bouton.
  */
+
+/** Un groupe de réglages, et son intitulé en petites capitales. */
+const GROUPE = 'm-0 mb-[22px] border-0 p-0';
+const LEGENDE =
+  'text-muted mb-2.5 p-0 font-mono text-[calc(10px*var(--a11y-echelle))] tracking-label uppercase';
+
+/**
+ * Les inputs des crans et des polices sont retirés de l'œil, pas de
+ * l'arbre : `display: none` les rendrait injoignables au clavier. C'est
+ * l'input qui porte l'état et le focus ; le cadre coloré n'est que son
+ * reflet, branché dessus par `has-`.
+ */
+const INPUT_INVISIBLE = 'absolute inset-0 m-0 cursor-pointer opacity-0';
+
+/** Un cran de taille. Il s'écrit à la taille qu'il applique. */
+const CRAN = [
+  'bg-bg border-rule text-ink relative flex flex-1 cursor-pointer items-center justify-center',
+  'rounded-[3px] border py-2.5 font-serif leading-none',
+  'transition-[border-color,background-color] duration-[120ms]',
+  'hover:border-ink',
+  'has-[input:checked]:border-[var(--c-bleu)] has-[input:checked]:bg-[var(--c-bleu)] has-[input:checked]:text-[var(--c-bleu-on)]',
+  'has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--c-bleu-deep)]',
+].join(' ');
+
+/**
+ * Valeurs fixes, non multipliées par l'échelle : le groupe doit garder
+ * le même rapport interne quel que soit le réglage en cours, sinon il
+ * grandirait à chaque clic.
+ */
+const TAILLES_CRAN = ['text-[13px]', 'text-[16px]', 'text-[19px]', 'text-[22px]'];
+
+/** Un choix de police. */
+const POLICE = [
+  'bg-bg border-rule text-ink relative grid cursor-pointer grid-cols-[1fr_auto] items-baseline',
+  'gap-x-2.5 gap-y-1 rounded-[3px] border px-3 py-2.5 text-left',
+  'transition-[border-color,background-color] duration-[120ms]',
+  'hover:border-ink',
+  'has-[input:checked]:border-[var(--c-bleu)] has-[input:checked]:bg-[color-mix(in_srgb,var(--c-bleu)_10%,var(--color-bg))]',
+  'has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--c-bleu-deep)]',
+].join(' ');
+
+/**
+ * L'échantillon porte la police proposée, indépendamment de celle qui
+ * est active : c'est ce qui permet de comparer avant de choisir.
+ */
+const ECHANTILLONS = {
+  defaut: "font-['Fraunces_Variable',Georgia,serif]",
+  luciole: "font-['Luciole',Verdana,sans-serif]",
+  dyslexie: "font-['OpenDyslexic',Verdana,sans-serif]",
+};
+
+/**
+ * Une bascule. `relative` sert de repère à l'input masqué : sans lui,
+ * celui-ci se calerait sur le tiroir — huit cases invisibles empilées
+ * dans le coin haut-gauche, par-dessus le bouton de fermeture, qui
+ * intercepteraient ses clics.
+ */
+const BASCULE = 'relative grid cursor-pointer grid-cols-[34px_1fr] items-start gap-2.5 py-[9px]';
+
+/**
+ * L'input de la bascule est `peer` : la piste n'est qu'un décor branché
+ * dessus. Retiré de l'affichage mais pas de l'arbre — c'est lui qui
+ * porte l'état, reçoit le focus et répond à la barre d'espace.
+ */
+const BASCULE_INPUT = 'peer absolute m-0 h-5 w-[34px] cursor-pointer opacity-0';
+const PISTE = [
+  'bg-rule relative mt-px h-5 w-[34px] rounded-full transition-[background-color] duration-[140ms]',
+  "after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:transition-transform after:duration-[140ms] after:content-['']",
+  'peer-checked:bg-[var(--c-vert)] peer-checked:after:translate-x-[14px]',
+  'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--c-bleu-deep)]',
+].join(' ');
+const BASCULE_TEXTE =
+  'text-[calc(13px*var(--a11y-echelle))] leading-[1.35] [&_.sous]:text-muted [&_.sous]:mt-0.5 [&_.sous]:block [&_.sous]:text-[calc(11.5px*var(--a11y-echelle))] [&_.sous]:leading-[1.45]';
+
 ---
 
+{/* Fermé : hors champ à droite. L'attribut `hidden` le retire de l'arbre
+    d'accessibilité, la transformation gère le mouvement — il est posé et
+    retiré par le script autour de celle-ci, pour que le tiroir ne reste
+    pas focusable une fois refermé.
+
+    Sous 420 px le tiroir prend toute la largeur : 380 px sur un écran de
+    360 laisseraient une bande de page inutilisable. */}
 <div
-  class="a11y"
+  class="bg-paper border-rule text-ink fixed inset-y-0 right-0 z-[60] flex w-[min(380px,100vw)] translate-x-full flex-col overflow-hidden border-l font-sans shadow-[-12px_0_32px_rgba(0,0,0,0.1)] transition-transform duration-[220ms] ease-[ease] data-[ouvert]:translate-x-0 max-[420px]:w-screen max-[420px]:border-l-0 [&[hidden]]:hidden"
   id="panneau-accessibilite"
   role="dialog"
   aria-labelledby="a11y-titre"
   aria-hidden="true"
   hidden
 >
-  <div class="a11y__tete">
-    <h2 id="a11y-titre">Accessibilité</h2>
-    <button type="button" class="a11y__fermer" data-a11y-close aria-label="Fermer le panneau">
+  <div class="flex items-center justify-between px-[22px] pt-5">
+    <h2 id="a11y-titre" class="m-0 font-serif text-[calc(22px*var(--a11y-echelle))] font-normal">
+      Accessibilité
+    </h2>
+    <button
+      type="button"
+      class="text-muted hover:text-ink -m-1.5 inline-flex cursor-pointer rounded-full border-0 bg-none p-1.5 hover:bg-[color-mix(in_oklch,var(--color-ink),transparent_92%)]"
+      data-a11y-close
+      aria-label="Fermer le panneau"
+    >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
         <path d="M18 6 6 18M6 6l12 12" />
       </svg>
     </button>
   </div>
 
-  <p class="a11y__lede">
+  <p class="text-muted mx-[22px] mt-2 text-meta leading-[1.5]">
     Ces réglages ne concernent que votre navigateur. Ils sont conservés d’une visite à l’autre.
   </p>
 
-  <div class="a11y__corps">
+  <div class="flex-auto overflow-y-auto px-[22px] pt-[18px] pb-2">
     {/* Quatre crans nommés plutôt qu'un curseur : ils se choisissent au
         clavier sans viser, et l'on sait toujours où l'on en est.
 
@@ -53,24 +141,25 @@
         — soit exactement ce qu'un panneau d'accessibilité n'a aucune
         excuse de réécrire à moitié. L'input est masqué à l'œil mais
         reste focusable ; le cadre coloré n'est que son reflet. */}
-    <fieldset class="a11y__groupe">
-      <legend>Taille du texte</legend>
-      <div class="a11y__crans">
+    <fieldset class={GROUPE}>
+      <legend class={LEGENDE}>Taille du texte</legend>
+      <div class="flex items-end gap-2">
         {[
           { v: '100', t: 'Taille normale' },
           { v: '110', t: 'Texte agrandi de 10 %' },
           { v: '120', t: 'Texte agrandi de 20 %' },
           { v: '130', t: 'Texte agrandi de 30 %' },
         ].map((c, i) => (
-          <label class={`a11y__cran a11y__cran--${i}`} title={c.t}>
+          <label class={CRAN} title={c.t}>
             <input
               type="radio"
               name="a11y-taille"
               value={c.v}
               data-a11y-set="taille"
               checked={c.v === '100'}
+              class={INPUT_INVISIBLE}
             />
-            <span class="marque" aria-hidden="true">A</span>
+            <span class={TAILLES_CRAN[i]} aria-hidden="true">A</span>
             <span class="sr-only">{c.t}</span>
           </label>
         ))}
@@ -79,77 +168,90 @@
 
     {/* Trois choix exclusifs. Chaque échantillon est écrit dans la
         police qu'il propose : c'est le seul aperçu qui vaille. */}
-    <fieldset class="a11y__groupe">
-      <legend>Police de lecture</legend>
-      <div class="a11y__polices">
+    <fieldset class={GROUPE}>
+      <legend class={LEGENDE}>Police de lecture</legend>
+      <div class="grid gap-2">
         {[
           { v: 'defaut', nom: 'Police du site', pour: null },
           { v: 'luciole', nom: 'Luciole', pour: 'basse vision' },
           { v: 'dyslexie', nom: 'OpenDyslexic', pour: 'dyslexie' },
         ].map((p) => (
-          <label class={`a11y__police a11y__police--${p.v}`}>
+          <label class={POLICE}>
             <input
               type="radio"
               name="a11y-police"
               value={p.v}
               data-a11y-set="police"
               checked={p.v === 'defaut'}
+              class={INPUT_INVISIBLE}
             />
-            <span class="nom">{p.nom}</span>
-            {p.pour && <span class="pour">{p.pour}</span>}
-            <span class="ex" aria-hidden="true">Aa Bb Il1 O0</span>
+            <span class="text-[calc(13px*var(--a11y-echelle))] font-medium">{p.nom}</span>
+            {p.pour && (
+              <span class="text-muted font-mono text-[calc(9px*var(--a11y-echelle))] tracking-[0.1em] uppercase">
+                {p.pour}
+              </span>
+            )}
+            <span
+              class:list={[
+                'text-muted col-span-full text-[15px] tracking-[0.04em]',
+                ECHANTILLONS[p.v as keyof typeof ECHANTILLONS],
+              ]}
+              aria-hidden="true"
+            >
+              Aa Bb Il1 O0
+            </span>
           </label>
         ))}
       </div>
     </fieldset>
 
-    <fieldset class="a11y__groupe">
-      <legend>Lisibilité</legend>
+    <fieldset class={GROUPE}>
+      <legend class={LEGENDE}>Lisibilité</legend>
 
-      <label class="a11y__bascule">
-        <input type="checkbox" data-a11y-toggle="espacement" data-a11y-on="large" />
-        <span class="piste" aria-hidden="true"></span>
-        <span class="txt">
+      <label class={BASCULE}>
+        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="espacement" data-a11y-on="large" />
+        <span class={PISTE} aria-hidden="true"></span>
+        <span class={BASCULE_TEXTE}>
           Espacement du texte
           <span class="sous">Interligne, interlettre et intermot élargis.</span>
         </span>
       </label>
 
-      <label class="a11y__bascule">
-        <input type="checkbox" data-a11y-toggle="liens" data-a11y-on="soulignes" />
-        <span class="piste" aria-hidden="true"></span>
-        <span class="txt">
+      <label class={BASCULE}>
+        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="liens" data-a11y-on="soulignes" />
+        <span class={PISTE} aria-hidden="true"></span>
+        <span class={BASCULE_TEXTE}>
           Liens soulignés
           <span class="sous">Repérer un lien sans se fier à sa couleur.</span>
         </span>
       </label>
 
-      <label class="a11y__bascule">
-        <input type="checkbox" data-a11y-toggle="guide" data-a11y-on="on" />
-        <span class="piste" aria-hidden="true"></span>
-        <span class="txt">
+      <label class={BASCULE}>
+        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="guide" data-a11y-on="on" />
+        <span class={PISTE} aria-hidden="true"></span>
+        <span class={BASCULE_TEXTE}>
           Guide de lecture
           <span class="sous">Une bande claire suit le pointeur, le reste s’assombrit.</span>
         </span>
       </label>
     </fieldset>
 
-    <fieldset class="a11y__groupe">
-      <legend>Couleurs</legend>
+    <fieldset class={GROUPE}>
+      <legend class={LEGENDE}>Couleurs</legend>
 
-      <label class="a11y__bascule">
-        <input type="checkbox" data-a11y-toggle="contraste" data-a11y-on="renforce" />
-        <span class="piste" aria-hidden="true"></span>
-        <span class="txt">
+      <label class={BASCULE}>
+        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="contraste" data-a11y-on="renforce" />
+        <span class={PISTE} aria-hidden="true"></span>
+        <span class={BASCULE_TEXTE}>
           Contraste renforcé
           <span class="sous">Se cumule avec le thème clair ou sombre.</span>
         </span>
       </label>
 
-      <label class="a11y__bascule">
-        <input type="checkbox" data-a11y-toggle="couleurs" data-a11y-on="daltonisme" />
-        <span class="piste" aria-hidden="true"></span>
-        <span class="txt">
+      <label class={BASCULE}>
+        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="couleurs" data-a11y-on="daltonisme" />
+        <span class={PISTE} aria-hidden="true"></span>
+        <span class={BASCULE_TEXTE}>
           Palette adaptée au daltonisme
           <span class="sous">
             Le site distingue ses formats par quatre couleurs. Celles-ci restent
@@ -158,10 +260,10 @@
         </span>
       </label>
 
-      <label class="a11y__bascule">
-        <input type="checkbox" data-a11y-toggle="animations" data-a11y-on="reduites" />
-        <span class="piste" aria-hidden="true"></span>
-        <span class="txt">
+      <label class={BASCULE}>
+        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="animations" data-a11y-on="reduites" />
+        <span class={PISTE} aria-hidden="true"></span>
+        <span class={BASCULE_TEXTE}>
           Animations réduites
           <span class="sous">Coupe les transitions et les défilements animés.</span>
         </span>
@@ -169,9 +271,15 @@
     </fieldset>
   </div>
 
-  <div class="a11y__pied">
-    <button type="button" class="a11y__reset" data-a11y-reset>Tout réinitialiser</button>
-    <p class="a11y__note">
+  <div class="border-rule flex-none border-t px-[22px] pt-3.5 pb-[18px]">
+    <button
+      type="button"
+      class="border-rule text-ink hover:border-ink cursor-pointer rounded-[3px] border bg-none px-3.5 py-2 font-[inherit] text-meta"
+      data-a11y-reset
+    >
+      Tout réinitialiser
+    </button>
+    <p class="text-muted mt-2.5 mb-0 text-label leading-[1.45] [&_a]:text-ink [&_a]:underline [&_a]:underline-offset-[0.18em]">
       <a href="/accessibilite/">Où nous en sommes, et ce qui manque encore</a> — un obstacle
       rencontré sur ce site&nbsp;? Le signaler est le meilleur moyen qu’il soit corrigé.
     </p>
@@ -185,335 +293,6 @@
   <div class="a11y-guide__fenetre"></div>
   <div class="a11y-guide__voile a11y-guide__voile--bas"></div>
 </div>
-
-<style>
-  /* ── Le tiroir ──────────────────────────────────────────────────── */
-  .a11y {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(380px, 100vw);
-    z-index: 60;
-    display: flex;
-    flex-direction: column;
-    background: var(--color-paper);
-    border-left: 1px solid var(--color-rule);
-    box-shadow: -12px 0 32px rgba(0, 0, 0, 0.1);
-    font-family: var(--font-sans);
-    color: var(--color-ink);
-    overflow: hidden;
-    /* Fermé : hors champ à droite. L'attribut `hidden` le retire de
-       l'arbre d'accessibilité, la transformation gère le mouvement. */
-    transform: translateX(100%);
-    transition: transform 0.22s ease;
-  }
-  .a11y.is-open {
-    transform: translateX(0);
-  }
-  /* `hidden` est posé et retiré par le script autour de la transition :
-     retiré avant l'ouverture, reposé après la fermeture, pour que le
-     tiroir ne reste pas focusable une fois refermé. */
-  .a11y[hidden] {
-    display: none;
-  }
-
-  .a11y__tete {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 22px 0;
-  }
-  .a11y__tete h2 {
-    margin: 0;
-    font-family: var(--font-serif);
-    font-size: calc(22px * var(--a11y-echelle));
-    font-weight: 400;
-  }
-  .a11y__fermer {
-    background: none;
-    border: 0;
-    padding: 6px;
-    margin: -6px;
-    color: var(--color-muted);
-    cursor: pointer;
-    border-radius: 999px;
-    display: inline-flex;
-  }
-  .a11y__fermer:hover {
-    color: var(--color-ink);
-    background: color-mix(in oklch, var(--color-ink), transparent 92%);
-  }
-
-  .a11y__lede {
-    margin: 8px 22px 0;
-    font-size: calc(12px * var(--a11y-echelle));
-    line-height: 1.5;
-    color: var(--color-muted);
-  }
-
-  .a11y__corps {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: 18px 22px 8px;
-  }
-
-  .a11y__groupe {
-    border: 0;
-    padding: 0;
-    margin: 0 0 22px;
-  }
-  .a11y__groupe legend {
-    padding: 0;
-    margin-bottom: 10px;
-    font-family: var(--font-mono);
-    font-size: calc(10px * var(--a11y-echelle));
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--color-muted);
-  }
-
-  /* ── Crans de taille ────────────────────────────────────────────── */
-  .a11y__crans {
-    display: flex;
-    gap: 8px;
-    align-items: flex-end;
-  }
-  .a11y__cran {
-    position: relative;
-    flex: 1 1 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-bg);
-    border: 1px solid var(--color-rule);
-    border-radius: 3px;
-    padding: 10px 0;
-    cursor: pointer;
-    color: var(--color-ink);
-    font-family: var(--font-serif);
-    line-height: 1;
-    transition:
-      border-color 0.12s,
-      background-color 0.12s;
-  }
-  /* L'input porte l'état et le focus ; il est retiré de l'œil, pas de
-     l'arbre — `display: none` le rendrait injoignable au clavier. */
-  .a11y__cran input,
-  .a11y__police input {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    margin: 0;
-    cursor: pointer;
-  }
-  /* Chaque cran s'écrit à la taille qu'il applique — il est son propre
-     aperçu. Valeurs fixes, non multipliées par l'échelle : le groupe
-     doit garder le même rapport interne quel que soit le réglage en
-     cours, sinon il grandirait à chaque clic. */
-  .a11y__cran--0 .marque {
-    font-size: 13px;
-  }
-  .a11y__cran--1 .marque {
-    font-size: 16px;
-  }
-  .a11y__cran--2 .marque {
-    font-size: 19px;
-  }
-  .a11y__cran--3 .marque {
-    font-size: 22px;
-  }
-  .a11y__cran:hover {
-    border-color: var(--color-ink);
-  }
-  .a11y__cran:has(input:checked) {
-    background: var(--c-bleu);
-    border-color: var(--c-bleu);
-    color: var(--c-bleu-on);
-  }
-  .a11y__cran:has(input:focus-visible),
-  .a11y__police:has(input:focus-visible) {
-    outline: 2px solid var(--c-bleu-deep);
-    outline-offset: 2px;
-  }
-
-  /* ── Choix de police ────────────────────────────────────────────── */
-  .a11y__polices {
-    display: grid;
-    gap: 8px;
-  }
-  .a11y__police {
-    position: relative;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: baseline;
-    gap: 4px 10px;
-    text-align: left;
-    background: var(--color-bg);
-    border: 1px solid var(--color-rule);
-    border-radius: 3px;
-    padding: 10px 12px;
-    cursor: pointer;
-    color: var(--color-ink);
-    transition:
-      border-color 0.12s,
-      background-color 0.12s;
-  }
-  .a11y__police:hover {
-    border-color: var(--color-ink);
-  }
-  .a11y__police:has(input:checked) {
-    border-color: var(--c-bleu);
-    background: color-mix(in srgb, var(--c-bleu) 10%, var(--color-bg));
-  }
-  .a11y__police .nom {
-    font-size: calc(13px * var(--a11y-echelle));
-    font-weight: 500;
-  }
-  .a11y__police .pour {
-    font-family: var(--font-mono);
-    font-size: calc(9px * var(--a11y-echelle));
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--color-muted);
-  }
-  /* L'échantillon porte la police proposée, indépendamment de celle qui
-     est active : c'est ce qui permet de comparer avant de choisir. */
-  .a11y__police .ex {
-    grid-column: 1 / -1;
-    font-size: 15px;
-    color: var(--color-muted);
-    letter-spacing: 0.04em;
-  }
-  .a11y__police--defaut .ex {
-    font-family: 'Fraunces Variable', Georgia, serif;
-  }
-  .a11y__police--luciole .ex {
-    font-family: 'Luciole', Verdana, sans-serif;
-  }
-  .a11y__police--dyslexie .ex {
-    font-family: 'OpenDyslexic', Verdana, sans-serif;
-  }
-
-  /* ── Bascules ───────────────────────────────────────────────────── */
-  .a11y__bascule {
-    /* Repère de positionnement pour l'input masqué ci-dessous. Sans
-       lui, celui-ci se calerait sur le tiroir — huit cases invisibles
-       empilées dans le coin haut-gauche, par-dessus le bouton de
-       fermeture, qui intercepteraient ses clics. */
-    position: relative;
-    display: grid;
-    grid-template-columns: 34px 1fr;
-    gap: 10px;
-    align-items: start;
-    padding: 9px 0;
-    cursor: pointer;
-  }
-  .a11y__bascule input {
-    /* Retiré de l'affichage mais pas de l'arbre : c'est lui qui porte
-       l'état, reçoit le focus et répond à la barre d'espace. La piste
-       n'est qu'un décor branché dessus. */
-    position: absolute;
-    opacity: 0;
-    width: 34px;
-    height: 20px;
-    margin: 0;
-    cursor: pointer;
-  }
-  .a11y__bascule .piste {
-    position: relative;
-    width: 34px;
-    height: 20px;
-    border-radius: 999px;
-    background: var(--color-rule);
-    transition: background-color 0.14s;
-    margin-top: 1px;
-  }
-  .a11y__bascule .piste::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #fff;
-    transition: transform 0.14s;
-  }
-  .a11y__bascule input:checked ~ .piste {
-    background: var(--c-vert);
-  }
-  .a11y__bascule input:checked ~ .piste::after {
-    transform: translateX(14px);
-  }
-  .a11y__bascule input:focus-visible ~ .piste {
-    outline: 2px solid var(--c-bleu-deep);
-    outline-offset: 2px;
-  }
-  .a11y__bascule .txt {
-    font-size: calc(13px * var(--a11y-echelle));
-    line-height: 1.35;
-  }
-  .a11y__bascule .sous {
-    display: block;
-    margin-top: 2px;
-    font-size: calc(11.5px * var(--a11y-echelle));
-    line-height: 1.45;
-    color: var(--color-muted);
-  }
-
-  /* ── Pied ───────────────────────────────────────────────────────── */
-  .a11y__pied {
-    flex: 0 0 auto;
-    padding: 14px 22px 18px;
-    border-top: 1px solid var(--color-rule);
-  }
-  .a11y__reset {
-    background: none;
-    border: 1px solid var(--color-rule);
-    border-radius: 3px;
-    padding: 8px 14px;
-    font-family: inherit;
-    font-size: calc(12px * var(--a11y-echelle));
-    color: var(--color-ink);
-    cursor: pointer;
-  }
-  .a11y__reset:hover {
-    border-color: var(--color-ink);
-  }
-  .a11y__note {
-    margin: 10px 0 0;
-    font-size: calc(11px * var(--a11y-echelle));
-    line-height: 1.45;
-    color: var(--color-muted);
-  }
-  .a11y__note a {
-    color: var(--color-ink);
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  /* Sous 420 px le tiroir prend toute la largeur — un tiroir de 380 px
-     sur un écran de 360 laisserait une bande de page inutilisable. */
-  @media (max-width: 420px) {
-    .a11y {
-      width: 100vw;
-      border-left: 0;
-    }
-  }
-</style>
 
 <script>
   /**
@@ -615,26 +394,26 @@
       // le retrait de `hidden` et l'ajout de la classe, et la
       // translation n'est pas animée.
       requestAnimationFrame(() =>
-        requestAnimationFrame(() => panneau!.classList.add('is-open')),
+        requestAnimationFrame(() => (panneau!.dataset.ouvert = '')),
       );
       bouton!.setAttribute('aria-expanded', 'true');
-      panneau!.querySelector<HTMLElement>('.a11y__fermer')?.focus();
+      panneau!.querySelector<HTMLElement>('[data-a11y-close]')?.focus();
     }
 
     function fermer(rendreFocus = true): void {
-      panneau!.classList.remove('is-open');
+      delete panneau!.dataset.ouvert;
       panneau!.setAttribute('aria-hidden', 'true');
       bouton!.setAttribute('aria-expanded', 'false');
       // `hidden` seulement une fois le mouvement fini, sinon le tiroir
       // disparaîtrait d'un coup au lieu de sortir par la droite.
       window.setTimeout(() => {
-        if (!panneau!.classList.contains('is-open')) panneau!.hidden = true;
+        if (!panneau!.hasAttribute('data-ouvert')) panneau!.hidden = true;
       }, 240);
       if (rendreFocus) bouton!.focus();
     }
 
     bouton.addEventListener('click', () => {
-      if (panneau.classList.contains('is-open')) fermer();
+      if (panneau.hasAttribute('data-ouvert')) fermer();
       else ouvrir();
     });
     panneau.querySelector('[data-a11y-close]')?.addEventListener('click', () => fermer());
@@ -642,7 +421,7 @@
     document.addEventListener(
       'keydown',
       (e) => {
-        if (e.key === 'Escape' && panneau.classList.contains('is-open')) fermer();
+        if (e.key === 'Escape' && panneau.hasAttribute('data-ouvert')) fermer();
       },
       { signal: ac.signal },
     );
@@ -652,7 +431,7 @@
     document.addEventListener(
       'pointerdown',
       (e) => {
-        if (!panneau.classList.contains('is-open')) return;
+        if (!panneau.hasAttribute('data-ouvert')) return;
         const cible = e.target as Node;
         if (panneau.contains(cible) || bouton.contains(cible)) return;
         fermer(false);
