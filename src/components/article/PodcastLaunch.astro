@@ -43,9 +43,30 @@ function chrono(secondes: number | null | undefined): string {
 const duree = chrono(durationSeconds);
 ---
 
+{/* La classe `lancer` reste : c'est par elle que le hero d'épisode
+    repose ses couleurs sur le bouton (cf PodcastHero). `group` sert au
+    survol du rond en variante nue, et `data-joue` à la permutation des
+    deux pictogrammes — un attribut plutôt qu'une classe, puisque
+    Tailwind ne génère que les classes qu'il lit dans les sources.
+
+    Au survol, le fond s'éclaire d'un voile de la couleur d'accent :
+    `color-mix` plutôt qu'une teinte figée, pour que le bouton suive la
+    couleur de marque réglée dans l'admin — et pour qu'il tienne aussi
+    bien sur le fond clair d'une page que sur le fond sombre d'un hero
+    d'épisode, où c'est la même règle qui joue.
+
+    Variante nue : le rond seul, sans cadre ni fond — la pastille
+    n'aurait plus rien à enfermer. */}
 <button
   type="button"
-  class:list={['lancer', { compact }]}
+  class:list={[
+    'lancer group inline-flex cursor-pointer items-center gap-3 rounded-full bg-transparent',
+    'text-ink font-sans text-[calc(14px*var(--a11y-echelle))]',
+    'transition-[border-color,color,background] duration-[120ms]',
+    'hover:border-accent hover:text-accent hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]',
+    'focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-accent',
+    compact ? 'border-0 p-0' : 'border-rule border py-2.5 pr-[22px] pl-2.5',
+  ]}
   data-podcast-launch
   data-src={src}
   data-titre={title}
@@ -53,91 +74,54 @@ const duree = chrono(durationSeconds);
   data-href={href ?? ''}
   aria-label={compact ? "Écouter l'épisode" : undefined}
 >
-  <span class="rond-wrap" aria-hidden="true">
-    {/* Anneau de progression, autour du rond. `pathLength="100"` fait
-        parler le tracé en centièmes quel que soit son rayon : la part
-        écoutée s'écrit alors directement, sans avoir à recalculer une
-        circonférence à chaque changement de taille. */}
-    {/* Pas de cercle de fond : un tour complet en gris se lit comme un
-        anneau déjà rempli, et l'arc qui avance dessus ne s'en distingue
-        plus. Seule la part écoutée est peinte. */}
+  <span class="relative grid place-items-center" aria-hidden="true">
+    {/* Anneau de progression, autour du rond. Pas de cercle de fond : un
+        tour complet en gris se lit comme un anneau déjà rempli, et l'arc
+        qui avance dessus ne s'en distingue plus. Seule la part écoutée
+        est peinte. */}
     <span class="anneau"></span>
-    <span class="rond">
-      {/* Les deux pictogrammes occupent la même case de la grille : ils
-          se superposent, et seul celui de l'état courant est visible.
-          Les permuter par affichage plutôt que par remplacement du
-          balisage évite un saut de mise en page à chaque bascule. */}
-      <svg class="i-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <span
+      class:list={[
+        'bg-accent grid size-[38px] place-items-center rounded-full text-white transition-[filter] duration-[120ms]',
+        compact && 'group-hover:brightness-[1.12]',
+      ]}
+    >
+      {/* Les deux pictogrammes occupent la même case de la grille : ils se
+          superposent, et seul celui de l'état courant est visible. Les
+          permuter par affichage plutôt que par remplacement du balisage
+          évite un saut de mise en page à chaque bascule. */}
+      <svg
+        class="col-start-1 row-start-1 group-data-[joue]:hidden"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+      >
         <path d="M8 5.5v13l11-6.5z" />
       </svg>
-      <svg class="i-pause" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <svg
+        class="col-start-1 row-start-1 hidden group-data-[joue]:block"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+      >
         <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />
       </svg>
     </span>
   </span>
-  {!compact && <span class="txt" data-txt>Écouter l'épisode</span>}
-  {!compact && duree && <span class="duree">{duree}</span>}
+  {!compact && <span data-txt>Écouter l'épisode</span>}
+  {!compact && duree && (
+    <span class="text-muted font-mono text-label tabular-nums">{duree}</span>
+  )}
 </button>
 
+{/* Le seul CSS qui reste, et il ne peut pas être ailleurs : `@property`
+    est une règle de feuille, sans équivalent en utilitaire, et l'anneau
+    en dépend — sans elle, `--part` n'est qu'une chaîne et la transition
+    saute d'une valeur à l'autre au lieu de s'interpoler. */}
 <style>
-  .lancer {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 22px 10px 10px;
-    border: 1px solid var(--color-rule);
-    border-radius: 999px;
-    background: transparent;
-    font-family: var(--font-sans);
-    font-size: calc(14px * var(--a11y-echelle));
-    color: var(--color-ink);
-    cursor: pointer;
-    transition: border-color 0.12s, color 0.12s, background 0.12s;
-  }
-  /* Au survol, le fond s'éclaire d'un voile de la couleur d'accent :
-     `color-mix` plutôt qu'une teinte figée, pour que le bouton suive la
-     couleur de marque réglée dans l'admin — et pour qu'il tienne aussi
-     bien sur le fond clair d'une page que sur le fond sombre d'un hero
-     d'épisode, où c'est la même règle qui joue. */
-  .lancer:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-    background: color-mix(in srgb, var(--color-accent) 10%, transparent);
-  }
-  .lancer:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 3px;
-  }
-  /* Variante nue : le rond seul, sans cadre ni fond — la pastille
-     n'aurait plus rien à enfermer. */
-  .lancer.compact {
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-  }
-  .lancer.compact:hover .rond {
-    filter: brightness(1.12);
-  }
-  .rond-wrap {
-    position: relative;
-    display: grid;
-    place-items: center;
-  }
-  .rond {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    color: #fff;
-    transition: filter 0.12s;
-  }
-
-  /* Part écoutée, déclarée pour pouvoir être animée : sans
-     `@property`, une propriété personnalisée est une simple chaîne et
-     la transition saute d'une valeur à l'autre. Typée en nombre, elle
-     s'interpole. */
+  /* Part écoutée, déclarée pour pouvoir être animée. */
   @property --part {
     syntax: '<number>';
     inherits: true;
@@ -180,22 +164,6 @@ const duree = chrono(durationSeconds);
       transition: none;
     }
   }
-  .rond svg {
-    grid-area: 1 / 1;
-  }
-  .i-pause,
-  .lancer.joue .i-play {
-    display: none;
-  }
-  .lancer.joue .i-pause {
-    display: block;
-  }
-  .duree {
-    font-family: var(--font-mono);
-    font-size: calc(11px * var(--a11y-echelle));
-    color: var(--color-muted);
-    font-variant-numeric: tabular-nums;
-  }
 </style>
 
 <script>
@@ -222,7 +190,11 @@ const duree = chrono(durationSeconds);
       const src = btn.dataset.src ?? '';
       const txt = btn.querySelector<HTMLElement>('[data-txt]');
       const joue = api.joue(src);
-      btn.classList.toggle('joue', joue);
+      // Un attribut et non une classe : la mise en forme est en
+      // utilitaires Tailwind, qui ne génère que les classes lues dans
+      // les sources.
+      if (joue) btn.dataset.joue = '';
+      else delete btn.dataset.joue;
       if (txt) txt.textContent = joue ? 'Mettre en pause' : "Écouter l'épisode";
       // L'anneau ne suit que l'épisode réellement chargé dans la barre :
       // sur une page qui en listerait plusieurs, les autres boutons
