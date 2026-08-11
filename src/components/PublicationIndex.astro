@@ -111,15 +111,17 @@ const LEDES: Record<PublicationCollection, string> = {
       d'abord dans une application, et sans ce lien rien sur le site
       n'indiquerait qu'on peut s'y abonner. */}
   {collection === 'podcasts' && (
-    <p class="abo">
-      <a href="/podcasts/rss.xml">S'abonner au podcast</a>
-      <span class="abo-aide">
+    <p class="m-0 mt-6 font-sans text-[calc(13px*var(--a11y-echelle))]">
+      <a class="text-accent border-b border-current pb-px" href="/podcasts/rss.xml">
+        S'abonner au podcast
+      </a>
+      <span class="text-muted">
         — collez cette adresse dans votre application d'écoute.
       </span>
     </p>
   )}
 
-  <section class="feed">
+  <section class="pt-6 pb-10">
     {docs.length === 0 ? (
       <Empty>
         <FormatIcon collection={collection} />
@@ -141,23 +143,3 @@ const LEDES: Record<PublicationCollection, string> = {
     )}
   </section>
 </PageShell>
-
-<style>
-  .feed {
-    padding-top: 24px;
-    padding-bottom: 40px;
-  }
-  .abo {
-    margin: 24px 0 0;
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-  }
-  .abo a {
-    color: var(--color-accent);
-    border-bottom: 1px solid currentColor;
-    padding-bottom: 1px;
-  }
-  .abo-aide {
-    color: var(--color-muted);
-  }
-</style>

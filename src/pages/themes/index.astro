@@ -84,20 +84,43 @@ const heroLedeHtml = formatHeroLede(
   lede={heroLedeHtml}
   famille="violet"
 >
+  {/* Gouttière et rythme vertical viennent de PageShell. */}
   {sorted.length === 0 ? (
     <Empty>Aucun thème pour l'instant.</Empty>
   ) : (
-    <div class="grid">
-      {sorted.map((t) => {
+    <div class="grid grid-cols-2 gap-0 max-mobile:grid-cols-1">
+      {sorted.map((t, rang) => {
         const count = counts.get(t.slug) ?? 0;
+        // Colonne de gauche ou de droite : c’était deux règles
+        // :nth-child(odd/even), c’est le rang de la boucle. Le filet
+        // vertical n’existe que tant qu’il y a deux colonnes.
+        const gauche = rang % 2 === 0;
         return (
-          <a class="theme-card" href={`/theme/${t.slug}/`}>
-            <div class="left">
-              <div class="ty mono">#{t.slug}</div>
-              <div class="t">{t.name}</div>
-              {t.description && <p class="desc">{t.description}</p>}
+          <a
+            class:list={[
+              'group border-rule text-inherit grid grid-cols-[1fr_100px] items-baseline gap-6 border-t py-6 transition-colors duration-[120ms]',
+              gauche
+                ? 'border-rule border-r pr-6 max-mobile:border-r-0 max-mobile:pr-0'
+                : 'pl-6 max-mobile:pl-0',
+            ]}
+            href={`/theme/${t.slug}/`}
+          >
+            <div>
+              <div class="mono mb-2 font-mono text-label tracking-[0.04em] text-[var(--c-violet-deep)]">
+                #{t.slug}
+              </div>
+              {/* Violet : la famille de cette taxonomie, cohérente avec le
+                  panneau « Au sommaire » de l’accueil qui la porte déjà. */}
+              <div class="m-0 mb-2 font-serif text-[calc(24px*var(--a11y-echelle))] leading-[1.2] font-heading tracking-[-0.02em] transition-colors duration-[120ms] group-hover:text-[var(--c-violet-deep)]">
+                {t.name}
+              </div>
+              {t.description && (
+                <p class="text-muted m-0 font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]">
+                  {t.description}
+                </p>
+              )}
             </div>
-            <div class="right">
+            <div class="text-muted text-right font-sans text-[calc(14px*var(--a11y-echelle))]">
               {count} publication{count > 1 ? 's' : ''}
             </div>
           </a>
@@ -106,76 +129,3 @@ const heroLedeHtml = formatHeroLede(
     </div>
   )}
 </PageShell>
-
-<style>
-  /* Gouttière et rythme vertical viennent de PageShell. */
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-  }
-  .theme-card {
-    display: grid;
-    grid-template-columns: 1fr 100px;
-    gap: 24px;
-    padding: 24px 0;
-    border-top: 1px solid var(--color-rule);
-    align-items: baseline;
-    color: inherit;
-    transition: color 0.12s;
-  }
-  .theme-card:nth-child(odd) {
-    padding-right: 24px;
-    border-right: 1px solid var(--color-rule);
-  }
-  .theme-card:nth-child(even) {
-    padding-left: 24px;
-  }
-  /* Violet : la famille de cette taxonomie, cohérente avec le panneau
-     « Au sommaire » de l'accueil qui la porte déjà. */
-  .theme-card:hover .t {
-    color: var(--c-violet-deep);
-  }
-  .theme-card .ty {
-    font-family: var(--font-mono);
-    font-size: calc(11px * var(--a11y-echelle));
-    color: var(--c-violet-deep);
-    margin-bottom: 8px;
-    letter-spacing: 0.04em;
-  }
-  .theme-card .t {
-    font-family: var(--font-serif);
-    font-size: calc(24px * var(--a11y-echelle));
-    line-height: 1.2;
-    font-weight: var(--w-heading);
-    margin: 0 0 8px;
-    letter-spacing: -0.02em;
-    transition: color 0.12s;
-  }
-  .theme-card .desc {
-    font-family: var(--font-serif);
-    font-size: calc(15px * var(--a11y-echelle));
-    line-height: 1.55;
-    color: var(--color-muted);
-    margin: 0;
-  }
-  .theme-card .right {
-    font-family: var(--font-sans);
-    font-size: calc(14px * var(--a11y-echelle));
-    color: var(--color-muted);
-    text-align: right;
-  }
-
-  @media (max-width: 900px) {
-    .grid {
-      grid-template-columns: 1fr;
-    }
-    .theme-card:nth-child(odd) {
-      padding-right: 0;
-      border-right: 0;
-    }
-    .theme-card:nth-child(even) {
-      padding-left: 0;
-    }
-  }
-</style>
