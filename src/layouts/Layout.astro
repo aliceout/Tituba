@@ -277,7 +277,12 @@ const fullTitle = pageTitle
   <body class={bodyClass}>
     <Header progressBar={progressBar} sansFilet={sansFilet} />
 
-    <main>
+    {/* L’écart entre le header et le hero de chaque page vivait dans
+        PageTitle ; il est ici pour que ce soit la géométrie partagée qui
+        le porte, et non un composant de contenu. Sous 720 px c’est la
+        variable qu’on redéfinit, pas le retrait : PageShell la lit
+        aussi. */}
+    <main class="mx-auto max-w-(--page-max) px-(--page-gutter) pt-(--page-pad-top) max-mobile:px-(--page-gutter-narrow) max-poche:[--page-pad-top:19px]">
       <slot />
     </main>
 
@@ -295,28 +300,7 @@ const fullTitle = pageTitle
         `aria-controls`. */}
     <A11yPanel />
 
-    <style>
-      main {
-        max-width: var(--page-max);
-        margin-inline: auto;
-        padding-inline: var(--page-gutter);
-        /* Écart entre le header et le hero de chaque page — vivait
-           avant dans PageTitle (.titre), déplacé ici pour que ce soit
-           la même géométrie partagée qui le porte, pas un composant
-           de contenu. */
-        padding-top: var(--page-pad-top);
-      }
-      @media (max-width: 900px) {
-        main {
-          padding-inline: var(--page-gutter-narrow);
-        }
-      }
-      @media (max-width: 720px) {
-        main {
-          --page-pad-top: 19px;
-        }
-      }
-    </style>
+
 
     {/* La barre elle-même vit dans Header (elle y remplace le filet
         dégradé), mais le script qui la fait avancer reste ici : peu
