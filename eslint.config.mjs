@@ -9,8 +9,8 @@
 // permissive (no-explicit-any, ban-ts-comment en warn) pour ne pas
 // freiner les itérations sur le contenu éditorial.
 
-import tseslint from 'typescript-eslint'
-import astro from 'eslint-plugin-astro'
+import tseslint from 'typescript-eslint';
+import astro from 'eslint-plugin-astro';
 
 export default [
   ...tseslint.configs.recommended,
@@ -44,4 +44,4 @@ export default [
       'scripts/',
     ],
   },
-]
+];

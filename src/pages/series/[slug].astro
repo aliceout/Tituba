@@ -60,70 +60,91 @@ const SEP = 'opacity-50';
   title={formatHeroTitle(serie.name)}
   lede={serie.lede ? formatHeroLede(serie.lede) : ''}
 >
-  {/* Découverte du flux propre à l'émission : c'est ce que lisent les
+  {
+    /* Découverte du flux propre à l'émission : c'est ce que lisent les
       applications d'écoute et les navigateurs à qui l'on donne
-      l'adresse de la page plutôt que celle du flux. */}
-  {estEmission && (
-    <Fragment slot="head">
-      <link
-        rel="alternate"
-        type="application/rss+xml"
-        title={`${serie.name} — flux podcast`}
-        href={`/series/${serie.slug}/rss.xml`}
-      />
-    </Fragment>
-  )}
+      l'adresse de la page plutôt que celle du flux. */
+  }
+  {
+    estEmission && (
+      <Fragment slot="head">
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title={`${serie.name} — flux podcast`}
+          href={`/series/${serie.slug}/rss.xml`}
+        />
+      </Fragment>
+    )
+  }
 
-  {/* Surtitre : la nature de l'objet avant son nom, comme sur la page
+  {
+    /* Surtitre : la nature de l'objet avant son nom, comme sur la page
       d'un billet. « Émission » et non « Série » pour un podcast — c'est
-      le mot du métier, et celui qu'emploie l'admin. */}
-  <p class="text-accent m-0 mb-6 flex items-center gap-[7px] font-mono text-label tracking-[0.16em] uppercase">
+      le mot du métier, et celui qu'emploie l'admin. */
+  }
+  <p
+    class="text-accent text-label m-0 mb-6 flex items-center gap-[7px] font-mono tracking-[0.16em] uppercase"
+  >
     <FormatIcon collection={serie.format} />
     {estEmission ? 'Émission' : 'Série'}
     <span class={SEP} aria-hidden="true">·</span>
     <span class="text-muted">{compte}</span>
-    {/* S'abonner à cette émission seule, plutôt qu'à toute la
+    {
+      /* S'abonner à cette émission seule, plutôt qu'à toute la
         production audio du site. Le lien n'a de sens que pour une
         émission : une série de textes n'a pas de flux propre.
 
         Souligné, contrairement au reste du surtitre : c'est le seul
         élément cliquable de la ligne, et rien d'autre ne le signalerait
-        à cette taille. */}
-    {estEmission && (
-      <>
-        <span class={SEP} aria-hidden="true">·</span>
-        <a
-          class="text-muted underline underline-offset-[0.25em] transition-colors duration-[120ms] hover:text-accent"
-          href={`/series/${serie.slug}/rss.xml`}
-        >
-          s’abonner à cette émission
-        </a>
-      </>
-    )}
+        à cette taille. */
+    }
+    {
+      estEmission && (
+        <>
+          <span class={SEP} aria-hidden="true">
+            ·
+          </span>
+          <a
+            class="text-muted hover:text-accent underline underline-offset-[0.25em] transition-colors duration-[120ms]"
+            href={`/series/${serie.slug}/rss.xml`}
+          >
+            s’abonner à cette émission
+          </a>
+        </>
+      )
+    }
   </p>
 
-  {/* L'image en bandeau et non en carré à côté du titre : la page d'une
+  {
+    /* L'image en bandeau et non en carré à côté du titre : la page d'une
       série est une couverture de recueil, pas une fiche. Le filet en
       fond de l'<img> tient la place du bandeau tant qu'il n'est pas
-      chargé, pour que la liste ne remonte pas. */}
-  {imageUrl && (
-    <figure class="m-0 mb-12">
-      <img
-        class="block aspect-[21/9] w-full rounded-(--radius-panel) bg-rule object-cover"
-        src={imageUrl}
-        alt=""
-      />
-    </figure>
-  )}
+      chargé, pour que la liste ne remonte pas. */
+  }
+  {
+    imageUrl && (
+      <figure class="m-0 mb-12">
+        <img
+          class="bg-rule block aspect-[21/9] w-full rounded-(--radius-panel) object-cover"
+          src={imageUrl}
+          alt=""
+        />
+      </figure>
+    )
+  }
 
-  {/* Liste ordonnée et non grille : une série se parcourt dans un ordre,
+  {
+    /* Liste ordonnée et non grille : une série se parcourt dans un ordre,
       et une grille en donnerait deux (celui des lignes, celui des
-      colonnes) sans dire lequel prime. */}
-  {posts.length > 0 ? (
-    <ol class="m-0 flex list-none flex-col gap-0 p-0">
-      {posts.map((doc, i) => (
-        <li class="grid grid-cols-[56px_1fr] items-start gap-2 border-t border-t-rule last:border-b last:border-b-rule max-poche:grid-cols-[34px_1fr] max-poche:gap-1">
-          {/* Le rang est affiché même quand il n'a pas été saisi : c'est
+      colonnes) sans dire lequel prime. */
+  }
+  {
+    posts.length > 0 ? (
+      <ol class="m-0 flex list-none flex-col gap-0 p-0">
+        {posts.map((doc, i) => (
+          <li class="border-t-rule last:border-b-rule max-poche:grid-cols-[34px_1fr] max-poche:gap-1 grid grid-cols-[56px_1fr] items-start gap-2 border-t last:border-b">
+            {/* Le rang est affiché même quand il n'a pas été saisi : c'est
               la position dans la série qui compte pour se repérer, pas
               le numéro que quelqu'un aurait pensé à écrire.
 
@@ -132,26 +153,29 @@ const SEP = 'opacity-50';
               une suite plutôt que comme un empilement. Le retrait haut
               aligne le chiffre sur la première ligne du titre de la
               carte voisine. */}
-          <span
-            class="text-muted pt-[26px] font-mono text-[calc(13px*var(--a11y-echelle))] tabular-nums max-poche:pt-[22px] max-poche:text-label"
-            aria-hidden="true"
-          >{String(i + 1).padStart(2, '0')}</span>
-          <PublicationCard
-            collection={serie.format}
-            docId={doc.publicId}
-            title={doc.title}
-            themeSlugs={doc.themeSlugs}
-            publishedAt={doc.publishedAt}
-            lede={doc.lede}
-            readingTime={doc.readingTime}
-            durationSeconds={doc.durationSeconds}
-          />
-        </li>
-      ))}
-    </ol>
-  ) : (
-    <p class="text-muted border-t border-t-rule py-8 font-sans">
-      Cette {estEmission ? 'émission' : 'série'} n’a pas encore de {mot} publié.
-    </p>
-  )}
+            <span
+              class="text-muted max-poche:pt-[22px] max-poche:text-label pt-[26px] font-mono text-[calc(13px*var(--a11y-echelle))] tabular-nums"
+              aria-hidden="true"
+            >
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <PublicationCard
+              collection={serie.format}
+              docId={doc.publicId}
+              title={doc.title}
+              themeSlugs={doc.themeSlugs}
+              publishedAt={doc.publishedAt}
+              lede={doc.lede}
+              readingTime={doc.readingTime}
+              durationSeconds={doc.durationSeconds}
+            />
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <p class="text-muted border-t-rule border-t py-8 font-sans">
+        Cette {estEmission ? 'émission' : 'série'} n’a pas encore de {mot} publié.
+      </p>
+    )
+  }
 </PageShell>

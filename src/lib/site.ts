@@ -125,7 +125,6 @@ export function formatHeroLede(s: string): string {
   return escapeHtml(s).replace(/\r?\n/g, '<br />');
 }
 
-
 /**
  * Liste d'auteur·ices d'un billet (cf issue #2). Chaque entrée est soit
  * un user du site (kind=user, user populé avec displayName), soit
@@ -134,7 +133,12 @@ export function formatHeroLede(s: string): string {
 export type PostAuthorEntry = {
   kind?: 'user' | 'external';
   user?:
-    | { id?: number | string; displayName?: string; email?: string; citationFormat?: string | null }
+    | {
+        id?: number | string;
+        displayName?: string;
+        email?: string;
+        citationFormat?: string | null;
+      }
     | number
     | string
     | null;
@@ -208,7 +212,10 @@ export function formatPostAuthorsForDisplay(
       const aff = a.kind === 'external' && a.affiliation?.trim();
       const label = aff ? `${name} (${aff.trim()})` : name;
       const href =
-        (a.kind ?? 'user') === 'user' && a.user && typeof a.user === 'object' && a.user.id != null
+        (a.kind ?? 'user') === 'user' &&
+        a.user &&
+        typeof a.user === 'object' &&
+        a.user.id != null
           ? `/auteurice/${a.user.id}/`
           : null;
       return { name: label, href };

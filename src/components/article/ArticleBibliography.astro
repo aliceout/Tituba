@@ -21,37 +21,47 @@ const { entries } = Astro.props;
   >
     Bibliographie
   </h3>
-  {/* Numérotée explicitement : c’est le numéro que cite le corps, il ne
-      doit pas dépendre d’une remise à zéro des styles. */}
+  {
+    /* Numérotée explicitement : c’est le numéro que cite le corps, il ne
+      doit pas dépendre d’une remise à zéro des styles. */
+  }
   <ol
-    class="text-body-soft marker:text-body-soft m-0 list-decimal pl-7 font-serif text-[calc(14px*var(--a11y-echelle))] leading-[1.65] marker:font-sans marker:text-meta"
+    class="text-body-soft marker:text-body-soft marker:text-meta m-0 list-decimal pl-7 font-serif text-[calc(14px*var(--a11y-echelle))] leading-[1.65] marker:font-sans"
   >
-    {entries.map((b) => (
-      <li id={`bib-${b.slug}`} class="mb-1.5">
-        <span class="text-ink font-medium">{formatAuthorsChicago(b.authors)}</span>
-        {`, ${b.year}, `}
-        <em>{b.title}</em>
-        {formatTranslators(b.authors) && `, ${formatTranslators(b.authors)}`}
-        {b.publisher && `, ${b.place ? b.place + ', ' : ''}${b.publisher}`}
-        {b.journal && `, ${b.journal}`}
-        {b.volume && `, ${b.volume}`}
-        {b.pages && `, p. ${b.pages}`}
-        {b.url && (
-          <>
-            {' '}
-            <a href={b.url} class="border-accent border-b text-inherit" rel="noopener">{b.url}</a>
-          </>
-        )}
-        {!b.url && b.doi && (
-          <>
-            {' doi:'}
-            <a href={`https://doi.org/${b.doi}`} class="border-accent border-b text-inherit" rel="noopener">
-              {b.doi}
-            </a>
-          </>
-        )}
-        .
-      </li>
-    ))}
+    {
+      entries.map((b) => (
+        <li id={`bib-${b.slug}`} class="mb-1.5">
+          <span class="text-ink font-medium">{formatAuthorsChicago(b.authors)}</span>
+          {`, ${b.year}, `}
+          <em>{b.title}</em>
+          {formatTranslators(b.authors) && `, ${formatTranslators(b.authors)}`}
+          {b.publisher && `, ${b.place ? b.place + ', ' : ''}${b.publisher}`}
+          {b.journal && `, ${b.journal}`}
+          {b.volume && `, ${b.volume}`}
+          {b.pages && `, p. ${b.pages}`}
+          {b.url && (
+            <>
+              {' '}
+              <a href={b.url} class="border-accent border-b text-inherit" rel="noopener">
+                {b.url}
+              </a>
+            </>
+          )}
+          {!b.url && b.doi && (
+            <>
+              {' doi:'}
+              <a
+                href={`https://doi.org/${b.doi}`}
+                class="border-accent border-b text-inherit"
+                rel="noopener"
+              >
+                {b.doi}
+              </a>
+            </>
+          )}
+          .
+        </li>
+      ))
+    }
   </ol>
 </section>

@@ -15,7 +15,12 @@ import { mediaUrl } from '../payload';
 
 type Entree = {
   fichier?:
-    | { filename?: string; title?: string | null; filesize?: number | null; mimeType?: string | null }
+    | {
+        filename?: string;
+        title?: string | null;
+        filesize?: number | null;
+        mimeType?: string | null;
+      }
     | string
     | number
     | null;
@@ -41,7 +46,8 @@ export function poidsLisible(octets: number | null | undefined): string {
 export function lireRessources(entrees: Entree[] | null | undefined): Ressource[] {
   return (entrees ?? [])
     .map((entree) => {
-      const doc = entree?.fichier && typeof entree.fichier === 'object' ? entree.fichier : null;
+      const doc =
+        entree?.fichier && typeof entree.fichier === 'object' ? entree.fichier : null;
       return {
         url: mediaUrl(doc?.filename) ?? '',
         // « Grille de relecture » se lit mieux que « grille-v3-final.pdf »,

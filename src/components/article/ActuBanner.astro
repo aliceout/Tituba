@@ -19,23 +19,32 @@ const { url, alt, credit } = Astro.props;
 ---
 
 <figure class="m-0 mb-[34px]">
-  {/* Le rayon est celui du hero des autres formats : les deux se lisent
+  {
+    /* Le rayon est celui du hero des autres formats : les deux se lisent
       comme une même famille de blocs d'ouverture. Le fond de repli se
-      voit le temps que l'image arrive. */}
+      voit le temps que l'image arrive. */
+  }
   <img
     src={url}
     alt={alt}
     class="bg-rule block aspect-video w-full rounded-[var(--hero-radius,10px)] object-cover"
   />
-  {credit && (
-    <figcaption class="text-muted mt-2.5 font-sans text-label leading-[1.45] [&_a]:border-b [&_a]:border-dotted [&_a]:border-current [&_a]:text-inherit [&_a:hover]:text-ink">
-      Photo par{' '}
-      {credit.profileUrl ? (
-        <a href={credit.profileUrl} rel="noopener">{credit.name}</a>
-      ) : (
-        credit.name
-      )}
-      {' '}sur <a href={credit.unsplashUrl} rel="noopener">Unsplash</a>
-    </figcaption>
-  )}
+  {
+    credit && (
+      <figcaption class="text-muted text-label [&_a:hover]:text-ink mt-2.5 font-sans leading-[1.45] [&_a]:border-b [&_a]:border-dotted [&_a]:border-current [&_a]:text-inherit">
+        Photo par{' '}
+        {credit.profileUrl ? (
+          <a href={credit.profileUrl} rel="noopener">
+            {credit.name}
+          </a>
+        ) : (
+          credit.name
+        )}{' '}
+        sur{' '}
+        <a href={credit.unsplashUrl} rel="noopener">
+          Unsplash
+        </a>
+      </figcaption>
+    )
+  }
 </figure>

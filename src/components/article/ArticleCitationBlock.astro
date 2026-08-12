@@ -34,27 +34,31 @@ const lienFormat =
 ---
 
 <section id="cite">
-  {/* La forme vient de Panel : fond de marque dilué, rayon des panneaux
+  {
+    /* La forme vient de Panel : fond de marque dilué, rayon des panneaux
       du site — même construction que le carré « URL du flux » de
       RssFeedBlock. Colonne et gap plutôt que des margin-top/bottom
       dépareillés entre le label, le corps et les actions : un seul écart
-      à régler, pas trois. */}
+      à régler, pas trois. */
+  }
   <Panel famille="marque" padding="serre" class="mt-10 flex flex-col gap-3.5">
-    <div class="font-mono text-label tracking-[0.2em] text-(--accent) uppercase">
+    <div class="text-label font-mono tracking-[0.2em] text-(--accent) uppercase">
       Pour citer cet article
     </div>
     <div class="font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]">
       {authorCitation}. « {title} », <em>Tituba</em>, {publishedFr},
-      <span class="font-mono text-meta">{' '}{articleUrl}</span>.
+      <span class="text-meta font-mono">{' '}{articleUrl}</span>.
     </div>
     <div class="flex flex-wrap items-center gap-4">
-      {/* L’état « copié » passe par un attribut plutôt que par une classe
+      {
+        /* L’état « copié » passe par un attribut plutôt que par une classe
           ajoutée à la main : Tailwind ne génère que les classes qu’il lit
-          dans les sources, et une classe née dans un script lui échappe. */}
+          dans les sources, et une classe née dans un script lui échappe. */
+      }
       <Button
         ton="contour"
         famille="marque"
-        class="copy-btn data-[copie]:bg-(--accent) data-[copie]:text-paper"
+        class="copy-btn data-[copie]:text-paper data-[copie]:bg-(--accent)"
         data-citation={citationText}
         aria-label="Copier la citation"
       >

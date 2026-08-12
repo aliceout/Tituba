@@ -25,7 +25,12 @@
  */
 import type { APIRoute } from 'astro';
 
-import { audioFileUrl, fetchIdentity, fetchSubscriptions, mediaUrl } from '../../../lib/payload';
+import {
+  audioFileUrl,
+  fetchIdentity,
+  fetchSubscriptions,
+  mediaUrl,
+} from '../../../lib/payload';
 import {
   fetchSerieBySlug,
   fetchSeriePosts,
@@ -111,7 +116,8 @@ export const GET: APIRoute = async (context) => {
     // La mention de l'émission l'emporte sur celle du site : c'est le
     // niveau le plus précis, et c'est bien pourquoi le champ existe.
     const explicite =
-      serie.feed?.explicit === true || (serie.feed?.explicit == null && subs.podcastExplicit === true)
+      serie.feed?.explicit === true ||
+      (serie.feed?.explicit == null && subs.podcastExplicit === true)
         ? 'true'
         : 'false';
     const contact = serie.feed?.ownerEmail?.trim() || subs.podcastOwnerEmail?.trim() || '';

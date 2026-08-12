@@ -23,12 +23,7 @@ interface Props {
   class?: string;
 }
 
-const {
-  niveau = 2,
-  taille,
-  famille = 'encre',
-  class: className,
-} = Astro.props;
+const { niveau = 2, taille, famille = 'encre', class: className } = Astro.props;
 
 const Tag = `h${niveau}` as 'h2' | 'h3' | 'h4';
 const apparence = taille ?? (niveau === 2 ? 'h2' : 'h3');
@@ -50,7 +45,7 @@ const APPARENCES: Record<string, string> = {
 
 <Tag
   class:list={[
-    'font-serif font-(--font-weight-heading) leading-heading tracking-display first:mt-0',
+    'leading-heading tracking-display font-serif font-(--font-weight-heading) first:mt-0',
     APPARENCES[apparence],
     FAMILLES[famille],
     className,

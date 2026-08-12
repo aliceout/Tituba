@@ -29,16 +29,11 @@ interface Props {
   showPublished?: boolean;
 }
 
-const {
-  authors,
-  publishedFr,
-  publishedIso,
-  themes,
-  showPublished = true,
-} = Astro.props;
+const { authors, publishedFr, publishedIso, themes, showPublished = true } = Astro.props;
 ---
 
-{/* Colonnes calées sur leur contenu, et non en fractions égales : le
+{
+  /* Colonnes calées sur leur contenu, et non en fractions égales : le
     bandeau ne porte que deux ou trois valeurs selon le format, et des
     colonnes de largeur fixe laissaient un tiers vide qu’on lisait comme
     une donnée manquante.
@@ -49,42 +44,76 @@ const {
 
     Le libellé porte la couleur de marque éclaircie : brute, elle est
     presque aussi sombre que l’encre — calibrée pour du texte courant,
-    pas pour un mot de onze pixels. */}
+    pas pour un mot de onze pixels. */
+}
 <div
-  class="border-rule text-muted mb-12 flex flex-wrap gap-x-14 gap-y-5 border-t border-b py-5 font-sans text-meta max-mobile:gap-x-8 max-mobile:gap-y-[18px]"
+  class="border-rule text-muted text-meta max-mobile:gap-x-8 max-mobile:gap-y-[18px] mb-12 flex flex-wrap gap-x-14 gap-y-5 border-t border-b py-5 font-sans"
 >
   <div>
-    <div class="text-[color-mix(in_srgb,var(--color-accent)_85%,white)] mb-1 font-semibold text-label tracking-[0.08em] uppercase">Auteur·ice</div>
-    {authors.length === 0 ? (
-      '—'
-    ) : (
-      authors.map((a, i) => (
-        <Fragment>
-          {i > 0 && (i === authors.length - 1 ? ' et ' : ', ')}
-          {a.href ? <a href={a.href} class="text-inherit no-underline border-b border-transparent hover:text-ink hover:border-b-ink transition-colors duration-100">{a.name}</a> : a.name}
-        </Fragment>
-      ))
-    )}
+    <div
+      class="text-label mb-1 font-semibold tracking-[0.08em] text-[color-mix(in_srgb,var(--color-accent)_85%,white)] uppercase"
+    >
+      Auteur·ice
+    </div>
+    {
+      authors.length === 0
+        ? '—'
+        : authors.map((a, i) => (
+            <Fragment>
+              {i > 0 && (i === authors.length - 1 ? ' et ' : ', ')}
+              {a.href ? (
+                <a
+                  href={a.href}
+                  class="hover:text-ink hover:border-b-ink border-b border-transparent text-inherit no-underline transition-colors duration-100"
+                >
+                  {a.name}
+                </a>
+              ) : (
+                a.name
+              )}
+            </Fragment>
+          ))
+    }
   </div>
   <div>
-    {/* Libellé accordé au nombre : « Thèmes » au pluriel devant une
-        valeur unique se lit comme une liste tronquée. */}
-    <div class="text-[color-mix(in_srgb,var(--color-accent)_85%,white)] mb-1 font-semibold text-label tracking-[0.08em] uppercase">{themes.length > 1 ? 'Thèmes' : 'Thème'}</div>
-    {/* Séparateur et lien tenus sur une seule ligne : à la ligne, le
-        retour se rend en espace et la virgule se détachait du nom qui la
-        précède (« Genre et RI , Genre et politiques »). */}
-    {themes.length === 0 ? (
-      '—'
-    ) : (
-      themes.map((t, i) => (
-        <Fragment>{i > 0 && ', '}<a href={`/theme/${t.slug}/`} class="text-inherit no-underline border-b border-transparent hover:text-ink hover:border-b-ink transition-colors duration-100">{t.name}</a></Fragment>
-      ))
-    )}
-  </div>
-  {showPublished && (
-    <div>
-      <div class="text-[color-mix(in_srgb,var(--color-accent)_85%,white)] mb-1 font-semibold text-label tracking-[0.08em] uppercase">Publié</div>
-      <time datetime={publishedIso}>{publishedFr}</time>
+    {
+      /* Libellé accordé au nombre : « Thèmes » au pluriel devant une
+        valeur unique se lit comme une liste tronquée. */
+    }
+    <div
+      class="text-label mb-1 font-semibold tracking-[0.08em] text-[color-mix(in_srgb,var(--color-accent)_85%,white)] uppercase"
+    >
+      {themes.length > 1 ? 'Thèmes' : 'Thème'}
     </div>
-  )}
+    {
+      /* Séparateur et lien tenus sur une seule ligne : à la ligne, le
+        retour se rend en espace et la virgule se détachait du nom qui la
+        précède (« Genre et RI , Genre et politiques »). */
+    }
+    {
+      themes.length === 0
+        ? '—'
+        : themes.map((t, i) => (
+            <Fragment>
+              {i > 0 && ', '}
+              <a
+                href={`/theme/${t.slug}/`}
+                class="hover:text-ink hover:border-b-ink border-b border-transparent text-inherit no-underline transition-colors duration-100"
+              >
+                {t.name}
+              </a>
+            </Fragment>
+          ))
+    }
+  </div>
+  {
+    showPublished && (
+      <div>
+        <div class="text-label mb-1 font-semibold tracking-[0.08em] text-[color-mix(in_srgb,var(--color-accent)_85%,white)] uppercase">
+          Publié
+        </div>
+        <time datetime={publishedIso}>{publishedFr}</time>
+      </div>
+    )
+  }
 </div>

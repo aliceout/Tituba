@@ -85,7 +85,8 @@ const estLong = taille === 'pleine' ? false : longueur > SEUIL_TITRE_LONG;
 const echelle = estLong ? 'text-display-long' : 'text-display';
 ---
 
-{/* Pas de marge basse : c’est le bloc suivant qui porte l’écart, comme
+{
+  /* Pas de marge basse : c’est le bloc suivant qui porte l’écart, comme
     partout ailleurs sur le site (cf. --block-gap). La faire porter des
     deux côtés ferait doubler certains blancs selon le voisinage — le
     défaut déjà corrigé sur l’accueil.
@@ -93,26 +94,31 @@ const echelle = estLong ? 'text-display-long' : 'text-display';
     Pas de padding non plus en haut : c’est <main> (Layout.astro) qui le
     porte, pour toutes les pages sans exception, afin que l’écart entre
     l’en-tête et le hero vive au même endroit que le reste de la
-    géométrie de page. */}
+    géométrie de page. */
+}
 <section class="titre py-0" data-famille={famille}>
   <h1
     class:list={[
-      'font-serif font-display leading-display tracking-display m-0 mb-9 max-poche:mb-[26px]',
+      'font-display leading-display tracking-display max-poche:mb-[26px] m-0 mb-9 font-serif',
       echelle,
     ]}
     set:html={title}
   />
-  {/* Chapô en sans : il contraste avec le serif du titre plutôt que de
-      le prolonger. */}
-  {lede && <p class="text-muted m-0 font-sans text-lede leading-[1.55]" set:html={lede} />}
+  {
+    /* Chapô en sans : il contraste avec le serif du titre plutôt que de
+      le prolonger. */
+  }
+  {lede && <p class="text-muted text-lede m-0 font-sans leading-[1.55]" set:html={lede} />}
   <slot />
 </section>
 
-{/* Le seul CSS qui reste ici, et il ne peut pas être ailleurs : ces
+{
+  /* Le seul CSS qui reste ici, et il ne peut pas être ailleurs : ces
     règles visent les <em> du titre, qui ne viennent pas de ce fichier
     mais de `set:html` — formatHeroTitle transforme en <em> les mots mis
     entre astérisques dans l’admin. On ne peut pas leur poser de classe
-    utilitaire : ils n’existent pas au moment où on écrit le composant. */}
+    utilitaire : ils n’existent pas au moment où on écrit le composant. */
+}
 <style>
   /* Surlignage au marqueur : le trait passe derrière le mot au lieu de
      le repeindre, donc le titre reste d'une seule encre et se lit d'un

@@ -31,7 +31,11 @@ const { docs, allHref = '/archives/' } = Astro.props as Props;
  * C’était trois règles :nth-child(3n+k) ; le rang est ici celui de
  * la boucle, qui dit la même chose sans avoir à être relu à l’envers.
  */
-const COULEURS = ['text-[var(--c-bleu-deep)]', 'text-[var(--c-vert-deep)]', 'text-[var(--c-jaune-deep)]'];
+const COULEURS = [
+  'text-[var(--c-bleu-deep)]',
+  'text-[var(--c-vert-deep)]',
+  'text-[var(--c-jaune-deep)]',
+];
 
 /** Le filet des lignes : l’accent du panneau, très dilué. */
 const FILET = 'border-[color-mix(in_srgb,var(--c-sommaire-accent)_14%,transparent)]';
@@ -44,56 +48,67 @@ function jourMois(iso: string | null): string {
 }
 ---
 
-{/* Pas de marge haute : la carte de la une ferme déjà par 40 px. Les
+{
+  /* Pas de marge haute : la carte de la une ferme déjà par 40 px. Les
     cumuler donnait 80 px ici contre 40 partout ailleurs, et le sommaire
-    semblait décroché du reste de la page. */}
-{docs.length > 0 && (
-  <section class="pt-0 pb-(--block-gap)">
-    <div class="rounded-(--radius-panel) bg-[var(--c-sommaire-bg)] px-12 pt-8 pb-5 max-mobile:rounded-[18px] max-mobile:px-5 max-mobile:pt-[22px] max-mobile:pb-3">
-      <div class="flex items-baseline justify-between border-b border-[color-mix(in_srgb,var(--c-sommaire-accent)_22%,transparent)] pb-3.5 font-mono text-label tracking-[0.2em] uppercase">
-        <span class="text-[var(--c-sommaire-accent)]">Au sommaire</span>
-        <a
-          class="text-[var(--c-panel-mute)] tracking-[0.16em] transition-colors duration-[120ms] hover:text-[var(--c-sommaire-accent)]"
-          href={allHref}
-        >
-          Tout lire →
-        </a>
-      </div>
+    semblait décroché du reste de la page. */
+}
+{
+  docs.length > 0 && (
+    <section class="pt-0 pb-(--block-gap)">
+      <div class="max-mobile:rounded-[18px] max-mobile:px-5 max-mobile:pt-[22px] max-mobile:pb-3 rounded-(--radius-panel) bg-[var(--c-sommaire-bg)] px-12 pt-8 pb-5">
+        <div class="text-label flex items-baseline justify-between border-b border-[color-mix(in_srgb,var(--c-sommaire-accent)_22%,transparent)] pb-3.5 font-mono tracking-[0.2em] uppercase">
+          <span class="text-[var(--c-sommaire-accent)]">Au sommaire</span>
+          <a
+            class="tracking-[0.16em] text-[var(--c-panel-mute)] transition-colors duration-[120ms] hover:text-[var(--c-sommaire-accent)]"
+            href={allHref}
+          >
+            Tout lire →
+          </a>
+        </div>
 
-      <ul class="m-0 list-none p-0">
-        {docs.map((d, rang) => {
-          const spec = PUBLICATIONS[d.collection] ?? PUBLICATIONS.articles;
-          const duree = readingLabelFor(d.collection, d);
-          return (
-            <li class:list={[rang > 0 && 'border-t', rang > 0 && FILET]}>
-              {/* Grille explicite : les colonnes s’alignent d’une ligne à
+        <ul class="m-0 list-none p-0">
+          {docs.map((d, rang) => {
+            const spec = PUBLICATIONS[d.collection] ?? PUBLICATIONS.articles;
+            const duree = readingLabelFor(d.collection, d);
+            return (
+              <li class:list={[rang > 0 && 'border-t', rang > 0 && FILET]}>
+                {/* Grille explicite : les colonnes s’alignent d’une ligne à
                   l’autre, ce qu’un simple flex ne garantirait pas. Quatre
                   colonnes — format, titre, durée, date.
 
                   Sur étroit elle se replie : le format sur une ligne, le
                   titre en dessous, la durée et la date retirées —
                   l’information reste sur la page de la publication. */}
-              <a
-                href={publicationHref(d.collection, d.publicId)}
-                class="text-ink grid grid-cols-[128px_1fr_auto_64px] items-baseline gap-6 py-5 transition-colors duration-[120ms] hover:text-[var(--c-sommaire-accent)] max-mobile:grid-cols-[1fr] max-mobile:gap-x-5 max-mobile:gap-y-1.5 max-mobile:py-4"
-              >
-                <span class:list={['font-mono text-label tracking-[0.14em] uppercase', COULEURS[rang % 3]]}>
-                  {spec.badge}
-                </span>
-                {/* Le titre reste d’une seule encre : c’est le texte à
+                <a
+                  href={publicationHref(d.collection, d.publicId)}
+                  class="text-ink max-mobile:grid-cols-[1fr] max-mobile:gap-x-5 max-mobile:gap-y-1.5 max-mobile:py-4 grid grid-cols-[128px_1fr_auto_64px] items-baseline gap-6 py-5 transition-colors duration-[120ms] hover:text-[var(--c-sommaire-accent)]"
+                >
+                  <span
+                    class:list={[
+                      'text-label font-mono tracking-[0.14em] uppercase',
+                      COULEURS[rang % 3],
+                    ]}
+                  >
+                    {spec.badge}
+                  </span>
+                  {/* Le titre reste d’une seule encre : c’est le texte à
                     lire, il n’a pas à participer au rythme des couleurs. */}
-                <span class="font-serif text-[calc(18px*var(--a11y-echelle))] leading-[1.25] font-normal tracking-[-0.01em] max-mobile:col-span-full max-mobile:text-[calc(17px*var(--a11y-echelle))]">
-                  {stripHeroMarkers(d.title)}
-                </span>
-                <span class="font-mono text-label text-[var(--c-panel-mute)] max-mobile:hidden">{duree}</span>
-                <span class="text-right font-mono text-label text-[var(--c-panel-mute)] max-mobile:hidden">
-                  {jourMois(d.publishedAt)} →
-                </span>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  </section>
-)}
+                  <span class="max-mobile:col-span-full max-mobile:text-[calc(17px*var(--a11y-echelle))] font-serif text-[calc(18px*var(--a11y-echelle))] leading-[1.25] font-normal tracking-[-0.01em]">
+                    {stripHeroMarkers(d.title)}
+                  </span>
+                  <span class="text-label max-mobile:hidden font-mono text-[var(--c-panel-mute)]">
+                    {duree}
+                  </span>
+                  <span class="text-label max-mobile:hidden text-right font-mono text-[var(--c-panel-mute)]">
+                    {jourMois(d.publishedAt)} →
+                  </span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  )
+}

@@ -42,7 +42,10 @@ const list = sections ?? [];
 function imageUrl(field: Block['image']): string | null {
   if (!field || typeof field !== 'object') return null;
   if (!field.filename) return null;
-  const base = (payloadPublicUrl ?? import.meta.env.PUBLIC_PAYLOAD_URL ?? '').replace(/\/$/, '');
+  const base = (payloadPublicUrl ?? import.meta.env.PUBLIC_PAYLOAD_URL ?? '').replace(
+    /\/$/,
+    '',
+  );
   return `${base}/cms/api/media/file/${encodeURIComponent(field.filename)}`;
 }
 
@@ -74,18 +77,18 @@ const PROSE = [
 /** Une légende de figure, et son crédit en plus petit. */
 const LEGENDE =
   'text-muted mt-2 flex flex-col gap-0.5 font-sans text-[calc(12.5px*var(--a11y-echelle))] leading-[1.55]';
-
 ---
 
-{list.map((block, rang) => {
-  switch (block.blockType) {
-    case 'prose':
-      return (
-        /* 920 px, soit la même colonne que le corps d'un billet sans
+{
+  list.map((block, rang) => {
+    switch (block.blockType) {
+      case 'prose':
+        return (
+          /* 920 px, soit la même colonne que le corps d'un billet sans
            sommaire. À 720, le bloc se décalait visiblement du hero, qui
            lui s'étend plus large. */
-        <section class="mb-8 max-w-[920px]">
-          {/* Un vrai titre, pas une étiquette. Il était en sans 12 px
+          <section class="mb-8 max-w-[920px]">
+            {/* Un vrai titre, pas une étiquette. Il était en sans 12 px
               capitales, soit un tiers plus PETIT que le texte qu'il
               annonce : sur une page dont les paragraphes commencent par
               des mots en gras, il passait pour une mention secondaire et
@@ -94,109 +97,110 @@ const LEGENDE =
               Les sections s'enchaînent : celles qui en suivent une autre
               ont besoin d'air au-dessus, sinon leur titre colle au
               paragraphe précédent et la coupure ne se lit plus. */}
-          {block.titre && (
-            <h2
-              class:list={[
-                'text-ink m-0 mb-[18px] font-serif text-[calc(26px*var(--a11y-echelle))] leading-heading font-heading tracking-[-0.01em]',
-                list[rang - 1]?.blockType === 'prose' && 'mt-3',
-              ]}
-            >
-              {block.titre}
-            </h2>
-          )}
-          {block.content && <div class={PROSE} set:html={renderLexical(block.content)} />}
-        </section>
-      );
+            {block.titre && (
+              <h2
+                class:list={[
+                  'text-ink leading-heading font-heading m-0 mb-[18px] font-serif text-[calc(26px*var(--a11y-echelle))] tracking-[-0.01em]',
+                  list[rang - 1]?.blockType === 'prose' && 'mt-3',
+                ]}
+              >
+                {block.titre}
+              </h2>
+            )}
+            {block.content && <div class={PROSE} set:html={renderLexical(block.content)} />}
+          </section>
+        );
 
-    // Dépliant — `<details>` natif plutôt qu'un accordéon en script :
-    // il s'ouvre sans JavaScript, le clavier et les lecteurs d'écran le
-    // connaissent, et Ctrl+F déplie tout seul le contenu qu'il y
-    // trouve. Le corps réutilise `.prose-body` : une fois ouvert, on y
-    // lit le même texte qu'ailleurs sur la page.
-    case 'depliant':
-      return (
-        /* Un encadré qui se distingue du texte courant sans crier : filet
+      // Dépliant — `<details>` natif plutôt qu'un accordéon en script :
+      // il s'ouvre sans JavaScript, le clavier et les lecteurs d'écran le
+      // connaissent, et Ctrl+F déplie tout seul le contenu qu'il y
+      // trouve. Le corps réutilise `.prose-body` : une fois ouvert, on y
+      // lit le même texte qu'ailleurs sur la page.
+      case 'depliant':
+        return (
+          /* Un encadré qui se distingue du texte courant sans crier : filet
            complet et fond très légèrement teinté, pour qu'on le lise comme
            un objet à part et non comme un paragraphe de plus. */
-        <details
-          class="border-rule group mb-8 max-w-[920px] rounded-[3px] border bg-[color-mix(in_srgb,var(--color-accent)_4%,var(--color-bg))]"
-          open={block.ouvert === true}
-        >
-          {/* La ligne cliquable couvre toute la largeur du bloc — une cible
+          <details
+            class="border-rule group mb-8 max-w-[920px] rounded-[3px] border bg-[color-mix(in_srgb,var(--color-accent)_4%,var(--color-bg))]"
+            open={block.ouvert === true}
+          >
+            {/* La ligne cliquable couvre toute la largeur du bloc — une cible
               de la taille de l'encadré, pas du seul mot. Le triangle par
               défaut du navigateur cède la place au chevron ci-dessous, qui
               suit la typographie de la page. */}
-          <summary class="text-ink flex cursor-pointer list-none items-center justify-between gap-4 px-[22px] py-[18px] font-serif text-[calc(20px*var(--a11y-echelle))] leading-heading focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--c-vert-deep)] [&::-webkit-details-marker]:hidden">
-            <span class="group-hover:text-accent">{block.titre}</span>
-            {/* Chevron dessiné en bordures : rien à charger, et il suit la
+            <summary class="text-ink leading-heading flex cursor-pointer list-none items-center justify-between gap-4 px-[22px] py-[18px] font-serif text-[calc(20px*var(--a11y-echelle))] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--c-vert-deep)] [&::-webkit-details-marker]:hidden">
+              <span class="group-hover:text-accent">{block.titre}</span>
+              {/* Chevron dessiné en bordures : rien à charger, et il suit la
                 couleur du texte — donc le thème sombre comme le contraste
                 renforcé du panneau d'accessibilité. */}
-            <span
-              class="border-r-muted border-b-muted mb-1 size-[9px] flex-none rotate-45 border-r-[1.5px] border-b-[1.5px] transition-transform duration-[160ms] ease-[ease] group-open:mt-1 group-open:mb-0 group-open:rotate-[-135deg]"
-              aria-hidden="true"
-            ></span>
-          </summary>
-          {block.content && (
-            <div
-              class:list={[
-                PROSE,
-                'px-[22px] pt-0 pb-1.5 [&>p:last-child]:mb-4 [&>ul:last-child]:mb-4',
-              ]}
-              set:html={renderLexical(block.content)}
-            />
-          )}
-        </details>
-      );
-
-    case 'figure': {
-      const url = imageUrl(block.image);
-      if (!url) return null;
-      const align = block.align ?? 'left';
-      return (
-        <figure
-          class:list={[
-            'my-8',
-            align === 'center' && 'text-center',
-            // Débordement des deux côtés : la figure large sort de la
-            // colonne de texte sans sortir de la page. Sous 900 px il n'y
-            // a plus de gouttière où déborder.
-            align === 'wide' && 'mx-[-100px] max-w-[920px] max-mobile:mx-0',
-          ]}
-        >
-          <img
-            src={url}
-            alt={(typeof block.image === 'object' && block.image?.alt) || ''}
-            loading="lazy"
-            class="block h-auto max-w-full"
-          />
-          {(block.legende || block.credit) && (
-            <figcaption class={LEGENDE}>
-              {block.legende && <span>{block.legende}</span>}
-              {block.credit && (
-                <span class="text-[calc(11px*var(--a11y-echelle))]">{block.credit}</span>
-              )}
-            </figcaption>
-          )}
-        </figure>
-      );
-    }
-
-    case 'citation_bloc':
-      return (
-        <section class="my-9">
-          <blockquote class="text-ink border-accent m-0 border-l-2 pl-[22px] text-[calc(22px*var(--a11y-echelle))] leading-[1.5] font-medium">
-            <p>{block.text}</p>
-            {block.source && (
-              <cite class="text-muted mt-3 block font-sans text-[calc(13px*var(--a11y-echelle))] not-italic">
-                — {block.source}
-              </cite>
+              <span
+                class="border-r-muted border-b-muted mb-1 size-[9px] flex-none rotate-45 border-r-[1.5px] border-b-[1.5px] transition-transform duration-[160ms] ease-[ease] group-open:mt-1 group-open:mb-0 group-open:rotate-[-135deg]"
+                aria-hidden="true"
+              />
+            </summary>
+            {block.content && (
+              <div
+                class:list={[
+                  PROSE,
+                  'px-[22px] pt-0 pb-1.5 [&>p:last-child]:mb-4 [&>ul:last-child]:mb-4',
+                ]}
+                set:html={renderLexical(block.content)}
+              />
             )}
-          </blockquote>
-        </section>
-      );
+          </details>
+        );
 
-    default:
-      console.warn('[PageRenderer] unknown blockType:', block.blockType);
-      return null;
-  }
-})}
+      case 'figure': {
+        const url = imageUrl(block.image);
+        if (!url) return null;
+        const align = block.align ?? 'left';
+        return (
+          <figure
+            class:list={[
+              'my-8',
+              align === 'center' && 'text-center',
+              // Débordement des deux côtés : la figure large sort de la
+              // colonne de texte sans sortir de la page. Sous 900 px il n'y
+              // a plus de gouttière où déborder.
+              align === 'wide' && 'max-mobile:mx-0 mx-[-100px] max-w-[920px]',
+            ]}
+          >
+            <img
+              src={url}
+              alt={(typeof block.image === 'object' && block.image?.alt) || ''}
+              loading="lazy"
+              class="block h-auto max-w-full"
+            />
+            {(block.legende || block.credit) && (
+              <figcaption class={LEGENDE}>
+                {block.legende && <span>{block.legende}</span>}
+                {block.credit && (
+                  <span class="text-[calc(11px*var(--a11y-echelle))]">{block.credit}</span>
+                )}
+              </figcaption>
+            )}
+          </figure>
+        );
+      }
+
+      case 'citation_bloc':
+        return (
+          <section class="my-9">
+            <blockquote class="text-ink border-accent m-0 border-l-2 pl-[22px] text-[calc(22px*var(--a11y-echelle))] leading-[1.5] font-medium">
+              <p>{block.text}</p>
+              {block.source && (
+                <cite class="text-muted mt-3 block font-sans text-[calc(13px*var(--a11y-echelle))] not-italic">
+                  — {block.source}
+                </cite>
+              )}
+            </blockquote>
+          </section>
+        );
+
+      default:
+        console.warn('[PageRenderer] unknown blockType:', block.blockType);
+        return null;
+    }
+  })
+}

@@ -15,7 +15,12 @@ import Prose from '../components/ui/Prose.astro';
 import EmailSubscribeForm from '../components/abonnement/EmailSubscribeForm.astro';
 import SocialLinksList from '../components/abonnement/SocialLinksList.astro';
 import RssFeedBlock from '../components/abonnement/RssFeedBlock.astro';
-import { entetesProxy, fetchIndexPages, fetchSubscriptions, postPayload } from '../lib/payload';
+import {
+  entetesProxy,
+  fetchIndexPages,
+  fetchSubscriptions,
+  postPayload,
+} from '../lib/payload';
 import { formatHeroLede, formatHeroTitle } from '../lib/site';
 
 type SubscriptionsGlobal = {
@@ -55,14 +60,34 @@ if (indexPages.subscribe?.enabled === false) {
 const rssEnabled = subscriptions.rssEnabled !== false;
 const emailEnabled = subscriptions.emailEnabled !== false;
 
-const heroTitleHtml = formatHeroTitle(indexPages.subscribe?.heroTitle?.trim() || DEFAULT_HERO_TITLE);
-const heroLedeHtml = formatHeroLede(indexPages.subscribe?.heroLede?.trim() || DEFAULT_HERO_LEDE);
+const heroTitleHtml = formatHeroTitle(
+  indexPages.subscribe?.heroTitle?.trim() || DEFAULT_HERO_TITLE,
+);
+const heroLedeHtml = formatHeroLede(
+  indexPages.subscribe?.heroLede?.trim() || DEFAULT_HERO_LEDE,
+);
 
 const socialEntries = [
-  subscriptions.mastodon ? { label: 'Mastodon', href: subscriptions.mastodon, hint: 'fediverse, sans algorithme' } : null,
-  subscriptions.bluesky ? { label: 'Bluesky', href: subscriptions.bluesky, hint: 'protocole AT, ouvert' } : null,
-  subscriptions.orcid ? { label: 'ORCID', href: subscriptions.orcid, hint: 'identifiant chercheur·euse, publications académiques' } : null,
-  subscriptions.hal ? { label: 'HAL', href: subscriptions.hal, hint: 'archive ouverte de la recherche française' } : null,
+  subscriptions.mastodon
+    ? { label: 'Mastodon', href: subscriptions.mastodon, hint: 'fediverse, sans algorithme' }
+    : null,
+  subscriptions.bluesky
+    ? { label: 'Bluesky', href: subscriptions.bluesky, hint: 'protocole AT, ouvert' }
+    : null,
+  subscriptions.orcid
+    ? {
+        label: 'ORCID',
+        href: subscriptions.orcid,
+        hint: 'identifiant chercheur·euse, publications académiques',
+      }
+    : null,
+  subscriptions.hal
+    ? {
+        label: 'HAL',
+        href: subscriptions.hal,
+        hint: 'archive ouverte de la recherche française',
+      }
+    : null,
 ].filter((x): x is { label: string; href: string; hint: string } => x !== null);
 
 const feedUrl = new URL('/rss.xml', Astro.site).toString();

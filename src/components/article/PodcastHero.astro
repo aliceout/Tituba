@@ -89,7 +89,8 @@ const {
 const fondUrl = backgroundUrl || coverUrl;
 ---
 
-{/* Pleine largeur : la section sort de la gouttière et de la largeur
+{
+  /* Pleine largeur : la section sort de la gouttière et de la largeur
     maximale de <main> en tirant ses marges jusqu'aux bords de la fenêtre.
     `overflow-x: clip` est posé sur <main> (cf Layout) — et non `hidden`,
     qui ferait de lui un conteneur de défilement et casserait le collage
@@ -100,11 +101,13 @@ const fondUrl = backgroundUrl || coverUrl;
     SOUS le header, elle vient s'y appuyer — un liseré de fond clair entre
     les deux la ferait lire comme une illustration flottante.
 
-    Le rognage, lui, tient au fond : le flou déborde de ses bords. */}
+    Le rognage, lui, tient au fond : le flou déborde de ses bords. */
+}
 <section
-  class="relative mb-10 overflow-hidden mx-[calc(50%-50vw)] mt-[calc(-1*var(--page-pad-top))] px-[calc(50vw-50%)]"
+  class="relative mx-[calc(50%-50vw)] mt-[calc(-1*var(--page-pad-top))] mb-10 overflow-hidden px-[calc(50vw-50%)]"
 >
-  {/* Fond porté par un élément à part et non par la section : le flou
+  {
+    /* Fond porté par un élément à part et non par la section : le flou
       d'un `filter` s'appliquerait à tout ce qu'elle contient, texte
       compris.
 
@@ -123,7 +126,8 @@ const fondUrl = backgroundUrl || coverUrl;
 
       Le voile est dégradé plutôt qu'uniforme : la partie basse porte le
       bouton et le crédit, qui demandent plus de contraste que le haut.
-      Allégé d'autant que le filtre — les deux se cumulaient. */}
+      Allégé d'autant que le filtre — les deux se cumulaient. */
+  }
   <div
     class="absolute -inset-[60px] bg-cover bg-center blur-[10px] brightness-[0.66] saturate-[1.15] after:absolute after:inset-0 after:bg-[linear-gradient(180deg,rgb(0_0_0/0.1),rgb(0_0_0/0.3))] after:content-['']"
     style={`background-image:url(${fondUrl})`}
@@ -131,11 +135,16 @@ const fondUrl = backgroundUrl || coverUrl;
   >
   </div>
 
-  {/* Alignés par le haut : c'est le titre qui doit partir à la même
+  {
+    /* Alignés par le haut : c'est le titre qui doit partir à la même
       hauteur que la photo, le surtitre débordant au-dessus. Sous 900 px
-      la photo passe au-dessus du texte. */}
-  <div class="relative flex items-stretch gap-12 py-[72px] max-mobile:flex-col max-mobile:items-start max-mobile:gap-7 max-mobile:py-10">
-    {/* Le crédit vit sous la photo qu'il crédite, en légende de la
+      la photo passe au-dessus du texte. */
+  }
+  <div
+    class="max-mobile:flex-col max-mobile:items-start max-mobile:gap-7 max-mobile:py-10 relative flex items-stretch gap-12 py-[72px]"
+  >
+    {
+      /* Le crédit vit sous la photo qu'il crédite, en légende de la
         figure — dans la colonne de texte, il se lisait comme une note de
         l'épisode. Le carré est enveloppé d'un bloc à part : c'est lui qui
         porte le rognage et l'arrondi, et une légende posée dans le même
@@ -145,29 +154,44 @@ const fondUrl = backgroundUrl || coverUrl;
         la rangée, et s'y accrocher transformait le carré en portrait dès
         que le chapô dépassait quelques lignes. Sans étirement, la figure
         fait la hauteur de son image — ce qui remet du même coup le crédit
-        juste sous elle, ancré à `top: 100%`. */}
-    <figure class="relative m-0 flex flex-[0_0_340px] self-start max-mobile:w-[min(280px,70%)] max-mobile:flex-[0_0_auto]">
-      {/* Carré, quoi qu'il arrive : c'est la proportion d'une pochette, et
+        juste sous elle, ancré à `top: 100%`. */
+    }
+    <figure
+      class="max-mobile:w-[min(280px,70%)] max-mobile:flex-[0_0_auto] relative m-0 flex flex-[0_0_340px] self-start"
+    >
+      {
+        /* Carré, quoi qu'il arrive : c'est la proportion d'une pochette, et
           c'est aussi ce qu'attendent les applications d'écoute.
-          `object-cover` cadre à l'intérieur, sans jamais déformer. */}
-      <div class="aspect-square w-full flex-none overflow-hidden rounded-xl shadow-[0_18px_40px_-18px_rgb(0_0_0/0.55)]">
+          `object-cover` cadre à l'intérieur, sans jamais déformer. */
+      }
+      <div
+        class="aspect-square w-full flex-none overflow-hidden rounded-xl shadow-[0_18px_40px_-18px_rgb(0_0_0/0.55)]"
+      >
         <img src={coverUrl} alt={coverAlt} class="block h-full w-full object-cover" />
       </div>
-      {credit && (
-        <figcaption class="absolute inset-x-0 top-full m-0 mt-3 font-sans text-label leading-[1.45] text-[rgb(255_255_255/0.55)] [&_a]:border-b [&_a]:border-dotted [&_a]:border-current [&_a]:text-inherit [&_a:hover]:text-white">
-          Photo par{' '}
-          {credit.profileUrl ? (
-            <a href={credit.profileUrl} rel="noopener">{credit.name}</a>
-          ) : (
-            credit.name
-          )}
-          {' '}sur <a href={credit.unsplashUrl} rel="noopener">Unsplash</a>
-        </figcaption>
-      )}
+      {
+        credit && (
+          <figcaption class="text-label absolute inset-x-0 top-full m-0 mt-3 font-sans leading-[1.45] text-[rgb(255_255_255/0.55)] [&_a]:border-b [&_a]:border-dotted [&_a]:border-current [&_a]:text-inherit [&_a:hover]:text-white">
+            Photo par{' '}
+            {credit.profileUrl ? (
+              <a href={credit.profileUrl} rel="noopener">
+                {credit.name}
+              </a>
+            ) : (
+              credit.name
+            )}{' '}
+            sur{' '}
+            <a href={credit.unsplashUrl} rel="noopener">
+              Unsplash
+            </a>
+          </figcaption>
+        )
+      }
     </figure>
 
     <div class="min-w-0 flex-auto text-white">
-      {/* L'émission prolonge le surtitre plutôt que d'ouvrir une ligne à
+      {
+        /* L'émission prolonge le surtitre plutôt que d'ouvrir une ligne à
           elle : « PODCAST · VOIX DE LA MER » se lit d'un trait, et c'est
           bien la même information — de quelle nature est ce billet, et
           d'où il vient.
@@ -178,70 +202,87 @@ const fondUrl = backgroundUrl || coverUrl;
           tombe alors sur le haut de la photo, et le format reste seul
           au-dessus de cette ligne. Exprimée en `lh` plutôt qu'en pixels :
           le jour où le corps ou l'interligne du surtitre change, le calage
-          suit au lieu de dériver de quelques pixels. */}
-      <p class="mt-[calc(-1*(1lh+18px))] mb-[18px] flex items-center gap-[7px] font-mono text-label tracking-[0.16em] text-[rgb(255_255_255/0.72)] uppercase [&_a]:border-b [&_a]:border-[rgb(255_255_255/0.3)] [&_a]:text-inherit [&_a:hover]:border-b-white [&_a:hover]:text-white">
+          suit au lieu de dériver de quelques pixels. */
+      }
+      <p
+        class="text-label mt-[calc(-1*(1lh+18px))] mb-[18px] flex items-center gap-[7px] font-mono tracking-[0.16em] text-[rgb(255_255_255/0.72)] uppercase [&_a]:border-b [&_a]:border-[rgb(255_255_255/0.3)] [&_a]:text-inherit [&_a:hover]:border-b-white [&_a:hover]:text-white"
+      >
         <FormatIcon collection={collection} />{formatLabel}
-        {serieName && serieSlug && (
-          <>
-            {/* Point médian en retrait : c'est une ponctuation entre deux
+        {
+          serieName && serieSlug && (
+            <>
+              {/* Point médian en retrait : c'est une ponctuation entre deux
                 valeurs, pas une troisième valeur. */}
-            <span class="text-[rgb(255_255_255/0.4)]" aria-hidden="true">·</span>
-            <a href={`/series/${serieSlug}/`}>{serieName}</a>
-          </>
-        )}
+              <span class="text-[rgb(255_255_255/0.4)]" aria-hidden="true">
+                ·
+              </span>
+              <a href={`/series/${serieSlug}/`}>{serieName}</a>
+            </>
+          )
+        }
       </p>
-      {/* Le surlignage au marqueur du titre ne tient pas sur un fond
+      {
+        /* Le surlignage au marqueur du titre ne tient pas sur un fond
           sombre : le trait pâle y disparaît. Les mots marqués — des <em>
           posés par formatHeroTitle, donc absents d'ici — passent en
           italique, seule accentuation qui garde sa force sur n'importe
-          quel fond. */}
+          quel fond. */
+      }
       <h1
-        class="m-0 mb-5 font-serif text-display-long font-display leading-display tracking-display text-white [&_em]:bg-none [&_em]:text-inherit [&_em]:italic"
+        class="text-display-long font-display leading-display tracking-display m-0 mb-5 font-serif text-white [&_em]:bg-none [&_em]:text-inherit [&_em]:italic"
         set:html={titleHtml}
       />
-      <p class="m-0 mb-3.5 max-w-[62ch] font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.5] whitespace-pre-line text-[rgb(255_255_255/0.86)]">
+      <p
+        class="m-0 mb-3.5 max-w-[62ch] font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.5] whitespace-pre-line text-[rgb(255_255_255/0.86)]"
+      >
         {lede}
       </p>
 
-      {/* Signature et thématique — remontées ici depuis le bandeau de
+      {
+        /* Signature et thématique — remontées ici depuis le bandeau de
           métadonnées, qui n'est plus rendu sur un épisode. Sur deux lignes
           et non sur une : ce sont deux renseignements de nature différente
           — qui signe, et de quoi ça parle. Séparés d'un point médian, ils
           se lisaient comme une énumération d'un même ordre.
 
           Les valeurs absentes sont omises plutôt que remplacées par un
-          tiret : un tiret sur fond sombre se lit comme une erreur. */}
-      {((authors && authors.length > 0) || (themeName && themeSlug)) && (
-        <p class="m-0 mb-3.5 flex flex-col items-start gap-[5px] font-sans text-[calc(15px*var(--a11y-echelle))] text-[rgb(255_255_255/0.8)] [&_a]:border-b [&_a]:border-[rgb(255_255_255/0.35)] [&_a]:text-inherit [&_a:hover]:border-b-white [&_a:hover]:text-white">
-          {authors && authors.length > 0 && (
-            <span>
-              {authors.map((a, i) => (
-                <Fragment>
-                  {i > 0 && (i === authors.length - 1 ? ' et ' : ', ')}
-                  {a.href ? <a href={a.href}>{a.name}</a> : a.name}
-                </Fragment>
-              ))}
-            </span>
-          )}
-          {themeName && themeSlug && <a href={`/theme/${themeSlug}/`}>{themeName}</a>}
-        </p>
-      )}
+          tiret : un tiret sur fond sombre se lit comme une erreur. */
+      }
+      {
+        ((authors && authors.length > 0) || (themeName && themeSlug)) && (
+          <p class="m-0 mb-3.5 flex flex-col items-start gap-[5px] font-sans text-[calc(15px*var(--a11y-echelle))] text-[rgb(255_255_255/0.8)] [&_a]:border-b [&_a]:border-[rgb(255_255_255/0.35)] [&_a]:text-inherit [&_a:hover]:border-b-white [&_a:hover]:text-white">
+            {authors && authors.length > 0 && (
+              <span>
+                {authors.map((a, i) => (
+                  <Fragment>
+                    {i > 0 && (i === authors.length - 1 ? ' et ' : ', ')}
+                    {a.href ? <a href={a.href}>{a.name}</a> : a.name}
+                  </Fragment>
+                ))}
+              </span>
+            )}
+            {themeName && themeSlug && <a href={`/theme/${themeSlug}/`}>{themeName}</a>}
+          </p>
+        )
+      }
 
-      {audioSrc && (
-        /* Le bouton hérite des couleurs de la page, pensées pour un fond
+      {
+        audioSrc && (
+          /* Le bouton hérite des couleurs de la page, pensées pour un fond
            clair : sur le fond sombre, son cerne et son libellé passent au
            blanc. On redéfinit les variables plutôt que les règles, ce qui
            évite d'avoir à connaître la structure interne du composant. */
-        <div class="[&_.lancer]:[--color-ink:#fff] [&_.lancer]:[--color-rule:rgb(255_255_255/0.4)] [&_.lancer]:text-white">
-          <PodcastLaunch
-            src={audioSrc}
-            durationSeconds={durationSeconds}
-            title={titlePlain}
-            coverUrl={coverUrl}
-            href={href}
-          />
-        </div>
-      )}
+          <div class="[&_.lancer]:text-white [&_.lancer]:[--color-ink:#fff] [&_.lancer]:[--color-rule:rgb(255_255_255/0.4)]">
+            <PodcastLaunch
+              src={audioSrc}
+              durationSeconds={durationSeconds}
+              title={titlePlain}
+              coverUrl={coverUrl}
+              href={href}
+            />
+          </div>
+        )
+      }
     </div>
   </div>
 </section>

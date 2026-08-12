@@ -11,7 +11,14 @@
  * liens partagés, et il vaut mieux qu'elle n'existe qu'à un endroit.
  */
 
-import { fetchByPublicId, fetchCollection, fetchPublicationsFeed, publishedOnly, type FeedDoc, type PublicationCollection } from './payload';
+import {
+  fetchByPublicId,
+  fetchCollection,
+  fetchPublicationsFeed,
+  publishedOnly,
+  type FeedDoc,
+  type PublicationCollection,
+} from './payload';
 import type { PostAuthorEntry } from './site';
 
 export type { PublicationCollection, FeedDoc };
@@ -229,8 +236,7 @@ export const PUBLICATIONS: Record<PublicationCollection, PublicationSpec> = {
     labelSingular: "Billet d'actu",
     labelPlural: "Billets d'actu",
     badge: 'Actu',
-    description:
-      "Rebonds courts sur l'actualité, publiés pendant qu'elle est encore vive.",
+    description: "Rebonds courts sur l'actualité, publiés pendant qu'elle est encore vive.",
     readingLabel: 'minutes',
     citationType: 'misc',
     actionLabel: 'Lire',
@@ -312,7 +318,9 @@ export function publicationHref(
   collection: PublicationCollection | string,
   publicId: string,
 ): string {
-  const spec = isPublicationCollection(collection) ? PUBLICATIONS[collection] : PUBLICATIONS.articles;
+  const spec = isPublicationCollection(collection)
+    ? PUBLICATIONS[collection]
+    : PUBLICATIONS.articles;
   return `${spec.routePrefix}/${publicId}/`;
 }
 
@@ -475,9 +483,7 @@ export async function fetchSeriePosts(serie: Serie): Promise<FeedDoc[]> {
       if (ra !== null && rb !== null) return ra - rb;
       if (ra !== null) return -1;
       if (rb !== null) return 1;
-      return (
-        new Date(b.publishedAt ?? 0).getTime() - new Date(a.publishedAt ?? 0).getTime()
-      );
+      return new Date(b.publishedAt ?? 0).getTime() - new Date(a.publishedAt ?? 0).getTime();
     });
   } catch (err) {
     console.warn('[series] fetchSeriePosts failed:', (err as Error).message);

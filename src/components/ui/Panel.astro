@@ -20,12 +20,7 @@ interface Props {
   class?: string;
 }
 
-const {
-  famille,
-  ton = 'dilue',
-  padding = 'normal',
-  class: className,
-} = Astro.props;
+const { famille, ton = 'dilue', padding = 'normal', class: className } = Astro.props;
 
 /**
  * Teintes diluées : l’encre reste celle de la page — sur un fond à 14-20 %,
@@ -39,15 +34,22 @@ const {
  * un texte clair.
  */
 const TEINTES: Record<string, string> = {
-  'dilue-bleu': '[--fond:var(--c-bleu-tint)] [--encre:var(--color-ink)] [--accent:var(--c-bleu-deep)]',
-  'dilue-vert': '[--fond:var(--c-vert-tint)] [--encre:var(--color-ink)] [--accent:var(--c-vert-deep)]',
-  'dilue-jaune': '[--fond:var(--c-jaune-tint)] [--encre:var(--color-ink)] [--accent:var(--c-jaune-deep)]',
-  'dilue-violet': '[--fond:var(--c-violet-tint)] [--encre:var(--color-ink)] [--accent:var(--c-violet-deep)]',
+  'dilue-bleu':
+    '[--fond:var(--c-bleu-tint)] [--encre:var(--color-ink)] [--accent:var(--c-bleu-deep)]',
+  'dilue-vert':
+    '[--fond:var(--c-vert-tint)] [--encre:var(--color-ink)] [--accent:var(--c-vert-deep)]',
+  'dilue-jaune':
+    '[--fond:var(--c-jaune-tint)] [--encre:var(--color-ink)] [--accent:var(--c-jaune-deep)]',
+  'dilue-violet':
+    '[--fond:var(--c-violet-tint)] [--encre:var(--color-ink)] [--accent:var(--c-violet-deep)]',
   'dilue-marque':
     '[--fond:color-mix(in_srgb,var(--color-accent)_14%,var(--color-bg))] [--encre:var(--color-ink)] [--accent:var(--color-accent)]',
-  'plein-bleu': '[--fond:var(--c-bleu-fill)] [--encre:var(--c-bleu-on)] [--accent:var(--c-bleu-on-soft)]',
-  'plein-vert': '[--fond:var(--c-vert-fill)] [--encre:var(--c-vert-on)] [--accent:var(--c-vert-on-soft)]',
-  'plein-jaune': '[--fond:var(--c-jaune-fill)] [--encre:var(--c-jaune-on)] [--accent:var(--c-jaune-on-soft)]',
+  'plein-bleu':
+    '[--fond:var(--c-bleu-fill)] [--encre:var(--c-bleu-on)] [--accent:var(--c-bleu-on-soft)]',
+  'plein-vert':
+    '[--fond:var(--c-vert-fill)] [--encre:var(--c-vert-on)] [--accent:var(--c-vert-on-soft)]',
+  'plein-jaune':
+    '[--fond:var(--c-jaune-fill)] [--encre:var(--c-jaune-on)] [--accent:var(--c-jaune-on-soft)]',
   'plein-violet': '[--fond:var(--c-violet)] [--encre:#fff] [--accent:#cdc0da]',
 };
 
@@ -60,7 +62,7 @@ const MARGES: Record<string, string> = {
 
 <div
   class:list={[
-    'bg-(--fond) text-(--encre) rounded-(--radius-panel) max-mobile:rounded-[18px]',
+    'max-mobile:rounded-[18px] rounded-(--radius-panel) bg-(--fond) text-(--encre)',
     TEINTES[`${ton}-${famille}`],
     MARGES[padding],
     className,

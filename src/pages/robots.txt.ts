@@ -27,7 +27,9 @@ import type { APIRoute } from 'astro';
 
 export const GET: APIRoute = (context) => {
   if (!context.site) {
-    throw new Error('robots.txt.ts : context.site est undefined — vérifier `site` dans astro.config.mjs.');
+    throw new Error(
+      'robots.txt.ts : context.site est undefined — vérifier `site` dans astro.config.mjs.',
+    );
   }
   const base = context.site.toString().replace(/\/$/, '');
 

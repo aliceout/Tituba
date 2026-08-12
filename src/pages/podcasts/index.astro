@@ -16,7 +16,12 @@
  */
 import PageShell from '../../components/ui/PageShell.astro';
 import PublicationCard from '../../components/PublicationCard.astro';
-import { fetchCollection, publishedOnly, uploadedImageUrl, type FeedDoc } from '../../lib/payload';
+import {
+  fetchCollection,
+  publishedOnly,
+  uploadedImageUrl,
+  type FeedDoc,
+} from '../../lib/payload';
 import { PUBLICATIONS, fetchSeries, type Serie } from '../../lib/publications';
 import { formatHeroTitle, stripHeroMarkers } from '../../lib/site';
 
@@ -117,112 +122,130 @@ const TITRE_SECTION =
   title={formatHeroTitle('Nos *émissions*.')}
   lede="Des conversations enregistrées, réunies par émission. Chacune suit son fil, et chacune s’écoute ou s’abonne séparément."
 >
-  {/* Une émission se présente comme une pochette : le carré d'abord, le
+  {
+    /* Une émission se présente comme une pochette : le carré d'abord, le
       texte à côté. C'est la convention de toutes les applications
       d'écoute, et elle rend la vignette reconnaissable avant le nom.
       Sous 720 px la grille tombe à une colonne et le carré rétrécit :
-      à 132 px, pochette et texte ne cohabitaient plus. */}
-  {emissions.length > 0 && (
-    <section
-      class="mb-18 grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-x-9 gap-y-7 max-poche:mb-12 max-poche:grid-cols-[1fr] max-poche:gap-x-[22px] max-poche:gap-y-[22px]"
-      aria-label="Émissions"
-    >
-      {emissions.map((em) => {
-        const img = uploadedImageUrl(em.image ?? null);
-        const n = comptes.get(String(em.id)) ?? 0;
-        return (
-          <a
-            class="grid grid-cols-[132px_1fr] items-start gap-5 text-inherit transition-opacity duration-[120ms] hover:opacity-78 max-poche:grid-cols-[96px_1fr] max-poche:gap-3.5"
-            href={`/series/${em.slug}/`}
-          >
-            {/* Faute d'image, le carré reste un aplat plutôt qu'un cadre
+      à 132 px, pochette et texte ne cohabitaient plus. */
+  }
+  {
+    emissions.length > 0 && (
+      <section
+        class="max-poche:mb-12 max-poche:grid-cols-[1fr] max-poche:gap-x-[22px] max-poche:gap-y-[22px] mb-18 grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-x-9 gap-y-7"
+        aria-label="Émissions"
+      >
+        {emissions.map((em) => {
+          const img = uploadedImageUrl(em.image ?? null);
+          const n = comptes.get(String(em.id)) ?? 0;
+          return (
+            <a
+              class="max-poche:grid-cols-[96px_1fr] max-poche:gap-3.5 grid grid-cols-[132px_1fr] items-start gap-5 text-inherit transition-opacity duration-[120ms] hover:opacity-78"
+              href={`/series/${em.slug}/`}
+            >
+              {/* Faute d'image, le carré reste un aplat plutôt qu'un cadre
                 vide : une émission sans couverture doit avoir l'air
                 d'attendre la sienne, pas d'être cassée. */}
-            <div
-              class:list={[
-                'aspect-square overflow-hidden rounded-[10px]',
-                img ? 'bg-rule' : 'bg-[color-mix(in_srgb,var(--color-accent)_16%,var(--color-bg))]',
-              ]}
-            >
-              {img && <img class="block h-full w-full object-cover" src={img} alt="" />}
-            </div>
-            <div>
-              <h2 class="m-0 mb-2 font-serif text-h3 leading-[1.2] font-normal">
-                {stripHeroMarkers(em.name)}
-              </h2>
-              {/* Trois lignes : la carte annonce l'émission, sa page la présente. */}
-              {em.lede && (
-                <p class="text-muted m-0 mb-2.5 line-clamp-3 font-serif text-[calc(14px*var(--a11y-echelle))] leading-[1.5] whitespace-pre-line italic">
-                  {em.lede}
+              <div
+                class:list={[
+                  'aspect-square overflow-hidden rounded-[10px]',
+                  img
+                    ? 'bg-rule'
+                    : 'bg-[color-mix(in_srgb,var(--color-accent)_16%,var(--color-bg))]',
+                ]}
+              >
+                {img && <img class="block h-full w-full object-cover" src={img} alt="" />}
+              </div>
+              <div>
+                <h2 class="text-h3 m-0 mb-2 font-serif leading-[1.2] font-normal">
+                  {stripHeroMarkers(em.name)}
+                </h2>
+                {/* Trois lignes : la carte annonce l'émission, sa page la présente. */}
+                {em.lede && (
+                  <p class="text-muted m-0 mb-2.5 line-clamp-3 font-serif text-[calc(14px*var(--a11y-echelle))] leading-[1.5] whitespace-pre-line italic">
+                    {em.lede}
+                  </p>
+                )}
+                <p class="text-muted text-label m-0 font-mono tracking-[0.08em] uppercase">
+                  {n === 0 ? 'Aucun épisode publié' : `${n} épisode${n > 1 ? 's' : ''}`}
                 </p>
-              )}
-              <p class="text-muted m-0 font-mono text-label tracking-[0.08em] uppercase">
-                {n === 0 ? 'Aucun épisode publié' : `${n} épisode${n > 1 ? 's' : ''}`}
-              </p>
-            </div>
-          </a>
-        );
-      })}
-    </section>
-  )}
+              </div>
+            </a>
+          );
+        })}
+      </section>
+    )
+  }
 
-  {/* Les épisodes rattachés à aucune émission, qui n'auraient sinon
+  {
+    /* Les épisodes rattachés à aucune émission, qui n'auraient sinon
       aucune porte d'entrée. Sous les pochettes et sous leur propre
       titre : ce sont des enregistrements à part entière, pas un fond
       de tiroir — mais ils ne suivent aucun fil, et l'annoncer évite de
-      chercher l'émission dont ils feraient partie. */}
-  {emissions.length > 0 && orphelins.length > 0 && (
-    <section aria-labelledby="hors-serie-titre">
-      <h2 class={TITRE_SECTION} id="hors-serie-titre">Épisodes hors émission</h2>
-      {/* Une pile, et non une grille : PublicationCard est conçue pour
+      chercher l'émission dont ils feraient partie. */
+  }
+  {
+    emissions.length > 0 && orphelins.length > 0 && (
+      <section aria-labelledby="hors-serie-titre">
+        <h2 class={TITRE_SECTION} id="hors-serie-titre">
+          Épisodes hors émission
+        </h2>
+        {/* Une pile, et non une grille : PublicationCard est conçue pour
           occuper une ligne entière — mise en case, elle se retrouvait
           sur 305 px de large et 765 de haut. Même traitement que l'index
           des autres formats (cf PublicationIndex), qui les empile.
           C'est aussi ce qui garde les filets de séparation entre cartes,
           posés par la carte elle-même sur son bord. Ne reste donc à
           poser ici qu'une respiration en pied. */}
-      <div class="pb-10">
-        {orphelins.map((d) => (
-          <PublicationCard
-            collection="podcasts"
-            docId={d.publicId}
-            title={d.title}
-            themeSlugs={d.themeSlugs}
-            publishedAt={d.publishedAt}
-            lede={d.lede}
-            readingTime={d.readingTime}
-            durationSeconds={d.durationSeconds}
-          />
-        ))}
-      </div>
-    </section>
-  )}
+        <div class="pb-10">
+          {orphelins.map((d) => (
+            <PublicationCard
+              collection="podcasts"
+              docId={d.publicId}
+              title={d.title}
+              themeSlugs={d.themeSlugs}
+              publishedAt={d.publishedAt}
+              lede={d.lede}
+              readingTime={d.readingTime}
+              durationSeconds={d.durationSeconds}
+            />
+          ))}
+        </div>
+      </section>
+    )
+  }
 
-  {/* Les épisodes ne sont listés que faute d'émission à montrer :
+  {
+    /* Les épisodes ne sont listés que faute d'émission à montrer :
       sinon la page n'aurait aucun contenu. Dès qu'une émission existe,
       c'est par elle qu'on entre — la liste faisait double emploi et
-      occupait plus de place que les pochettes qu'elle doublait. */}
-  {emissions.length === 0 && (
-  <section aria-labelledby="derniers-titre">
-    <h2 class={TITRE_SECTION} id="derniers-titre">Épisodes</h2>
-    {episodes.length === 0 ? (
-      <p class="text-muted font-sans">Aucun épisode publié pour l’instant.</p>
-    ) : (
-      <div class="pb-10">
-        {episodes.map((d) => (
-          <PublicationCard
-            collection="podcasts"
-            docId={d.publicId}
-            title={d.title}
-            themeSlugs={d.themeSlugs}
-            publishedAt={d.publishedAt}
-            lede={d.lede}
-            readingTime={d.readingTime}
-            durationSeconds={d.durationSeconds}
-          />
-        ))}
-      </div>
-    )}
-  </section>
-  )}
+      occupait plus de place que les pochettes qu'elle doublait. */
+  }
+  {
+    emissions.length === 0 && (
+      <section aria-labelledby="derniers-titre">
+        <h2 class={TITRE_SECTION} id="derniers-titre">
+          Épisodes
+        </h2>
+        {episodes.length === 0 ? (
+          <p class="text-muted font-sans">Aucun épisode publié pour l’instant.</p>
+        ) : (
+          <div class="pb-10">
+            {episodes.map((d) => (
+              <PublicationCard
+                collection="podcasts"
+                docId={d.publicId}
+                title={d.title}
+                themeSlugs={d.themeSlugs}
+                publishedAt={d.publishedAt}
+                lede={d.lede}
+                readingTime={d.readingTime}
+                durationSeconds={d.durationSeconds}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    )
+  }
 </PageShell>

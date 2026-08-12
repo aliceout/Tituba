@@ -96,9 +96,7 @@ document.addEventListener('astro:page-load', function () {
     // Deux images successives : sans ce délai, le navigateur groupe
     // le retrait de `hidden` et l'ajout de la classe, et la
     // translation n'est pas animée.
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => (panneau!.dataset.ouvert = '')),
-    );
+    requestAnimationFrame(() => requestAnimationFrame(() => (panneau!.dataset.ouvert = '')));
     bouton!.setAttribute('aria-expanded', 'true');
     panneau!.querySelector<HTMLElement>('[data-a11y-close]')?.focus();
   }

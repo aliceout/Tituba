@@ -58,10 +58,12 @@ const {
  * premier ferme par un filet et les secondes en ouvrent un — collés,
  * les deux traits se lisent comme une bordure double. On en retire un.
  */
-const sansIntercalaire =
-  entries.length === 0 && !hasFootnotes && !hasBiblio && !hasCitation;
+const sansIntercalaire = entries.length === 0 && !hasFootnotes && !hasBiblio && !hasCitation;
 
-const nomAudio = `${(audioTitle ?? 'episode').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80).trim()}.mp3`;
+const nomAudio = `${(audioTitle ?? 'episode')
+  .replace(/[\\/:*?"<>|]+/g, '-')
+  .slice(0, 80)
+  .trim()}.mp3`;
 /**
  * Micro-label du bloc — « SOMMAIRE », « LECTURE : … », « PUBLIÉ : … ».
  * Les repères chiffrés et l'intitulé du sommaire sont au même niveau
@@ -97,11 +99,14 @@ const ACTION = [
 ].join(' ');
 ---
 
-{/* Pas de condition d'affichage ici : c'est PublicationArticle qui
+{
+  /* Pas de condition d'affichage ici : c'est PublicationArticle qui
     décide de monter ou non ce composant, et qui pose `no-toc` sur la
     grille en conséquence. Deux conditions séparées finiraient par
-    diverger — une colonne réservée sans rien dedans, ou l'inverse. */}
-{/* La position horizontale (colonne 2) et la hauteur du bloc viennent de
+    diverger — une colonne réservée sans rien dedans, ou l'inverse. */
+}
+{
+  /* La position horizontale (colonne 2) et la hauteur du bloc viennent de
     la grille du parent — rien à calculer ici.
 
     Le `top` du collage est calé sur sa position naturelle au chargement
@@ -112,23 +117,29 @@ const ACTION = [
     position avant de se figer. Calé sur son point de départ, il ne semble
     jamais bouger.
 
-    Sous 1300 px la colonne n'existe plus et le bloc disparaît. */}
-{/* La classe `toc` ne porte plus rien : elle reste comme crochet. Le
+    Sous 1300 px la colonne n'existe plus et le bloc disparaît. */
+}
+{
+  /* La classe `toc` ne porte plus rien : elle reste comme crochet. Le
     scrollspy y cherche ses liens, et PublicationArticle s’en sert pour
     décoller le bloc quand il le pose dans la colonne d’un billet
     d’actu. La retirer avait éteint le repère de section — silencieusement,
-    puisque rien ne casse quand un sélecteur ne trouve personne. */}
+    puisque rien ne casse quand un sélecteur ne trouve personne. */
+}
 <aside
-  class="toc text-muted sticky top-[183px] z-4 font-sans text-meta leading-[1.5] max-large:hidden"
+  class="toc text-muted text-meta max-large:hidden sticky top-[183px] z-4 font-sans leading-[1.5]"
   id="toc"
   aria-label="Sommaire"
 >
-    {/* Repères chiffrés en tête d'aside : combien de temps ça prend, et
+  {
+    /* Repères chiffrés en tête d'aside : combien de temps ça prend, et
         de quand ça date. La date n'est passée que par les pages dont le
         hero porte déjà les autres métadonnées et qui ne rendent donc pas
         le bandeau — sur les autres, elle y figure et la redire ici
-        ferait doublon. */}
-    {/* Hauteur et respiration communes avec le générique de la colonne de
+        ferait doublon. */
+  }
+  {
+    /* Hauteur et respiration communes avec le générique de la colonne de
         texte, pour que les deux filets tombent sur la même ligne. La valeur
         vit dans PublicationArticle (`--repere-h`), qui porte les deux
         colonnes ; le repli couvre le cas où ce bloc servirait un jour hors
@@ -144,8 +155,10 @@ const ACTION = [
 
         18 px de part et d'autre du filet, comme partout ailleurs dans cet
         aside : un trait qui sépare deux blocs n'a pas de raison d'avoir
-        plus d'air d'un côté que de l'autre. */}
-    {(readingLabel || publishedFr) && (
+        plus d'air d'un côté que de l'autre. */
+  }
+  {
+    (readingLabel || publishedFr) && (
       <div
         class:list={[
           LABEL,
@@ -164,17 +177,23 @@ const ACTION = [
         {publishedFr && (
           <div class="mt-[18px]">
             <span>Publié : </span>
-            <time class="font-normal" datetime={publishedIso}>{publishedFr}</time>
+            <time class="font-normal" datetime={publishedIso}>
+              {publishedFr}
+            </time>
           </div>
         )}
       </div>
-    )}
+    )
+  }
 
-    {/* Le sommaire proprement dit n'a de sens qu'avec des titres de
+  {
+    /* Le sommaire proprement dit n'a de sens qu'avec des titres de
         section. Sans eux — cas courant d'un billet d'analyse court — le
         reste de l'aside (durée, liens de pied, actions) garde tout son
-        intérêt. */}
-    {entries.length > 0 && (
+        intérêt. */
+  }
+  {
+    entries.length > 0 && (
       <>
         <div class:list={[LABEL, 'mb-2.5']}>Sommaire</div>
         <a href="#intro" class={LIEN} data-toc="intro" aria-current="location">
@@ -190,86 +209,161 @@ const ACTION = [
           </a>
         ))}
       </>
-    )}
-    {hasFootnotes && <a href="#notes" data-toc="notes" class={LIEN}>Notes</a>}
-    {hasBiblio && <a href="#biblio" data-toc="biblio" class={LIEN}>Bibliographie</a>}
-    {hasCitation && <a href="#cite" data-toc="cite" class={LIEN}>Pour citer</a>}
+    )
+  }
+  {
+    hasFootnotes && (
+      <a href="#notes" data-toc="notes" class={LIEN}>
+        Notes
+      </a>
+    )
+  }
+  {
+    hasBiblio && (
+      <a href="#biblio" data-toc="biblio" class={LIEN}>
+        Bibliographie
+      </a>
+    )
+  }
+  {
+    hasCitation && (
+      <a href="#cite" data-toc="cite" class={LIEN}>
+        Pour citer
+      </a>
+    )
+  }
 
-    {/* Actions rapides — non câblées : le design est posé, le clic ne fait
+  {
+    /* Actions rapides — non câblées : le design est posé, le clic ne fait
         rien pour l'instant. En bas de bloc plutôt qu'en haut : ce sont des
         gestes secondaires (copier, citer, télécharger), qui viennent après
         s'être repéré et avoir navigué, pas avant.
 
         Sans intercalaire, le filet des repères tient lieu de séparation à
-        lui seul ; l'écart, lui, reste porté par leur marge basse. */}
-    <div
-      class:list={[
-        'flex flex-col gap-0.5',
-        sansIntercalaire ? 'mt-0 pt-0' : 'border-rule mt-[18px] border-t pt-3.5',
-      ]}
-    >
-      <button type="button" class={ACTION} aria-label="Copier le lien de l'article">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="9" y="9" width="12" height="12" rx="2"/>
-          <path d="M5.5 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v0.5"/>
-        </svg>
-        Copier le lien
-      </button>
-      <button type="button" class={ACTION} aria-label="Copier la citation de l'article">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M7 8.5c-2 0-3.2 1.4-3.2 3.4S5 15.2 7 15.2c0 2-1.2 2.8-3 2.8"/>
-          <path d="M16.2 8.5c-2 0-3.2 1.4-3.2 3.4s1.2 3.3 3.2 3.3c0 2-1.2 2.8-3 2.8"/>
-        </svg>
-        Citer cet article
-      </button>
-      {/* Les deux téléchargements se suivent : ce sont les seuls gestes
+        lui seul ; l'écart, lui, reste porté par leur marge basse. */
+  }
+  <div
+    class:list={[
+      'flex flex-col gap-0.5',
+      sansIntercalaire ? 'mt-0 pt-0' : 'border-rule mt-[18px] border-t pt-3.5',
+    ]}
+  >
+    <button type="button" class={ACTION} aria-label="Copier le lien de l'article">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+        <path d="M5.5 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v0.5"></path>
+      </svg>
+      Copier le lien
+    </button>
+    <button type="button" class={ACTION} aria-label="Copier la citation de l'article">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M7 8.5c-2 0-3.2 1.4-3.2 3.4S5 15.2 7 15.2c0 2-1.2 2.8-3 2.8"></path>
+        <path d="M16.2 8.5c-2 0-3.2 1.4-3.2 3.4s1.2 3.3 3.2 3.3c0 2-1.2 2.8-3 2.8"></path>
+      </svg>
+      Citer cet article
+    </button>
+    {
+      /* Les deux téléchargements se suivent : ce sont les seuls gestes
           du bloc qui font descendre un fichier, et les séparer par
           « copier » ou « citer » obligeait à les rechercher l'un après
           l'autre. L'épisode d'abord — c'est le contenu même de la
           publication, le PDF n'en est qu'une mise en forme.
           Seul de ce bloc à être réellement câblé pour l'instant, d'où le
-          <a> là où les autres sont des <button>. */}
-      {audioSrc && (
+          <a> là où les autres sont des <button>. */
+    }
+    {
+      audioSrc && (
         <a class={ACTION} href={audioSrc} download={nomAudio}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
             <path d="M12 3v11" />
             <path d="m7.5 10 4.5 4.5 4.5-4.5" />
             <path d="M4.5 19.5h15" />
           </svg>
           Télécharger l'épisode
         </a>
-      )}
-      <button type="button" class={ACTION} aria-label="Télécharger l'article en PDF">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 3v11"/>
-          <path d="m7.5 10 4.5 4.5 4.5-4.5"/>
-          <path d="M4.5 19.5h15"/>
-        </svg>
-        Télécharger en PDF
-      </button>
-    </div>
+      )
+    }
+    <button type="button" class={ACTION} aria-label="Télécharger l'article en PDF">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M12 3v11"></path>
+        <path d="m7.5 10 4.5 4.5 4.5-4.5"></path>
+        <path d="M4.5 19.5h15"></path>
+      </svg>
+      Télécharger en PDF
+    </button>
+  </div>
 
-    {/* Même répartition à deux niveaux que les actions juste au-dessus :
+  {
+    /* Même répartition à deux niveaux que les actions juste au-dessus :
         le filet et les écarts portés par le conteneur, le retrait interne
         par le lien — pas un seul bloc qui rejoue approximativement le même
-        total en une règle. */}
-    <div class="border-rule mt-[18px] border-t pt-[18px]">
-      {/* Le scrollspy finit par désigner ce lien — `#haut` est en tête de
+        total en une règle. */
+  }
+  <div class="border-rule mt-[18px] border-t pt-[18px]">
+    {
+      /* Le scrollspy finit par désigner ce lien — `#haut` est en tête de
           document, donc « la dernière section dépassée » une fois qu’on est
           descendu assez loin. Il passe alors à l’encre, comme n’importe
-          quelle entrée courante ; le filet, lui, n’existe pas ici. */}
-      <a
-        href="#haut"
-        data-toc="haut"
-        class:list={[ACTION, 'aria-[current=location]:text-ink']}
+          quelle entrée courante ; le filet, lui, n’existe pas ici. */
+    }
+    <a href="#haut" data-toc="haut" class:list={[ACTION, 'aria-[current=location]:text-ink']}>
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 19V5"/>
-          <path d="m5 12 7-7 7 7"/>
-        </svg>
-        Haut de page
-      </a>
-    </div>
+        <path d="M12 19V5"></path>
+        <path d="m5 12 7-7 7 7"></path>
+      </svg>
+      Haut de page
+    </a>
+  </div>
 </aside>
 
 <script>

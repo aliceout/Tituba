@@ -107,39 +107,43 @@ const LEDES: Record<PublicationCollection, string> = {
     />
   </Fragment>
 
-  {/* Seul format à porter un flux propre : un podcast s'écoute
+  {
+    /* Seul format à porter un flux propre : un podcast s'écoute
       d'abord dans une application, et sans ce lien rien sur le site
-      n'indiquerait qu'on peut s'y abonner. */}
-  {collection === 'podcasts' && (
-    <p class="m-0 mt-6 font-sans text-[calc(13px*var(--a11y-echelle))]">
-      <a class="text-accent border-b border-current pb-px" href="/podcasts/rss.xml">
-        S'abonner au podcast
-      </a>
-      <span class="text-muted">
-        — collez cette adresse dans votre application d'écoute.
-      </span>
-    </p>
-  )}
+      n'indiquerait qu'on peut s'y abonner. */
+  }
+  {
+    collection === 'podcasts' && (
+      <p class="m-0 mt-6 font-sans text-[calc(13px*var(--a11y-echelle))]">
+        <a class="text-accent border-b border-current pb-px" href="/podcasts/rss.xml">
+          S'abonner au podcast
+        </a>
+        <span class="text-muted">— collez cette adresse dans votre application d'écoute.</span>
+      </p>
+    )
+  }
 
   <section class="pt-6 pb-10">
-    {docs.length === 0 ? (
-      <Empty>
-        <FormatIcon collection={collection} />
-        Aucune publication dans ce format pour l'instant.
-      </Empty>
-    ) : (
-      docs.map((d) => (
-        <PublicationCard
-          collection={collection}
-          docId={d.publicId}
-          title={d.title}
-          themes={d.themes}
-          publishedAt={d.publishedAt}
-          lede={d.lede}
-          readingTime={d.readingTime}
-          durationSeconds={d.durationSeconds}
-        />
-      ))
-    )}
+    {
+      docs.length === 0 ? (
+        <Empty>
+          <FormatIcon collection={collection} />
+          Aucune publication dans ce format pour l'instant.
+        </Empty>
+      ) : (
+        docs.map((d) => (
+          <PublicationCard
+            collection={collection}
+            docId={d.publicId}
+            title={d.title}
+            themes={d.themes}
+            publishedAt={d.publishedAt}
+            lede={d.lede}
+            readingTime={d.readingTime}
+            durationSeconds={d.durationSeconds}
+          />
+        ))
+      )
+    }
   </section>
 </PageShell>

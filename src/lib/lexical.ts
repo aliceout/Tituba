@@ -213,7 +213,7 @@ function renderBlock(node: LexicalNode, ctx: RenderContext): string {
       const image = fields.image;
       const url =
         image && typeof image === 'object' && image.filename
-          ? mediaUrl(image.filename) ?? ''
+          ? (mediaUrl(image.filename) ?? '')
           : '';
       if (!url) return '';
       const alt = (image && typeof image === 'object' && image.alt) || '';
@@ -224,10 +224,7 @@ function renderBlock(node: LexicalNode, ctx: RenderContext): string {
         ? `<span class="credit">${escapeHtml(fields.credit)}</span>`
         : '';
       const align = fields.align ?? 'left';
-      const caption =
-        legende || credit
-          ? `<figcaption>${legende}${credit}</figcaption>`
-          : '';
+      const caption = legende || credit ? `<figcaption>${legende}${credit}</figcaption>` : '';
       return `<figure class="block-figure align-${align}"><img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" loading="lazy" />${caption}</figure>`;
     }
 

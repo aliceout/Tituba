@@ -43,9 +43,7 @@ const href = publicationHref(doc.collection, doc.publicId);
 const duree = readingLabelFor(doc.collection, doc);
 
 // Métadonnées assemblées en une seule ligne mono, façon ours de revue.
-const meta = [spec.badge.toUpperCase(), duree]
-  .filter(Boolean)
-  .join(' · ');
+const meta = [spec.badge.toUpperCase(), duree].filter(Boolean).join(' · ');
 
 const auteurs = doc.authors ?? [];
 
@@ -70,7 +68,10 @@ const LIGNE_COURANTE = 'tracking-[0.08em] normal-case';
  * doit donner MV, pas MC.
  */
 function initiales(nom: string): string {
-  const mots = nom.trim().split(/[\s-]+/).filter(Boolean);
+  const mots = nom
+    .trim()
+    .split(/[\s-]+/)
+    .filter(Boolean);
   if (mots.length === 0) return '';
   const first = mots[0]![0] ?? '';
   const last = mots.length > 1 ? (mots[mots.length - 1]![0] ?? '') : '';
@@ -93,19 +94,24 @@ const signature =
         : `par ${auteurs[0]} et ${auteurs.length - 1} autres`;
 ---
 
-{/* Pas de padding-top : PageShell.page-body le porte déjà. Un top ici
+{
+  /* Pas de padding-top : PageShell.page-body le porte déjà. Un top ici
     doublerait l'écart avec le hero — exactement le défaut qu'on a eu
-    en rendant ce Container systématique. */}
+    en rendant ce Container systématique. */
+}
 <section class="pb-(--block-gap)">
-  {/* Ligne de section, hors de la carte : intitulé à gauche, repère
+  {
+    /* Ligne de section, hors de la carte : intitulé à gauche, repère
       éditorial à droite. Elle reste sur le fond de page — c'est
-      l'étiquette du bloc, pas son contenu. */}
+      l'étiquette du bloc, pas son contenu. */
+  }
   <div class:list={['mb-6 flex items-baseline justify-between', LIGNE_CAPITALES]}>
     <span class="text-[var(--c-une-accent)]">À la une</span>
     {eyebrow && <span class:list={['text-muted', LIGNE_COURANTE]}>{eyebrow}</span>}
   </div>
 
-  {/* Trois quarts / un quart, les deux blocs à la même hauteur.
+  {
+    /* Trois quarts / un quart, les deux blocs à la même hauteur.
 
       `items-stretch` est ce qui égalise : la rangée prend la hauteur de
       la carte — dimensionnée par son texte — et le bloc de droite la
@@ -117,9 +123,15 @@ const signature =
       la seule façon de garder un carré serait de laisser sa largeur en
       découler. Essayé, en colonne `auto` : la grille et l'`aspect-ratio`
       se renvoient la balle sans point fixe, et le bloc a fini à 673 px de
-      côté, soit plus de la moitié de la largeur. */}
-  <div class:list={[scinde && 'grid grid-cols-[3fr_1fr] items-stretch gap-6 max-mobile:grid-cols-[1fr]']}>
-    {/* Colonne, pour que le pied puisse être poussé en bas (cf. `mt-auto`
+      côté, soit plus de la moitié de la largeur. */
+  }
+  <div
+    class:list={[
+      scinde && 'max-mobile:grid-cols-[1fr] grid grid-cols-[3fr_1fr] items-stretch gap-6',
+    ]}
+  >
+    {
+      /* Colonne, pour que le pied puisse être poussé en bas (cf. `mt-auto`
         plus bas). Le carré podcast voisin le fait déjà par
         `space-between` : ici le pied suivait le chapô, si bien que
         « lire le texte » et « écouter » ne tombaient sur la même ligne
@@ -139,17 +151,20 @@ const signature =
 
         `ease-[ease]` explicite : le raccourci CSS d'origine laissait la
         courbe à `ease`, là où les utilitaires Tailwind appliquent
-        `cubic-bezier(.4,0,.2,1)` par défaut. */}
+        `cubic-bezier(.4,0,.2,1)` par défaut. */
+    }
     <div
-      class="relative flex flex-col rounded-(--radius-panel) bg-[var(--c-une-bg)] px-12 py-9 transition-[filter] duration-[120ms] ease-[ease] hover:brightness-[0.97] max-mobile:rounded-[18px] max-mobile:px-6 max-mobile:py-8"
+      class="max-mobile:rounded-[18px] max-mobile:px-6 max-mobile:py-8 relative flex flex-col rounded-(--radius-panel) bg-[var(--c-une-bg)] px-12 py-9 transition-[filter] duration-[120ms] ease-[ease] hover:brightness-[0.97]"
     >
-      {/* Format à gauche, date à droite — la ligne de tête reprend la
+      {
+        /* Format à gauche, date à droite — la ligne de tête reprend la
           composition de l'étiquette de section juste au-dessus. La date
           quitte le pied, qui ne garde que l'appel à lire.
 
           Seule ligne colorée du bloc : elle nomme la famille du panneau
           avant que le titre commence. La valeur vient de --c-une-accent,
-          donc changer la famille de la une suffit à la faire suivre. */}
+          donc changer la famille de la une suffit à la faire suivre. */
+      }
       <div
         class:list={[
           'mb-3.5 flex items-center justify-between gap-4 text-[var(--c-une-accent)]',
@@ -160,17 +175,20 @@ const signature =
           <FormatIcon collection={doc.collection} />
           {meta}
         </span>
-        {doc.publishedAt && (
-          <time
-            datetime={new Date(doc.publishedAt).toISOString().slice(0, 10)}
-            class:list={['whitespace-nowrap', LIGNE_COURANTE]}
-          >
-            {formatDateFr(doc.publishedAt)}
-          </time>
-        )}
+        {
+          doc.publishedAt && (
+            <time
+              datetime={new Date(doc.publishedAt).toISOString().slice(0, 10)}
+              class:list={['whitespace-nowrap', LIGNE_COURANTE]}
+            >
+              {formatDateFr(doc.publishedAt)}
+            </time>
+          )
+        }
       </div>
 
-      {/* Plus grand qu'un titre de carte, plus petit que le hero : la
+      {
+        /* Plus grand qu'un titre de carte, plus petit que le hero : la
           hiérarchie de la page se lit à la taille seule — 76 pour le hero,
           42 ici, 32 pour les cartes de format, 22 pour le sommaire.
 
@@ -178,17 +196,34 @@ const signature =
           quarante signes. Les titres réels de Tituba en font plus de cent :
           à 56 px ils occupaient quatre lignes pleines et la une écrasait le
           hero qu'elle est censée suivre. C'est la longueur du texte, pas la
-          maquette, qui commande ici. */}
-      <h2 class="m-0 mb-4 font-serif text-[calc(clamp(24px,2.6vw,36px)*var(--a11y-echelle))] leading-heading font-display tracking-display text-balance"><a class="text-[var(--c-une-fg)] after:absolute after:inset-0 after:content-['']" href={href}>{stripHeroMarkers(doc.title)}</a></h2>
+          maquette, qui commande ici. */
+      }
+      <h2
+        class="leading-heading font-display tracking-display m-0 mb-4 font-serif text-[calc(clamp(24px,2.6vw,36px)*var(--a11y-echelle))] text-balance"
+      >
+        <a
+          class="text-[var(--c-une-fg)] after:absolute after:inset-0 after:content-['']"
+          href={href}>{stripHeroMarkers(doc.title)}</a
+        >
+      </h2>
 
-      {/* Chapô en italique serif : il prolonge le titre au lieu d'ouvrir
+      {
+        /* Chapô en italique serif : il prolonge le titre au lieu d'ouvrir
           un nouveau registre, ce qui garde le bloc soudé. Pas de plafond
           de largeur : il prend toute celle de la carte, comme le titre
           au-dessus. Il s'arrêtait auparavant bien avant lui, ce qui
-          creusait un décrochage dans le bord droit du bloc. */}
-      {doc.lede && <p class="m-0 mb-[22px] font-serif text-[calc(20px*var(--a11y-echelle))] leading-[1.5] font-display text-[var(--c-une-soft)] italic whitespace-pre-line max-mobile:text-lede">{doc.lede}</p>}
+          creusait un décrochage dans le bord droit du bloc. */
+      }
+      {
+        doc.lede && (
+          <p class="font-display max-mobile:text-lede m-0 mb-[22px] font-serif text-[calc(20px*var(--a11y-echelle))] leading-[1.5] whitespace-pre-line text-[var(--c-une-soft)] italic">
+            {doc.lede}
+          </p>
+        )
+      }
 
-      {/* Collé au bas de la carte par `mt-auto`, la hauteur de celle-ci
+      {
+        /* Collé au bas de la carte par `mt-auto`, la hauteur de celle-ci
           étant celle de la rangée de la grille (`items-stretch`). Le carré
           podcast fait de même : les deux pieds sont donc à 36 px du bas de
           deux boîtes de même hauteur, tous deux hauts de 38 px et centrés —
@@ -198,9 +233,11 @@ const signature =
           `min-h-[38px]` est le même plancher que le carré. La rangée tient
           d'ordinaire sa hauteur de la pastille d'initiales, mais celle-ci
           ne s'affiche pas pour un billet non signé : sans ce plancher,
-          l'alignement reposerait sur la présence d'un auteur·ice. */}
+          l'alignement reposerait sur la présence d'un auteur·ice. */
+      }
       <div class="mt-auto flex min-h-[38px] items-center gap-4">
-        {/* Pastille d'initiales — le seul aplat rond de la page, et le seul
+        {
+          /* Pastille d'initiales — le seul aplat rond de la page, et le seul
             endroit où une personne apparaît en tant que telle plutôt que
             comme un nom dans une ligne de métadonnées. Le serif italique y
             remplace le mono du reste du pied : c'est une signature, pas une
@@ -208,12 +245,25 @@ const signature =
 
             Elle double la signature qui la suit : purement décorative, donc
             masquée à la synthèse vocale, qui lirait sinon « O D » avant le
-            nom complet. */}
-        {auteurs.length > 0 && (
-          <span class="flex size-[38px] flex-none items-center justify-center rounded-full bg-[var(--c-jaune)] font-serif text-[calc(13px*var(--a11y-echelle))] tracking-[0.02em] text-[var(--c-jaune-on)] italic" aria-hidden="true">{initiales(auteurs[0]!)}</span>
-        )}
-        {signature && <p class="m-0 font-mono text-meta text-[var(--c-une-mute)]">{signature}</p>}
-        {/* Sorti de la signature : il doit pouvoir aller au bord droit
+            nom complet. */
+        }
+        {
+          auteurs.length > 0 && (
+            <span
+              class="flex size-[38px] flex-none items-center justify-center rounded-full bg-[var(--c-jaune)] font-serif text-[calc(13px*var(--a11y-echelle))] tracking-[0.02em] text-[var(--c-jaune-on)] italic"
+              aria-hidden="true"
+            >
+              {initiales(auteurs[0]!)}
+            </span>
+          )
+        }
+        {
+          signature && (
+            <p class="text-meta m-0 font-mono text-[var(--c-une-mute)]">{signature}</p>
+          )
+        }
+        {
+          /* Sorti de la signature : il doit pouvoir aller au bord droit
             indépendamment d'elle, et il n'y est pas rattaché — c'est
             l'appel du bloc, pas une métadonnée de plus.
 
@@ -226,8 +276,12 @@ const signature =
             Son corps est celui de la signature posée juste à gauche, et non
             les 16 px hérités du corps de texte : l'appel appartient au pied
             de bloc, il en prend l'échelle. Même valeur dans le carré
-            podcast, pour que les deux appels de l'accueil pèsent pareil. */}
-        <span class="ml-auto border-b border-current pb-px text-meta text-[var(--c-une-fg)] whitespace-nowrap transition-opacity duration-[120ms] ease-[ease] hover:opacity-[0.72]">{appel}</span>
+            podcast, pour que les deux appels de l'accueil pèsent pareil. */
+        }
+        <span
+          class="text-meta ml-auto border-b border-current pb-px whitespace-nowrap text-[var(--c-une-fg)] transition-opacity duration-[120ms] ease-[ease] hover:opacity-[0.72]"
+          >{appel}</span
+        >
       </div>
     </div>
 

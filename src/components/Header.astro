@@ -43,8 +43,7 @@ const nav = await resolveHeaderNav(Astro.url.pathname);
  */
 const FILET =
   'after:bg-[linear-gradient(90deg,var(--c-bleu),var(--c-vert)_45%,var(--c-jaune)_80%)]';
-const BARRE =
-  'bg-[linear-gradient(90deg,var(--c-bleu),var(--c-vert)_45%,var(--c-jaune)_80%)]';
+const BARRE = 'bg-[linear-gradient(90deg,var(--c-bleu),var(--c-vert)_45%,var(--c-jaune)_80%)]';
 
 /**
  * Un onglet du menu. L'état courant se lit sur `aria-current`, déjà posé
@@ -59,10 +58,10 @@ const ONGLET = [
   'text-ink pb-1 transition-opacity duration-[120ms] hover:opacity-60',
   'aria-[current=page]:border-b-[1.5px] aria-[current=page]:border-[var(--c-bleu)] aria-[current=page]:font-semibold',
 ].join(' ');
-
 ---
 
-{/* `group` : l'état de défilement est posé sur le header par
+{
+  /* `group` : l'état de défilement est posé sur le header par
     sticky-header.client.ts, et le bandeau, la marque et la barre de
     progression y réagissent chacun de leur côté.
 
@@ -77,7 +76,8 @@ const ONGLET = [
     pas commencé à défiler — c'est au même seuil qu'il lui cède la place,
     plutôt que d'empiler les deux dès le chargement. Sur une page à hero
     pleine largeur, pas de filet du tout : la barre, elle, reste, c'est un
-    repère de lecture et pas un ornement. */}
+    repère de lecture et pas un ornement. */
+}
 <header
   class:list={[
     'group bg-bg sticky top-0 z-10',
@@ -89,87 +89,121 @@ const ONGLET = [
   ]}
   id="site-header"
 >
-  {/* Trois zones : logo, menus, boutons. Colonnes latérales en 1fr, donc
+  {
+    /* Trois zones : logo, menus, boutons. Colonnes latérales en 1fr, donc
       les menus tombent au centre de la page sans bouger quand le logo ou
       les boutons changent de largeur. Sous 720 px la grille cède la place à
-      une colonne. */}
+      une colonne. */
+  }
   <div
-    class="mx-auto grid max-w-(--page-max) grid-cols-[1fr_auto_1fr] items-center px-(--page-gutter) py-6 transition-[padding] duration-[180ms] ease-[ease] group-data-[defile]:py-3 max-mobile:px-(--page-gutter-narrow) max-mobile:py-4 max-mobile:group-data-[defile]:py-2.5 max-poche:relative max-poche:flex max-poche:flex-col max-poche:items-start max-poche:gap-3 max-poche:px-6 max-poche:pt-[18px] max-poche:pb-3.5 max-poche:group-data-[defile]:py-2.5"
+    class="max-mobile:px-(--page-gutter-narrow) max-mobile:py-4 max-mobile:group-data-[defile]:py-2.5 max-poche:relative max-poche:flex max-poche:flex-col max-poche:items-start max-poche:gap-3 max-poche:px-6 max-poche:pt-[18px] max-poche:pb-3.5 max-poche:group-data-[defile]:py-2.5 mx-auto grid max-w-(--page-max) grid-cols-[1fr_auto_1fr] items-center px-(--page-gutter) py-6 transition-[padding] duration-[180ms] ease-[ease] group-data-[defile]:py-3"
   >
     <div class="flex items-center gap-[22px] justify-self-start">
-      {/* Wordmark en Fraunces italique bas de casse, posée en style et non
+      {
+        /* Wordmark en Fraunces italique bas de casse, posée en style et non
           dans le contenu : le nom reste « Tituba » pour un lecteur d'écran,
           l'onglet et les métadonnées de partage. Graisse 400 : à l'italique
           de Fraunces, c'est déjà un caractère fort.
 
           Le point est le seul élément de marque coloré du header, et le seul
           caractère droit du mot — deux écarts sur un demi-cadratin, ce qui le
-          fait lire comme une signature. */}
+          fait lire comme une signature. */
+      }
       <a
-        class="text-ink font-serif text-[calc(24px*var(--a11y-echelle))] leading-none font-normal tracking-[-0.01em] lowercase italic transition-[opacity,font-size] duration-[120ms] ease-[ease] hover:opacity-70 group-data-[defile]:text-[calc(20px*var(--a11y-echelle))]"
+        class="text-ink font-serif text-[calc(24px*var(--a11y-echelle))] leading-none font-normal tracking-[-0.01em] lowercase italic transition-[opacity,font-size] duration-[120ms] ease-[ease] group-data-[defile]:text-[calc(20px*var(--a11y-echelle))] hover:opacity-70"
         href="/"
       >
         {nav.siteName}<span class="text-[var(--c-jaune-deep)] not-italic">.</span>
       </a>
     </div>
-    {/* Centré sur l'axe et non sur la ligne de base : un bouton-icône sans
-        ligne de base texte se retrouverait deux ou trois pixels plus haut. */}
-    <nav class="flex items-center gap-8 justify-self-center font-sans text-[calc(14px*var(--a11y-echelle))] font-medium max-poche:flex-wrap max-poche:gap-[18px]">
+    {
+      /* Centré sur l'axe et non sur la ligne de base : un bouton-icône sans
+        ligne de base texte se retrouverait deux ou trois pixels plus haut. */
+    }
+    <nav
+      class="max-poche:flex-wrap max-poche:gap-[18px] flex items-center gap-8 justify-self-center font-sans text-[calc(14px*var(--a11y-echelle))] font-medium"
+    >
       <a href="/" class={ONGLET} aria-current={nav.homeActive ? 'page' : undefined}>
         Accueil
       </a>
 
-      {/* Onglets pilotés depuis Payload (Navigation → navHeader). Ils
+      {
+        /* Onglets pilotés depuis Payload (Navigation → navHeader). Ils
           viennent juste après « Accueil », donc avant les deux menus
           déroulants : ce sont des destinations, alors que « Formats » et
-          « Thématiques » n'ouvrent qu'une liste. */}
-      {nav.itemsAvant.map((item) => (
-        <a href={item.href} class={ONGLET} aria-current={nav.isActive(item) ? 'page' : undefined}>
-          {item.label}
-        </a>
-      ))}
+          « Thématiques » n'ouvrent qu'une liste. */
+      }
+      {
+        nav.itemsAvant.map((item) => (
+          <a
+            href={item.href}
+            class={ONGLET}
+            aria-current={nav.isActive(item) ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        ))
+      }
 
-      {nav.navThemes.length > 0 && (
-        <NavDropdown label="Thématiques" active={nav.themesActive} panelId="menu-themes">
-          {nav.navThemes.map((t) => (
-            <a href={`/theme/${t.slug}/`}>{t.name}</a>
-          ))}
-          <a slot="footer" href="/themes/">Voir toutes les thématiques →</a>
-        </NavDropdown>
-      )}
+      {
+        nav.navThemes.length > 0 && (
+          <NavDropdown label="Thématiques" active={nav.themesActive} panelId="menu-themes">
+            {nav.navThemes.map((t) => (
+              <a href={`/theme/${t.slug}/`}>{t.name}</a>
+            ))}
+            <a slot="footer" href="/themes/">
+              Voir toutes les thématiques →
+            </a>
+          </NavDropdown>
+        )
+      }
 
       <NavDropdown label="Formats" active={nav.formatsActive} panelId="menu-formats">
-        {PUBLICATION_ORDER.map((c) => (
-          <a href={`${PUBLICATIONS[c].routePrefix}/`}>
-            <FormatIcon collection={c} />
-            {PUBLICATIONS[c].labelPlural}
-          </a>
-        ))}
-        {/* Même pied que le menu des thématiques : les cinq entrées mènent
-            chacune à un format, celle-ci à la page qui les présente tous. */}
+        {
+          PUBLICATION_ORDER.map((c) => (
+            <a href={`${PUBLICATIONS[c].routePrefix}/`}>
+              <FormatIcon collection={c} />
+              {PUBLICATIONS[c].labelPlural}
+            </a>
+          ))
+        }
+        {
+          /* Même pied que le menu des thématiques : les cinq entrées mènent
+            chacune à un format, celle-ci à la page qui les présente tous. */
+        }
         <a slot="footer" href="/formats/">Voir tous les formats →</a>
       </NavDropdown>
 
-      {nav.itemsApres.map((item) => (
-        <a href={item.href} class={ONGLET} aria-current={nav.isActive(item) ? 'page' : undefined}>
-          {item.label}
-        </a>
-      ))}
+      {
+        nav.itemsApres.map((item) => (
+          <a
+            href={item.href}
+            class={ONGLET}
+            aria-current={nav.isActive(item) ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        ))
+      }
     </nav>
 
-    {/* Boutons-icônes sortis du <nav> : ils forment la troisième zone de la
+    {
+      /* Boutons-icônes sortis du <nav> : ils forment la troisième zone de la
         grille, à droite. Les garder dans la nav les aurait entraînés dans le
-        centrage des menus. */}
+        centrage des menus. */
+    }
     <div class="flex items-center gap-3.5 justify-self-end">
       <SearchLink active={nav.searchActive} />
-      <ThemeToggle class="ml-1 max-poche:absolute max-poche:top-4 max-poche:right-6" />
-      {/* Ouvre le panneau de réglages d'accessibilité. Celui-ci est rendu par
+      <ThemeToggle class="max-poche:absolute max-poche:top-4 max-poche:right-6 ml-1" />
+      {
+        /* Ouvre le panneau de réglages d'accessibilité. Celui-ci est rendu par
           le Layout et non ici : le header porte un `z-index`, donc un
           contexte d'empilement dont un tiroir posé à l'intérieur ne pourrait
           pas sortir. Le lien entre les deux passe par `aria-controls`.
 
           Le bouton doit se lire comme un onglet — même police, corps, graisse
-          et survol. D'où le reset natif propriété par propriété. */}
+          et survol. D'où le reset natif propriété par propriété. */
+      }
       <button
         type="button"
         class="text-ink cursor-pointer border-0 bg-none p-0 font-sans text-[calc(14px*var(--a11y-echelle))] font-medium whitespace-nowrap transition-opacity duration-[120ms] hover:opacity-60"
@@ -183,25 +217,27 @@ const ONGLET = [
     </div>
   </div>
 
-  {progressBar && (
-    <div
-      class="absolute inset-x-0 bottom-0 hidden h-[3px] group-data-[defile]:block group-data-[defile]:h-0.5"
-      id="progress"
-      aria-hidden="true"
-    >
-      {/* Même dégradé que le filet qu'elle remplace, mais peint sur toute la
+  {
+    progressBar && (
+      <div
+        class="absolute inset-x-0 bottom-0 hidden h-[3px] group-data-[defile]:block group-data-[defile]:h-0.5"
+        id="progress"
+        aria-hidden="true"
+      >
+        {/* Même dégradé que le filet qu'elle remplace, mais peint sur toute la
           largeur de la fenêtre et simplement révélé au fil du défilement
           (taille de fond en vw, pas en %) — sinon un dégradé recalculé sur
           une largeur qui grandit se retrouverait « écrasé » différemment à
           chaque avancement. */}
-      <div
-        class:list={[
-          'progress-fill h-full w-0 bg-[length:100vw_100%] transition-[width] duration-[120ms] ease-linear',
-          BARRE,
-        ]}
-      />
-    </div>
-  )}
+        <div
+          class:list={[
+            'progress-fill h-full w-0 bg-[length:100vw_100%] transition-[width] duration-[120ms] ease-linear',
+            BARRE,
+          ]}
+        />
+      </div>
+    )
+  }
 </header>
 
 <script>

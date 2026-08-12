@@ -43,7 +43,8 @@ const Tag = href ? 'a' : 'button';
 const FAMILLES: Record<string, string> = {
   bleu: '[--fam:var(--c-bleu-deep)] [--fam-fill:var(--c-bleu-fill)] [--fam-on:var(--c-bleu-on)]',
   vert: '[--fam:var(--c-vert-deep)] [--fam-fill:var(--c-vert-fill)] [--fam-on:var(--c-vert-on)]',
-  jaune: '[--fam:var(--c-jaune-deep)] [--fam-fill:var(--c-jaune-fill)] [--fam-on:var(--c-jaune-on)]',
+  jaune:
+    '[--fam:var(--c-jaune-deep)] [--fam-fill:var(--c-jaune-fill)] [--fam-on:var(--c-jaune-on)]',
   violet: '[--fam:var(--c-violet-deep)] [--fam-fill:var(--c-violet)] [--fam-on:#fff]',
   // Couleur de marque configurable depuis l’admin : seul `--fam` est
   // posé, et `contour` est le seul ton qui s’en contente — son survol
@@ -54,14 +55,15 @@ const FAMILLES: Record<string, string> = {
 
 const TONS: Record<string, string> = {
   plein: 'bg-(--fam-fill) text-(--fam-on) border border-transparent hover:brightness-[1.12]',
-  contour: 'bg-transparent text-(--fam) border border-(--fam) hover:bg-(--fam) hover:text-paper',
+  contour:
+    'bg-transparent text-(--fam) border border-(--fam) hover:bg-(--fam) hover:text-paper',
 };
 ---
 
 <Tag
   class:list={[
     'inline-flex flex-none cursor-pointer items-center gap-1.5 rounded-full px-4 py-[7px]',
-    'font-sans text-meta leading-[1.2] whitespace-nowrap transition duration-100',
+    'text-meta font-sans leading-[1.2] whitespace-nowrap transition duration-100',
     'disabled:cursor-default disabled:opacity-50 disabled:filter-none',
     FAMILLES[famille],
     TONS[ton],

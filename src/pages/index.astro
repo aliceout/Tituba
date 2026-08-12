@@ -49,16 +49,20 @@ try {
 
 const { une, dernierPodcast, sommaire } = deriveUne(posts, featured);
 
-const heroTitleHtml = formatHeroTitle(indexPages.home?.heroTitle?.trim() || DEFAULT_HERO_TITLE);
+const heroTitleHtml = formatHeroTitle(
+  indexPages.home?.heroTitle?.trim() || DEFAULT_HERO_TITLE,
+);
 const heroLedeHtml = formatHeroLede(indexPages.home?.heroLede?.trim() || DEFAULT_HERO_LEDE);
 ---
 
 <PageShell title={heroTitleHtml} lede={heroLedeHtml} bodyClass="justify" taille="pleine">
-  {une && (
-    <FeaturedPublication doc={une} eyebrow={saison(une.publishedAt)}>
-      {dernierPodcast && <PodcastSquare slot="aside" doc={dernierPodcast} />}
-    </FeaturedPublication>
-  )}
+  {
+    une && (
+      <FeaturedPublication doc={une} eyebrow={saison(une.publishedAt)}>
+        {dernierPodcast && <PodcastSquare slot="aside" doc={dernierPodcast} />}
+      </FeaturedPublication>
+    )
+  }
   <SommairePanel docs={sommaire} />
   <LettreBand />
 </PageShell>

@@ -173,7 +173,7 @@ v2 sur les migrations formelles.
 
 Tokens dans [`src/styles/global.css`](src/styles/global.css). Couleur
 d'accent et fond éditables depuis `/cms/admin/globals/site` (section
-*Branding*) — palette de 5 teintes accent + 6 teintes fond.
+_Branding_) — palette de 5 teintes accent + 6 teintes fond.
 
 Polices self-hostées via `@fontsource` : Source Serif 4 (corps), Inter
 (UI), JetBrains Mono (technique).

@@ -75,19 +75,23 @@ const spec = PUBLICATIONS[collection] ?? PUBLICATIONS.articles;
 const href = publicationHref(collection, docId);
 ---
 
-{/* La classe `item` reste : c’est le crochet du filtrage client (cf
+{
+  /* La classe `item` reste : c’est le crochet du filtrage client (cf
     CardFilterBar), pas une accroche de style. `group` sert au survol du
     titre, qui se déclenche sur toute la carte.
 
     Sous 900 px la troisième colonne passe sous les deux autres, alignée
-    à gauche : à 80 px de large elle ne tenait plus son libellé. */}
+    à gauche : à 80 px de large elle ne tenait plus son libellé. */
+}
 <article
-  class="item group border-rule grid grid-cols-[120px_1fr_80px] items-baseline gap-12 border-b py-[calc(40px*var(--density-feed))] max-mobile:grid-cols-[90px_1fr] max-mobile:gap-6"
+  class="item group border-rule max-mobile:grid-cols-[90px_1fr] max-mobile:gap-6 grid grid-cols-[120px_1fr_80px] items-baseline gap-12 border-b py-[calc(40px*var(--density-feed))]"
   data-type={collection}
   data-themes={themeSlugs}
 >
-  {/* Colonne de gauche masquée aux lecteurs d’écran : format et date y
-      répètent ce que la colonne centrale annonce déjà. */}
+  {
+    /* Colonne de gauche masquée aux lecteurs d’écran : format et date y
+      répètent ce que la colonne centrale annonce déjà. */
+  }
   <a
     class="text-muted text-meta flex min-h-full flex-col justify-between font-sans no-underline"
     href={href}
@@ -104,35 +108,45 @@ const href = publicationHref(collection, docId);
     </div>
   </a>
   <a class="text-inherit no-underline" href={href}>
-    {showThemes && populatedThemes.length > 0 && (
-      <div class="text-label mb-2.5 font-sans tracking-[0.1em] text-[var(--c-bleu-deep)] uppercase">
-        <span class="text-muted">
-          {populatedThemes.map((t, i) => (
-            <>
-              {i > 0 && ', '}
-              <span>{t.name}</span>
-            </>
-          ))}
-        </span>
-      </div>
-    )}
-    {/* Les `*` d’un titre ne sont interprétés que dans le h1 de la page
+    {
+      showThemes && populatedThemes.length > 0 && (
+        <div class="text-label mb-2.5 font-sans tracking-[0.1em] text-[var(--c-bleu-deep)] uppercase">
+          <span class="text-muted">
+            {populatedThemes.map((t, i) => (
+              <>
+                {i > 0 && ', '}
+                <span>{t.name}</span>
+              </>
+            ))}
+          </span>
+        </div>
+      )
+    }
+    {
+      /* Les `*` d’un titre ne sont interprétés que dans le h1 de la page
         de lecture (cf formatHeroTitle) : partout ailleurs on affiche le
         texte nu, sinon on lirait « L’*homonationalisme* » dans les
         listes. Fait ici et non chez les appelants pour que le cas soit
         traité une fois pour toutes les surfaces qui passent par la
-        carte. */}
-    <h2 class="m-0 mb-3 text-[calc(26px*var(--a11y-echelle))] leading-[1.2] font-semibold tracking-[-0.3px] transition-colors duration-[120ms] group-hover:text-[var(--c-bleu-deep)]">
+        carte. */
+    }
+    <h2
+      class="m-0 mb-3 text-[calc(26px*var(--a11y-echelle))] leading-[1.2] font-semibold tracking-[-0.3px] transition-colors duration-[120ms] group-hover:text-[var(--c-bleu-deep)]"
+    >
       {stripHeroMarkers(title)}
     </h2>
-    {/* Retours à la ligne du chapô conservés — même parti que sur les
-        autres surfaces qui affichent un champ multiligne. */}
-    <p class="text-body-soft m-0 text-[calc(16px*var(--a11y-echelle))] leading-[1.55] whitespace-pre-line">
+    {
+      /* Retours à la ligne du chapô conservés — même parti que sur les
+        autres surfaces qui affichent un champ multiligne. */
+    }
+    <p
+      class="text-body-soft m-0 text-[calc(16px*var(--a11y-echelle))] leading-[1.55] whitespace-pre-line"
+    >
       {lede}
     </p>
   </a>
   <a
-    class="text-muted text-meta flex min-h-full flex-col justify-between text-right font-sans no-underline max-mobile:col-span-full max-mobile:pt-2 max-mobile:text-left"
+    class="text-muted text-meta max-mobile:col-span-full max-mobile:pt-2 max-mobile:text-left flex min-h-full flex-col justify-between text-right font-sans no-underline"
     href={href}
   >
     <div class="font-medium text-[var(--c-bleu-deep)]">{spec.actionLabel} →</div>

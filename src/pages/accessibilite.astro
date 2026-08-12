@@ -24,13 +24,17 @@ import { formatHeroTitle } from '../lib/site';
   lede="Un site qu’une partie des gens ne peut pas lire n’est pas un site publié. Voici où nous en sommes, sans arrondir."
   famille="vert"
 >
-  {/* Toute la page est du texte suivi écrit ici même : ce sont donc des
+  {
+    /* Toute la page est du texte suivi écrit ici même : ce sont donc des
       variantes descendantes plutôt qu’une classe sur chacun des trente
       paragraphes. La mise en retrait de la remarque passe par `.note` et
       non par une classe posée sur le paragraphe : `.a11y .note` l’emporte
       sur `.a11y p`, là où deux utilitaires posés côte à côte se
-      départageraient sur l’ordre de la feuille générée. */}
-  <div class="max-w-mesure [&_section+section]:mt-14 [&_h2]:m-0 [&_h2]:mb-[18px] [&_h2]:font-serif [&_h2]:text-h2 [&_h2]:leading-heading [&_h2]:font-heading [&_p]:text-body [&_p]:m-0 [&_p]:mb-4 [&_p]:font-serif [&_p]:text-courant [&_p]:leading-body [&_ul]:m-0 [&_ul]:mb-4 [&_ul]:pl-[1.1em] [&_li]:text-body [&_li]:mb-2.5 [&_li]:font-serif [&_li]:text-courant [&_li]:leading-body [&_a]:text-[var(--c-vert-deep)] [&_a]:underline [&_a]:underline-offset-[0.18em] [&_.note]:border-rule [&_.note]:text-muted [&_.note]:border-l-2 [&_.note]:pl-[18px] [&_.note]:text-sublede">
+      départageraient sur l’ordre de la feuille générée. */
+  }
+  <div
+    class="max-w-mesure [&_h2]:text-h2 [&_h2]:leading-heading [&_h2]:font-heading [&_p]:text-body [&_p]:text-courant [&_p]:leading-body [&_li]:text-body [&_li]:text-courant [&_li]:leading-body [&_.note]:border-rule [&_.note]:text-muted [&_.note]:text-sublede [&_.note]:border-l-2 [&_.note]:pl-[18px] [&_a]:text-[var(--c-vert-deep)] [&_a]:underline [&_a]:underline-offset-[0.18em] [&_h2]:m-0 [&_h2]:mb-[18px] [&_h2]:font-serif [&_li]:mb-2.5 [&_li]:font-serif [&_p]:m-0 [&_p]:mb-4 [&_p]:font-serif [&_section+section]:mt-14 [&_ul]:m-0 [&_ul]:mb-4 [&_ul]:pl-[1.1em]"
+  >
     <section>
       <h2>Les réglages à votre disposition</h2>
       <p>
@@ -49,19 +53,19 @@ import { formatHeroTitle } from '../lib/site';
         </li>
         <li>
           <strong>Police de lecture</strong> — la <em>Luciole</em>, dessinée avec le Centre
-          technique régional pour la déficience visuelle pour les personnes malvoyantes ; ou
-          l’<em>OpenDyslexic</em>, dont les lettres lestées du bas sont préférées par beaucoup de
-          personnes dyslexiques.
+          technique régional pour la déficience visuelle pour les personnes malvoyantes ; ou l’<em
+            >OpenDyslexic</em
+          >, dont les lettres lestées du bas sont préférées par beaucoup de personnes
+          dyslexiques.
         </li>
         <li>
           <strong>Contraste renforcé</strong> — se cumule avec le thème clair ou sombre plutôt que
           de le remplacer.
         </li>
         <li>
-          <strong>Palette adaptée au daltonisme</strong> — le site distingue ses formats par
-          quatre couleurs, dont deux paires que confondent la protanopie et la deutéranopie. Cette
-          option les remplace par des teintes qui restent différenciables sous les trois formes de
-          daltonisme.
+          <strong>Palette adaptée au daltonisme</strong> — le site distingue ses formats par quatre
+          couleurs, dont deux paires que confondent la protanopie et la deutéranopie. Cette option
+          les remplace par des teintes qui restent différenciables sous les trois formes de daltonisme.
         </li>
         <li>
           <strong>Liens soulignés</strong>, <strong>animations réduites</strong> et
@@ -69,10 +73,10 @@ import { formatHeroTitle } from '../lib/site';
         </li>
       </ul>
       <p class="note">
-        Certaines choses ne figurent pas dans ce panneau, et c’est volontaire : la navigation au
-        clavier, la structure des titres, les libellés des boutons et le contraste par défaut ne
-        sont pas des options. Ce sont des propriétés du site. Les proposer à l’activation
-        reviendrait à admettre qu’il s’en passe le reste du temps.
+        Certaines choses ne figurent pas dans ce panneau, et c’est volontaire : la navigation
+        au clavier, la structure des titres, les libellés des boutons et le contraste par
+        défaut ne sont pas des options. Ce sont des propriétés du site. Les proposer à
+        l’activation reviendrait à admettre qu’il s’en passe le reste du temps.
       </p>
     </section>
 
@@ -87,8 +91,7 @@ import { formatHeroTitle } from '../lib/site';
       <ul>
         <li>
           <strong>Les podcasts n’ont pas de transcription.</strong> C’est le manque le plus grave
-          de cette liste : en l’état, les épisodes sont inaccessibles aux personnes sourdes et
-          malentendantes.
+          de cette liste : en l’état, les épisodes sont inaccessibles aux personnes sourdes et malentendantes.
         </li>
         <li>
           <strong>Le guide de lecture suit le pointeur</strong>, donc il ne sert à rien sans
@@ -96,13 +99,12 @@ import { formatHeroTitle } from '../lib/site';
         </li>
         <li>
           <strong>L’agrandissement s’arrête à 130&nbsp;%.</strong> Au-delà, les colonnes les plus
-          étroites se disloquent. Le zoom de votre navigateur reste disponible pour aller plus
-          loin.
+          étroites se disloquent. Le zoom de votre navigateur reste disponible pour aller plus loin.
         </li>
         <li>
-          <strong>Les textes alternatifs des images dépendent de la saisie.</strong> Le champ
-          existe et il est obligatoire, mais rien ne garantit que ce qui y a été écrit décrit
-          utilement l’image.
+          <strong>Les textes alternatifs des images dépendent de la saisie.</strong> Le champ existe
+          et il est obligatoire, mais rien ne garantit que ce qui y a été écrit décrit utilement
+          l’image.
         </li>
       </ul>
     </section>
@@ -111,11 +113,13 @@ import { formatHeroTitle } from '../lib/site';
       <h2>Signaler un obstacle</h2>
       <p>
         Si quelque chose vous empêche de lire, d’écouter ou de naviguer sur ce site,
-        {/* L'objet arrive présélectionné : une personne qui vient de
-            buter sur un obstacle n'a pas à le ranger dans une case. */}
-        <a href="/contact/?objet=accessibilite">écrivez-nous</a>. Ce n’est pas une formule : cette liste s’est
-        construite en tâtonnant, et ce que nous n’avons pas rencontré nous-mêmes, nous ne le
-        connaissons pas.
+        {
+          /* L'objet arrive présélectionné : une personne qui vient de
+            buter sur un obstacle n'a pas à le ranger dans une case. */
+        }
+        <a href="/contact/?objet=accessibilite">écrivez-nous</a>. Ce n’est pas une formule :
+        cette liste s’est construite en tâtonnant, et ce que nous n’avons pas rencontré
+        nous-mêmes, nous ne le connaissons pas.
       </p>
       <p>
         Dites-nous, si vous le pouvez, quelle page, quel navigateur et quelle technologie

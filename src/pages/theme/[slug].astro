@@ -31,7 +31,6 @@ type Theme = {
   description?: string | null;
 };
 
-
 type Post = FeedDoc;
 
 const { slug } = Astro.params;
@@ -69,7 +68,8 @@ const total = posts.length;
 // Formats réellement représentés sous cette thématique, dans l'ordre
 // éditorial. Un filtre vide n'aurait pas de sens ici non plus.
 const formatCounts = new Map<string, number>();
-for (const p of posts) formatCounts.set(p.collection, (formatCounts.get(p.collection) ?? 0) + 1);
+for (const p of posts)
+  formatCounts.set(p.collection, (formatCounts.get(p.collection) ?? 0) + 1);
 const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((c) => ({
   value: c,
   label: PUBLICATIONS[c].labelPlural,
@@ -79,34 +79,32 @@ const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((
 
 <PageShell
   documentTitle={theme.name}
-  description={theme.description ?? `Toutes les publications de Tituba sur la thématique ${theme.name}.`}
+  description={theme.description ??
+    `Toutes les publications de Tituba sur la thématique ${theme.name}.`}
   title={theme.name}
   lede={theme.description ? formatHeroLede(theme.description) : undefined}
   famille="violet"
 >
   <Fragment slot="sous-titre">
-    <CardFilterBar
-      dimension="type"
-      label="Format"
-      options={formatOptions}
-      total={total}
-    />
+    <CardFilterBar dimension="type" label="Format" options={formatOptions} total={total} />
   </Fragment>
 
-  {posts.length === 0 ? (
-    <Empty>Aucune publication sous cette thématique pour l'instant.</Empty>
-  ) : (
-    posts.map((p) => (
-      <PublicationCard
-        collection={p.collection}
-        docId={p.publicId}
-        title={p.title}
-        themeSlugs={p.themeSlugs}
-        publishedAt={p.publishedAt}
-        lede={p.lede}
-        readingTime={p.readingTime}
-        showThemes={false}
-      />
-    ))
-  )}
+  {
+    posts.length === 0 ? (
+      <Empty>Aucune publication sous cette thématique pour l'instant.</Empty>
+    ) : (
+      posts.map((p) => (
+        <PublicationCard
+          collection={p.collection}
+          docId={p.publicId}
+          title={p.title}
+          themeSlugs={p.themeSlugs}
+          publishedAt={p.publishedAt}
+          lede={p.lede}
+          readingTime={p.readingTime}
+          showThemes={false}
+        />
+      ))
+    )
+  }
 </PageShell>

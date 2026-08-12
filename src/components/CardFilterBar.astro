@@ -44,50 +44,60 @@ const PUCE = [
 ].join(' ');
 ---
 
-{options.length > 1 && (
-  <section
-    class="border-rule border-b py-[18px] font-sans text-[calc(13px*var(--a11y-echelle))]"
-    data-card-filters
-    data-dimension={dimension}
-    data-total={total}
-  >
-    <div class="flex flex-wrap items-center gap-6">
-      {/* `flex-1 min-w-0` : sans lui le groupe se dimensionne sur son
+{
+  options.length > 1 && (
+    <section
+      class="border-rule border-b py-[18px] font-sans text-[calc(13px*var(--a11y-echelle))]"
+      data-card-filters
+      data-dimension={dimension}
+      data-total={total}
+    >
+      <div class="flex flex-wrap items-center gap-6">
+        {/* `flex-1 min-w-0` : sans lui le groupe se dimensionne sur son
           contenu, la boîte de puces hérite d’une largeur plus étroite que
           l’espace disponible, et une puce part à la ligne alors qu’il
           restait de la place. */}
-      <div class="flex min-w-0 flex-1 items-baseline gap-1.5" role="group" aria-label={`Filtrer par ${label.toLowerCase()}`}>
-        {/* Le libellé hors du flux d’enroulement, pour que les puces
+        <div
+          class="flex min-w-0 flex-1 items-baseline gap-1.5"
+          role="group"
+          aria-label={`Filtrer par ${label.toLowerCase()}`}
+        >
+          {/* Le libellé hors du flux d’enroulement, pour que les puces
             reportées s’alignent sous « Tous ». La largeur réservée est
             celle de l’accueil : le bord gauche de « Tous » tombe au même
             endroit d’une page à l’autre. */}
-        <span class="text-muted flex-[0_0_96px] pr-2">{label}</span>
-        <div class="flex flex-wrap items-center gap-1.5">
-          <button class={PUCE} type="button" aria-pressed="true" data-filter-value="all">
-            Tous
-          </button>
-          {/* Option déclarée mais sans publication ici : lisible, sans
+          <span class="text-muted flex-[0_0_96px] pr-2">{label}</span>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button class={PUCE} type="button" aria-pressed="true" data-filter-value="all">
+              Tous
+            </button>
+            {/* Option déclarée mais sans publication ici : lisible, sans
               attirer l’œil autant que celles qui mènent quelque part —
               sauf si c’est elle qu’on a choisie. */}
-          {options.map((o) => (
-            <button
-              class:list={[PUCE, o.count === 0 && 'opacity-55 aria-pressed:opacity-100']}
-              type="button"
-              aria-pressed="false"
-              data-filter-value={o.value}
-              title={o.count !== undefined ? `${o.label} — ${o.count} publication${o.count > 1 ? 's' : ''}` : o.label}
-            >
-              {o.label}
-            </button>
-          ))}
+            {options.map((o) => (
+              <button
+                class:list={[PUCE, o.count === 0 && 'opacity-55 aria-pressed:opacity-100']}
+                type="button"
+                aria-pressed="false"
+                data-filter-value={o.value}
+                title={
+                  o.count !== undefined
+                    ? `${o.label} — ${o.count} publication${o.count > 1 ? 's' : ''}`
+                    : o.label
+                }
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div class="text-muted ml-auto" data-filter-count>
+          {total} publication{total > 1 ? 's' : ''}
         </div>
       </div>
-      <div class="text-muted ml-auto" data-filter-count>
-        {total} publication{total > 1 ? 's' : ''}
-      </div>
-    </div>
-  </section>
-)}
+    </section>
+  )
+}
 
 <script>
   // Filtrage client des cartes. Générique : la dimension filtrée est
@@ -147,7 +157,9 @@ const PUCE = [
     });
 
     // Restaure le choix depuis l'URL au chargement.
-    const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get(dimension);
+    const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get(
+      dimension,
+    );
     if (fromHash) current = fromHash;
     apply();
   });

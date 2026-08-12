@@ -28,7 +28,11 @@ const INDEX_TARGETS: Record<IndexTarget, NavItem> = {
   // Le libellé dit « Nous suivre », l'URL reste /abonnement/ : une
   // racine publiée ne se renomme pas sans casser les liens déjà
   // partagés, et le chemin n'apparaît nulle part à l'écran.
-  subscribe: { href: '/abonnement/', label: 'Nous suivre', matchPaths: ['/abonnement', '/rss'] },
+  subscribe: {
+    href: '/abonnement/',
+    label: 'Nous suivre',
+    matchPaths: ['/abonnement', '/rss'],
+  },
 };
 const INDEX_HREFS = new Set(Object.values(INDEX_TARGETS).map((t) => t.href));
 const DEFAULT_NAV_ITEMS: NavItem[] = [
@@ -103,7 +107,10 @@ export async function resolveHeaderNav(pathname: string): Promise<HeaderNav> {
       subscribe: ip.subscribe?.enabled !== false,
     };
   } catch (err) {
-    console.warn('[navigation] fetchIndexPages failed, using defaults:', (err as Error).message);
+    console.warn(
+      '[navigation] fetchIndexPages failed, using defaults:',
+      (err as Error).message,
+    );
   }
   try {
     const nav = await fetchNavigation<NavigationGlobal>();
@@ -152,7 +159,10 @@ export async function resolveHeaderNav(pathname: string): Promise<HeaderNav> {
       });
     }
   } catch (err) {
-    console.warn('[navigation] fetchNavigation failed, using defaults:', (err as Error).message);
+    console.warn(
+      '[navigation] fetchNavigation failed, using defaults:',
+      (err as Error).message,
+    );
   }
 
   // Les onglets pilotés depuis Payload se répartissent de part et d'autre
@@ -172,7 +182,9 @@ export async function resolveHeaderNav(pathname: string): Promise<HeaderNav> {
   // Le menu « Formats » est actif dès qu'on lit une publication, quelle
   // que soit sa collection.
   const formatsActive = PUBLICATION_ORDER.some(
-    (c) => pathname === PUBLICATIONS[c].routePrefix || pathname.startsWith(PUBLICATIONS[c].routePrefix + '/'),
+    (c) =>
+      pathname === PUBLICATIONS[c].routePrefix ||
+      pathname.startsWith(PUBLICATIONS[c].routePrefix + '/'),
   );
   // Le menu « Thématiques » couvre la vue d'ensemble et les pages
   // individuelles.

@@ -28,24 +28,30 @@ const PASTILLE_LIBRE =
 
 <Heading>Par flux RSS</Heading>
 <Lede>
-  Le RSS est une façon simple de recevoir les nouveaux billets dans une
-  application dédiée. Vous ajoutez l'URL ci-dessous à votre lecteur de
-  flux, et chaque nouveau billet apparaît automatiquement.
+  Le RSS est une façon simple de recevoir les nouveaux billets dans une application dédiée.
+  Vous ajoutez l'URL ci-dessous à votre lecteur de flux, et chaque nouveau billet apparaît
+  automatiquement.
 </Lede>
 
-{/* La forme vient de Panel : fond de famille dilué, rayon des panneaux
-    du site. Il ne reste ici que la marge basse. */}
+{
+  /* La forme vient de Panel : fond de famille dilué, rayon des panneaux
+    du site. Il ne reste ici que la marge basse. */
+}
 <Panel famille="vert" padding="serre" class="mb-8">
-  <div class="mb-3 font-mono text-label tracking-label text-[var(--c-vert-deep)] uppercase">
+  <div class="text-label tracking-label mb-3 font-mono text-[var(--c-vert-deep)] uppercase">
     URL du flux
   </div>
   <div class="flex flex-wrap items-center justify-between gap-4">
-    <code class="text-ink min-w-0 flex-[1_1_280px] font-mono text-[calc(14px*var(--a11y-echelle))] break-all">
+    <code
+      class="text-ink min-w-0 flex-[1_1_280px] font-mono text-[calc(14px*var(--a11y-echelle))] break-all"
+    >
       {feedUrl}
     </code>
-    {/* L'état « copié » passe par un attribut plutôt que par une classe
+    {
+      /* L'état « copié » passe par un attribut plutôt que par une classe
         ajoutée à la main : Tailwind ne génère que les classes qu'il lit
-        dans les sources, et une classe née dans un script lui échappe. */}
+        dans les sources, et une classe née dans un script lui échappe. */
+    }
     <Button
       ton="contour"
       famille="vert"
@@ -56,28 +62,36 @@ const PASTILLE_LIBRE =
       Copier
     </Button>
   </div>
-  {/* --c-panel-mute et non --color-muted : le second est calibré sur le
-      fond de page, et tombe à 4,24:1 sur une teinte de panneau. */}
+  {
+    /* --c-panel-mute et non --color-muted : le second est calibré sur le
+      fond de page, et tombe à 4,24:1 sur une teinte de panneau. */
+  }
   <p
-    class="mt-3.5 mb-0 font-sans text-meta text-[var(--c-panel-mute)] [&_a]:border-b [&_a]:border-dotted [&_a]:border-[var(--c-vert-deep)] [&_a]:text-[var(--c-vert-deep)]"
+    class="text-meta mt-3.5 mb-0 font-sans text-[var(--c-panel-mute)] [&_a]:border-b [&_a]:border-dotted [&_a]:border-[var(--c-vert-deep)] [&_a]:text-[var(--c-vert-deep)]"
   >
-    Vous pouvez aussi <a href="/rss.xml">ouvrir le flux directement</a> —
-    c'est un fichier XML, pas conçu pour la lecture humaine.
+    Vous pouvez aussi <a href="/rss.xml">ouvrir le flux directement</a> — c'est un fichier XML, pas
+    conçu pour la lecture humaine.
   </p>
 </Panel>
 
-{/* `group` sur le <details> : c'est lui qui porte [open], et le signe à
-    replier vit sur le <summary>, son enfant. */}
+{
+  /* `group` sur le <details> : c'est lui qui porte [open], et le signe à
+    replier vit sur le <summary>, son enfant. */
+}
 <details class="group border-rule my-8 border-y">
-  {/* Le marqueur natif est masqué au profit du + / − posé en
+  {
+    /* Le marqueur natif est masqué au profit du + / − posé en
       pseudo-élément : sa forme et sa couleur varient d'un navigateur à
-      l'autre, et il ne suit pas la famille de la page. */}
+      l'autre, et il ne suit pas la famille de la page. */
+  }
   <summary
-    class="text-ink flex cursor-pointer list-none items-center gap-3 py-4 font-serif text-[calc(20px*var(--a11y-echelle))] font-semibold before:w-[1ch] before:font-mono before:text-[calc(18px*var(--a11y-echelle))] before:font-normal before:text-[var(--c-vert-deep)] before:content-['+'] hover:text-[var(--c-vert-deep)] focus-visible:rounded-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--c-vert-deep)] group-open:before:content-['−'] [&::-webkit-details-marker]:hidden"
+    class="text-ink flex cursor-pointer list-none items-center gap-3 py-4 font-serif text-[calc(20px*var(--a11y-echelle))] font-semibold before:w-[1ch] before:font-mono before:text-[calc(18px*var(--a11y-echelle))] before:font-normal before:text-[var(--c-vert-deep)] before:content-['+'] group-open:before:content-['−'] hover:text-[var(--c-vert-deep)] focus-visible:rounded-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--c-vert-deep)] [&::-webkit-details-marker]:hidden"
   >
     Quelques lecteurs recommandés
   </summary>
-  <ul class="text-body m-0 grid list-none gap-2.5 p-0 pb-4 font-serif text-sublede leading-body">
+  <ul
+    class="text-body text-sublede leading-body m-0 grid list-none gap-2.5 p-0 pb-4 font-serif"
+  >
     <li>
       <a href="https://feedly.com/" rel="noopener" class={LIEN_LECTEUR}>Feedly</a>
       — le plus connu, web et mobile, version gratuite suffisante.
@@ -92,7 +106,8 @@ const PASTILLE_LIBRE =
       — multi-plateformes, organisation poussée.
     </li>
     <li>
-      <a href="https://www.thunderbird.net/" rel="noopener" class={LIEN_LECTEUR}>Thunderbird</a>
+      <a href="https://www.thunderbird.net/" rel="noopener" class={LIEN_LECTEUR}>Thunderbird</a
+      >
       <span class={PASTILLE_LIBRE} title="Logiciel libre / open source">open source</span>
       — le client mail de Mozilla lit aussi les flux RSS.
     </li>

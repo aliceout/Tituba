@@ -18,7 +18,13 @@ export function saison(iso: string | null): string | undefined {
   if (Number.isNaN(d.getTime())) return undefined;
   const m = d.getMonth();
   const nom =
-    m >= 2 && m <= 4 ? 'printemps' : m >= 5 && m <= 7 ? 'été' : m >= 8 && m <= 10 ? 'automne' : 'hiver';
+    m >= 2 && m <= 4
+      ? 'printemps'
+      : m >= 5 && m <= 7
+        ? 'été'
+        : m >= 8 && m <= 10
+          ? 'automne'
+          : 'hiver';
   // L'hiver de janvier-février appartient à la saison ouverte en
   // décembre de l'année précédente.
   const annee = nom === 'hiver' && m <= 1 ? d.getFullYear() - 1 : d.getFullYear();

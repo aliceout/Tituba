@@ -18,7 +18,12 @@ import { uploadedImageUrl } from '../payload';
  * cent. Rien dans les valeurs ne le signale, et s'y tromper donne un
  * agrandissement de vingt mille pour cent.
  */
-export type Zone = { x?: number | null; y?: number | null; w?: number | null; h?: number | null };
+export type Zone = {
+  x?: number | null;
+  y?: number | null;
+  w?: number | null;
+  h?: number | null;
+};
 
 type ImageChamp =
   | {
@@ -88,10 +93,7 @@ export function cadrageDeZone(zone: Zone | null | undefined): string | null {
   );
 }
 
-export function lireCouverture(
-  image: ImageChamp,
-  imageDeSerie?: ImageChamp,
-): Couverture {
+export function lireCouverture(image: ImageChamp, imageDeSerie?: ImageChamp): Couverture {
   const objet = typeof image === 'object' && image ? image : null;
   const photographe = objet?.unsplash?.photographerName;
 

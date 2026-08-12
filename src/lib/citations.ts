@@ -145,17 +145,14 @@ function bibTexEscape(s: string): string {
     .replace(/[{}]/g, (m) => `\\${m}`)
     .replace(/[#$%&_]/g, (m) => `\\${m}`)
     .replace(/~/g, '\\~{}')
-    .replace(/\^/g, '\\^{}')
-    // Caractères Unicode courants qui peuvent gêner certains LaTeX
-    // anciens — laissés tels quels par défaut, BibTeX moderne les gère.
-    ;
+    .replace(/\^/g, '\\^{}');
+  // Caractères Unicode courants qui peuvent gêner certains LaTeX
+  // anciens — laissés tels quels par défaut, BibTeX moderne les gère.
 }
 
 /** Joint des auteur·ices au format BibTeX (`Last, First and Last, First`). */
 function bibTexAuthors(authors: Array<{ family: string; given: string }>): string {
-  return authors
-    .map((a) => (a.given ? `${a.family}, ${a.given}` : a.family))
-    .join(' and ');
+  return authors.map((a) => (a.given ? `${a.family}, ${a.given}` : a.family)).join(' and ');
 }
 
 /**
@@ -205,7 +202,10 @@ export function toBibTeX(post: CitationPost, ctx: CitationContext): string {
   push('title', post.title);
   push('howpublished', siteName);
   push('year', toYear(post.publishedAt));
-  push('month', new Date(post.publishedAt).toLocaleString('en-US', { month: 'short' }).toLowerCase());
+  push(
+    'month',
+    new Date(post.publishedAt).toLocaleString('en-US', { month: 'short' }).toLowerCase(),
+  );
   push('url', ctx.articleUrl);
   push('urldate', ctx.accessedAt ?? toIsoDate(new Date().toISOString()));
   if (post.doi) push('doi', post.doi);
@@ -277,7 +277,10 @@ export function toRIS(post: CitationPost, ctx: CitationContext): string {
  *
  * Renvoie un array d'objets { name, content } à mapper en JSX/Astro.
  */
-export function highwireMeta(post: CitationPost, ctx: CitationContext): Array<{ name: string; content: string }> {
+export function highwireMeta(
+  post: CitationPost,
+  ctx: CitationContext,
+): Array<{ name: string; content: string }> {
   const authors = extractCitationAuthors(post.authors);
   const tags: Array<{ name: string; content: string }> = [];
   const push = (name: string, content: string) => {

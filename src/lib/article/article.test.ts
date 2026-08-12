@@ -91,10 +91,7 @@ describe('ce que la page montre', () => {
     assert.equal(dateDansColonne({ ...base, collection: 'analyses' }), true);
     // Un outil sans rien à offrir n'a pas de colonne : la date reste
     // dans le bandeau plutôt que de disparaître.
-    assert.equal(
-      dateDansColonne({ ...base, collection: 'outils', citable: false }),
-      false,
-    );
+    assert.equal(dateDansColonne({ ...base, collection: 'outils', citable: false }), false);
     // Un épisode dont le lecteur est dans le hero l'a aussi.
     assert.equal(
       dateDansColonne({ ...base, collection: 'podcasts', lecteurDansHero: true }),

@@ -13,7 +13,6 @@ import { fetchFeed, publicationHref } from '../lib/publications';
 type IdentityGlobal = { siteName?: string };
 type SubscriptionsGlobal = { rssEnabled?: boolean };
 
-
 type Post = FeedDoc;
 
 export const GET: APIRoute = async (context) => {
@@ -25,7 +24,10 @@ export const GET: APIRoute = async (context) => {
       return new Response('Not found', { status: 404 });
     }
   } catch (err) {
-    console.warn('[rss] fetchSubscriptions failed, flux servi par défaut:', (err as Error).message);
+    console.warn(
+      '[rss] fetchSubscriptions failed, flux servi par défaut:',
+      (err as Error).message,
+    );
   }
 
   let posts: Post[] = [];
@@ -45,7 +47,7 @@ export const GET: APIRoute = async (context) => {
 
   if (!context.site) {
     throw new Error(
-      "rss.xml.ts: context.site est undefined — vérifie que `site` est défini dans astro.config.mjs.",
+      'rss.xml.ts: context.site est undefined — vérifie que `site` est défini dans astro.config.mjs.',
     );
   }
   return rss({

@@ -15,14 +15,11 @@ import { fetchIndexPages, type FeedDoc } from '../lib/payload';
 import { PUBLICATIONS, fetchFeed, publicationHref } from '../lib/publications';
 import { formatDateIso, formatHeroLede, formatHeroTitle, stripHeroMarkers } from '../lib/site';
 
-
 type Post = FeedDoc;
 
 type IndexPagesGlobal = {
   archives?: { enabled?: boolean; heroTitle?: string; heroLede?: string };
 };
-
-
 
 const DEFAULT_TITLE = 'Toutes les *publications*, par année.';
 const DEFAULT_LEDE =
@@ -58,12 +55,8 @@ for (const p of posts) {
 }
 const years = [...byYear.keys()].sort().reverse();
 
-const heroTitleHtml = formatHeroTitle(
-  indexPages.archives?.heroTitle?.trim() || DEFAULT_TITLE,
-);
-const heroLedeHtml = formatHeroLede(
-  indexPages.archives?.heroLede?.trim() || DEFAULT_LEDE,
-);
+const heroTitleHtml = formatHeroTitle(indexPages.archives?.heroTitle?.trim() || DEFAULT_TITLE);
+const heroLedeHtml = formatHeroLede(indexPages.archives?.heroLede?.trim() || DEFAULT_LEDE);
 ---
 
 <PageShell
@@ -72,52 +65,55 @@ const heroLedeHtml = formatHeroLede(
   title={heroTitleHtml}
   lede={heroLedeHtml}
 >
-  {/* Gouttière et rythme vertical viennent de PageShell. Pas de famille
+  {
+    /* Gouttière et rythme vertical viennent de PageShell. Pas de famille
       dominante : les archives traversent les cinq formats et n’ont pas de
       couleur propre, comme le titre de l’accueil dont les mots se
-      relaient plutôt qu’imposer une seule teinte. */}
-  {years.length === 0 ? (
-    <Empty>Aucune publication pour l'instant.</Empty>
-  ) : (
-    years.map((y) => {
-      const list = byYear.get(y)!;
-      return (
-        <div class="border-rule border-b py-8">
-          {/* Le corps du titre d’année reste hors de l’échelle des titres
+      relaient plutôt qu’imposer une seule teinte. */
+  }
+  {
+    years.length === 0 ? (
+      <Empty>Aucune publication pour l'instant.</Empty>
+    ) : (
+      years.map((y) => {
+        const list = byYear.get(y)!;
+        return (
+          <div class="border-rule border-b py-8">
+            {/* Le corps du titre d’année reste hors de l’échelle des titres
               de section : c’est un repère chronologique, pas un titre de
               contenu, et il doit dominer la page comme un numéro de
               sommaire. */}
-          <h2 class="m-0 mb-6 font-serif text-[calc(48px*var(--a11y-echelle))] font-heading tracking-[-0.02em] max-mobile:text-[calc(32px*var(--a11y-echelle))]">
-            {y}
-            {' '}
-            <span class="mono text-muted font-mono text-[calc(13px*var(--a11y-echelle))] font-normal tracking-normal">
-              · {list.length} publication{list.length > 1 ? 's' : ''}
-            </span>
-          </h2>
-          {list.map((p) => {
-            const primaryTheme = (p.themeSlugs ?? [])[0];
-            return (
-              <a
-                class="group border-rule text-inherit grid grid-cols-[120px_100px_1fr_160px] items-baseline gap-8 border-t py-3.5 transition-colors duration-[120ms] max-mobile:grid-cols-[100px_1fr] max-mobile:gap-4"
-                href={publicationHref(p.collection, p.publicId)}
-              >
-                <div class="text-muted font-mono text-meta">
-                  {p.publishedAt ? formatDateIso(p.publishedAt) : ''}
-                </div>
-                <div class="font-mono text-label tracking-[0.08em] text-[var(--c-bleu-deep)] uppercase max-mobile:col-span-full">
-                  {PUBLICATIONS[p.collection]?.badge ?? ''}
-                </div>
-                <div class="font-serif text-[calc(18px*var(--a11y-echelle))] leading-[1.35] font-normal transition-colors duration-[120ms] group-hover:text-[var(--c-bleu-deep)]">
-                  {stripHeroMarkers(p.title)}
-                </div>
-                <div class="text-muted text-right font-sans text-label max-mobile:col-span-full max-mobile:text-left">
-                  {primaryTheme ?? '—'}
-                </div>
-              </a>
-            );
-          })}
-        </div>
-      );
-    })
-  )}
+            <h2 class="font-heading max-mobile:text-[calc(32px*var(--a11y-echelle))] m-0 mb-6 font-serif text-[calc(48px*var(--a11y-echelle))] tracking-[-0.02em]">
+              {y}{' '}
+              <span class="mono text-muted font-mono text-[calc(13px*var(--a11y-echelle))] font-normal tracking-normal">
+                · {list.length} publication{list.length > 1 ? 's' : ''}
+              </span>
+            </h2>
+            {list.map((p) => {
+              const primaryTheme = (p.themeSlugs ?? [])[0];
+              return (
+                <a
+                  class="group border-rule max-mobile:grid-cols-[100px_1fr] max-mobile:gap-4 grid grid-cols-[120px_100px_1fr_160px] items-baseline gap-8 border-t py-3.5 text-inherit transition-colors duration-[120ms]"
+                  href={publicationHref(p.collection, p.publicId)}
+                >
+                  <div class="text-muted text-meta font-mono">
+                    {p.publishedAt ? formatDateIso(p.publishedAt) : ''}
+                  </div>
+                  <div class="text-label max-mobile:col-span-full font-mono tracking-[0.08em] text-[var(--c-bleu-deep)] uppercase">
+                    {PUBLICATIONS[p.collection]?.badge ?? ''}
+                  </div>
+                  <div class="font-serif text-[calc(18px*var(--a11y-echelle))] leading-[1.35] font-normal transition-colors duration-[120ms] group-hover:text-[var(--c-bleu-deep)]">
+                    {stripHeroMarkers(p.title)}
+                  </div>
+                  <div class="text-muted text-label max-mobile:col-span-full max-mobile:text-left text-right font-sans">
+                    {primaryTheme ?? '—'}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        );
+      })
+    )
+  }
 </PageShell>

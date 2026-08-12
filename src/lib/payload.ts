@@ -23,9 +23,7 @@ const API_BASE = `${INTERNAL_URL.replace(/\/$/, '')}/cms/api`;
  *  Si ADDRESS n'a pas de schème, on préfixe https:// — convention
  *  Infisical = on stocke juste le domaine. */
 const RAW_ADDRESS = process.env.ADDRESS ?? 'http://localhost:3001';
-const ADDRESS = /^https?:\/\//.test(RAW_ADDRESS)
-  ? RAW_ADDRESS
-  : `https://${RAW_ADDRESS}`;
+const ADDRESS = /^https?:\/\//.test(RAW_ADDRESS) ? RAW_ADDRESS : `https://${RAW_ADDRESS}`;
 
 /**
  * Construit l'URL publique d'une image Payload depuis son `filename`
@@ -234,10 +232,7 @@ export async function fetchByPublicId<T = unknown>(
 }
 
 /** Variante pour `pages` — passe par fetchBySlug avec un cast confortable. */
-export async function fetchPage<T = unknown>(
-  slug: string,
-  depth = 2,
-): Promise<T | null> {
+export async function fetchPage<T = unknown>(slug: string, depth = 2): Promise<T | null> {
   return fetchBySlug<T>('pages', slug, depth);
 }
 
@@ -305,9 +300,7 @@ export async function fetchCollection<T = unknown>(
       parts.push(`select[${encodeURIComponent(field)}]=true`);
     }
   }
-  const data = await fetchPayload<FindResult<T>>(
-    `/${collection}?${parts.join('&')}`,
-  );
+  const data = await fetchPayload<FindResult<T>>(`/${collection}?${parts.join('&')}`);
   return data.docs;
 }
 
@@ -359,7 +352,8 @@ export async function fetchIndexPages<T = unknown>(): Promise<T> {
     docs?: { slug?: string; title?: string | null; lede?: string | null; enabled?: boolean }[];
   }>('/pages?where[kind][equals]=fixe&limit=10&depth=0');
 
-  const sortie: Record<string, { heroTitle?: string; heroLede?: string; enabled?: boolean }> = {};
+  const sortie: Record<string, { heroTitle?: string; heroLede?: string; enabled?: boolean }> =
+    {};
   for (const d of res.docs ?? []) {
     if (!d.slug) continue;
     sortie[d.slug] = {

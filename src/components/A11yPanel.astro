@@ -77,7 +77,8 @@ const ECHANTILLONS = {
  * dans le coin haut-gauche, par-dessus le bouton de fermeture, qui
  * intercepteraient ses clics.
  */
-const BASCULE = 'relative grid cursor-pointer grid-cols-[34px_1fr] items-start gap-2.5 py-[9px]';
+const BASCULE =
+  'relative grid cursor-pointer grid-cols-[34px_1fr] items-start gap-2.5 py-[9px]';
 
 /**
  * L'input de la bascule est `peer` : la piste n'est qu'un décor branché
@@ -93,16 +94,17 @@ const PISTE = [
 ].join(' ');
 const BASCULE_TEXTE =
   'text-[calc(13px*var(--a11y-echelle))] leading-[1.35] [&_.sous]:text-muted [&_.sous]:mt-0.5 [&_.sous]:block [&_.sous]:text-[calc(11.5px*var(--a11y-echelle))] [&_.sous]:leading-[1.45]';
-
 ---
 
-{/* Fermé : hors champ à droite. L'attribut `hidden` le retire de l'arbre
+{
+  /* Fermé : hors champ à droite. L'attribut `hidden` le retire de l'arbre
     d'accessibilité, la transformation gère le mouvement — il est posé et
     retiré par le script autour de celle-ci, pour que le tiroir ne reste
     pas focusable une fois refermé.
 
     Sous 420 px le tiroir prend toute la largeur : 380 px sur un écran de
-    360 laisseraient une bande de page inutilisable. */}
+    360 laisseraient une bande de page inutilisable. */
+}
 <div
   class="bg-paper border-rule text-ink fixed inset-y-0 right-0 z-[60] flex w-[min(380px,100vw)] translate-x-full flex-col overflow-hidden border-l font-sans shadow-[-12px_0_32px_rgba(0,0,0,0.1)] transition-transform duration-[220ms] ease-[ease] data-[ouvert]:translate-x-0 max-[420px]:w-screen max-[420px]:border-l-0 [&[hidden]]:hidden"
   id="panneau-accessibilite"
@@ -112,7 +114,10 @@ const BASCULE_TEXTE =
   hidden
 >
   <div class="flex items-center justify-between px-[22px] pt-5">
-    <h2 id="a11y-titre" class="m-0 font-serif text-[calc(22px*var(--a11y-echelle))] font-normal">
+    <h2
+      id="a11y-titre"
+      class="m-0 font-serif text-[calc(22px*var(--a11y-echelle))] font-normal"
+    >
       Accessibilité
     </h2>
     <button
@@ -121,18 +126,28 @@ const BASCULE_TEXTE =
       data-a11y-close
       aria-label="Fermer le panneau"
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
-        <path d="M18 6 6 18M6 6l12 12" />
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <path d="M18 6 6 18M6 6l12 12"></path>
       </svg>
     </button>
   </div>
 
-  <p class="text-muted mx-[22px] mt-2 text-meta leading-[1.5]">
+  <p class="text-muted text-meta mx-[22px] mt-2 leading-[1.5]">
     Ces réglages ne concernent que votre navigateur. Ils sont conservés d’une visite à l’autre.
   </p>
 
   <div class="flex-auto overflow-y-auto px-[22px] pt-[18px] pb-2">
-    {/* Quatre crans nommés plutôt qu'un curseur : ils se choisissent au
+    {
+      /* Quatre crans nommés plutôt qu'un curseur : ils se choisissent au
         clavier sans viser, et l'on sait toujours où l'on en est.
 
         De vrais <input type="radio"> et non des boutons portant
@@ -140,68 +155,77 @@ const BASCULE_TEXTE =
         flèches, le point de tabulation unique et l'annonce « 2 sur 4 »
         — soit exactement ce qu'un panneau d'accessibilité n'a aucune
         excuse de réécrire à moitié. L'input est masqué à l'œil mais
-        reste focusable ; le cadre coloré n'est que son reflet. */}
+        reste focusable ; le cadre coloré n'est que son reflet. */
+    }
     <fieldset class={GROUPE}>
       <legend class={LEGENDE}>Taille du texte</legend>
       <div class="flex items-end gap-2">
-        {[
-          { v: '100', t: 'Taille normale' },
-          { v: '110', t: 'Texte agrandi de 10 %' },
-          { v: '120', t: 'Texte agrandi de 20 %' },
-          { v: '130', t: 'Texte agrandi de 30 %' },
-        ].map((c, i) => (
-          <label class={CRAN} title={c.t}>
-            <input
-              type="radio"
-              name="a11y-taille"
-              value={c.v}
-              data-a11y-set="taille"
-              checked={c.v === '100'}
-              class={INPUT_INVISIBLE}
-            />
-            <span class={TAILLES_CRAN[i]} aria-hidden="true">A</span>
-            <span class="sr-only">{c.t}</span>
-          </label>
-        ))}
+        {
+          [
+            { v: '100', t: 'Taille normale' },
+            { v: '110', t: 'Texte agrandi de 10 %' },
+            { v: '120', t: 'Texte agrandi de 20 %' },
+            { v: '130', t: 'Texte agrandi de 30 %' },
+          ].map((c, i) => (
+            <label class={CRAN} title={c.t}>
+              <input
+                type="radio"
+                name="a11y-taille"
+                value={c.v}
+                data-a11y-set="taille"
+                checked={c.v === '100'}
+                class={INPUT_INVISIBLE}
+              />
+              <span class={TAILLES_CRAN[i]} aria-hidden="true">
+                A
+              </span>
+              <span class="sr-only">{c.t}</span>
+            </label>
+          ))
+        }
       </div>
     </fieldset>
 
-    {/* Trois choix exclusifs. Chaque échantillon est écrit dans la
-        police qu'il propose : c'est le seul aperçu qui vaille. */}
+    {
+      /* Trois choix exclusifs. Chaque échantillon est écrit dans la
+        police qu'il propose : c'est le seul aperçu qui vaille. */
+    }
     <fieldset class={GROUPE}>
       <legend class={LEGENDE}>Police de lecture</legend>
       <div class="grid gap-2">
-        {[
-          { v: 'defaut', nom: 'Police du site', pour: null },
-          { v: 'luciole', nom: 'Luciole', pour: 'basse vision' },
-          { v: 'dyslexie', nom: 'OpenDyslexic', pour: 'dyslexie' },
-        ].map((p) => (
-          <label class={POLICE}>
-            <input
-              type="radio"
-              name="a11y-police"
-              value={p.v}
-              data-a11y-set="police"
-              checked={p.v === 'defaut'}
-              class={INPUT_INVISIBLE}
-            />
-            <span class="text-[calc(13px*var(--a11y-echelle))] font-medium">{p.nom}</span>
-            {p.pour && (
-              <span class="text-muted font-mono text-[calc(9px*var(--a11y-echelle))] tracking-[0.1em] uppercase">
-                {p.pour}
+        {
+          [
+            { v: 'defaut', nom: 'Police du site', pour: null },
+            { v: 'luciole', nom: 'Luciole', pour: 'basse vision' },
+            { v: 'dyslexie', nom: 'OpenDyslexic', pour: 'dyslexie' },
+          ].map((p) => (
+            <label class={POLICE}>
+              <input
+                type="radio"
+                name="a11y-police"
+                value={p.v}
+                data-a11y-set="police"
+                checked={p.v === 'defaut'}
+                class={INPUT_INVISIBLE}
+              />
+              <span class="text-[calc(13px*var(--a11y-echelle))] font-medium">{p.nom}</span>
+              {p.pour && (
+                <span class="text-muted font-mono text-[calc(9px*var(--a11y-echelle))] tracking-[0.1em] uppercase">
+                  {p.pour}
+                </span>
+              )}
+              <span
+                class:list={[
+                  'text-muted col-span-full text-[15px] tracking-[0.04em]',
+                  ECHANTILLONS[p.v as keyof typeof ECHANTILLONS],
+                ]}
+                aria-hidden="true"
+              >
+                Aa Bb Il1 O0
               </span>
-            )}
-            <span
-              class:list={[
-                'text-muted col-span-full text-[15px] tracking-[0.04em]',
-                ECHANTILLONS[p.v as keyof typeof ECHANTILLONS],
-              ]}
-              aria-hidden="true"
-            >
-              Aa Bb Il1 O0
-            </span>
-          </label>
-        ))}
+            </label>
+          ))
+        }
       </div>
     </fieldset>
 
@@ -209,7 +233,12 @@ const BASCULE_TEXTE =
       <legend class={LEGENDE}>Lisibilité</legend>
 
       <label class={BASCULE}>
-        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="espacement" data-a11y-on="large" />
+        <input
+          type="checkbox"
+          class={BASCULE_INPUT}
+          data-a11y-toggle="espacement"
+          data-a11y-on="large"
+        />
         <span class={PISTE} aria-hidden="true"></span>
         <span class={BASCULE_TEXTE}>
           Espacement du texte
@@ -218,7 +247,12 @@ const BASCULE_TEXTE =
       </label>
 
       <label class={BASCULE}>
-        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="liens" data-a11y-on="soulignes" />
+        <input
+          type="checkbox"
+          class={BASCULE_INPUT}
+          data-a11y-toggle="liens"
+          data-a11y-on="soulignes"
+        />
         <span class={PISTE} aria-hidden="true"></span>
         <span class={BASCULE_TEXTE}>
           Liens soulignés
@@ -227,7 +261,12 @@ const BASCULE_TEXTE =
       </label>
 
       <label class={BASCULE}>
-        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="guide" data-a11y-on="on" />
+        <input
+          type="checkbox"
+          class={BASCULE_INPUT}
+          data-a11y-toggle="guide"
+          data-a11y-on="on"
+        />
         <span class={PISTE} aria-hidden="true"></span>
         <span class={BASCULE_TEXTE}>
           Guide de lecture
@@ -240,7 +279,12 @@ const BASCULE_TEXTE =
       <legend class={LEGENDE}>Couleurs</legend>
 
       <label class={BASCULE}>
-        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="contraste" data-a11y-on="renforce" />
+        <input
+          type="checkbox"
+          class={BASCULE_INPUT}
+          data-a11y-toggle="contraste"
+          data-a11y-on="renforce"
+        />
         <span class={PISTE} aria-hidden="true"></span>
         <span class={BASCULE_TEXTE}>
           Contraste renforcé
@@ -249,7 +293,12 @@ const BASCULE_TEXTE =
       </label>
 
       <label class={BASCULE}>
-        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="couleurs" data-a11y-on="daltonisme" />
+        <input
+          type="checkbox"
+          class={BASCULE_INPUT}
+          data-a11y-toggle="couleurs"
+          data-a11y-on="daltonisme"
+        />
         <span class={PISTE} aria-hidden="true"></span>
         <span class={BASCULE_TEXTE}>
           Palette adaptée au daltonisme
@@ -261,7 +310,12 @@ const BASCULE_TEXTE =
       </label>
 
       <label class={BASCULE}>
-        <input type="checkbox" class={BASCULE_INPUT} data-a11y-toggle="animations" data-a11y-on="reduites" />
+        <input
+          type="checkbox"
+          class={BASCULE_INPUT}
+          data-a11y-toggle="animations"
+          data-a11y-on="reduites"
+        />
         <span class={PISTE} aria-hidden="true"></span>
         <span class={BASCULE_TEXTE}>
           Animations réduites
@@ -274,20 +328,24 @@ const BASCULE_TEXTE =
   <div class="border-rule flex-none border-t px-[22px] pt-3.5 pb-[18px]">
     <button
       type="button"
-      class="border-rule text-ink hover:border-ink cursor-pointer rounded-[3px] border bg-none px-3.5 py-2 font-[inherit] text-meta"
+      class="border-rule text-ink hover:border-ink text-meta cursor-pointer rounded-[3px] border bg-none px-3.5 py-2 font-[inherit]"
       data-a11y-reset
     >
       Tout réinitialiser
     </button>
-    <p class="text-muted mt-2.5 mb-0 text-label leading-[1.45] [&_a]:text-ink [&_a]:underline [&_a]:underline-offset-[0.18em]">
-      <a href="/accessibilite/">Où nous en sommes, et ce qui manque encore</a> — un obstacle
-      rencontré sur ce site&nbsp;? Le signaler est le meilleur moyen qu’il soit corrigé.
+    <p
+      class="text-muted text-label [&_a]:text-ink mt-2.5 mb-0 leading-[1.45] [&_a]:underline [&_a]:underline-offset-[0.18em]"
+    >
+      <a href="/accessibilite/">Où nous en sommes, et ce qui manque encore</a> — un obstacle rencontré
+      sur ce site&nbsp;? Le signaler est le meilleur moyen qu’il soit corrigé.
     </p>
   </div>
 </div>
 
-{/* Guide de lecture — hors du tiroir : il couvre la fenêtre entière, et
-    doit rester en place une fois le panneau refermé. */}
+{
+  /* Guide de lecture — hors du tiroir : il couvre la fenêtre entière, et
+    doit rester en place une fois le panneau refermé. */
+}
 <div class="a11y-guide" aria-hidden="true">
   <div class="a11y-guide__voile a11y-guide__voile--haut"></div>
   <div class="a11y-guide__fenetre"></div>

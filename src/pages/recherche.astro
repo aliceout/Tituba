@@ -82,7 +82,6 @@ function pageHref(p: number): string {
 /** Phrase centrée : une erreur, ou une recherche sans résultat. */
 const REPONSE =
   'text-muted py-12 text-center font-serif text-courant [&_em]:text-ink [&_em]:italic';
-
 ---
 
 <PageShell
@@ -93,12 +92,14 @@ const REPONSE =
 >
   {/* Gouttière et rythme vertical viennent de PageShell. */}
   <div class="pt-0 pb-20">
-    {/* Sous 720 px le champ et le bouton s'empilent : à deux, ils ne
-        laissaient plus assez de place à la saisie. */}
+    {
+      /* Sous 720 px le champ et le bouton s'empilent : à deux, ils ne
+        laissaient plus assez de place à la saisie. */
+    }
     <form
       method="get"
       action="/recherche/"
-      class="mb-8 flex max-w-[720px] gap-2 max-poche:flex-col"
+      class="max-poche:flex-col mb-8 flex max-w-[720px] gap-2"
       role="search"
     >
       <input
@@ -108,7 +109,7 @@ const REPONSE =
         placeholder="Cherchez sur Tituba…"
         autofocus={!q}
         aria-label="Rechercher"
-        class="border-rule bg-bg text-ink flex-1 border px-3.5 py-2.5 font-serif text-sublede leading-[1.4] focus:border-[var(--c-bleu-deep)] focus:outline-none"
+        class="border-rule bg-bg text-ink text-sublede flex-1 border px-3.5 py-2.5 font-serif leading-[1.4] focus:border-[var(--c-bleu-deep)] focus:outline-none"
       />
       <button
         type="submit"
@@ -120,71 +121,99 @@ const REPONSE =
 
     {fetchError && <p class={REPONSE}>Une erreur est survenue : {fetchError}.</p>}
 
-    {!q && !fetchError && (
-      <div class="bg-bg text-muted my-6 border-l-2 border-[var(--c-bleu-deep)] py-[18px] pr-[22px] pl-[22px] font-sans text-[calc(13.5px*var(--a11y-echelle))]">
-        <h2 class="text-muted m-0 mb-2.5 font-mono text-label font-normal tracking-label uppercase">
-          Astuces
-        </h2>
-        <ul class="m-0 pl-[18px] leading-[1.7] [&_code]:text-ink [&_code]:rounded-[2px] [&_code]:bg-[color-mix(in_oklch,var(--color-ink),transparent_92%)] [&_code]:px-1 [&_code]:font-mono [&_code]:text-[calc(12.5px*var(--a11y-echelle))]">
-          <li><code>spivak agency</code> → publications contenant les deux mots</li>
-          <li><code>"théorie postcoloniale"</code> → expression exacte</li>
-          <li><code>spivak -postcolonial</code> → exclure un terme</li>
-          <li><code>queer or trans</code> → l'un ou l'autre</li>
-        </ul>
-      </div>
-    )}
+    {
+      !q && !fetchError && (
+        <div class="bg-bg text-muted my-6 border-l-2 border-[var(--c-bleu-deep)] py-[18px] pr-[22px] pl-[22px] font-sans text-[calc(13.5px*var(--a11y-echelle))]">
+          <h2 class="text-muted text-label tracking-label m-0 mb-2.5 font-mono font-normal uppercase">
+            Astuces
+          </h2>
+          <ul class="[&_code]:text-ink m-0 pl-[18px] leading-[1.7] [&_code]:rounded-[2px] [&_code]:bg-[color-mix(in_oklch,var(--color-ink),transparent_92%)] [&_code]:px-1 [&_code]:font-mono [&_code]:text-[calc(12.5px*var(--a11y-echelle))]">
+            <li>
+              <code>spivak agency</code> → publications contenant les deux mots
+            </li>
+            <li>
+              <code>"théorie postcoloniale"</code> → expression exacte
+            </li>
+            <li>
+              <code>spivak -postcolonial</code> → exclure un terme
+            </li>
+            <li>
+              <code>queer or trans</code> → l'un ou l'autre
+            </li>
+          </ul>
+        </div>
+      )
+    }
 
-    {q && !fetchError && docs.length === 0 && (
-      <p class={REPONSE}>Aucun résultat pour <em>« {q} »</em>.</p>
-    )}
+    {
+      q && !fetchError && docs.length === 0 && (
+        <p class={REPONSE}>
+          Aucun résultat pour <em>« {q} »</em>.
+        </p>
+      )
+    }
 
-    {q && docs.length > 0 && (
-      <ol class="m-0 flex list-none flex-col gap-7 p-0">
-        {docs.map((d, rang) => (
-          <li
-            class:list={[
-              'pb-6',
-              // Le dernier résultat ne porte pas de filet : c'était
-              // `:last-child`, c'est le rang de la boucle.
-              rang < docs.length - 1 && 'border-rule border-b',
-            ]}
-          >
-            <a
-              href={publicationHref(d.collection, d.publicId)}
-              class="text-ink mb-1.5 block font-serif text-[calc(22px*var(--a11y-echelle))] leading-[1.3] font-normal no-underline hover:text-[var(--c-bleu-deep)] hover:underline"
+    {
+      q && docs.length > 0 && (
+        <ol class="m-0 flex list-none flex-col gap-7 p-0">
+          {docs.map((d, rang) => (
+            <li
+              class:list={[
+                'pb-6',
+                // Le dernier résultat ne porte pas de filet : c'était
+                // `:last-child`, c'est le rang de la boucle.
+                rang < docs.length - 1 && 'border-rule border-b',
+              ]}
             >
-              {stripHeroMarkers(d.title)}
-            </a>
-            <div class="text-muted mb-2 flex items-baseline gap-3 font-sans text-meta">
-              {/* En sans, comme le reste de la ligne. Une règle voulait la
+              <a
+                href={publicationHref(d.collection, d.publicId)}
+                class="text-ink mb-1.5 block font-serif text-[calc(22px*var(--a11y-echelle))] leading-[1.3] font-normal no-underline hover:text-[var(--c-bleu-deep)] hover:underline"
+              >
+                {stripHeroMarkers(d.title)}
+              </a>
+              <div class="text-muted text-meta mb-2 flex items-baseline gap-3 font-sans">
+                {/* En sans, comme le reste de la ligne. Une règle voulait la
                   date en mono, mais elle visait `.id` quand le balisage
                   écrit `.d` : elle n'a jamais rien fait, et l'appliquer
                   aurait changé le rendu sans qu'on l'ait demandé. */}
-              {d.publishedAt && <span>{formatDateIso(d.publishedAt)}</span>}
-            </div>
-            {d.excerpt && (
-              /* ts_headline pose des <mark>…</mark> autour des mots
+                {d.publishedAt && <span>{formatDateIso(d.publishedAt)}</span>}
+              </div>
+              {d.excerpt && (
+                /* ts_headline pose des <mark>…</mark> autour des mots
                  trouvés : ils arrivent par set:html, donc stylés par
                  variante descendante. */
-              <p
-                class="text-muted m-0 font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55] [&_mark]:text-ink [&_mark]:bg-[color-mix(in_oklch,var(--c-bleu-deep),transparent_80%)] [&_mark]:px-0.5 [&_mark]:font-medium"
-                set:html={d.excerpt}
-              />
-            )}
-          </li>
-        ))}
-      </ol>
-    )}
+                <p
+                  class="text-muted [&_mark]:text-ink m-0 font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55] [&_mark]:bg-[color-mix(in_oklch,var(--c-bleu-deep),transparent_80%)] [&_mark]:px-0.5 [&_mark]:font-medium"
+                  set:html={d.excerpt}
+                />
+              )}
+            </li>
+          ))}
+        </ol>
+      )
+    }
 
-    {q && totalPages > 1 && (
-      <nav
-        class="mt-12 flex items-center justify-between gap-4 font-sans text-[calc(13px*var(--a11y-echelle))] max-poche:flex-col max-poche:items-stretch max-poche:text-center [&_a]:text-ink [&_a]:border-rule [&_a]:border-b [&_a]:pb-0.5 [&_a]:no-underline [&_a:hover]:text-[var(--c-bleu-deep)] [&_a:hover]:border-b-[var(--c-bleu-deep)]"
-        aria-label="Pages de résultats"
-      >
-        {page > 1 && <a href={pageHref(page - 1)} rel="prev">← Page précédente</a>}
-        <span class="text-muted">Page {page} sur {totalPages}</span>
-        {page < totalPages && <a href={pageHref(page + 1)} rel="next">Page suivante →</a>}
-      </nav>
-    )}
+    {
+      q && totalPages > 1 && (
+        <nav
+          class="max-poche:flex-col max-poche:items-stretch max-poche:text-center [&_a]:text-ink [&_a]:border-rule mt-12 flex items-center justify-between gap-4 font-sans text-[calc(13px*var(--a11y-echelle))] [&_a]:border-b [&_a]:pb-0.5 [&_a]:no-underline [&_a:hover]:border-b-[var(--c-bleu-deep)] [&_a:hover]:text-[var(--c-bleu-deep)]"
+          aria-label="Pages de résultats"
+        >
+          {page > 1 && (
+            <a href={pageHref(page - 1)} rel="prev">
+              ← Page précédente
+            </a>
+          )}
+          <span class="text-muted">
+            Page {page} sur {totalPages}
+          </span>
+          {page < totalPages && (
+            <a href={pageHref(page + 1)} rel="next">
+              Page suivante →
+            </a>
+          )}
+        </nav>
+      )
+    }
   </div>
 </PageShell>

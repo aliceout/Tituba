@@ -52,7 +52,8 @@ const {
 const FAMILLES: Record<string, string> = {
   bleu: '[--fam:var(--c-bleu-deep)] [--fam-fill:var(--c-bleu-fill)] [--fam-on:var(--c-bleu-on)]',
   vert: '[--fam:var(--c-vert-deep)] [--fam-fill:var(--c-vert-fill)] [--fam-on:var(--c-vert-on)]',
-  jaune: '[--fam:var(--c-jaune-deep)] [--fam-fill:var(--c-jaune-fill)] [--fam-on:var(--c-jaune-on)]',
+  jaune:
+    '[--fam:var(--c-jaune-deep)] [--fam-fill:var(--c-jaune-fill)] [--fam-on:var(--c-jaune-on)]',
   violet: '[--fam:var(--c-violet-deep)] [--fam-fill:var(--c-violet)] [--fam-on:#fff]',
 };
 ---
@@ -60,21 +61,23 @@ const FAMILLES: Record<string, string> = {
 <div class:list={[FAMILLES[famille]]}>
   <label
     class:list={[
-      'font-mono text-label tracking-label text-muted mb-2.5 block uppercase',
+      'text-label tracking-label text-muted mb-2.5 block font-mono uppercase',
       !labelVisible && 'sr-only',
     ]}
     for={id}
   >
     {label}
   </label>
-  {/* Une seule pastille contenant le champ et le bouton, comme celle de
+  {
+    /* Une seule pastille contenant le champ et le bouton, comme celle de
       la bande « Nous suivre ». Le rembourrage droit est réduit pour que
       le bouton vienne se loger dans le filet sans le toucher.
 
       Sous 560 px la pastille comprimerait le champ à quelques signes :
-      les deux se séparent et s’empilent. */}
+      les deux se séparent et s’empilent. */
+  }
   <div
-    class="bg-paper focus-within:border-(--fam) flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--fam)_35%,transparent)] py-[5px] pr-[5px] pl-4 transition-colors duration-100 max-etroit:flex-col max-etroit:items-stretch max-etroit:gap-3 max-etroit:rounded-[22px] max-etroit:p-3.5"
+    class="bg-paper max-etroit:flex-col max-etroit:items-stretch max-etroit:gap-3 max-etroit:rounded-[22px] max-etroit:p-3.5 flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--fam)_35%,transparent)] py-[5px] pr-[5px] pl-4 transition-colors duration-100 focus-within:border-(--fam)"
   >
     <input
       id={id}
@@ -84,10 +87,14 @@ const FAMILLES: Record<string, string> = {
       required={required}
       autocomplete={autocomplete}
       spellcheck="false"
-      class="text-ink placeholder:text-muted min-w-0 flex-auto border-0 bg-none px-0 py-[7px] font-sans text-[calc(14px*var(--a11y-echelle))] focus:outline-none max-etroit:px-2 max-etroit:py-1"
+      class="text-ink placeholder:text-muted max-etroit:px-2 max-etroit:py-1 min-w-0 flex-auto border-0 bg-none px-0 py-[7px] font-sans text-[calc(14px*var(--a11y-echelle))] focus:outline-none"
     />
-    {action && (
-      <Button type="submit" ton="plein" famille={famille}>{action}</Button>
-    )}
+    {
+      action && (
+        <Button type="submit" ton="plein" famille={famille}>
+          {action}
+        </Button>
+      )
+    }
   </div>
 </div>

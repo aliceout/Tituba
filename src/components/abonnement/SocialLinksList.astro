@@ -12,16 +12,18 @@ const { entries } = Astro.props;
 
 <Heading>Sur les réseaux</Heading>
 <ul class="text-courant leading-body text-body m-0 mb-6 grid list-none gap-2.5 p-0 font-serif">
-  {entries.map((s) => (
-    <li>
-      <a
-        href={s.href}
-        rel="noopener"
-        class="text-ink hover:text-[var(--c-vert-deep)] border-b border-[var(--c-vert-deep)] font-medium"
-      >
-        {s.label}
-      </a>
-      <span class="text-muted text-[calc(15px*var(--a11y-echelle))]">— {s.hint}</span>
-    </li>
-  ))}
+  {
+    entries.map((s) => (
+      <li>
+        <a
+          href={s.href}
+          rel="noopener"
+          class="text-ink border-b border-[var(--c-vert-deep)] font-medium hover:text-[var(--c-vert-deep)]"
+        >
+          {s.label}
+        </a>
+        <span class="text-muted text-[calc(15px*var(--a11y-echelle))]">— {s.hint}</span>
+      </li>
+    ))
+  }
 </ul>

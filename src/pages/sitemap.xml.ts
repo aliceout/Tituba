@@ -57,7 +57,9 @@ function xml(v: unknown): string {
 
 export const GET: APIRoute = async (context) => {
   if (!context.site) {
-    throw new Error('sitemap.xml.ts : context.site est undefined — vérifier `site` dans astro.config.mjs.');
+    throw new Error(
+      'sitemap.xml.ts : context.site est undefined — vérifier `site` dans astro.config.mjs.',
+    );
   }
   const base = context.site.toString().replace(/\/$/, '');
 
@@ -160,4 +162,3 @@ export const GET: APIRoute = async (context) => {
     },
   });
 };
-

@@ -20,9 +20,13 @@ interface Props {
 const { invitees } = Astro.props;
 ---
 
-<p class="border-rule m-0 mb-[34px] flex min-h-[var(--repere-h)] flex-col items-start gap-1.5 border-b pb-[var(--repere-pad)]">
-  <span class="text-muted font-sans text-[calc(10px*var(--a11y-echelle))] font-semibold tracking-[0.12em] uppercase">
+<p
+  class="border-rule m-0 mb-[34px] flex min-h-[var(--repere-h)] flex-col items-start gap-1.5 border-b pb-[var(--repere-pad)]"
+>
+  <span
+    class="text-muted font-sans text-[calc(10px*var(--a11y-echelle))] font-semibold tracking-[0.12em] uppercase"
+  >
     Un épisode avec
   </span>
-  <span class="text-ink font-serif text-sublede">{invitees}</span>
+  <span class="text-ink text-sublede font-serif">{invitees}</span>
 </p>

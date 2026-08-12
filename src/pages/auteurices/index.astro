@@ -39,18 +39,25 @@ const sorted = authors.slice().sort((a, b) => {
   lede="Les membres du collectif qui signent les publications de Tituba."
   famille="bleu"
 >
-  {sorted.length === 0 ? (
-    <p class="text-muted py-16 text-center font-sans">Aucun·e auteur·ice pour l'instant.</p>
-  ) : (
-    <div class="grid grid-cols-2 gap-0 max-mobile:grid-cols-1">
-      {sorted.map((a) => (
-        <a class="border-rule group grid grid-cols-[1fr_100px] items-baseline gap-6 border-t py-6 text-inherit transition-colors duration-100 odd:border-r odd:pr-6 even:pl-6 max-mobile:odd:border-r-0 max-mobile:odd:pr-0 max-mobile:even:pl-0" href={`/auteurice/${a.id}/`}>
-          <div class="group-hover:text-[var(--c-bleu-deep)] m-0 font-serif text-[calc(24px*var(--a11y-echelle))] leading-[1.2] font-(--font-weight-heading) tracking-[-0.02em] transition-colors duration-100">{stripHeroMarkers(a.displayName) ?? 'Auteur·ice'}</div>
-          <div class="text-muted text-right font-sans text-[calc(14px*var(--a11y-echelle))]">
-            {a.count} publication{a.count > 1 ? 's' : ''}
-          </div>
-        </a>
-      ))}
-    </div>
-  )}
+  {
+    sorted.length === 0 ? (
+      <p class="text-muted py-16 text-center font-sans">Aucun·e auteur·ice pour l'instant.</p>
+    ) : (
+      <div class="max-mobile:grid-cols-1 grid grid-cols-2 gap-0">
+        {sorted.map((a) => (
+          <a
+            class="border-rule group max-mobile:odd:border-r-0 max-mobile:odd:pr-0 max-mobile:even:pl-0 grid grid-cols-[1fr_100px] items-baseline gap-6 border-t py-6 text-inherit transition-colors duration-100 odd:border-r odd:pr-6 even:pl-6"
+            href={`/auteurice/${a.id}/`}
+          >
+            <div class="m-0 font-serif text-[calc(24px*var(--a11y-echelle))] leading-[1.2] font-(--font-weight-heading) tracking-[-0.02em] transition-colors duration-100 group-hover:text-[var(--c-bleu-deep)]">
+              {stripHeroMarkers(a.displayName) ?? 'Auteur·ice'}
+            </div>
+            <div class="text-muted text-right font-sans text-[calc(14px*var(--a11y-echelle))]">
+              {a.count} publication{a.count > 1 ? 's' : ''}
+            </div>
+          </a>
+        ))}
+      </div>
+    )
+  }
 </PageShell>

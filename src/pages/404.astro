@@ -31,43 +31,58 @@ const BOUTON_ACCENT =
   description="Cette page n'existe pas — ou plus."
   noindex={true}
 >
-  {/* Largeur canonique des pages éditoriales : 1080 px de cadre, 80 px
-      de retrait, donc 920 px utiles — la largeur du corps des billets. */}
-  <section class="mx-auto max-w-[1080px] px-20 pt-20 pb-16 max-mobile:px-6 max-mobile:pt-16 max-mobile:pb-12">
-    <div class="mono text-accent mb-3.5 font-mono text-meta tracking-[0.04em]">
+  {
+    /* Largeur canonique des pages éditoriales : 1080 px de cadre, 80 px
+      de retrait, donc 920 px utiles — la largeur du corps des billets. */
+  }
+  <section
+    class="max-mobile:px-6 max-mobile:pt-16 max-mobile:pb-12 mx-auto max-w-[1080px] px-20 pt-20 pb-16"
+  >
+    <div class="mono text-accent text-meta mb-3.5 font-mono tracking-[0.04em]">
       Page introuvable · err/404
     </div>
-    <h1 class="m-0 mb-5 text-[calc(48px*var(--a11y-echelle))] leading-[1.08] font-semibold tracking-[-0.5px] max-mobile:text-[calc(32px*var(--a11y-echelle))] [&_em]:text-accent [&_em]:font-medium [&_em]:italic">
+    <h1
+      class="max-mobile:text-[calc(32px*var(--a11y-echelle))] [&_em]:text-accent m-0 mb-5 text-[calc(48px*var(--a11y-echelle))] leading-[1.08] font-semibold tracking-[-0.5px] [&_em]:font-medium [&_em]:italic"
+    >
       La 404 <em>peut-elle parler</em>&nbsp;?
     </h1>
-    <p class="text-muted m-0 mb-9 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55]">
-      Cette page n&apos;existe pas (ou plus). Le lien que vous avez suivi est
-      probablement cassé, ou l&apos;URL a été mal saisie. Ce qui suit est une
-      tentative de consolation théorique — si vous êtes pressé·e, le bouton
-      « Retour à l&apos;accueil » plus bas fait très bien l&apos;affaire.
+    <p
+      class="text-muted m-0 mb-9 font-serif text-[calc(19px*var(--a11y-echelle))] leading-[1.55]"
+    >
+      Cette page n&apos;existe pas (ou plus). Le lien que vous avez suivi est probablement
+      cassé, ou l&apos;URL a été mal saisie. Ce qui suit est une tentative de consolation
+      théorique — si vous êtes pressé·e, le bouton « Retour à l&apos;accueil » plus bas fait
+      très bien l&apos;affaire.
     </p>
 
     {/* Citation italique, note de marge cursive. */}
     <div class="m-0 mb-7 max-w-[820px]">
-      <p class="text-ink m-0 font-serif text-[calc(22px*var(--a11y-echelle))] leading-[1.45] italic [&_em]:text-accent [&_em]:font-medium">
-        « On l&apos;a indexée, citée en passant, mentionnée dans un futur
-        conditionnel ; mais on ne lui a jamais donné <em>la place
-        d&apos;énonciation</em> qu&apos;elle aurait pu occuper. »
+      <p
+        class="text-ink [&_em]:text-accent m-0 font-serif text-[calc(22px*var(--a11y-echelle))] leading-[1.45] italic [&_em]:font-medium"
+      >
+        « On l&apos;a indexée, citée en passant, mentionnée dans un futur conditionnel ; mais
+        on ne lui a jamais donné <em>la place d&apos;énonciation</em> qu&apos;elle aurait pu occuper.
+        »
       </p>
-      {/* Caveat n’est pas embarquée dans le projet — repli sur la
-          cursive du système. */}
-      <span class="text-accent mt-[18px] block rotate-[-1deg] font-[Caveat,'Bradley_Hand','Brush_Script_MT',cursive] text-[calc(22px*var(--a11y-echelle))] before:font-serif before:content-['↳_']">
+      {
+        /* Caveat n’est pas embarquée dans le projet — repli sur la
+          cursive du système. */
+      }
+      <span
+        class="text-accent mt-[18px] block rotate-[-1deg] font-[Caveat,'Bradley_Hand','Brush_Script_MT',cursive] text-[calc(22px*var(--a11y-echelle))] before:font-serif before:content-['↳_']"
+      >
         note de marge : la 404 hoche la tête, polie.
       </span>
     </div>
 
     <div class="[&_em]:text-accent [&_em]:italic">
-      <p class="text-body m-0 mb-7 max-w-[820px] font-serif text-[calc(18px*var(--a11y-echelle))] leading-[1.65] hyphens-auto text-justify">
-        Said nous rappellerait qu&apos;on l&apos;a <em>orientalisée</em> avant
-        même qu&apos;elle existe — projection d&apos;un billet rêvé, jamais
-        écrit. Spivak, elle, suggérerait de ne pas se précipiter pour parler à
-        sa place : revenez plus tard, quand Tituba aura cessé de la
-        représenter pour qu&apos;elle puisse, peut-être, s&apos;écrire.
+      <p
+        class="text-body m-0 mb-7 max-w-[820px] text-justify font-serif text-[calc(18px*var(--a11y-echelle))] leading-[1.65] hyphens-auto"
+      >
+        Said nous rappellerait qu&apos;on l&apos;a <em>orientalisée</em> avant même qu&apos;elle
+        existe — projection d&apos;un billet rêvé, jamais écrit. Spivak, elle, suggérerait de ne
+        pas se précipiter pour parler à sa place : revenez plus tard, quand Tituba aura cessé de
+        la représenter pour qu&apos;elle puisse, peut-être, s&apos;écrire.
       </p>
     </div>
 

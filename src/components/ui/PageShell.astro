@@ -47,23 +47,29 @@ const { documentTitle, description, noindex, bodyClass, title, lede, famille, ta
   noindex={noindex}
   bodyClass={bodyClass}
 >
-  {/* Relais du slot `head` de Layout : une page passant par PageShell
+  {
+    /* Relais du slot `head` de Layout : une page passant par PageShell
       n'avait aucun moyen d'ajouter une balise dans le <head>, alors
       que Layout le permet. C'est par là que passe la découverte d'un
-      flux propre à la page (<link rel="alternate">). */}
+      flux propre à la page (<link rel="alternate">). */
+  }
   <Fragment slot="head">
     <slot name="head" />
   </Fragment>
 
   <PageTitle title={title} lede={lede} famille={famille} taille={taille}>
-    {/* Contenu propre au pied du hero — compteur + lien retour d'une
+    {
+      /* Contenu propre au pied du hero — compteur + lien retour d'une
         page de thème ou de tag, par exemple. Rendu dans le slot par
-        défaut de PageTitle, donc juste sous le chapô. */}
+        défaut de PageTitle, donc juste sous le chapô. */
+    }
     <slot name="titre-pied" />
   </PageTitle>
 
-  {/* Slot nommé pour ce qui doit s'insérer entre le titre et le corps —
-      une barre de filtres, par exemple. */}
+  {
+    /* Slot nommé pour ce qui doit s'insérer entre le titre et le corps —
+      une barre de filtres, par exemple. */
+  }
   <slot name="sous-titre" />
 
   <section class="page-body">

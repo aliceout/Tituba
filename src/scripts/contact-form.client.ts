@@ -97,7 +97,9 @@ document.addEventListener('astro:page-load', function () {
       if (statut) statut.textContent = 'Merci de remplir les champs obligatoires.';
       return;
     }
-    form.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
+    form
+      .querySelectorAll('[aria-invalid]')
+      .forEach((el) => el.removeAttribute('aria-invalid'));
 
     if (bouton) bouton.disabled = true;
     lancer();
@@ -168,7 +170,8 @@ document.addEventListener('astro:page-load', function () {
         'Le formulaire n’est pas encore configuré de notre côté. Réessayez plus tard.',
     };
     return (
-      (code && table[code]) || 'Le message n’a pas pu être envoyé. Réessayez dans quelques minutes.'
+      (code && table[code]) ||
+      'Le message n’a pas pu être envoyé. Réessayez dans quelques minutes.'
     );
   }
 });

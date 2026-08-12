@@ -94,13 +94,17 @@ document.addEventListener('astro:page-load', () => {
     },
     { signal: ac.signal },
   );
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    const openMenu = menus.find((m) => btnOf(m)?.getAttribute('aria-expanded') === 'true');
-    if (!openMenu) return;
-    close(openMenu);
-    // On rend le focus au bouton : sans ça, Échap laisse le focus dans
-    // le vide et la navigation clavier repart du début du document.
-    btnOf(openMenu)?.focus();
-  }, { signal: ac.signal });
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key !== 'Escape') return;
+      const openMenu = menus.find((m) => btnOf(m)?.getAttribute('aria-expanded') === 'true');
+      if (!openMenu) return;
+      close(openMenu);
+      // On rend le focus au bouton : sans ça, Échap laisse le focus dans
+      // le vide et la navigation clavier repart du début du document.
+      btnOf(openMenu)?.focus();
+    },
+    { signal: ac.signal },
+  );
 });

@@ -10,9 +10,7 @@ import tailwindcss from '@tailwindcss/vite';
 // reçoive une URL valide (le validateur explose sinon avec « Invalid
 // URL »).
 const RAW_ADDRESS = process.env.ADDRESS ?? 'https://tituba.example.com';
-const ADDRESS = /^https?:\/\//.test(RAW_ADDRESS)
-  ? RAW_ADDRESS
-  : `https://${RAW_ADDRESS}`;
+const ADDRESS = /^https?:\/\//.test(RAW_ADDRESS) ? RAW_ADDRESS : `https://${RAW_ADDRESS}`;
 
 export default defineConfig({
   site: ADDRESS,

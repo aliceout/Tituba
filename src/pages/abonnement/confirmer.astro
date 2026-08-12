@@ -25,10 +25,9 @@ let confirmedEmail: string | null = null;
 
 if (token) {
   try {
-    const { status, body } = await postPayload<ConfirmResponse>(
-      '/subscribers/confirm',
-      { token },
-    );
+    const { status, body } = await postPayload<ConfirmResponse>('/subscribers/confirm', {
+      token,
+    });
     if (status === 200 && body.ok) {
       state = 'success';
       confirmedEmail = body.email ?? null;
@@ -55,44 +54,54 @@ const title = TITLES[state];
 <Layout title={title} noindex={true}>
   <PageTitle title={title} />
 
-  <section class="mx-auto max-w-[1080px] px-20 pt-10 pb-16 max-mobile:px-6 max-mobile:pt-8 max-mobile:pb-12">
-    {state === 'success' && (
-      <Message>
-        Merci ! L'adresse {confirmedEmail && <strong>{confirmedEmail}</strong>}
-        est désormais inscrite aux alertes mail. Vous recevrez un mail à
-        chaque nouveau billet publié.
-        <Fragment slot="suite">
-          Chaque mail contiendra un lien pour vous désabonner en un clic.
-        </Fragment>
-      </Message>
-    )}
-    {state === 'invalid' && (
-      <Message>
-        Ce lien n'est pas valide. Il a peut-être déjà été utilisé, ou
-        l'inscription correspondante a été annulée.
-        <Fragment slot="suite">
-          Vous pouvez réessayer depuis la <a href="/abonnement/">page d'abonnement</a>.
-        </Fragment>
-      </Message>
-    )}
-    {state === 'expired' && (
-      <Message>
-        Ce lien a expiré (validité de 7 jours).
-        <Fragment slot="suite">
-          Vous pouvez recommencer depuis la <a href="/abonnement/">page d'abonnement</a> —
-          un nouveau mail vous sera envoyé.
-        </Fragment>
-      </Message>
-    )}
-    {state === 'missing' && (
-      <Message>
-        L'URL est incomplète : le paramètre <code>token</code> manque.
-        <Fragment slot="suite">
-          Si vous avez cliqué un lien depuis un mail, copiez l'URL complète
-          dans votre navigateur. Sinon, recommencez depuis la
-          <a href="/abonnement/">page d'abonnement</a>.
-        </Fragment>
-      </Message>
-    )}
+  <section
+    class="max-mobile:px-6 max-mobile:pt-8 max-mobile:pb-12 mx-auto max-w-[1080px] px-20 pt-10 pb-16"
+  >
+    {
+      state === 'success' && (
+        <Message>
+          Merci ! L'adresse {confirmedEmail && <strong>{confirmedEmail}</strong>}
+          est désormais inscrite aux alertes mail. Vous recevrez un mail à chaque nouveau
+          billet publié.
+          <Fragment slot="suite">
+            Chaque mail contiendra un lien pour vous désabonner en un clic.
+          </Fragment>
+        </Message>
+      )
+    }
+    {
+      state === 'invalid' && (
+        <Message>
+          Ce lien n'est pas valide. Il a peut-être déjà été utilisé, ou l'inscription
+          correspondante a été annulée.
+          <Fragment slot="suite">
+            Vous pouvez réessayer depuis la <a href="/abonnement/">page d'abonnement</a>.
+          </Fragment>
+        </Message>
+      )
+    }
+    {
+      state === 'expired' && (
+        <Message>
+          Ce lien a expiré (validité de 7 jours).
+          <Fragment slot="suite">
+            Vous pouvez recommencer depuis la <a href="/abonnement/">page d'abonnement</a> — un
+            nouveau mail vous sera envoyé.
+          </Fragment>
+        </Message>
+      )
+    }
+    {
+      state === 'missing' && (
+        <Message>
+          L'URL est incomplète : le paramètre <code>token</code> manque.
+          <Fragment slot="suite">
+            Si vous avez cliqué un lien depuis un mail, copiez l'URL complète dans votre
+            navigateur. Sinon, recommencez depuis la
+            <a href="/abonnement/">page d'abonnement</a>.
+          </Fragment>
+        </Message>
+      )
+    }
   </section>
 </Layout>

@@ -24,10 +24,10 @@ let unsubEmail: string | null = null;
 
 if (id && sig) {
   try {
-    const { status, body } = await postPayload<UnsubResponse>(
-      '/subscribers/unsubscribe',
-      { id, sig },
-    );
+    const { status, body } = await postPayload<UnsubResponse>('/subscribers/unsubscribe', {
+      id,
+      sig,
+    });
     if (status === 200 && body.ok) {
       state = 'success';
       unsubEmail = body.email ?? null;
@@ -51,37 +51,45 @@ const title = TITLES[state];
 <Layout title={title} noindex={true}>
   <PageTitle title={title} />
 
-  <section class="mx-auto max-w-[1080px] px-20 pt-10 pb-16 max-mobile:px-6 max-mobile:pt-8 max-mobile:pb-12">
-    {state === 'success' && (
-      <Message>
-        C'est fait. L'adresse {unsubEmail && <strong>{unsubEmail}</strong>}
-        ne recevra plus d'alertes mail.
-        <Fragment slot="suite">
-          Vous pouvez vous réinscrire à tout moment depuis la
-          <a href="/abonnement/">page d'abonnement</a>.
-        </Fragment>
-      </Message>
-    )}
-    {state === 'invalid' && (
-      <Message>
-        Ce lien de désabonnement n'est pas valide.
-        <Fragment slot="suite">
-          Si vous voulez vous désabonner, ouvrez le dernier mail
-          d'alerte reçu et cliquez sur le lien « se désabonner » qui s'y
-          trouve. Si ce n'est pas possible, écrivez à l'autrice depuis la
-          <a href="/abonnement/">page d'abonnement</a>.
-        </Fragment>
-      </Message>
-    )}
-    {state === 'missing' && (
-      <Message>
-        L'URL est incomplète : les paramètres <code>id</code> et
-        <code>sig</code> manquent.
-        <Fragment slot="suite">
-          Si vous avez cliqué un lien depuis un mail, copiez l'URL complète
-          dans votre navigateur.
-        </Fragment>
-      </Message>
-    )}
+  <section
+    class="max-mobile:px-6 max-mobile:pt-8 max-mobile:pb-12 mx-auto max-w-[1080px] px-20 pt-10 pb-16"
+  >
+    {
+      state === 'success' && (
+        <Message>
+          C'est fait. L'adresse {unsubEmail && <strong>{unsubEmail}</strong>}
+          ne recevra plus d'alertes mail.
+          <Fragment slot="suite">
+            Vous pouvez vous réinscrire à tout moment depuis la
+            <a href="/abonnement/">page d'abonnement</a>.
+          </Fragment>
+        </Message>
+      )
+    }
+    {
+      state === 'invalid' && (
+        <Message>
+          Ce lien de désabonnement n'est pas valide.
+          <Fragment slot="suite">
+            Si vous voulez vous désabonner, ouvrez le dernier mail d'alerte reçu et cliquez sur
+            le lien « se désabonner » qui s'y trouve. Si ce n'est pas possible, écrivez à
+            l'autrice depuis la
+            <a href="/abonnement/">page d'abonnement</a>.
+          </Fragment>
+        </Message>
+      )
+    }
+    {
+      state === 'missing' && (
+        <Message>
+          L'URL est incomplète : les paramètres <code>id</code> et
+          <code>sig</code> manquent.
+          <Fragment slot="suite">
+            Si vous avez cliqué un lien depuis un mail, copiez l'URL complète dans votre
+            navigateur.
+          </Fragment>
+        </Message>
+      )
+    }
   </section>
 </Layout>

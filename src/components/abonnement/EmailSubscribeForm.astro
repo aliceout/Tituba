@@ -26,30 +26,37 @@ const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-pan
 
 <Heading>Par mail</Heading>
 <Lede>
-  Deux rythmes, au choix — ou les deux. Désabonnement en un clic depuis
-  chaque envoi.
+  Deux rythmes, au choix — ou les deux. Désabonnement en un clic depuis chaque envoi.
 </Lede>
 
-{/* Pleine largeur, comme le panneau du flux RSS juste en dessous. Une
+{
+  /* Pleine largeur, comme le panneau du flux RSS juste en dessous. Une
     largeur de lecture avait été écrite ici — 560 px — mais elle n’avait
     jamais pris effet, faute de `:global()` sur une classe passée en prop.
     Rendue active à la migration, elle donnait un panneau étroit posé
     au-dessus d’un panneau large : deux blocs de même nature qui ne
-    s’alignent plus. */}
+    s’alignent plus. */
+}
 <Panel famille="vert" padding="serre" class="mb-9">
-  {/* `method` et `action` ne sont pas décoratifs : sans eux, un
+  {
+    /* `method` et `action` ne sont pas décoratifs : sans eux, un
       navigateur sans JavaScript soumet en GET sur l’URL courante, et
       l’adresse saisie part dans la barre d’adresse, l’historique et les
       journaux du serveur. Avec eux, elle voyage dans le corps de la
-      requête, et le frontmatter de la page traite l’envoi. */}
+      requête, et le frontmatter de la page traite l’envoi. */
+  }
   <form class="subscribe-form" method="post" action="/abonnement/" novalidate>
     <fieldset class="m-0 mb-[18px] border-0 p-0">
-      <legend class="mb-3 p-0 font-mono text-label tracking-label text-[var(--c-vert-deep)] uppercase">
+      <legend
+        class="text-label tracking-label mb-3 p-0 font-mono text-[var(--c-vert-deep)] uppercase"
+      >
         Ce que vous voulez recevoir
       </legend>
       <label class={CHOIX}>
-        {/* Le bouton radio prend la couleur de famille plutôt que le bleu
-            du système, qui serait la seule note étrangère du panneau. */}
+        {
+          /* Le bouton radio prend la couleur de famille plutôt que le bleu
+            du système, qui serait la seule note étrangère du panneau. */
+        }
         <input type="radio" name="kind" value="newsletter" class={RADIO} checked />
         <span class={QUOI}>La lettre</span>
         <span class={QUAND}>une fois par trimestre</span>
@@ -72,11 +79,13 @@ const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-pan
       action="S'abonner"
       famille="vert"
     />
-    {/* Résultat d’une soumission native ; le script le remplace au vol
+    {
+      /* Résultat d’une soumission native ; le script le remplace au vol
         quand JavaScript est disponible. Le ton passe par un attribut et
         non par une classe : Tailwind ne génère que les classes qu’il lit
         dans les sources, et le script écrasait de toute façon l’attribut
-        class entier à chaque message. */}
+        class entier à chaque message. */
+    }
     <p
       class="text-muted mt-3 mb-0 min-h-[1.5em] font-sans text-[calc(13px*var(--a11y-echelle))] leading-[1.5] data-[ton=err]:text-[#b63a3a] data-[ton=ok]:text-[var(--c-vert-deep)]"
       data-status
@@ -144,18 +153,24 @@ const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-pan
             setStatus(
               "C'est noté. Un mail de confirmation vient de partir vers " +
                 email +
-                ' — cliquez sur le lien qui s\'y trouve pour finaliser l\'inscription.',
+                " — cliquez sur le lien qui s'y trouve pour finaliser l'inscription.",
               'ok',
             );
             input.value = '';
           } else if (res.status === 429) {
-            setStatus('Trop de tentatives sur cet appareil. Réessayez dans quelques minutes.', 'err');
+            setStatus(
+              'Trop de tentatives sur cet appareil. Réessayez dans quelques minutes.',
+              'err',
+            );
           } else if (body.code === 'invalid_email') {
             setStatus('Adresse mail invalide.', 'err');
           } else if (body.code === 'disabled') {
-            setStatus("Les alertes mail sont temporairement désactivées. Réessayez plus tard.", 'err');
+            setStatus(
+              'Les alertes mail sont temporairement désactivées. Réessayez plus tard.',
+              'err',
+            );
           } else {
-            setStatus("Une erreur est survenue. Réessayez plus tard.", 'err');
+            setStatus('Une erreur est survenue. Réessayez plus tard.', 'err');
           }
         } catch (err) {
           console.warn('subscribe:', err);

@@ -98,7 +98,15 @@ export const GET: APIRoute = async (context) => {
       // `audio` doit figurer ici pour être peuplé, même avec depth > 0
       // (cf fetchCollection). Sans lui, plus d'enclosure, donc plus de
       // flux valide — et l'échec serait silencieux.
-      select: ['publicId', 'title', 'lede', 'publishedAt', 'durationSeconds', 'audio', 'draft'],
+      select: [
+        'publicId',
+        'title',
+        'lede',
+        'publishedAt',
+        'durationSeconds',
+        'audio',
+        'draft',
+      ],
     });
 
     const auteur = authorName || siteName;
@@ -118,7 +126,11 @@ export const GET: APIRoute = async (context) => {
       // lisible sur le site, il n'est simplement pas diffusé.
       .filter((e) => typeof e.audio === 'object' && e.audio && e.audio.filename)
       .map((e) => {
-        const audio = e.audio as { filename?: string; filesize?: number | null; mimeType?: string | null };
+        const audio = e.audio as {
+          filename?: string;
+          filesize?: number | null;
+          mimeType?: string | null;
+        };
         const url = audioFileUrl(audio.filename);
         const duree = chrono(e.durationSeconds);
         const lien = `${base}${publicationHref('podcasts', e.publicId)}`;

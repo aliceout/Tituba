@@ -49,9 +49,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     });
   } catch (err) {
     console.warn('[api/subscribe] proxy failed:', (err as Error).message);
-    return new Response(
-      JSON.stringify({ ok: false, code: 'proxy_error' }),
-      { status: 502, headers: { 'Content-Type': 'application/json' } },
-    );
+    return new Response(JSON.stringify({ ok: false, code: 'proxy_error' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 };

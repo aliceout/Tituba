@@ -14,9 +14,7 @@ export type BibAuthor = {
 };
 
 export function formatAuthorsShort(authors: BibAuthor[] | null | undefined): string {
-  const list = (authors ?? []).filter(
-    (a) => a?.role === 'author' || a?.role === undefined,
-  );
+  const list = (authors ?? []).filter((a) => a?.role === 'author' || a?.role === undefined);
   const names = list.map((a) => (a.lastName ?? '').trim()).filter(Boolean);
   if (names.length === 0) return '';
   if (names.length === 1) return names[0];
@@ -74,9 +72,7 @@ export function formatTranslators(authors: BibAuthor[] | null | undefined): stri
 }
 
 export function getFirstAuthorLastName(authors: BibAuthor[] | null | undefined): string {
-  const list = (authors ?? []).filter(
-    (a) => a?.role === 'author' || a?.role === undefined,
-  );
+  const list = (authors ?? []).filter((a) => a?.role === 'author' || a?.role === undefined);
   if (list.length === 0) return '';
   return (list[0].lastName ?? '').trim();
 }

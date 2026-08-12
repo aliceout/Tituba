@@ -10,11 +10,7 @@
  */
 import PageShell from '../../components/ui/PageShell.astro';
 import Empty from '../../components/ui/Empty.astro';
-import {
-  fetchCollection,
-  fetchIndexPages,
-    fetchPublicationCounts,
-} from '../../lib/payload';
+import { fetchCollection, fetchIndexPages, fetchPublicationCounts } from '../../lib/payload';
 import { formatHeroLede, formatHeroTitle } from '../../lib/site';
 
 type Theme = {
@@ -69,12 +65,8 @@ const sorted = themes.slice().sort((a, b) => {
   return a.name.localeCompare(b.name, 'fr');
 });
 
-const heroTitleHtml = formatHeroTitle(
-  indexPages.themes?.heroTitle?.trim() || DEFAULT_TITLE,
-);
-const heroLedeHtml = formatHeroLede(
-  indexPages.themes?.heroLede?.trim() || DEFAULT_LEDE,
-);
+const heroTitleHtml = formatHeroTitle(indexPages.themes?.heroTitle?.trim() || DEFAULT_TITLE);
+const heroLedeHtml = formatHeroLede(indexPages.themes?.heroLede?.trim() || DEFAULT_LEDE);
 ---
 
 <PageShell
@@ -85,47 +77,49 @@ const heroLedeHtml = formatHeroLede(
   famille="violet"
 >
   {/* Gouttière et rythme vertical viennent de PageShell. */}
-  {sorted.length === 0 ? (
-    <Empty>Aucun thème pour l'instant.</Empty>
-  ) : (
-    <div class="grid grid-cols-2 gap-0 max-mobile:grid-cols-1">
-      {sorted.map((t, rang) => {
-        const count = counts.get(t.slug) ?? 0;
-        // Colonne de gauche ou de droite : c’était deux règles
-        // :nth-child(odd/even), c’est le rang de la boucle. Le filet
-        // vertical n’existe que tant qu’il y a deux colonnes.
-        const gauche = rang % 2 === 0;
-        return (
-          <a
-            class:list={[
-              'group border-rule text-inherit grid grid-cols-[1fr_100px] items-baseline gap-6 border-t py-6 transition-colors duration-[120ms]',
-              gauche
-                ? 'border-rule border-r pr-6 max-mobile:border-r-0 max-mobile:pr-0'
-                : 'pl-6 max-mobile:pl-0',
-            ]}
-            href={`/theme/${t.slug}/`}
-          >
-            <div>
-              <div class="mono mb-2 font-mono text-label tracking-[0.04em] text-[var(--c-violet-deep)]">
-                #{t.slug}
-              </div>
-              {/* Violet : la famille de cette taxonomie, cohérente avec le
+  {
+    sorted.length === 0 ? (
+      <Empty>Aucun thème pour l'instant.</Empty>
+    ) : (
+      <div class="max-mobile:grid-cols-1 grid grid-cols-2 gap-0">
+        {sorted.map((t, rang) => {
+          const count = counts.get(t.slug) ?? 0;
+          // Colonne de gauche ou de droite : c’était deux règles
+          // :nth-child(odd/even), c’est le rang de la boucle. Le filet
+          // vertical n’existe que tant qu’il y a deux colonnes.
+          const gauche = rang % 2 === 0;
+          return (
+            <a
+              class:list={[
+                'group border-rule grid grid-cols-[1fr_100px] items-baseline gap-6 border-t py-6 text-inherit transition-colors duration-[120ms]',
+                gauche
+                  ? 'border-rule max-mobile:border-r-0 max-mobile:pr-0 border-r pr-6'
+                  : 'max-mobile:pl-0 pl-6',
+              ]}
+              href={`/theme/${t.slug}/`}
+            >
+              <div>
+                <div class="mono text-label mb-2 font-mono tracking-[0.04em] text-[var(--c-violet-deep)]">
+                  #{t.slug}
+                </div>
+                {/* Violet : la famille de cette taxonomie, cohérente avec le
                   panneau « Au sommaire » de l’accueil qui la porte déjà. */}
-              <div class="m-0 mb-2 font-serif text-[calc(24px*var(--a11y-echelle))] leading-[1.2] font-heading tracking-[-0.02em] transition-colors duration-[120ms] group-hover:text-[var(--c-violet-deep)]">
-                {t.name}
+                <div class="font-heading m-0 mb-2 font-serif text-[calc(24px*var(--a11y-echelle))] leading-[1.2] tracking-[-0.02em] transition-colors duration-[120ms] group-hover:text-[var(--c-violet-deep)]">
+                  {t.name}
+                </div>
+                {t.description && (
+                  <p class="text-muted m-0 font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]">
+                    {t.description}
+                  </p>
+                )}
               </div>
-              {t.description && (
-                <p class="text-muted m-0 font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]">
-                  {t.description}
-                </p>
-              )}
-            </div>
-            <div class="text-muted text-right font-sans text-[calc(14px*var(--a11y-echelle))]">
-              {count} publication{count > 1 ? 's' : ''}
-            </div>
-          </a>
-        );
-      })}
-    </div>
-  )}
+              <div class="text-muted text-right font-sans text-[calc(14px*var(--a11y-echelle))]">
+                {count} publication{count > 1 ? 's' : ''}
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    )
+  }
 </PageShell>

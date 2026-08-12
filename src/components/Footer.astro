@@ -140,71 +140,90 @@ const INTITULE =
 const COLONNE_LIENS =
   'grid gap-1.5 [&_a]:text-ink [&_a]:transition-colors [&_a]:duration-[120ms] [&_a:hover]:text-[var(--c-bleu-deep)]';
 
-const BASELINE = 'text-muted m-0 max-w-[460px] font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]';
+const BASELINE =
+  'text-muted m-0 max-w-[460px] font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]';
 const MENTION = 'mono text-muted text-label';
 ---
 
 <footer class="bg-bg border-rule mt-(--block-gap) border-t pt-16 pb-14">
-  <div class="mx-auto max-w-(--page-max) px-(--page-gutter) max-mobile:px-(--page-gutter-narrow)">
-    {/* La signature garde deux parts, les trois colonnes de liens une
+  <div
+    class="max-mobile:px-(--page-gutter-narrow) mx-auto max-w-(--page-max) px-(--page-gutter)"
+  >
+    {
+      /* La signature garde deux parts, les trois colonnes de liens une
         chacune. Passer de deux à trois colonnes de liens sans élargir la
         première l’aurait écrasée : la baseline s’y hachait en lignes de
-        quatre mots. */}
-    <div class="text-ink grid grid-cols-[2fr_1fr_1fr_1fr] gap-x-10 gap-y-14 font-sans text-[calc(13px*var(--a11y-echelle))] max-mobile:grid-cols-[1fr] max-mobile:gap-8">
+        quatre mots. */
+    }
+    <div
+      class="text-ink max-mobile:grid-cols-[1fr] max-mobile:gap-8 grid grid-cols-[2fr_1fr_1fr_1fr] gap-x-10 gap-y-14 font-sans text-[calc(13px*var(--a11y-echelle))]"
+    >
       <div>
-        {/* Même graphie que le wordmark du header : italique bas de casse
+        {
+          /* Même graphie que le wordmark du header : italique bas de casse
             en graisse 400, point droit en jaune profond. Le pied affichait
             jusqu’ici un « Tituba. » capitale droite demi-gras — deux
-            graphies du même nom sur une seule page. */}
-        <div class="mb-2.5 font-serif text-[calc(22px*var(--a11y-echelle))] font-normal tracking-[-0.01em] lowercase italic">
+            graphies du même nom sur une seule page. */
+        }
+        <div
+          class="mb-2.5 font-serif text-[calc(22px*var(--a11y-echelle))] font-normal tracking-[-0.01em] lowercase italic"
+        >
           {siteName}<span class="text-[var(--c-jaune-deep)] not-italic">.</span>
         </div>
-        {/* Les deux lignes de baseline se serrent l’une contre l’autre :
+        {
+          /* Les deux lignes de baseline se serrent l’une contre l’autre :
             elles forment un seul bloc de sens malgré les deux
-            paragraphes. */}
-        {baselineLignes.map((l, rang) => (
-          <p class:list={[BASELINE, rang > 0 && 'mt-1']}>{l}</p>
-        ))}
+            paragraphes. */
+        }
+        {
+          baselineLignes.map((l, rang) => (
+            <p class:list={[BASELINE, rang > 0 && 'mt-1']}>{l}</p>
+          ))
+        }
         <div class={MENTION + ' mt-6'}>{copyrightLine}</div>
         <div class={MENTION + ' mt-1'}>Version : {gitTag}</div>
       </div>
       <div>
         <h4 class={INTITULE}>Formats</h4>
         <div class={COLONNE_LIENS}>
-          {formatLinks.map((link) => (
-            <a href={link.href}>{link.label}</a>
-          ))}
+          {formatLinks.map((link) => <a href={link.href}>{link.label}</a>)}
         </div>
       </div>
       <div>
         <h4 class={INTITULE}>Naviguer</h4>
         <div class={COLONNE_LIENS}>
-          {navFooter.map((link) => (
-            <a href={link.href} rel={link.external ? 'noopener' : undefined}>
-              {link.label}
-            </a>
-          ))}
-        </div>
-      </div>
-      {/* L’envers du site plutôt que son contenu. La colonne disparaît si
-          elle est vide — un titre seul ne vaut pas d’occuper un quart du
-          pied. */}
-      {navCoulisses.length > 0 && (
-        <div>
-          <h4 class={INTITULE}>Coulisses</h4>
-          <div class={COLONNE_LIENS}>
-            {navCoulisses.map((link) => (
-              <a
-                href={link.href}
-                rel={link.external ? 'noopener' : undefined}
-                target={link.external ? '_blank' : undefined}
-              >
+          {
+            navFooter.map((link) => (
+              <a href={link.href} rel={link.external ? 'noopener' : undefined}>
                 {link.label}
               </a>
-            ))}
-          </div>
+            ))
+          }
         </div>
-      )}
+      </div>
+      {
+        /* L’envers du site plutôt que son contenu. La colonne disparaît si
+          elle est vide — un titre seul ne vaut pas d’occuper un quart du
+          pied. */
+      }
+      {
+        navCoulisses.length > 0 && (
+          <div>
+            <h4 class={INTITULE}>Coulisses</h4>
+            <div class={COLONNE_LIENS}>
+              {navCoulisses.map((link) => (
+                <a
+                  href={link.href}
+                  rel={link.external ? 'noopener' : undefined}
+                  target={link.external ? '_blank' : undefined}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        )
+      }
     </div>
   </div>
 </footer>

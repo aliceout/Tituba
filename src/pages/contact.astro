@@ -43,7 +43,13 @@ import { formatHeroTitle } from '../lib/site';
 // Cf. le commentaire d'en-tête : condition de fonctionnement.
 Astro.response.headers.set('Cache-Control', 'private, no-store');
 
-type ReponseDefi = { ok?: boolean; jeton?: string; sel?: string; cible?: string; max?: number };
+type ReponseDefi = {
+  ok?: boolean;
+  jeton?: string;
+  sel?: string;
+  cible?: string;
+  max?: number;
+};
 type ReponseEnvoi = { ok?: boolean; code?: string; mode?: 'direct' | 'confirmation' };
 
 /**
@@ -185,7 +191,6 @@ const BANDEAU =
   'text-ink m-0 mb-6 border-l-[3px] px-[18px] py-3.5 font-serif text-sublede leading-[1.55]';
 const BANDEAU_OK = `${BANDEAU} border-[var(--c-vert)] bg-[var(--c-vert-tint)]`;
 const BANDEAU_ERREUR = `${BANDEAU} border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3a_8%,var(--color-bg))]`;
-
 ---
 
 <PageShell
@@ -196,57 +201,76 @@ const BANDEAU_ERREUR = `${BANDEAU} border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3
   famille="vert"
 >
   <div class="max-w-[46rem]">
-    {envoye === 'direct' && (
-      <p class={BANDEAU_OK} role="status">
-        <strong>Message envoyé.</strong> Nous vous répondrons à l’adresse indiquée. Merci d’avoir
-        pris le temps de nous écrire.
-      </p>
-    )}
+    {
+      envoye === 'direct' && (
+        <p class={BANDEAU_OK} role="status">
+          <strong>Message envoyé.</strong> Nous vous répondrons à l’adresse indiquée. Merci
+          d’avoir pris le temps de nous écrire.
+        </p>
+      )
+    }
 
-    {/* Sans JavaScript, le message attend une confirmation. Le dire
+    {
+      /* Sans JavaScript, le message attend une confirmation. Le dire
         franchement plutôt que d'annoncer un envoi qui n'a pas eu lieu :
         quelqu'un qui croit son message parti n'ira pas ouvrir le mail,
-        et il se perdra. */}
-    {envoye === 'confirmation' && (
-      <p class={BANDEAU_OK} role="status">
-        <strong>Une dernière étape.</strong> Nous venons de vous envoyer un mail : ouvrez-le et
-        cliquez sur le lien pour que votre message nous parvienne. Il est valable trente minutes,
-        et le mail en contient le texte intégral.
-      </p>
-    )}
+        et il se perdra. */
+    }
+    {
+      envoye === 'confirmation' && (
+        <p class={BANDEAU_OK} role="status">
+          <strong>Une dernière étape.</strong> Nous venons de vous envoyer un mail : ouvrez-le
+          et cliquez sur le lien pour que votre message nous parvienne. Il est valable trente
+          minutes, et le mail en contient le texte intégral.
+        </p>
+      )
+    }
 
-    {erreur && (
-      <p class={BANDEAU_ERREUR} role="alert">{erreur}</p>
-    )}
+    {
+      erreur && (
+        <p class={BANDEAU_ERREUR} role="alert">
+          {erreur}
+        </p>
+      )
+    }
 
-    {/* Le script recrée le bandeau de succès à la volée quand l’envoi
-        aboutit ; il lit sa mise en forme sur le formulaire plutôt que de la
-        recopier, faute de quoi elle divergerait du rendu serveur au premier
-        ajustement — et c’est exactement ce qui s’était produit : la classe
-        qu’il posait n’avait plus de règle, et le message arrivait sans la
-        moindre mise en forme. */}
-    {indisponible ? (
-      <p class={BANDEAU_ERREUR} role="alert">
-        Le formulaire est momentanément indisponible. Réessayez dans quelques minutes.
-      </p>
-    ) : (
-      <form
-        class="contact-form mt-2 grid gap-5"
-        method="post"
-        action="/contact/"
-        novalidate
-        data-contact-form
-        data-classe-succes={BANDEAU_OK}
-        data-max={String(defi.max ?? 0)}
-        data-sel={defi.sel}
-        data-cible={defi.cible}
-      >
-        <input type="hidden" name="jeton" value={defi.jeton} />
-        {/* Rempli par le script quand la preuve de travail a abouti.
+    {
+      /* Le script recrée le bandeau de succès à la volée quand l’envoi
+
+        aboutit ; il lit sa mise en forme sur le formulaire plutôt que de la
+
+        recopier, faute de quoi elle divergerait du rendu serveur au premier
+
+        ajustement — et c’est exactement ce qui s’était produit : la classe
+
+        qu’il posait n’avait plus de règle, et le message arrivait sans la
+
+        moindre mise en forme. */
+    }
+
+    {
+      indisponible ? (
+        <p class={BANDEAU_ERREUR} role="alert">
+          Le formulaire est momentanément indisponible. Réessayez dans quelques minutes.
+        </p>
+      ) : (
+        <form
+          class="contact-form mt-2 grid gap-5"
+          method="post"
+          action="/contact/"
+          novalidate
+          data-contact-form
+          data-classe-succes={BANDEAU_OK}
+          data-max={String(defi.max ?? 0)}
+          data-sel={defi.sel}
+          data-cible={defi.cible}
+        >
+          <input type="hidden" name="jeton" value={defi.jeton} />
+          {/* Rempli par le script quand la preuve de travail a abouti.
             Laissé vide sans JavaScript : le serveur l'accepte. */}
-        <input type="hidden" name="solution" value="" data-contact-solution />
+          <input type="hidden" name="solution" value="" data-contact-solution />
 
-        {/*
+          {/*
           Pot de miel. `display: none` et non l'utilitaire de lecture
           d'écran du site : celui-ci procède par découpe, donc le champ
           resterait annoncé par un lecteur d'écran, quelqu'un le
@@ -256,57 +280,75 @@ const BANDEAU_ERREUR = `${BANDEAU} border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3
           dissuade au passage le remplissage automatique du navigateur.
           Ne jamais « corriger » ceci vers .visually-hidden.
         */}
-        <div class="hidden" aria-hidden="true">
-          <label for="ct-reference">Référence</label>
-          <input id="ct-reference" name="reference" type="text" tabindex="-1" autocomplete="off" />
-        </div>
-
-        {/* Deux colonnes tant que la place le permet : nom et adresse sont
-            courts, les empiler étirerait le formulaire sans rien gagner. */}
-        <div class="grid grid-cols-2 gap-5 max-[640px]:grid-cols-1">
-          <label class={CHAMP}>
-            <span class={INTITULE}>Votre nom <span class="req" aria-hidden="true">*</span></span>
+          <div class="hidden" aria-hidden="true">
+            <label for="ct-reference">Référence</label>
             <input
+              id="ct-reference"
+              name="reference"
               type="text"
-              name="nom"
-              required
-              maxlength="120"
-              autocomplete="name"
-              value={saisie.nom}
+              tabindex="-1"
+              autocomplete="off"
             />
-          </label>
+          </div>
+
+          {/* Deux colonnes tant que la place le permet : nom et adresse sont
+            courts, les empiler étirerait le formulaire sans rien gagner. */}
+          <div class="grid grid-cols-2 gap-5 max-[640px]:grid-cols-1">
+            <label class={CHAMP}>
+              <span class={INTITULE}>
+                Votre nom{' '}
+                <span class="req" aria-hidden="true">
+                  *
+                </span>
+              </span>
+              <input
+                type="text"
+                name="nom"
+                required
+                maxlength="120"
+                autocomplete="name"
+                value={saisie.nom}
+              />
+            </label>
+
+            <label class={CHAMP}>
+              <span class={INTITULE}>
+                Votre adresse e-mail{' '}
+                <span class="req" aria-hidden="true">
+                  *
+                </span>
+              </span>
+              <input
+                type="email"
+                name="email"
+                required
+                maxlength="254"
+                autocomplete="email"
+                value={saisie.email}
+              />
+              <span class={PRECISION}>Elle ne sert qu’à vous répondre.</span>
+            </label>
+          </div>
 
           <label class={CHAMP}>
-            <span class={INTITULE}>Votre adresse e-mail <span class="req" aria-hidden="true">*</span></span>
-            <input
-              type="email"
-              name="email"
-              required
-              maxlength="254"
-              autocomplete="email"
-              value={saisie.email}
-            />
-            <span class={PRECISION}>Elle ne sert qu’à vous répondre.</span>
-          </label>
-        </div>
-
-        <label class={CHAMP}>
-          <span class={INTITULE}>Objet</span>
-          <select name="objetChoix">
-            <option value="">— choisissez un objet —</option>
-            {OBJETS.map((o) => (
-              <option
-                value={o.valeur}
-                selected={(saisie.objetChoix || objetPreselectionne) === o.valeur}
-              >
-                {o.label}
+            <span class={INTITULE}>Objet</span>
+            <select name="objetChoix">
+              <option value="">— choisissez un objet —</option>
+              {OBJETS.map((o) => (
+                <option
+                  value={o.valeur}
+                  selected={(saisie.objetChoix || objetPreselectionne) === o.valeur}
+                >
+                  {o.label}
+                </option>
+              ))}
+              <option value="autre" selected={saisie.objetChoix === 'autre'}>
+                Autre
               </option>
-            ))}
-            <option value="autre" selected={saisie.objetChoix === 'autre'}>Autre</option>
-          </select>
-        </label>
+            </select>
+          </label>
 
-        {/*
+          {/*
           Le champ libre est révélé par le CSS (`:has()`), pas par le
           script : sans JavaScript il resterait sinon inaccessible, et
           « Autre » ne mènerait nulle part. Il est visible par défaut et
@@ -314,54 +356,71 @@ const BANDEAU_ERREUR = `${BANDEAU} border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3
           un navigateur qui ne connaîtrait pas `:has()` l'affiche
           toujours, ce qui est le défaut sûr.
         */}
-        <label class:list={[CHAMP, 'contact-autre']}>
-          <span class={INTITULE}>Précisez l’objet</span>
-          <input
-            type="text"
-            name="objetAutre"
-            maxlength="200"
-            value={saisie.objetAutre}
-            placeholder="En quelques mots"
-          />
-        </label>
+          <label class:list={[CHAMP, 'contact-autre']}>
+            <span class={INTITULE}>Précisez l’objet</span>
+            <input
+              type="text"
+              name="objetAutre"
+              maxlength="200"
+              value={saisie.objetAutre}
+              placeholder="En quelques mots"
+            />
+          </label>
 
-        <label class={CHAMP}>
-          <span class={INTITULE}>Votre message <span class="req" aria-hidden="true">*</span></span>
-          <textarea name="message" rows={10} required maxlength="5000" set:text={saisie.message} />
-        </label>
+          <label class={CHAMP}>
+            <span class={INTITULE}>
+              Votre message{' '}
+              <span class="req" aria-hidden="true">
+                *
+              </span>
+            </span>
+            <textarea
+              name="message"
+              rows={10}
+              required
+              maxlength="5000"
+              set:text={saisie.message}
+            />
+          </label>
 
-        <p class:list={[PRECISION, 'm-0']}>
-          Les champs marqués d’une <span aria-hidden="true">*</span
-          ><span class="sr-only">astérisque</span> sont obligatoires.
-        </p>
+          <p class:list={[PRECISION, 'm-0']}>
+            Les champs marqués d’une{' '}
+            <>
+              <span aria-hidden="true">*</span>
+              <span class="sr-only">astérisque</span>
+            </>{' '}
+            sont obligatoires.
+          </p>
 
-        <div class="flex flex-wrap items-center gap-[18px]">
-          <button
-            type="submit"
-            class="cursor-pointer rounded-[2px] border-0 bg-[var(--c-vert-fill)] px-7 py-3 font-sans text-[calc(14px*var(--a11y-echelle))] font-medium text-[var(--c-vert-on)] transition-opacity duration-[120ms] hover:opacity-[0.88] disabled:cursor-progress disabled:opacity-55"
-          >
-            Envoyer
-          </button>
-          {/* Région live : c'est par elle qu'un lecteur d'écran apprend
+          <div class="flex flex-wrap items-center gap-[18px]">
+            <button
+              type="submit"
+              class="cursor-pointer rounded-[2px] border-0 bg-[var(--c-vert-fill)] px-7 py-3 font-sans text-[calc(14px*var(--a11y-echelle))] font-medium text-[var(--c-vert-on)] transition-opacity duration-[120ms] hover:opacity-[0.88] disabled:cursor-progress disabled:opacity-55"
+            >
+              Envoyer
+            </button>
+            {/* Région live : c'est par elle qu'un lecteur d'écran apprend
               que l'envoi est en cours, a réussi ou a échoué. */}
-          <p
-            class="text-muted m-0 font-sans text-[calc(13px*var(--a11y-echelle))]"
-            role="status"
-            aria-live="polite"
-            data-contact-statut
-          ></p>
-        </div>
-      </form>
-    )}
+            <p
+              class="text-muted m-0 font-sans text-[calc(13px*var(--a11y-echelle))]"
+              role="status"
+              aria-live="polite"
+              data-contact-statut
+            />
+          </div>
+        </form>
+      )
+    }
 
-    <p class="text-muted mt-8 mb-0 font-sans text-meta leading-[1.5]">
+    <p class="text-muted text-meta mt-8 mb-0 font-sans leading-[1.5]">
       Vos coordonnées ne servent qu’à vous répondre. Elles ne sont pas conservées sur le site :
       le message part directement dans notre boîte mail.
     </p>
   </div>
 </PageShell>
 
-{/* Le seul CSS qui reste, et il porte une décision : le champ libre de
+{
+  /* Le seul CSS qui reste, et il porte une décision : le champ libre de
     l'objet est révélé par `:has()` et non par le script — sans
     JavaScript il resterait sinon inaccessible, et « Autre » ne mènerait
     nulle part. Il est visible par défaut et masqué quand un objet de la
@@ -370,7 +429,8 @@ const BANDEAU_ERREUR = `${BANDEAU} border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3
 
     Écrit ici plutôt qu'en variante arbitraire : la même chose en
     utilitaire demanderait d'encoder ce sélecteur entier dans un nom de
-    classe, quotes et parenthèses comprises. */}
+    classe, quotes et parenthèses comprises. */
+}
 <style>
   .contact-form:has(select[name='objetChoix'] option:not([value='autre']):checked)
     .contact-autre {

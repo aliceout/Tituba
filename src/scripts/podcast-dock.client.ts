@@ -213,8 +213,9 @@
   // ─── Interface offerte aux boutons de page ───────────────────────
   fenetre.titubaPodcast = {
     ouvrir(ep) {
-      const memeEpisode = audio.src && new URL(audio.src, location.href).href ===
-        new URL(ep.src, location.href).href;
+      const memeEpisode =
+        audio.src &&
+        new URL(audio.src, location.href).href === new URL(ep.src, location.href).href;
       if (!memeEpisode) {
         audio.src = ep.src;
         audio.currentTime = 0;
