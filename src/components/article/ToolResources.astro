@@ -1,0 +1,80 @@
+---
+/**
+ * Les fichiers d'un billet « outil » — ce qu'on est venu chercher.
+ *
+ * En tête de billet et non en pied : le format existe pour transmettre
+ * un document, son corps de texte n'en est que la présentation.
+ * Quelqu'un qui connaît déjà l'outil doit pouvoir y accéder sans lire,
+ * et quelqu'un qui découvre doit voir tout de suite qu'il y a quelque
+ * chose à prendre.
+ *
+ * Sorti de PublicationArticle, où douze règles et vingt-six lignes de
+ * balisage propres à un seul des cinq formats voisinaient avec le hero,
+ * la bannière d'actu et le générique d'épisode.
+ */
+import type { Ressource } from '../../lib/article/ressources';
+
+interface Props {
+  ressources: Ressource[];
+  /** « Militant·es et collectifs », « Professionnel·les »… */
+  publicVise?: string;
+}
+
+const { ressources, publicVise } = Astro.props;
+---
+
+{ressources.length > 0 && (
+  <section
+    class="mb-10 rounded-[4px] border border-[var(--c-vert)] bg-[var(--c-vert-tint)] px-6 pt-5 pb-[22px]"
+    aria-labelledby="ressource-titre"
+  >
+    <p
+      class="m-0 mb-3.5 font-sans text-[calc(10px*var(--a11y-echelle))] font-semibold tracking-[0.12em] text-[var(--c-vert-deep)] uppercase"
+      id="ressource-titre"
+    >
+      {ressources.length > 1 ? 'Les ressources' : 'La ressource'}
+      {publicVise && <span class="text-muted font-normal"> · {publicVise}</span>}
+    </p>
+    <ul class="m-0 flex list-none flex-col gap-2.5 p-0">
+      {ressources.map((r, rang) => (
+        /* Sous 560 px, le bouton passe sous le nom et prend toute la
+           largeur : à cette taille, un bouton flottant à droite d'un nom
+           tronqué se lit mal et se vise mal. */
+        <li
+          class:list={[
+            'flex flex-wrap items-center justify-between gap-x-6 gap-y-3',
+            'max-etroit:flex-col max-etroit:items-stretch',
+            rang > 0 &&
+              'border-t border-[color-mix(in_srgb,var(--c-vert)_30%,transparent)] pt-2.5',
+          ]}
+        >
+          <span class="flex min-w-0 flex-col gap-0.5">
+            <span class="text-ink font-serif text-sublede [overflow-wrap:anywhere]">{r.nom}</span>
+            {r.description && (
+              /* Saisie dans un textarea : les retours à la ligne sont voulus. */
+              <span class="text-muted max-w-[62ch] font-serif text-[calc(14px*var(--a11y-echelle))] leading-[1.45] whitespace-pre-line">
+                {r.description}
+              </span>
+            )}
+            <span class="text-muted font-mono text-label tracking-[0.06em]">
+              {[r.format, r.poids].filter(Boolean).join(' · ')}
+            </span>
+          </span>
+          <a
+            class="group inline-flex flex-none items-center gap-2.5 rounded-[3px] bg-[var(--c-vert-fill)] px-5 py-[9px] font-sans text-[calc(13px*var(--a11y-echelle))] font-medium text-[var(--c-vert-on)] no-underline transition-opacity duration-[120ms] hover:opacity-[0.88] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--c-vert-deep)] max-etroit:justify-center"
+            href={r.url}
+            download
+          >
+            Télécharger
+            <span
+              class="transition-transform duration-[120ms] group-hover:translate-y-0.5"
+              aria-hidden="true"
+            >
+              ↓
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+)}

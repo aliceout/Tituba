@@ -27,6 +27,7 @@
 import Layout from '../layouts/Layout.astro';
 import PageTitle from './ui/PageTitle.astro';
 import ArticleToc from './article/ArticleToc.astro';
+import ToolResources from './article/ToolResources.astro';
 import ArticleMeta from './article/ArticleMeta.astro';
 import ArticleBody from './article/ArticleBody.astro';
 import ArticleFootnotes from './article/ArticleFootnotes.astro';
@@ -505,31 +506,7 @@ const postTags = (post.tags ?? []).filter(
           présentation. Quelqu'un qui connaît déjà l'outil doit pouvoir
           y accéder sans lire, et quelqu'un qui découvre doit voir tout
           de suite qu'il y a quelque chose à prendre. */}
-      {ressources.length > 0 && (
-        <section class="ressource" aria-labelledby="ressource-titre">
-          <p class="ressource-lbl" id="ressource-titre">
-            {ressources.length > 1 ? 'Les ressources' : 'La ressource'}
-            {publicVise && <span class="ressource-public"> · {publicVise}</span>}
-          </p>
-          <ul class="ressource-liste">
-            {ressources.map((r) => (
-              <li class="ressource-item">
-                <span class="ressource-desc">
-                  <span class="ressource-nom">{r.nom}</span>
-                  {r.description && <span class="ressource-texte">{r.description}</span>}
-                  <span class="ressource-meta">
-                    {[r.format, r.poids].filter(Boolean).join(' · ')}
-                  </span>
-                </span>
-                <a class="ressource-lien" href={r.url} download>
-                  Télécharger
-                  <span class="ressource-fleche" aria-hidden="true">↓</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <ToolResources ressources={ressources} publicVise={publicVise} />
 
       {/* Chapô et ligne de méta d'une actu — en tête de la colonne
           principale et non dans le hero, pour partager leur rangée avec
@@ -1121,120 +1098,6 @@ const postTags = (post.tags ?? []).filter(
 
      Le vert du site plutôt que la couleur de format : ce sont des
      actions, elles doivent se distinguer du texte qui les entoure. */
-  .ressource {
-    margin: 0 0 40px;
-    padding: 20px 24px 22px;
-    border: 1px solid var(--c-vert);
-    border-radius: 4px;
-    background: var(--c-vert-tint);
-  }
-  .ressource-lbl {
-    margin: 0 0 14px;
-    font-family: var(--font-sans);
-    font-size: calc(10px * var(--a11y-echelle));
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--c-vert-deep);
-  }
-  .ressource-public {
-    font-weight: 400;
-    color: var(--color-muted);
-  }
-  .ressource-liste {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  /* Une ligne par document : son nom à gauche, son bouton à droite.
-     Les lignes se séparent d’un filet plutôt que d’un écart seul —
-     à deux ou trois documents, l’œil doit voir où finit l’un et où
-     commence l’autre. */
-  .ressource-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px 24px;
-  }
-  .ressource-item + .ressource-item {
-    padding-top: 10px;
-    border-top: 1px solid color-mix(in srgb, var(--c-vert) 30%, transparent);
-  }
-  .ressource-desc {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-  .ressource-nom {
-    font-family: var(--font-serif);
-    font-size: calc(16px * var(--a11y-echelle));
-    color: var(--color-ink);
-    overflow-wrap: anywhere;
-  }
-  /* La description tient entre l’intitulé et la ligne technique :
-     ce qu’on lit avant de décider de télécharger. */
-  .ressource-texte {
-    font-family: var(--font-serif);
-    font-size: calc(14px * var(--a11y-echelle));
-    line-height: 1.45;
-    color: var(--color-muted);
-    max-width: 62ch;
-    /* Saisie dans un textarea : les retours à la ligne sont voulus. */
-    white-space: pre-line;
-  }
-  .ressource-meta {
-    font-family: var(--font-mono);
-    font-size: calc(11px * var(--a11y-echelle));
-    letter-spacing: 0.06em;
-    color: var(--color-muted);
-  }
-  /* Bouton plein : l’action principale de la page. */
-  .ressource-lien {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 20px;
-    border-radius: 3px;
-    background: var(--c-vert-fill);
-    color: var(--c-vert-on);
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-    font-weight: 500;
-    text-decoration: none;
-    transition: opacity 0.12s;
-  }
-  .ressource-lien:hover {
-    opacity: 0.88;
-  }
-  .ressource-lien:focus-visible {
-    outline: 2px solid var(--c-vert-deep);
-    outline-offset: 2px;
-  }
-  .ressource-fleche {
-    transition: transform 0.12s;
-  }
-  .ressource-lien:hover .ressource-fleche {
-    transform: translateY(2px);
-  }
-  /* Sous 560 px, le bouton passe sous le nom et prend toute la
-     largeur : à cette taille, un bouton flottant à droite d’un nom
-     tronqué se lit mal et se vise mal. */
-  @media (max-width: 560px) {
-    .ressource-item {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .ressource-lien {
-      justify-content: center;
-    }
-  }
-
   /* Contenu réservé aux technologies d'assistance. */
   .sr-only {
     position: absolute;
