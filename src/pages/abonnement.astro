@@ -106,7 +106,7 @@ if (Astro.request.method === 'POST') {
   lede={heroLedeHtml}
   famille="vert"
 >
-  <Prose mesure="pleine" class="suivre-page">
+  <Prose mesure="pleine">
     {emailEnabled && <EmailSubscribeForm statut={statutAbonnement} />}
     {socialEntries.length > 0 && <SocialLinksList entries={socialEntries} />}
     {rssEnabled && <RssFeedBlock feedUrl={feedUrl} />}
