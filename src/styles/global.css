@@ -145,7 +145,6 @@
      signes, --t-display les ferait courir sur trop de lignes. Le seuil
      et la bascule vivent dans PageTitle, pas ici : ce token n'est que
      la valeur d'arrivée. */
-  --t-display-long: calc(clamp(28px, 3.6vw, 48px) * var(--a11y-echelle));
   --t-h2: calc(30px * var(--a11y-echelle));
   --t-h3: calc(21px * var(--a11y-echelle));
   /* Trois registres, trois crans. Le chapo de page et celui d une
@@ -272,7 +271,6 @@
   --c-une-fg: #1a1d28;
   --c-une-soft: #4a4640;
   --c-une-mute: #57534c;
-  --c-une-em: var(--c-jaune-deep);
   /* Ligne de métadonnées en tête de carte. Le jaune de la maquette y
      tenait parce que le fond était noir ; sur un bleu clair il tombe
      sous le seuil de contraste. */
@@ -334,7 +332,6 @@
   --c-une-fg: #e8e6e0;
   --c-une-soft: #b8c2d4;
   --c-une-mute: #a8aebb;
-  --c-une-em: var(--c-jaune-deep);
   --c-une-accent: var(--c-jaune-deep);
   --c-sommaire-bg: var(--c-violet-tint);
   --c-sommaire-accent: var(--c-violet-deep);
