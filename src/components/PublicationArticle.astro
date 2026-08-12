@@ -25,11 +25,11 @@
  * la composition.
  */
 import Layout from '../layouts/Layout.astro';
-import PageTitle from './ui/PageTitle.astro';
 import ArticleToc from './article/ArticleToc.astro';
 import ToolResources from './article/ToolResources.astro';
 import ActuBanner from './article/ActuBanner.astro';
 import EpisodeCredits from './article/EpisodeCredits.astro';
+import ArticleHero from './article/ArticleHero.astro';
 import ArticleMeta from './article/ArticleMeta.astro';
 import ArticleBody from './article/ArticleBody.astro';
 import ArticleFootnotes from './article/ArticleFootnotes.astro';
@@ -40,7 +40,6 @@ import ArticleRelated from './article/ArticleRelated.astro';
 import ActuBrief from './article/ActuBrief.astro';
 import PodcastLaunch from './article/PodcastLaunch.astro';
 import PodcastHero from './article/PodcastHero.astro';
-import FormatIcon from './FormatIcon.astro';
 import {
   PUBLICATIONS,
   fetchRelatedPosts,
@@ -70,6 +69,7 @@ import { highwireMeta } from '../lib/citations';
 import { afficherBrief, afficherSommaire, dateDansColonne } from '../lib/article/affichage';
 import { lireCouverture } from '../lib/article/couverture';
 import { lireEpisode } from '../lib/article/episode';
+import { DECK } from '../lib/article/classes';
 import { libellePublic, lireRessources } from '../lib/article/ressources';
 
 export interface Props {
@@ -344,72 +344,16 @@ const postTags = (post.tags ?? []).filter(
       )}
 
       {!heroPlayer && (
-      <div class:list={['hero', { 'has-image': coverImageUrl && !estActu, 'has-player': heroPlayer }]}>
-        {/* Le crédit vit sous le cadre du titre, pas sous l'image : c'est
-            une colonne à part entière du hero, sinon il deviendrait un
-            troisième bloc de la rangée flex. */}
-        <div class="hero-left">
-          {!heroPlayer && (
-            <p class="hero-format">
-              <FormatIcon collection={collection} />
-              {spec.labelSingular}
-            </p>
-          )}
-          <div class="hero-text">
-            <PageTitle title={titleHtml} famille="marque" />
-            {/* Le rond de lecture ouvre le chapô : l'appel à écouter se
-                lit alors dans le même mouvement que la phrase qui dit de
-                quoi parle l'épisode, au lieu d'attendre en bas de
-                colonne. Sans libellé — le rond seul suffit à cet
-                endroit, et « Écouter l'épisode » ne ferait que répéter
-                la page. */}
-            {/* Sur une actu, le chapô ne vit pas ici : il descend en tête
-                de la colonne principale, pour que sa première ligne
-                tombe à la même hauteur que le titre du rappel des faits,
-                dans la colonne d'à côté. Deux blocs qui s'ouvrent
-                ensemble doivent commencer sur la même rangée — le seul
-                moyen d'y parvenir sans caler une marge au pixel. */}
-            {estActu ? null : heroPlayer ? (
-              <div class="hero-amorce">
-                <PodcastLaunch
-                  src={audioSrc ?? ''}
-                  durationSeconds={post.durationSeconds}
-                  title={titlePlain}
-                  coverUrl={coverImageUrl}
-                  href={Astro.url.pathname}
-                  compact
-                />
-                <p class="deck">{post.lede}</p>
-              </div>
-            ) : (
-              <p class="deck">{post.lede}</p>
-            )}
-          </div>
-          {/* Le crédit vit sous le cadre du titre, pas sous l'image :
-              c'est une colonne à part entière du hero, sinon il
-              deviendrait un troisième bloc de la rangée flex. Même
-              place sur un épisode que sur un billet d'analyse — donc
-              avant le bouton, contre la bordure basse du cadre. */}
-          {unsplashCredit && !estActu && (
-            <p class="hero-credit">
-              Photo par{' '}
-              {unsplashCredit.profileUrl ? (
-                <a href={unsplashCredit.profileUrl} rel="noopener">{unsplashCredit.name}</a>
-              ) : (
-                unsplashCredit.name
-              )}
-              {' '}sur <a href={unsplashCredit.unsplashUrl} rel="noopener">Unsplash</a>
-            </p>
-          )}
-        </div>
-        {coverImageUrl && !estActu && (
-          <figure class="hero-figure">
-            <div class:list={['hero-frame', { cropped: !!cropStyle }]}>
-              <img class="hero-image" src={coverImageUrl} alt={coverImageAlt} style={cropStyle} />
-            </div>
-          </figure>
-        )}
-      </div>
+        <ArticleHero
+          collection={collection}
+          formatLabel={spec.labelSingular}
+          titleHtml={titleHtml}
+          lede={estActu ? null : post.lede}
+          credit={estActu ? null : unsplashCredit}
+          coverUrl={estActu ? null : coverImageUrl}
+          coverAlt={coverImageAlt}
+          cadrage={cropStyle}
+        />
       )}
 
       {/* Pas de bandeau sur un épisode : le hero pleine largeur porte
@@ -434,7 +378,7 @@ const postTags = (post.tags ?? []).filter(
       {/* Épisode sans couverture : le bouton se pose sous le bandeau
           meta, faute de cadre où se loger (cf heroPlayer). */}
       {!heroPlayer && audioSrc && (
-        <p class="hors-cadre">
+        <p class="m-0 mb-10">
           <PodcastLaunch
             src={audioSrc}
             durationSeconds={post.durationSeconds}
@@ -497,7 +441,7 @@ const postTags = (post.tags ?? []).filter(
       {/* Chapô et ligne de méta d'une actu — en tête de la colonne
           principale et non dans le hero, pour partager leur rangée avec
           le rappel des faits d'à côté (cf ActuBrief). */}
-      {estActu && <p class="deck mt-0">{post.lede}</p>}
+      {estActu && <p class:list={[DECK, 'mt-0']}>{post.lede}</p>}
       {estActu && ((displayAuthors && displayAuthors.length > 0) || primaryTheme) && (
         <p class="text-muted m-0 mt-[18px] flex flex-wrap items-baseline gap-0.5 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:border-rule [&_a]:border-b [&_a]:text-inherit [&_a]:transition-[color,border-color] [&_a]:duration-[120ms] [&_a:hover]:text-ink [&_a:hover]:border-b-ink">
           {displayAuthors && displayAuthors.length > 0 && (
@@ -708,280 +652,6 @@ const postTags = (post.tags ?? []).filter(
      se retrouver sous le header sticky. */
   article.post#haut {
     scroll-margin-top: 96px;
-  }
-
-  /* Hero à deux colonnes (titre/chapô encadrés + image de couverture)
-     — pour l'instant, seules les analyses portent une image (cf
-     Analyses.ts → extraFields), donc ce n'est visible que là où le
-     champ est renseigné. Sans image, .hero reste un simple bloc :
-     rendu identique à avant sur tous les autres billets. Le bandeau
-     Auteur·ice/Thème/Format/Publié n'est plus dans le hero : il vit
-     sous lui, sur toute la largeur du contenu (cf markup), donc pas
-     de règle qui le recadre ici. */
-  @media (min-width: 900px) {
-    /* Deux blocs encadrés de même facture, côte à côte : le titre et son
-       chapô à gauche, l'image à droite. `center` les aligne sur leur
-       milieu — l'image étant carrée et généralement plus haute que le
-       cadre, elle le déborde alors symétriquement.
-
-       L'image est calée au bord droit et garde une largeur fixe ; c'est
-       le cadre du titre qui absorbe le reste (`flex: 1 1 auto`). Sans
-       ça, l'écart tomberait à droite de l'image au lieu de séparer les
-       deux blocs. */
-    .hero.has-image {
-      --hero-image-part: 39%;
-      display: flex;
-      /* Étirée et non centrée : la colonne de gauche prend ainsi la
-         hauteur de la rangée, celle de l'image. Le cadre du titre y
-         reste centré par sa propre justification, et le surtitre peut
-         se caler sur le haut réel de la photo — qui déborde le cadre. */
-      align-items: stretch;
-      /* Pas d'écart : l'image est collée au cadre du titre, et c'est sa
-         bordure gauche qui vient fermer le rectangle resté ouvert de ce
-         côté. Un `gap` séparerait les deux blocs et laisserait le cadre
-         béant. */
-      gap: 0;
-      margin-bottom: 40px;
-    }
-    .hero-left {
-      position: relative;
-      flex: 1 1 auto;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    /* Deux repères d'origines différentes, d'où la position absolue dans
-       la colonne : en vertical le haut de celle-ci — étirée à la hauteur
-       de l'image, c'est donc le haut de la photo ; en horizontal la
-       verticale du texte du titre, soit le trait du cadre plus son
-       retrait. Le cadre, lui, reste centré sur la photo et commence donc
-       plus bas : les deux repères ne pouvaient pas venir du même
-       élément. */
-    .hero.has-image .hero-format {
-      position: absolute;
-      top: 0;
-      left: calc(var(--hero-pad) + 1px);
-      margin: 0;
-    }
-    /* Le rond et le chapô sur une même rangée. Alignés par le haut et
-       non centrés : le rond se cale sur la première ligne du chapô, quel
-       que soit le nombre de lignes qui suivent — centré, il descendrait
-       au milieu d'un chapô long et cesserait d'ouvrir la phrase. */
-    .hero-amorce {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--amorce-gap);
-    }
-    .hero-amorce :global(.lancer) {
-      flex: 0 0 auto;
-      /* L'anneau s'écarte un peu plus du disque à cette taille : le
-         même jeu de 5 px se lirait comme un liseré collé sur un rond
-         de 57. */
-      --anneau-ecart: 7px;
-    }
-    /* Le rond couvre exactement la hauteur des deux premières lignes,
-       calé sur le haut de la première. */
-    .hero-amorce :global(.rond) {
-      width: var(--rond-amorce);
-      height: var(--rond-amorce);
-    }
-    .hero-amorce :global(.rond svg) {
-      width: 26px;
-      height: 26px;
-    }
-    .hero-amorce .deck {
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-    /* Alignée sur le chapô et non sur le retrait du cadre : le chapô est
-       lui-même décalé par le rond qui l'ouvre, et une ligne calée plus à
-       gauche que lui ferait ressortir un alinéa qui n'existe pas. Même
-       retrait, donc, calculé depuis le rond et son écart. */
-    .hero-text .guests {
-      padding-left: calc(var(--rond-amorce) + var(--amorce-gap));
-    }
-    .hero-figure {
-      flex: 0 0 var(--hero-image-part);
-      min-width: 0;
-    }
-    /* Le chapô porte l'écart qui le sépare du bandeau meta dans le flux
-       normal ; à l'intérieur du cadre c'est le padding qui doit donner
-       l'inset, sinon le bas du cadre s'éloigne du texte alors que le
-       haut lui reste collé. */
-    .hero.has-image .deck {
-      margin-bottom: 0;
-    }
-  }
-  /* Surtitre de format. Reprend les valeurs de l'étiquette de section de
-     l'accueil (cf FeaturedPublication .head) — mono 11 px, 0,16 em,
-     capitales. Le blanc dessous, lui, s'en écarte : 60 px et non 24,
-     parce qu'ici le surtitre précède un titre d'affichage de 60 px et
-     non une rangée de cartes. À 24 px il se lisait comme une ligne du
-     titre plutôt que comme l'étiquette qui l'annonce.
-     Sans effet sur les heros à image : le surtitre y est positionné en
-     absolu, calé sur le haut de la photo (cf .hero.has-image
-     .hero-format), et sa marge n'y joue plus. En couleur de marque
-     comme le surlignage du titre juste en dessous, plutôt qu'en couleur
-     de famille : sur la page d'une publication, c'est la marque qui
-     donne le ton, pas la rubrique. */
-  .hero-format {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-family: var(--font-mono);
-    font-size: calc(11px * var(--a11y-echelle));
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--color-accent);
-    margin: 0 0 60px;
-  }
-
-  .hero-figure {
-    margin: 0;
-  }
-  /* Cadre du titre et fenêtre de l'image : même trait, même arrondi.
-     Le trait reprend celui des filets du bandeau meta (cf ArticleMeta),
-     pour que les trois se lisent comme une même famille plutôt que
-     comme trois objets distincts. */
-  /* Rayon commun au cadre du titre et à la fenêtre de l'image. Nommé
-     plutôt que répété : les deux doivent s'accorder au pixel près. */
-  .hero {
-    --hero-radius: 10px;
-    /* Diamètre du rond de lecture = deux lignes de chapô, reprises de
-       .deck plus bas : 19 px de corps sur 1,5 d'interligne. Écrit en
-       calcul plutôt qu'en valeur figée pour qu'il suive si l'un des deux
-       change — sinon il finirait par déborder ou flotter. Avec l'écart
-       qui le sépare du texte, il donne aussi le retrait sur lequel se
-       cale la ligne des invité·es, sous le chapô. */
-    --rond-amorce: calc(19px * 1.5 * 2);
-    --amorce-gap: 18px;
-    /* Retrait intérieur du cadre. Nommé parce que la ligne des
-       invité·es s'en sert pour venir se caler contre la bordure basse :
-       les deux valeurs doivent rester d'accord. */
-    --hero-pad: 32px;
-  }
-  .hero.has-image .hero-text,
-  .hero-frame {
-    border: 1px solid var(--color-rule);
-    border-radius: var(--hero-radius);
-  }
-  /* Le cadre du titre reste ouvert à droite : l'image y est collée, et
-     c'est sa propre bordure gauche qui ferme le rectangle. Sans ça, les
-     deux traits se superposeraient en un filet deux fois plus épais à
-     la jointure. Les angles droits redeviennent vifs pour la même
-     raison — un arrondi laisserait une encoche au raccord. */
-  .hero.has-image .hero-text {
-    border-right: 0;
-    border-radius: var(--hero-radius) 0 0 var(--hero-radius);
-    padding: var(--hero-pad);
-  }
-  /* Fenêtre carrée de la couverture. width:100% + aspect-ratio : la
-     largeur vient de la colonne, la hauteur s'en déduit. Sans width
-     explicite, le flex-basis d'une <img> part de ses dimensions
-     intrinsèques (celles du fichier, ex. 1600×820) et la colonne se
-     calerait dessus plutôt que sur l'espace disponible. */
-  .hero-frame {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    overflow: hidden;
-    /* Arrondi sur les quatre angles. Sans conséquence à la jointure :
-       l'image dépasse largement le cadre en haut et en bas, les
-       bordures de celui-ci la rejoignent donc sur sa partie droite,
-       loin de ses angles. */
-    border-radius: var(--hero-radius);
-  }
-  /* Crédit photo sous le cadre du titre, aligné à droite — contre sa
-     bordure basse, et non sous l'image où il se lisait comme une
-     légende de celle-ci. */
-  .hero-credit {
-    margin: 8px 0 0;
-    /* Le bord droit du cadre est aussi le bord gauche de l'image :
-       sans ce retrait, le crédit vient buter contre la photo. */
-    padding-right: 14px;
-    text-align: right;
-    font-family: var(--font-sans);
-    font-size: calc(11px * var(--a11y-echelle));
-    color: var(--color-muted);
-  }
-  .hero-credit a {
-    color: inherit;
-    border-bottom: 1px dotted var(--color-muted);
-  }
-  .hero-credit a:hover {
-    color: var(--color-ink);
-    border-bottom-color: var(--color-ink);
-  }
-  .hero-image {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  /* Mode sombre : la photo est assombrie d'un cran. Une image livrée
-     pour un fond clair « brille » sur un fond sombre — elle capte le
-     regard plus qu'elle ne le devrait et fatigue à la lecture de nuit.
-     Léger et sans désaturation : on tempère, on ne délave pas.
-     `:global()` sur le sélecteur de thème — il vit sur <html>, hors de
-     la portée de ce composant, sans quoi Astro le préfixerait de son
-     hash et la règle ne s'appliquerait jamais. */
-  :global([data-theme='dark']) .hero-image {
-    filter: brightness(0.82);
-  }
-  /* Avec une zone enregistrée, l'image est agrandie et décalée pour que
-     cette zone remplisse exactement la fenêtre (dimensions et décalage
-     posés en style inline, calculés plus haut). `object-fit` n'a alors
-     plus lieu d'être : c'est la géométrie qui fait le cadrage. */
-  .hero-frame.cropped .hero-image {
-    position: absolute;
-    width: auto;
-    height: auto;
-    max-width: none;
-    object-fit: fill;
-  }
-  article.post .deck {
-    font-family: var(--font-serif);
-    /* Même corps que le texte de l'article (cf ArticleBody) : le chapô
-       n'est pas un titre secondaire, c'est déjà de la lecture. Sa
-       distinction tient à la couleur et au cadre, pas à la taille. */
-    font-size: calc(19px * var(--a11y-echelle));
-    line-height: 1.5;
-    color: var(--color-muted);
-    margin: 0 0 32px;
-  }
-  /* Justification suivie, mais sans césure : le chapô est du titrage, et
-     un mot coupé y attire l'œil sur la coupure plutôt que sur le propos.
-     La césure reste en vigueur dans le corps de l'article (cf
-     ArticleBody), où les lignes sont assez nombreuses pour que le gain
-     de régularité l'emporte. */
-  body.justify article.post .deck {
-    text-align: justify;
-    hyphens: manual;
-    -webkit-hyphens: manual;
-  }
-
-  /* Ligne des personnes reçues, juste sous le bandeau meta. Même
-     famille que les libellés de ce bandeau — elle en prolonge la
-     signalétique plutôt que d'ouvrir le corps de la page. */
-  .guests {
-    font-family: var(--font-sans);
-    font-size: calc(13px * var(--a11y-echelle));
-    color: var(--color-muted);
-    margin: -12px 0 20px;
-  }
-  /* Dans le cadre, calée contre sa bordure basse par l'intérieur : la
-     marge négative reprend le retrait du cadre pour n'en laisser que
-     l'air nécessaire à ne pas toucher le trait. Exprimée à partir de
-     --hero-pad plutôt qu'en valeur figée, sinon changer le retrait du
-     cadre décollerait la ligne sans qu'on s'en aperçoive. */
-  .hero-text .guests {
-    margin: 26px 0 calc(10px - var(--hero-pad));
-  }
-  /* Épisode sans couverture : le bouton n'a pas de cadre où se loger et
-     se pose seul sous le bandeau meta. */
-  .hors-cadre {
-    margin: 0 0 40px;
   }
 
   /* Générique en tête des notes. Traité comme les repères de l'aside —
