@@ -1,31 +1,59 @@
 #!/usr/bin/env node
-// Audit d'accessibilité statique sur dist/.
+// Audit d'accessibilité statique sur le HTML SERVI.
 // Sans navigateur headless : vérifications structurelles courantes
 // (images sans alt, boutons sans nom accessible, hiérarchie h1, labels
 // de formulaire, lang, viewport, titres dupliqués, etc.)
 //
-// Non-exhaustif — complémentaire d'un vrai audit Lighthouse/axe côté prod.
+// Non-exhaustif — complémentaire de scripts/a11y-deep.mjs, qui exécute
+// axe-core dans un vrai navigateur.
+//
+// Il lisait dist/ à la recherche de fichiers .html. Le site étant en SSR
+// (output: 'server'), dist/ n'en contient aucun : le script parcourait
+// zéro fichier et annonçait zéro erreur, quoi qu'il arrive. Un contrôle
+// qui ne peut pas échouer ne protège de rien. Il interroge désormais un
+// serveur en marche, sur la même liste de pages que l'audit profond.
+//
+// Utilisation :  BASE_URL=http://127.0.0.1:4321 pnpm a11y
 
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
 import { Parser } from 'htmlparser2';
+import { listerPages } from './pages-publiques.mjs';
 
-const DIST = 'dist';
+const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:4321';
+
+/** Éléments sans balise fermante — ils ne creusent pas la profondeur. */
+const VIDES = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+]);
 let filesChecked = 0;
 const issues = [];
 
-function walk(dir, files = []) {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    const s = statSync(full);
-    if (s.isDirectory()) walk(full, files);
-    else if (entry.endsWith('.html')) files.push(full);
+/** Le HTML d'une page servie, ou null si elle ne répond pas. */
+async function recuperer(url) {
+  try {
+    const r = await fetch(url);
+    // Un 404 est une page comme une autre : c'est celle qu'on voit quand
+    // tout va mal, elle mérite d'être auditée aussi.
+    return await r.text();
+  } catch {
+    return null;
   }
-  return files;
 }
 
 function report(file, rule, msg, severity = 'error') {
-  issues.push({ file: relative('.', file), rule, severity, msg });
+  issues.push({ file, rule, severity, msg });
 }
 
 function audit(html, file) {
@@ -37,6 +65,15 @@ function audit(html, file) {
   let title = '';
   let inScript = false;
   let inStyle = false;
+  /**
+   * Profondeur dans un sous-arbre masqué. Ce qui porte `hidden` ne se
+   * rend pas et ne figure pas dans l'arbre d'accessibilité : le signaler
+   * revient à reprocher à un tiroir fermé de ne rien dire. La barre
+   * d'écoute, masquée tant qu'on n'a rien lancé, portait ainsi un lien de
+   * titre vide — signalé sur les trente et une pages, alors qu'axe, qui
+   * regarde le rendu, ne le voit pas.
+   */
+  let masque = 0;
   let insideButton = null; // { tag, attrs, text }
   let insideAnchor = null;
   let insideLabel = null;
@@ -51,6 +88,15 @@ function audit(html, file) {
   const parser = new Parser(
     {
       onopentag(name, attrs) {
+        if (masque > 0) {
+          // On suit quand même l'imbrication, pour savoir quand on ressort.
+          if (!VIDES.has(name)) masque++;
+          return;
+        }
+        if (attrs.hidden !== undefined && !VIDES.has(name)) {
+          masque = 1;
+          return;
+        }
         if (name === 'html') htmlLang = attrs.lang || '';
         if (name === 'head') insideHead = true;
         if (name === 'meta' && attrs.name === 'viewport') hasViewport = true;
@@ -93,8 +139,7 @@ function audit(html, file) {
           const type = attrs.type || (name === 'input' ? 'text' : name);
           // Hidden / submit / button / honeypot n'ont pas besoin de label
           const hiddenType = ['hidden', 'submit', 'button', 'reset', 'image'];
-          const isHoneypot =
-            attrs['aria-hidden'] === 'true' || attrs.tabindex === '-1';
+          const isHoneypot = attrs['aria-hidden'] === 'true' || attrs.tabindex === '-1';
           if (!hiddenType.includes(type) && !isHoneypot) {
             formControls.push({ tag: name, attrs });
           }
@@ -119,6 +164,10 @@ function audit(html, file) {
       },
 
       onclosetag(name) {
+        if (masque > 0) {
+          if (!VIDES.has(name)) masque--;
+          return;
+        }
         if (name === 'head') insideHead = false;
         if (name === 'title') titleDepth--;
         if (name === 'script') inScript = false;
@@ -190,18 +239,14 @@ function audit(html, file) {
   }
 
   // Labels / form controls : un input doit avoir un label (par for=id) ou un parent label
-  const labelledIds = new Set(
-    labels.filter((l) => l.attrs.for).map((l) => l.attrs.for),
-  );
+  const labelledIds = new Set(labels.filter((l) => l.attrs.for).map((l) => l.attrs.for));
   for (const ctrl of formControls) {
     const hasFor = ctrl.attrs.id && labelledIds.has(ctrl.attrs.id);
     const hasAria =
       ctrl.attrs['aria-label'] || ctrl.attrs['aria-labelledby'] || ctrl.attrs.title;
     // Label parent : on ne track pas directement ici ; on accepte la présence
     // d'un label englobant avec `nestedControl=true`.
-    const hasNested = labels.some(
-      (l) => l.nestedControl && !l.attrs.for,
-    );
+    const hasNested = labels.some((l) => l.nestedControl && !l.attrs.for);
     if (!hasFor && !hasAria && !hasNested) {
       report(
         file,
@@ -212,15 +257,24 @@ function audit(html, file) {
   }
 }
 
-const files = walk(DIST);
-for (const f of files) {
-  audit(readFileSync(f, 'utf8'), f);
+const routes = await listerPages(BASE);
+let injoignables = 0;
+for (const route of routes) {
+  const html = await recuperer(BASE + route);
+  if (html === null) {
+    injoignables++;
+    continue;
+  }
+  audit(html, route);
+}
+if (injoignables) {
+  console.error(`\n${injoignables} page(s) injoignable(s) — le serveur est-il démarré ?`);
 }
 
 const errors = issues.filter((i) => i.severity === 'error');
 const warnings = issues.filter((i) => i.severity === 'warn');
 
-console.log(`\nScanned ${filesChecked} HTML files.\n`);
+console.log(`\n${filesChecked} page(s) auditée(s) sur ${BASE}.\n`);
 
 const byFile = {};
 for (const issue of issues) {

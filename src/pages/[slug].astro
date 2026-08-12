@@ -13,6 +13,7 @@ import PageShell from '../components/ui/PageShell.astro';
 import PageRenderer from '../components/PageRenderer.astro';
 import { fetchBySlug } from '../lib/payload';
 import { formatHeroLede, formatHeroTitle, stripHeroMarkers } from '../lib/site';
+import { serviceIndisponible } from '../lib/indisponible';
 
 type PageDoc = {
   id: number | string;
@@ -31,7 +32,15 @@ type PageDoc = {
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect('/');
 
-const page = await fetchBySlug<PageDoc>('pages', slug);
+let page: PageDoc | null;
+try {
+  page = await fetchBySlug<PageDoc>('pages', slug);
+} catch (err) {
+  // Cette route attrape tout ce qui ne correspond à aucune autre : sans
+  // ce filet, une panne du CMS remontait une erreur brute, y compris sur
+  // la page « introuvable » elle-même.
+  return serviceIndisponible('page', err);
+}
 // Les pages fixes vivent dans la même collection mais ne se rendent pas
 // ici : elles ne portent que le titre et le chapô de routes qui ont leur
 // propre fichier (`archives.astro`, `abonnement.astro`…). Sans ce

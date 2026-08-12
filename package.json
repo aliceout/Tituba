@@ -18,6 +18,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "a11y": "node scripts/a11y-audit.mjs",
     "a11y:deep": "node scripts/a11y-deep.mjs",
     "format": "prettier --write \"src/**/*.{astro,ts,tsx,js,json,md}\" \"*.{md,mjs,ts,json}\"",
@@ -55,6 +56,7 @@
     "satori": "^0.26.0",
     "sharp": "^0.35.2",
     "tailwindcss": "^4.3.1",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.0"
   },

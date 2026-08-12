@@ -21,6 +21,7 @@ import { fetchFeed } from '../../lib/publications';
 // le premier.
 import { formatHeroLede } from '../../lib/site';
 import type { FeedDoc } from '../../lib/payload';
+import { serviceIndisponible } from '../../lib/indisponible';
 
 type IndexPagesGlobal = { themes?: { enabled?: boolean } };
 
@@ -48,7 +49,12 @@ try {
   /* Payload down — on continue, le toggle est best-effort. */
 }
 
-const theme = await fetchBySlug<Theme>('themes', slug);
+let theme: Theme | null;
+try {
+  theme = await fetchBySlug<Theme>('themes', slug);
+} catch (err) {
+  return serviceIndisponible('theme', err);
+}
 if (!theme) {
   return new Response('Thème introuvable', { status: 404 });
 }

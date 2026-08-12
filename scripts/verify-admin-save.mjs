@@ -35,7 +35,9 @@ const SLUG = `verif-podcast-${Date.now()}`;
 
 async function latestOtp() {
   for (let i = 0; i < 90; i++) {
-    const list = await fetch(`${MAILPIT}/api/v1/messages?limit=1`).then((r) => r.json()).catch(() => null);
+    const list = await fetch(`${MAILPIT}/api/v1/messages?limit=1`)
+      .then((r) => r.json())
+      .catch(() => null);
     const id = list?.messages?.[0]?.ID;
     if (id) {
       const msg = await fetch(`${MAILPIT}/api/v1/message/${id}`).then((r) => r.json());
@@ -59,7 +61,11 @@ async function fillByLabel(page, pattern, value) {
     return true;
   }
   // Repli : le <label> et le champ sont frères directs.
-  const alt = page.locator(`label:text-matches("${pattern.source ?? pattern}", "i") + input, label:text-matches("${pattern.source ?? pattern}", "i") + textarea`).first();
+  const alt = page
+    .locator(
+      `label:text-matches("${pattern.source ?? pattern}", "i") + input, label:text-matches("${pattern.source ?? pattern}", "i") + textarea`,
+    )
+    .first();
   if (await alt.count()) {
     await alt.fill(value);
     return true;
@@ -87,7 +93,9 @@ try {
   const otp = await latestOtp();
   // Le champ du code est le seul input texte de l'etape 2FA : on exclut
   // explicitement la case « se souvenir de cet appareil ».
-  const codeInput = page.locator('input[type="text"], input[type="tel"], input[inputmode="numeric"]').first();
+  const codeInput = page
+    .locator('input[type="text"], input[type="tel"], input[inputmode="numeric"]')
+    .first();
   await codeInput.waitFor({ timeout: 120_000 });
   await codeInput.fill(otp);
   await page.locator('button[type="submit"]').click();
@@ -95,7 +103,9 @@ try {
   check(true, 'connecté à l’admin');
 
   // ─── Création d'un podcast ────────────────────────────────────
-  await page.goto(`${BASE}/cms/admin/collections/podcasts/create`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE}/cms/admin/collections/podcasts/create`, {
+    waitUntil: 'domcontentloaded',
+  });
   await page.waitForSelector('textarea, input', { timeout: 60_000 });
   await page.waitForTimeout(2000);
 
@@ -109,10 +119,15 @@ try {
 
   // ─── Sauvegarde ───────────────────────────────────────────────
   const saveResp = page.waitForResponse(
-    (r) => r.url().includes('/cms/api/podcasts') && ['POST', 'PATCH'].includes(r.request().method()),
+    (r) =>
+      r.url().includes('/cms/api/podcasts') &&
+      ['POST', 'PATCH'].includes(r.request().method()),
     { timeout: 60_000 },
   );
-  await page.getByRole('button', { name: /sauvegarder|enregistrer|publier/i }).first().click();
+  await page
+    .getByRole('button', { name: /sauvegarder|enregistrer|publier/i })
+    .first()
+    .click();
   const resp = await saveResp;
   const sent = JSON.parse(resp.request().postData() ?? '{}');
   check(resp.ok(), `sauvegarde acceptée (HTTP ${resp.status()})`);

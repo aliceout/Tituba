@@ -124,6 +124,11 @@ const formatLinks = PUBLICATION_ORDER.map((c) => ({
 }));
 
 /**
+ * Intitulé de colonne. En <h2> et non en <h4> : il suit un <h2> de la
+ * page, et sauter deux niveaux fait perdre le fil à qui parcourt le
+ * document par ses titres — axe le signalait sur vingt-huit pages sur
+ * trente et une, le pied étant partout.
+ *
  * Mono largement interlettré, comme « À LA UNE », « AU SOMMAIRE » et
  * « LA LETTRE » plus haut. C’était du sans demi-gras à 0,08 em : le pied
  * était le seul endroit du site où une étiquette de section parlait une
@@ -184,13 +189,13 @@ const MENTION = 'mono text-muted text-label';
         <div class={MENTION + ' mt-1'}>Version : {gitTag}</div>
       </div>
       <div>
-        <h4 class={INTITULE}>Formats</h4>
+        <h2 class={INTITULE}>Formats</h2>
         <div class={COLONNE_LIENS}>
           {formatLinks.map((link) => <a href={link.href}>{link.label}</a>)}
         </div>
       </div>
       <div>
-        <h4 class={INTITULE}>Naviguer</h4>
+        <h2 class={INTITULE}>Naviguer</h2>
         <div class={COLONNE_LIENS}>
           {
             navFooter.map((link) => (
@@ -209,7 +214,7 @@ const MENTION = 'mono text-muted text-label';
       {
         navCoulisses.length > 0 && (
           <div>
-            <h4 class={INTITULE}>Coulisses</h4>
+            <h2 class={INTITULE}>Coulisses</h2>
             <div class={COLONNE_LIENS}>
               {navCoulisses.map((link) => (
                 <a

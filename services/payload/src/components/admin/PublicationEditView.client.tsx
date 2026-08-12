@@ -1122,7 +1122,20 @@ export default function PublicationEditViewClient({
                     const dejaLa = new Set(
                       cur.map((b) => String(typeof b === 'object' ? b.id : b)),
                     );
-                    const ajout = ids.filter((id) => !dejaLa.has(String(id)));
+                    // Dédoublonné DANS le lot autant que contre
+                    // l’existant : onze notes qui citent la même source à
+                    // des pages différentes envoient onze fois le même
+                    // identifiant, et la bibliographie du billet affichait
+                    // alors onze fois la même entrée — avec onze fois le
+                    // même id dans le HTML, ce qui casse au passage les
+                    // ancres de renvoi.
+                    const vus = new Set(dejaLa);
+                    const ajout = ids.filter((id) => {
+                      const cle = String(id);
+                      if (vus.has(cle)) return false;
+                      vus.add(cle);
+                      return true;
+                    });
                     if (ajout.length === 0) return p;
                     return { ...p, bibliography: [...cur, ...ajout] };
                   });

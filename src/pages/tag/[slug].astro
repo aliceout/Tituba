@@ -18,6 +18,7 @@ import {
 } from '../../lib/payload';
 import { fetchFeed } from '../../lib/publications';
 import type { FeedDoc } from '../../lib/payload';
+import { serviceIndisponible } from '../../lib/indisponible';
 
 type Tag = {
   id: number | string;
@@ -30,7 +31,12 @@ type Post = FeedDoc;
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect('/tags/');
 
-const tag = await fetchBySlug<Tag>('tags', slug);
+let tag: Tag | null;
+try {
+  tag = await fetchBySlug<Tag>('tags', slug);
+} catch (err) {
+  return serviceIndisponible('tag', err);
+}
 if (!tag) {
   return new Response('Tag introuvable', { status: 404 });
 }

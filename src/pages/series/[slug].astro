@@ -23,11 +23,17 @@ import {
   type FeedDoc,
 } from '../../lib/publications';
 import { formatHeroLede, formatHeroTitle, stripHeroMarkers } from '../../lib/site';
+import { serviceIndisponible } from '../../lib/indisponible';
 
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect('/');
 
-const serie = await fetchSerieBySlug(slug);
+let serie: Awaited<ReturnType<typeof fetchSerieBySlug>>;
+try {
+  serie = await fetchSerieBySlug(slug);
+} catch (err) {
+  return serviceIndisponible('serie', err);
+}
 // Une série en brouillon n'a pas de page publique — c'est ce que la case
 // promet dans l'admin.
 if (!serie || serie.draft) {

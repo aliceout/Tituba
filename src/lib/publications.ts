@@ -453,8 +453,10 @@ export async function fetchSerieBySlug(slug: string): Promise<Serie | null> {
       where: [{ field: 'slug', value: slug }],
     });
     return docs[0] ?? null;
-  } catch {
-    return null;
+  } catch (err) {
+    // Une émission absente est un 404 ; une base injoignable, non.
+    if ((err as { status?: number })?.status === 404) return null;
+    throw err;
   }
 }
 

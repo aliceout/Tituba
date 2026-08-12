@@ -19,13 +19,19 @@ import { fetchUserDisplayName, uploadedImageUrl } from '../../lib/payload';
 // surlignage a lieu d'être. Ailleurs, `stripHeroMarkers` les efface.
 import { formatHeroTitle, stripHeroMarkers } from '../../lib/site';
 import type { FeedDoc } from '../../lib/payload';
+import { serviceIndisponible } from '../../lib/indisponible';
 
 type Post = FeedDoc;
 
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/auteurices/');
 
-const author = await fetchUserDisplayName(id);
+let author: Awaited<ReturnType<typeof fetchUserDisplayName>>;
+try {
+  author = await fetchUserDisplayName(id);
+} catch (err) {
+  return serviceIndisponible('auteurice', err);
+}
 if (!author) {
   return new Response('Auteur·ice introuvable', { status: 404 });
 }

@@ -151,6 +151,14 @@ function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
 
   <p class="text-muted text-meta mt-7 mb-0 font-mono">
     {total} publication{total > 1 ? 's' : ''} en ligne, tous formats confondus.
-    <a class="ml-2 text-[var(--c-bleu-deep)]" href="/archives/">Voir les archives →</a>
+    {
+      /* Un filet sous le lien, et pas seulement la couleur : posé au milieu
+        d'une phrase, il ne se distinguait que par sa teinte — ce qui ne
+        dit rien à qui ne perçoit pas cette différence-là. */
+    }
+    <a
+      class="ml-2 border-b border-[var(--c-bleu-deep)] text-[var(--c-bleu-deep)]"
+      href="/archives/">Voir les archives →</a
+    >
   </p>
 </PageShell>

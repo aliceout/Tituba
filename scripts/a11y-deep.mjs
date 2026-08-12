@@ -24,42 +24,15 @@
 
 import { chromium } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
+import { listerPages } from './pages-publiques.mjs';
 
 const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:4321';
 
-// ~18 routes représentatives : couvre la home, les index de section, les
-// pages de fond (prose + blocs riches), les formulaires (contact), l'agenda
-// et la déclaration d'accessibilité. Ajouter ici chaque nouvelle page
-// présentant un bloc inédit pour qu'elle soit auditée.
-const routes = [
-  '/',
-  '/association',
-  '/association/qui-sommes-nous',
-  '/association/interventions',
-  '/association/equipe',
-  '/association/documents',
-  '/association/financeurs',
-  '/isolement-corporel',
-  '/isolement-corporel/impense',
-  '/isolement-corporel/toucher',
-  '/isolement-corporel/ressources',
-  '/pour',
-  '/pour/structures',
-  '/pour/femmes',
-  '/pour/entreprises',
-  '/pour/temoignages',
-  '/agir',
-  '/agir/benevolat',
-  '/agir/praticiennes',
-  '/soutenir',
-  '/soutenir/dons',
-  '/soutenir/mecenat',
-  '/agenda',
-  '/contact',
-  '/mentions-legales',
-  '/politique-confidentialite',
-  '/accessibilite',
-];
+// Les pages à auditer viennent d’une liste partagée avec l’audit
+// statique, et les contenus y sont découverts en suivant les index :
+// une liste écrite en dur avait fini par ne plus désigner que des 404,
+// et l’audit concluait que tout allait bien.
+const routes = await listerPages(BASE);
 
 // Règles détectées mais non bloquantes (à rendre bloquantes une fois fixées).
 const WARN_ONLY_RULES = new Set(['color-contrast']);
@@ -116,9 +89,7 @@ for (const route of routes) {
     const color = impactColor[v.impact] ?? '';
     const icon = WARN_ONLY_RULES.has(v.id) ? '⚠' : (impactIcon[v.impact] ?? '•');
     const tag = WARN_ONLY_RULES.has(v.id) ? `${v.impact} · warn-only` : v.impact;
-    console.log(
-      `  ${color}${icon} [${tag}] ${v.id}${reset} — ${v.help}`,
-    );
+    console.log(`  ${color}${icon} [${tag}] ${v.id}${reset} — ${v.help}`);
     console.log(`    ${v.helpUrl}`);
     for (const node of v.nodes.slice(0, 3)) {
       const sel = Array.isArray(node.target) ? node.target.join(' > ') : node.target;

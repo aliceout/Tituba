@@ -76,6 +76,12 @@ jobs:
       # pose un fallback en interne, mais on l'expose ici aussi pour
       # tout module qui pourrait le checker au top-level. Aucune valeur
       # sensible : c'est un secret de test fixé, jamais utilisé en prod.
+      # Les huit cas du front ne tournaient nulle part : il n'y avait pas
+      # de script `test` à la racine, et donc aucune étape ici. Un test
+      # qu'aucune machine ne lance ne protège de rien.
+      - name: Test frontend (Astro, node --test)
+        run: pnpm test
+
       - name: Test backend (Payload, node --test)
         env:
           PAYLOAD_SECRET: ci-test-secret-not-sensitive-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

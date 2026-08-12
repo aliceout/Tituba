@@ -80,7 +80,13 @@ async function fetchPayload<T>(path: string): Promise<T> {
     headers: { Accept: 'application/json' },
   });
   if (!res.ok) {
-    throw new Error(`Payload fetch ${url} failed: ${res.status} ${res.statusText}`);
+    // Le statut voyage avec l’erreur : sans lui, un appelant ne peut pas
+    // distinguer « cet objet n’existe pas » (404, une réponse) d’« on ne
+    // peut pas lire la base » (panne, tout autre cas). Les deux
+    // demandent pourtant des réponses opposées côté page.
+    const err = new Error(`Payload fetch ${url} failed: ${res.status} ${res.statusText}`);
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
   }
   return (await res.json()) as T;
 }
@@ -226,8 +232,12 @@ export async function fetchByPublicId<T = unknown>(
       `/${collection}?where[publicId][equals]=${encodeURIComponent(publicId)}&depth=${depth}&limit=1`,
     );
     return data.docs[0] ?? null;
-  } catch {
-    return null;
+  } catch (err) {
+    // Un 404 vaut « cette publication n’existe pas » et se traduit par
+    // `null`. Toute autre panne remonte : la page doit pouvoir répondre
+    // 503 plutôt que d’annoncer une absence qu’elle n’a pas constatée.
+    if ((err as { status?: number })?.status === 404) return null;
+    throw err;
   }
 }
 
@@ -540,7 +550,11 @@ export async function fetchUserDisplayName(id: number | string): Promise<{
       `/users/${encodeURIComponent(String(id))}?depth=1` +
         '&select[displayName]=true&select[bio]=true&select[photo]=true',
     );
-  } catch {
-    return null;
+  } catch (err) {
+    // Seul un 404 vaut « cette personne n’existe pas ». Toute autre
+    // panne remonte, pour que la page réponde 503 plutôt que d’annoncer
+    // une absence qu’elle n’a pas constatée.
+    if ((err as { status?: number })?.status === 404) return null;
+    throw err;
   }
 }
