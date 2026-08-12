@@ -1,0 +1,28 @@
+---
+/**
+ * « Un épisode avec … » — en tête des notes d'un podcast.
+ *
+ * Traité comme les repères de l'aside en face : étiquette en petites
+ * capitales au-dessus, valeur en corps de lecture en dessous, et un
+ * filet pour fermer. Sans lui, la ligne se lisait comme un premier
+ * paragraphe très court, collé à la lettrine du vrai premier.
+ *
+ * Empilé plutôt que sur une ligne pour la même raison : les deux blocs
+ * qui ouvrent la page prennent ainsi la même forme, et pas seulement la
+ * même hauteur — celle-ci vient de `--repere-h`, posée par la coquille
+ * de l'article sur ses deux colonnes.
+ */
+interface Props {
+  /** « A, B et C », déjà mis en forme par listerInvitees. */
+  invitees: string;
+}
+
+const { invitees } = Astro.props;
+---
+
+<p class="border-rule m-0 mb-[34px] flex min-h-[var(--repere-h)] flex-col items-start gap-1.5 border-b pb-[var(--repere-pad)]">
+  <span class="text-muted font-sans text-[calc(10px*var(--a11y-echelle))] font-semibold tracking-[0.12em] uppercase">
+    Un épisode avec
+  </span>
+  <span class="text-ink font-serif text-sublede">{invitees}</span>
+</p>

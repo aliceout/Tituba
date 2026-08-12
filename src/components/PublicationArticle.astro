@@ -29,6 +29,7 @@ import PageTitle from './ui/PageTitle.astro';
 import ArticleToc from './article/ArticleToc.astro';
 import ToolResources from './article/ToolResources.astro';
 import ActuBanner from './article/ActuBanner.astro';
+import EpisodeCredits from './article/EpisodeCredits.astro';
 import ArticleMeta from './article/ArticleMeta.astro';
 import ArticleBody from './article/ArticleBody.astro';
 import ArticleFootnotes from './article/ArticleFootnotes.astro';
@@ -483,10 +484,7 @@ const postTags = (post.tags ?? []).filter(
           qui le sépare du texte : sans lui, la ligne se confondait avec
           un premier paragraphe très court. */}
       {guestLabel && (
-        <p class="generique">
-          <span class="generique-lbl">Un épisode avec</span>
-          <span class="generique-noms">{guestLabel}</span>
-        </p>
+        <EpisodeCredits invitees={guestLabel} />
       )}
 
       {/* La ressource, en tête du billet et non en pied : c'est ce que
@@ -990,34 +988,6 @@ const postTags = (post.tags ?? []).filter(
      intitulé en petites capitales, valeur en corps de lecture — et
      fermé par un filet : sans lui, la ligne se lisait comme un premier
      paragraphe très court, collé à la lettrine du vrai premier. */
-  .generique {
-    display: flex;
-    /* Empilé plutôt que sur une ligne : l'étiquette au-dessus, les noms
-       en dessous, exactement comme les repères de l'aside en face. Les
-       deux blocs qui ouvrent la page prennent ainsi la même forme, et
-       pas seulement la même hauteur. */
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    margin: 0 0 34px;
-    /* Hauteur commune avec les repères de l'aside — cf --repere-h. */
-    min-height: var(--repere-h);
-    padding-bottom: var(--repere-pad);
-    border-bottom: 1px solid var(--color-rule);
-  }
-  .generique-lbl {
-    font-family: var(--font-sans);
-    font-size: calc(10px * var(--a11y-echelle));
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--color-muted);
-  }
-  .generique-noms {
-    font-family: var(--font-serif);
-    font-size: calc(16px * var(--a11y-echelle));
-    color: var(--color-ink);
-  }
 
   /* ── Ressources d'un outil ─────────────────────────────────────────
      Un encadré, pas une note de bas de page : ce billet existe pour
