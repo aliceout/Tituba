@@ -154,7 +154,7 @@ const ACTION = [
       >
         {readingLabel && (
           <div>
-            <span class="duree-label">{readingLabel.label} : </span>
+            <span>{readingLabel.label} : </span>
             <span class="font-normal">{readingLabel.value}</span>
           </div>
         )}
@@ -163,7 +163,7 @@ const ACTION = [
             pas à être séparées comme deux sections. */}
         {publishedFr && (
           <div class="mt-[18px]">
-            <span class="duree-label">Publié : </span>
+            <span>Publié : </span>
             <time class="font-normal" datetime={publishedIso}>{publishedFr}</time>
           </div>
         )}

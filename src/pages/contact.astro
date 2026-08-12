@@ -183,6 +183,8 @@ const PRECISION = 'text-muted font-sans text-[calc(11.5px*var(--a11y-echelle))]'
 /** Bandeau de réponse — succès en vert, échec en rouge. */
 const BANDEAU =
   'text-ink m-0 mb-6 border-l-[3px] px-[18px] py-3.5 font-serif text-sublede leading-[1.55]';
+const BANDEAU_OK = `${BANDEAU} border-[var(--c-vert)] bg-[var(--c-vert-tint)]`;
+const BANDEAU_ERREUR = `${BANDEAU} border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3a_8%,var(--color-bg))]`;
 
 ---
 
@@ -195,7 +197,7 @@ const BANDEAU =
 >
   <div class="max-w-[46rem]">
     {envoye === 'direct' && (
-      <p class:list={[BANDEAU, 'border-[var(--c-vert)] bg-[var(--c-vert-tint)]']} role="status">
+      <p class={BANDEAU_OK} role="status">
         <strong>Message envoyé.</strong> Nous vous répondrons à l’adresse indiquée. Merci d’avoir
         pris le temps de nous écrire.
       </p>
@@ -206,7 +208,7 @@ const BANDEAU =
         quelqu'un qui croit son message parti n'ira pas ouvrir le mail,
         et il se perdra. */}
     {envoye === 'confirmation' && (
-      <p class:list={[BANDEAU, 'border-[var(--c-vert)] bg-[var(--c-vert-tint)]']} role="status">
+      <p class={BANDEAU_OK} role="status">
         <strong>Une dernière étape.</strong> Nous venons de vous envoyer un mail : ouvrez-le et
         cliquez sur le lien pour que votre message nous parvienne. Il est valable trente minutes,
         et le mail en contient le texte intégral.
@@ -214,11 +216,17 @@ const BANDEAU =
     )}
 
     {erreur && (
-      <p class:list={[BANDEAU, 'border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3a_8%,var(--color-bg))]']} role="alert">{erreur}</p>
+      <p class={BANDEAU_ERREUR} role="alert">{erreur}</p>
     )}
 
+    {/* Le script recrée le bandeau de succès à la volée quand l’envoi
+        aboutit ; il lit sa mise en forme sur le formulaire plutôt que de la
+        recopier, faute de quoi elle divergerait du rendu serveur au premier
+        ajustement — et c’est exactement ce qui s’était produit : la classe
+        qu’il posait n’avait plus de règle, et le message arrivait sans la
+        moindre mise en forme. */}
     {indisponible ? (
-      <p class:list={[BANDEAU, 'border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3a_8%,var(--color-bg))]']} role="alert">
+      <p class={BANDEAU_ERREUR} role="alert">
         Le formulaire est momentanément indisponible. Réessayez dans quelques minutes.
       </p>
     ) : (
@@ -227,7 +235,8 @@ const BANDEAU =
         method="post"
         action="/contact/"
         novalidate
-        data-contact-form
+        data-contact-form
+        data-classe-succes={BANDEAU_OK}
         data-max={String(defi.max ?? 0)}
         data-sel={defi.sel}
         data-cible={defi.cible}
@@ -498,7 +507,7 @@ const BANDEAU =
           // laisser en place inviterait à renvoyer le même message, que
           // le défi consommé ferait de toute façon échouer.
           const ok = document.createElement('p');
-          ok.className = 'contact-ok';
+          ok.className = form.dataset.classeSucces ?? '';
           ok.setAttribute('role', 'status');
           ok.innerHTML =
             '<strong>Message envoyé.</strong> Nous vous répondrons à l’adresse indiquée. Merci d’avoir pris le temps de nous écrire.';
