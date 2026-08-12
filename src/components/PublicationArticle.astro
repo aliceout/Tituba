@@ -238,6 +238,34 @@ const contexteAffichage = {
 };
 const afficherToc = afficherSommaire(contexteAffichage);
 const afficherLeBrief = afficherBrief(contexteAffichage);
+
+/**
+ * La page se scinde en deux colonnes sous le hero. Une seule condition
+ * décide de monter l'aside ET de réserver sa colonne : deux conditions
+ * séparées finiraient par diverger — une colonne vide, ou l'inverse.
+ */
+const avecColonne = afficherToc || afficherLeBrief;
+
+/**
+ * Écart entre le header et le premier bloc. Nul quand le hero pleine
+ * largeur d'un épisode s'appuie contre le header, et nul aussi pour les
+ * billets d'analyse, les articles de recherche et les actus : leur
+ * surtitre de format tient lieu d'entrée en matière, et l'écart de
+ * <main> suffit à le décoller du header. Les deux existent pour poser un
+ * titre dans du blanc — une image qui va jusqu'aux bords n'en a pas
+ * besoin.
+ */
+const sansEcartHaut =
+  heroPlayer || estActu || collection === 'analyses' || collection === 'articles';
+
+/**
+ * Deux fois la largeur habituelle pour le rappel des faits d'une actu.
+ * La colonne des autres formats porte un sommaire — une liste de titres
+ * courts, qui tient dans 220 px. Celle-ci porte des phrases : à la même
+ * largeur, elles se hachaient en lignes de six ou sept mots, ce qui se
+ * lit mal et fait paraître le bloc plus long qu'il n'est.
+ */
+const COLONNES = estActu ? 'large:grid-cols-[440px_1fr]' : 'large:grid-cols-[1fr_220px]';
 const dateDansAside = dateDansColonne(contexteAffichage);
   afficherToc && (heroPlayer || collection === 'analyses' || collection === 'articles');
 
@@ -290,19 +318,56 @@ const postTags = (post.tags ?? []).filter(
     ))}
   </Fragment>
 
+  {/**
+   * --repere-h : hauteur du bloc qui ouvre chaque colonne, et
+   * respiration avant son filet.
+   *
+   * Deux blocs ouvrent la page côte à côte : le générique dans la
+   * colonne de texte (« Un épisode avec … ») et les repères dans l'aside
+   * (« Temps d'écoute », « Publié »). Leurs filets doivent tomber sur la
+   * même ligne — deux traits décalés de vingt pixels se lisent comme un
+   * défaut de calage, pas comme une intention.
+   *
+   * La valeur est posée ICI, une seule fois, et lue par les deux (cf
+   * EpisodeCredits et ArticleToc). C'est le point : chacun calculait
+   * auparavant sa hauteur dans son coin, à partir de son propre contenu
+   * — une ligne d'un côté, deux de l'autre — et rien ne garantissait
+   * qu'ils tombent d'accord. Une hauteur partagée ne peut pas diverger.
+   *
+   * Sa valeur est celle de l'aside : deux lignes de 10 px à interligne
+   * 1,5, les 18 px qui les séparent, et les 18 px avant le filet. Écrite
+   * en clair plutôt qu'en nombre rond, elle suit le réglage de taille du
+   * panneau d'accessibilité — un 66px figé aurait décroché au premier
+   * agrandissement.
+   *
+   * C'est une hauteur TOTALE, marge intérieure comprise, parce que
+   * Tailwind pose box-sizing: border-box sur tout : un min-height
+   * englobe ici le padding, il ne s'y ajoute pas. La version précédente
+   * comptait l'inverse, d'où un générique de 48 px en face d'un aside de
+   * 66 — l'écart valait exactement la marge oubliée.
+   */}
   <div
     class:list={[
-      'article-shell',
-      {
-        'no-toc': !afficherToc && !afficherLeBrief,
-        'shell--phero': heroPlayer,
-        'shell--actu': estActu,
-        'shell--ras': collection === 'analyses' || collection === 'articles' || estActu,
-      },
+      '[--repere-h:calc(10px*var(--a11y-echelle)*1.5*2+18px+18px)] [--repere-pad:18px]',
+      sansEcartHaut ? 'pt-0' : 'pt-[75px]',
+      'max-mobile:pt-6',
     ]}
   >
 
-    <article class="post" id="haut">
+    {/* Cibles d'ancres du sommaire : on offre une marge de défilement
+        pour que l'élément cliqué arrive au tiers du haut de la fenêtre
+        plutôt que collé sous le header. Étalées sur plusieurs composants
+        (ArticleBody, ArticleFootnotes, ArticleBibliography,
+        ArticleCitationBlock), la coordination vit ici — une variante
+        descendante les atteint tous, y compris le HTML de l'éditeur.
+
+        « Haut de page » fait exception : il ramène au tout début de
+        l'article, avec juste assez de marge pour ne pas se retrouver sous
+        le header. */}
+    <article
+      class="scroll-mt-24 [&_#biblio]:scroll-mt-[33vh] [&_#cite]:scroll-mt-[33vh] [&_#intro]:scroll-mt-[33vh] [&_#notes]:scroll-mt-[33vh] [&_h2]:scroll-mt-[33vh] [&_h3]:scroll-mt-[33vh]"
+      id="haut"
+    >
       {/* Essai en cours sur les épisodes : hero pleine largeur, la
           couverture en fond flouté et reprise nette en carré à gauche
           du titre (cf PodcastHero). Les autres formats gardent le hero
@@ -392,14 +457,35 @@ const postTags = (post.tags ?? []).filter(
       {/* Hero et bandeau meta courent sur toute la largeur ; c'est ici
           seulement que la page se scinde en deux colonnes, texte et
           aside. */}
-      <div class="post-split">
+      {/* La scission ne porte pas sur toute la page mais sur le seul
+          corps de l'article : le hero et le bandeau meta courent sur
+          toute la largeur, et c'est en dessous que le texte cède sa place
+          à l'aside. Sous 1300 px, pas de scission — l'aside n'est pas
+          affiché, le texte occupe tout.
+
+          `items-start` est nécessaire : sans lui, la grille étire l'aside
+          (l'élément le plus court) à la hauteur de la ligne, sa boîte
+          devient aussi haute que le texte, et il ne reste plus aucune
+          marge pour que le collage puisse le déplacer — il se comporte
+          alors comme un élément statique. */}
+      <div class:list={[avecColonne && `large:grid large:items-start large:gap-x-[52px] ${COLONNES}`]}>
         {/* Avant la colonne principale dans le document, et pas seulement
             à gauche à l'écran : une colonne qu'on lit en premier doit
             être rencontrée en premier au clavier et au lecteur d'écran.
             Le rappel des faits ouvre la lecture — il précède donc le
             billet dans les deux ordres. */}
+        {/* C'est la colonne qui colle, et non chacun des deux blocs —
+            imbriqués, deux collages se contraignent l'un l'autre et se
+            figent à contretemps. Même hauteur d'arrêt que le sommaire
+            des autres formats, pour qu'un lecteur passant d'un billet
+            d'analyse à une actu ne voie pas la colonne s'arrêter deux
+            fois au même endroit à des hauteurs différentes.
+
+            Le bloc commun y perd son propre collage et son écart haut :
+            c'est la colonne qui les porte désormais, et il vient se
+            poser sous le résumé plutôt que d'ouvrir la colonne. */}
         {afficherLeBrief && (
-          <div class="brief-colonne">
+          <div class="[&_.toc]:border-rule sticky top-[183px] [&_.toc]:static [&_.toc]:mt-[18px] [&_.toc]:border-t [&_.toc]:pt-[18px] [&_.toc]:top-auto">
             <ActuBrief texte={post.enBref!} sources={post.sources ?? null} />
             {/* Le même bloc que les autres formats, monté sans entrées :
                 une actu n'a pas de plan, mais elle a une date, une durée
@@ -420,7 +506,9 @@ const postTags = (post.tags ?? []).filter(
             />
           </div>
         )}
-        <div class="post-main">
+        {/* Plus de plafond à poser sur le chapô : descendu dans la
+            colonne principale, il en prend la largeur tout seul. */}
+        <div class="large:min-w-0">
       {/* Générique, en tête des notes et non dans le hero : c'est ce
           qu'on lit sur l'épisode, pas la carte de visite qui l'annonce.
           Traité comme les repères de l'aside — intitulé en petites
@@ -473,7 +561,7 @@ const postTags = (post.tags ?? []).filter(
 
       {footnotesHtml && <ArticleFootnotes html={footnotesHtml} />}
 
-      <div class="tail">
+      <div class="mt-12">
         {biblio.length > 0 && <ArticleBibliography entries={biblio} />}
         {postTags.length > 0 && <ArticleTags tags={postTags} />}
         {spec.citationType === 'article' && (
@@ -509,184 +597,3 @@ const postTags = (post.tags ?? []).filter(
     </article>
   </div>
 </Layout>
-
-<style>
-  .article-shell {
-    padding-top: 75px;
-    /**
-     * Hauteur du bloc qui ouvre chaque colonne, et respiration avant
-     * son filet.
-     *
-     * Deux blocs ouvrent la page côte à côte : le générique dans la
-     * colonne de texte (« Un épisode avec … ») et les repères dans
-     * l'aside (« Temps d'écoute », « Publié »). Leurs filets doivent
-     * tomber sur la même ligne — deux traits décalés de vingt pixels se
-     * lisent comme un défaut de calage, pas comme une intention.
-     *
-     * La valeur est posée ICI, une seule fois, et lue par les deux
-     * (cf `.generique` plus bas, et ArticleToc → `.duree`). C'est le
-     * point : chacun calculait auparavant sa hauteur dans son coin, à
-     * partir de son propre contenu — une ligne d'un côté, deux de
-     * l'autre — et rien ne garantissait qu'ils tombent d'accord. Une
-     * hauteur partagée ne peut pas diverger.
-     *
-     * Sa valeur est celle de l'aside : deux lignes de 10 px à
-     * interligne 1,5, les 18 px qui les séparent, et les 18 px avant le
-     * filet. Écrite en clair plutôt qu'en nombre rond, elle suit le
-     * réglage de taille du panneau d'accessibilité — un `66px` figé
-     * aurait décroché au premier agrandissement.
-     *
-     * C'est une hauteur TOTALE, marge intérieure comprise, parce que
-     * Tailwind pose `box-sizing: border-box` sur tout : un `min-height`
-     * englobe ici le `padding`, il ne s'y ajoute pas. La version
-     * précédente comptait l'inverse, d'où un générique de 48 px en face
-     * d'un aside de 66 — l'écart valait exactement la marge oubliée.
-     */
-    --repere-h: calc(10px * var(--a11y-echelle) * 1.5 * 2 + 18px + 18px);
-    --repere-pad: 18px;
-  }
-  /* Le hero pleine largeur d'un épisode s'appuie contre le header : la
-     page ne lui ménage donc aucun écart au-dessus, ni celui de <main>
-     (annulé par le composant) ni celui-ci. Les deux existent pour poser
-     un titre dans du blanc — une image qui va jusqu'aux bords n'en a
-     pas besoin.
-     Les billets d'analyse et les articles de recherche s'en passent
-     aussi : leur surtitre de format tient lieu d'entrée en matière, et
-     l'écart de <main> suffit à le décoller du header. */
-  .shell--phero,
-  .shell--ras {
-    padding-top: 0;
-  }
-
-  /* Géométrie de la colonne du rappel des faits, déclarée une fois et
-     lue à deux endroits : la grille du corps, et la largeur du chapô qui
-     doit s'arrêter au même endroit. Deux valeurs recopiées auraient
-     divergé au premier ajustement. */
-  .shell--actu {
-    --brief-col: 440px;
-    --brief-gap: 52px;
-  }
-
-  /* Colonne latérale d'une actu : le rappel des faits, puis les repères
-     et les actions du bloc commun. C'est elle qui colle, et non chacun
-     des deux blocs — imbriqués, deux `sticky` se contraignent l'un
-     l'autre et se figent à contretemps. Même hauteur d'arrêt que le
-     sommaire des autres formats, pour qu'un lecteur passant d'un billet
-     d'analyse à une actu ne voie pas la colonne s'arrêter deux fois au
-     même endroit à des hauteurs différentes. */
-  .brief-colonne {
-    position: sticky;
-    top: 183px;
-  }
-  /* Le bloc commun perd son propre collage et son écart haut : c'est la
-     colonne qui les porte désormais, et il vient se poser sous le
-     résumé plutôt que d'ouvrir la colonne. */
-  .brief-colonne :global(.toc) {
-    position: static;
-    top: auto;
-    margin-top: 18px;
-    padding-top: 18px;
-    border-top: 1px solid var(--color-rule);
-  }
-
-  /* Billet d'actu : le rappel des faits occupe la colonne latérale des
-     autres formats (cf .post-split), et le billet la colonne principale.
-     Pas de grille propre à ce format — celle du gabarit existe déjà,
-     avec son comportement collant, et la dupliquer aurait fait deux
-     mécanismes à maintenir pour un seul résultat.
-     Le hero, lui, garde toute la largeur : c'est sous le titre que la
-     page se scinde, comme partout ailleurs. */
-  /* Bandeau d'une actu : pleine largeur de la colonne, au-dessus de
-     tout. En 16/9 imposé — c'est la proportion que le cadrage propose
-     dans l'admin, et laisser l'image dicter sa hauteur ferait sauter le
-     titre d'un billet à l'autre. `object-fit: cover` cadre dedans. */
-  /* La scission en deux colonnes ne porte plus sur toute la page mais
-     sur le seul corps de l'article : le hero (cadre du titre + image) et
-     le bandeau meta courent sur toute la largeur, et c'est en dessous
-     que le texte cède 220px à l'aside.
-     En dessous de 1300px, pas de scission — l'aside n'est pas affiché,
-     le texte occupe tout. */
-  @media (min-width: 1300px) {
-    .article-shell:not(.no-toc) .post-split {
-      display: grid;
-      grid-template-columns: 1fr 220px;
-      column-gap: 52px;
-      /* Sans "start", la grille étire l'aside (item le plus court) à la
-         hauteur de la ligne : sa boîte devient aussi haute que le texte,
-         ce qui ne laisse plus aucune marge pour que `sticky` puisse le
-         déplacer — il se comporte alors comme un élément statique. */
-      align-items: start;
-    }
-    /* Deux fois la largeur habituelle pour le rappel des faits d'une
-       actu. La colonne des autres formats porte un sommaire — une liste
-       de titres courts, qui tient dans 220 px. Celle-ci porte des
-       phrases : à la même largeur, elles se hachaient en lignes de six
-       ou sept mots, ce qui se lit mal et fait paraître le bloc plus
-       long qu'il n'est. */
-    .article-shell.shell--actu:not(.no-toc) .post-split {
-      grid-template-columns: var(--brief-col) 1fr;
-      column-gap: var(--brief-gap);
-    }
-    /* Plus de plafond à poser sur le chapô : descendu dans la colonne
-       principale, il en prend la largeur tout seul. */
-    .post-main {
-      min-width: 0;
-    }
-  }
-
-  /* Cibles d'ancres du Sommaire : on offre une marge de scroll pour
-     que l'élément cliqué arrive ~1/3 du haut de la fenêtre, plutôt
-     que collé sous la topbar sticky. Étalé sur plusieurs composants
-     (ArticleBody, ArticleFootnotes, ArticleBibliography,
-     ArticleCitationBlock) : la coordination vit ici. */
-  article.post :global(h2),
-  article.post :global(h3),
-  article.post :global(#intro),
-  article.post :global(#notes),
-  article.post :global(#biblio),
-  article.post :global(#cite) {
-    scroll-margin-top: 33vh;
-  }
-  /* « Haut de page » ramène au tout début de l'article, pas au tiers de
-     l'écran comme les autres ancres — juste assez de marge pour ne pas
-     se retrouver sous le header sticky. */
-  article.post#haut {
-    scroll-margin-top: 96px;
-  }
-
-  /* Générique en tête des notes. Traité comme les repères de l'aside —
-     intitulé en petites capitales, valeur en corps de lecture — et
-     fermé par un filet : sans lui, la ligne se lisait comme un premier
-     paragraphe très court, collé à la lettrine du vrai premier. */
-
-  /* ── Ressources d'un outil ─────────────────────────────────────────
-     Un encadré, pas une note de bas de page : ce billet existe pour
-     transmettre des documents, et le texte n’en est que la
-     présentation. Il se lit donc avant le corps, et se voit sans être
-     cherché.
-
-     Le vert du site plutôt que la couleur de format : ce sont des
-     actions, elles doivent se distinguer du texte qui les entoure. */
-  /* Contenu réservé aux technologies d'assistance. */
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .tail {
-    margin: 48px 0 0;
-  }
-
-  @media (max-width: 900px) {
-    .article-shell {
-      padding-top: 24px;
-    }
-  }
-</style>
