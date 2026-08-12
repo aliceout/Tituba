@@ -28,6 +28,7 @@ import Layout from '../layouts/Layout.astro';
 import PageTitle from './ui/PageTitle.astro';
 import ArticleToc from './article/ArticleToc.astro';
 import ToolResources from './article/ToolResources.astro';
+import ActuBanner from './article/ActuBanner.astro';
 import ArticleMeta from './article/ArticleMeta.astro';
 import ArticleBody from './article/ArticleBody.astro';
 import ArticleFootnotes from './article/ArticleFootnotes.astro';
@@ -338,20 +339,7 @@ const postTags = (post.tags ?? []).filter(
           en premier fait ce que fait une photo de presse, elle donne
           l'objet avant la phrase. */}
       {estActu && coverImageUrl && (
-        <figure class="actu-banniere">
-          <img src={coverImageUrl} alt={coverImageAlt} />
-          {unsplashCredit && (
-            <figcaption>
-              Photo par{' '}
-              {unsplashCredit.profileUrl ? (
-                <a href={unsplashCredit.profileUrl} rel="noopener">{unsplashCredit.name}</a>
-              ) : (
-                unsplashCredit.name
-              )}
-              {' '}sur <a href={unsplashCredit.unsplashUrl} rel="noopener">Unsplash</a>
-            </figcaption>
-          )}
-        </figure>
+        <ActuBanner url={coverImageUrl} alt={coverImageAlt} credit={unsplashCredit} />
       )}
 
       {!heroPlayer && (
@@ -511,9 +499,9 @@ const postTags = (post.tags ?? []).filter(
       {/* Chapô et ligne de méta d'une actu — en tête de la colonne
           principale et non dans le hero, pour partager leur rangée avec
           le rappel des faits d'à côté (cf ActuBrief). */}
-      {estActu && <p class="deck deck--actu">{post.lede}</p>}
+      {estActu && <p class="deck mt-0">{post.lede}</p>}
       {estActu && ((displayAuthors && displayAuthors.length > 0) || primaryTheme) && (
-        <p class="actu-meta">
+        <p class="text-muted m-0 mt-[18px] flex flex-wrap items-baseline gap-0.5 font-sans text-[calc(14px*var(--a11y-echelle))] [&_a]:border-rule [&_a]:border-b [&_a]:text-inherit [&_a]:transition-[color,border-color] [&_a]:duration-[120ms] [&_a:hover]:text-ink [&_a:hover]:border-b-ink">
           {displayAuthors && displayAuthors.length > 0 && (
             <span>
               {displayAuthors.map((a, i) => (
@@ -531,7 +519,7 @@ const postTags = (post.tags ?? []).filter(
           {primaryTheme && (
             <>
               {displayAuthors && displayAuthors.length > 0 && (
-                <span class="actu-meta-sep" aria-hidden="true">·</span>
+                <span class="mx-2 opacity-50" aria-hidden="true">·</span>
               )}
               <a href={`/theme/${primaryTheme.slug}/`}>{primaryTheme.name}</a>
             </>
@@ -670,65 +658,6 @@ const postTags = (post.tags ?? []).filter(
      tout. En 16/9 imposé — c'est la proportion que le cadrage propose
      dans l'admin, et laisser l'image dicter sa hauteur ferait sauter le
      titre d'un billet à l'autre. `object-fit: cover` cadre dedans. */
-  .actu-banniere {
-    margin: 0 0 34px;
-  }
-  .actu-banniere img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border-radius: var(--hero-radius, 10px);
-    background: var(--color-rule);
-  }
-  .actu-banniere figcaption {
-    font-family: var(--font-sans);
-    font-size: calc(11px * var(--a11y-echelle));
-    line-height: 1.45;
-    color: var(--color-muted);
-    margin-top: 10px;
-  }
-  .actu-banniere figcaption a {
-    color: inherit;
-    border-bottom: 1px dotted currentColor;
-  }
-  .actu-banniere figcaption a:hover {
-    color: var(--color-ink);
-  }
-
-  /* Signature et thématique en une ligne, à la place du bandeau. Posées
-     sous le chapô et non sous le titre : c'est le chapô qui dit de quoi
-     il s'agit, ces deux valeurs ne font que le situer. */
-  /* En tête de colonne, le chapô n'a plus la marge haute qu'il portait
-     sous le titre : c'est la rangée elle-même qui l'ouvre, et un écart
-     de plus le décalerait du bloc d'à côté. */
-  .deck--actu {
-    margin-top: 0;
-  }
-
-  .actu-meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px;
-    font-family: var(--font-sans);
-    font-size: calc(14px * var(--a11y-echelle));
-    color: var(--color-muted);
-    margin: 18px 0 0;
-  }
-  .actu-meta a {
-    color: inherit;
-    border-bottom: 1px solid var(--color-rule);
-    transition: color 0.12s, border-color 0.12s;
-  }
-  .actu-meta a:hover {
-    color: var(--color-ink);
-    border-bottom-color: var(--color-ink);
-  }
-  .actu-meta-sep {
-    margin-inline: 8px;
-    opacity: 0.5;
-  }
   /* La scission en deux colonnes ne porte plus sur toute la page mais
      sur le seul corps de l'article : le hero (cadre du titre + image) et
      le bandeau meta courent sur toute la largeur, et c'est en dessous
