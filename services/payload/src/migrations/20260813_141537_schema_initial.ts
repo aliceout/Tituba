@@ -8,13 +8,16 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE TYPE "public"."enum_podcasts_authors_kind" AS ENUM('user', 'external');
   CREATE TYPE "public"."enum_outils_authors_kind" AS ENUM('user', 'external');
   CREATE TYPE "public"."enum_outils_audience" AS ENUM('tous', 'militantes', 'pros', 'structures');
+  CREATE TYPE "public"."enum_series_format" AS ENUM('podcasts', 'articles', 'analyses');
   CREATE TYPE "public"."enum_bibliography_authors_role" AS ENUM('author', 'editor', 'translator');
   CREATE TYPE "public"."enum_bibliography_type" AS ENUM('book', 'chapter', 'article', 'paper', 'web', 'other');
   CREATE TYPE "public"."enum_bibliography_source" AS ENUM('manual', 'zotero');
   CREATE TYPE "public"."enum_pages_blocks_figure_align" AS ENUM('left', 'center', 'wide');
+  CREATE TYPE "public"."enum_pages_kind" AS ENUM('libre', 'fixe');
   CREATE TYPE "public"."enum_users_role" AS ENUM('root', 'admin', 'editor');
   CREATE TYPE "public"."enum_users_status" AS ENUM('pending', 'active', 'disabled');
   CREATE TYPE "public"."enum_users_zotero_library_type" AS ENUM('user', 'group');
+  CREATE TYPE "public"."enum_subscribers_rythmes" AS ENUM('newsletter', 'publications');
   CREATE TYPE "public"."enum_subscribers_status" AS ENUM('pending', 'active', 'unsubscribed');
   CREATE TYPE "public"."enum_site_branding_accent_color" AS ENUM('#5a3a7a', '#8a3a3a', '#1f3a5a', '#3a3a3a', '#2d5a3d');
   CREATE TYPE "public"."enum_site_branding_background_color" AS ENUM('#f6f5f1', '#fdfcf8', '#ffffff', '#f1efe8', '#eee9dd', '#e9eaec');
@@ -33,15 +36,16 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   
   CREATE TABLE "articles" (
   	"id" serial PRIMARY KEY NOT NULL,
-  	"numero" numeric NOT NULL,
+  	"public_id" varchar,
   	"title" varchar NOT NULL,
-  	"slug" varchar NOT NULL,
+  	"series_id" integer,
+  	"series_number" numeric,
   	"published_at" timestamp(3) with time zone NOT NULL,
   	"lede" varchar NOT NULL,
   	"body" jsonb NOT NULL,
   	"doi" varchar,
   	"reading_time" numeric,
-  	"id_carnet" varchar,
+  	"featured" boolean DEFAULT false,
   	"draft" boolean DEFAULT false,
   	"notifications_sent_at" timestamp(3) with time zone,
   	"has_draft_zones" boolean DEFAULT false,
@@ -72,14 +76,16 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   
   CREATE TABLE "analyses" (
   	"id" serial PRIMARY KEY NOT NULL,
-  	"numero" numeric NOT NULL,
+  	"public_id" varchar,
   	"title" varchar NOT NULL,
-  	"slug" varchar NOT NULL,
+  	"series_id" integer,
+  	"series_number" numeric,
   	"published_at" timestamp(3) with time zone NOT NULL,
   	"lede" varchar NOT NULL,
   	"body" jsonb NOT NULL,
+  	"image_id" integer,
   	"reading_time" numeric,
-  	"id_carnet" varchar,
+  	"featured" boolean DEFAULT false,
   	"draft" boolean DEFAULT false,
   	"notifications_sent_at" timestamp(3) with time zone,
   	"has_draft_zones" boolean DEFAULT false,
@@ -108,16 +114,25 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"affiliation" varchar
   );
   
+  CREATE TABLE "actus_sources" (
+  	"_order" integer NOT NULL,
+  	"_parent_id" integer NOT NULL,
+  	"id" varchar PRIMARY KEY NOT NULL,
+  	"label" varchar,
+  	"url" varchar
+  );
+  
   CREATE TABLE "actus" (
   	"id" serial PRIMARY KEY NOT NULL,
-  	"numero" numeric NOT NULL,
+  	"public_id" varchar,
   	"title" varchar NOT NULL,
-  	"slug" varchar NOT NULL,
   	"published_at" timestamp(3) with time zone NOT NULL,
   	"lede" varchar NOT NULL,
   	"body" jsonb NOT NULL,
+  	"en_bref" varchar,
+  	"image_id" integer,
   	"reading_time" numeric,
-  	"id_carnet" varchar,
+  	"featured" boolean DEFAULT false,
   	"draft" boolean DEFAULT false,
   	"notifications_sent_at" timestamp(3) with time zone,
   	"has_draft_zones" boolean DEFAULT false,
@@ -148,23 +163,32 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   
   CREATE TABLE "podcasts" (
   	"id" serial PRIMARY KEY NOT NULL,
-  	"numero" numeric NOT NULL,
+  	"public_id" varchar,
   	"title" varchar NOT NULL,
-  	"slug" varchar NOT NULL,
+  	"series_id" integer,
+  	"series_number" numeric,
   	"published_at" timestamp(3) with time zone NOT NULL,
   	"lede" varchar NOT NULL,
   	"body" jsonb,
-  	"audio_url" varchar NOT NULL,
+  	"audio_id" integer,
+  	"image_id" integer,
   	"duration_seconds" numeric,
-  	"guests" varchar,
   	"reading_time" numeric,
-  	"id_carnet" varchar,
+  	"featured" boolean DEFAULT false,
   	"draft" boolean DEFAULT false,
   	"notifications_sent_at" timestamp(3) with time zone,
   	"has_draft_zones" boolean DEFAULT false,
   	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
   	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
   	"search_vector" "tsvector"
+  );
+  
+  CREATE TABLE "podcasts_texts" (
+  	"id" serial PRIMARY KEY NOT NULL,
+  	"order" integer NOT NULL,
+  	"parent_id" integer NOT NULL,
+  	"path" varchar NOT NULL,
+  	"text" varchar
   );
   
   CREATE TABLE "podcasts_rels" (
@@ -187,18 +211,24 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"affiliation" varchar
   );
   
+  CREATE TABLE "outils_resources" (
+  	"_order" integer NOT NULL,
+  	"_parent_id" integer NOT NULL,
+  	"id" varchar PRIMARY KEY NOT NULL,
+  	"fichier_id" integer NOT NULL,
+  	"description" varchar
+  );
+  
   CREATE TABLE "outils" (
   	"id" serial PRIMARY KEY NOT NULL,
-  	"numero" numeric NOT NULL,
+  	"public_id" varchar,
   	"title" varchar NOT NULL,
-  	"slug" varchar NOT NULL,
   	"published_at" timestamp(3) with time zone NOT NULL,
   	"lede" varchar NOT NULL,
   	"body" jsonb,
-  	"resource_url" varchar NOT NULL,
   	"audience" "enum_outils_audience" DEFAULT 'tous',
   	"reading_time" numeric,
-  	"id_carnet" varchar,
+  	"featured" boolean DEFAULT false,
   	"draft" boolean DEFAULT false,
   	"notifications_sent_at" timestamp(3) with time zone,
   	"has_draft_zones" boolean DEFAULT false,
@@ -224,6 +254,28 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"description" varchar,
   	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
   	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
+  );
+  
+  CREATE TABLE "series" (
+  	"id" serial PRIMARY KEY NOT NULL,
+  	"name" varchar NOT NULL,
+  	"slug" varchar NOT NULL,
+  	"format" "enum_series_format" NOT NULL,
+  	"lede" varchar,
+  	"image_id" integer,
+  	"feed_explicit" boolean DEFAULT false,
+  	"feed_owner_email" varchar,
+  	"draft" boolean DEFAULT true,
+  	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+  	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
+  );
+  
+  CREATE TABLE "series_rels" (
+  	"id" serial PRIMARY KEY NOT NULL,
+  	"order" integer,
+  	"parent_id" integer NOT NULL,
+  	"path" varchar NOT NULL,
+  	"themes_id" integer
   );
   
   CREATE TABLE "tags" (
@@ -273,7 +325,18 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"_path" text NOT NULL,
   	"id" varchar PRIMARY KEY NOT NULL,
   	"titre" varchar,
-  	"content" jsonb NOT NULL,
+  	"content" jsonb,
+  	"block_name" varchar
+  );
+  
+  CREATE TABLE "pages_blocks_depliant" (
+  	"_order" integer NOT NULL,
+  	"_parent_id" integer NOT NULL,
+  	"_path" text NOT NULL,
+  	"id" varchar PRIMARY KEY NOT NULL,
+  	"titre" varchar,
+  	"ouvert" boolean DEFAULT false,
+  	"content" jsonb,
   	"block_name" varchar
   );
   
@@ -294,14 +357,17 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"_parent_id" integer NOT NULL,
   	"_path" text NOT NULL,
   	"id" varchar PRIMARY KEY NOT NULL,
-  	"text" varchar NOT NULL,
+  	"text" varchar,
   	"source" varchar,
   	"block_name" varchar
   );
   
   CREATE TABLE "pages" (
   	"id" serial PRIMARY KEY NOT NULL,
+  	"kind" "enum_pages_kind" DEFAULT 'libre',
   	"title" varchar NOT NULL,
+  	"enabled" boolean DEFAULT true,
+  	"draft" boolean DEFAULT false,
   	"slug" varchar NOT NULL,
   	"description" varchar,
   	"noindex" boolean DEFAULT false,
@@ -327,6 +393,8 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE TABLE "users" (
   	"id" serial PRIMARY KEY NOT NULL,
   	"display_name" varchar,
+  	"bio" varchar,
+  	"photo_id" integer,
   	"citation_format" varchar,
   	"role" "enum_users_role" NOT NULL,
   	"status" "enum_users_status" DEFAULT 'active',
@@ -361,7 +429,15 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE TABLE "media" (
   	"id" serial PRIMARY KEY NOT NULL,
   	"title" varchar NOT NULL,
-  	"alt" varchar NOT NULL,
+  	"alt" varchar,
+  	"unsplash_photo_id" varchar,
+  	"unsplash_photographer_name" varchar,
+  	"unsplash_photographer_profile_url" varchar,
+  	"unsplash_photo_page_url" varchar,
+  	"crop_x" numeric,
+  	"crop_y" numeric,
+  	"crop_w" numeric,
+  	"crop_h" numeric,
   	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
   	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
   	"url" varchar,
@@ -373,6 +449,13 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"height" numeric,
   	"focal_x" numeric,
   	"focal_y" numeric
+  );
+  
+  CREATE TABLE "subscribers_rythmes" (
+  	"order" integer NOT NULL,
+  	"parent_id" integer NOT NULL,
+  	"value" "enum_subscribers_rythmes",
+  	"id" serial PRIMARY KEY NOT NULL
   );
   
   CREATE TABLE "subscribers" (
@@ -412,6 +495,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"podcasts_id" integer,
   	"outils_id" integer,
   	"themes_id" integer,
+  	"series_id" integer,
   	"tags_id" integer,
   	"bibliography_id" integer,
   	"pages_id" integer,
@@ -474,25 +558,17 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"external" boolean DEFAULT false
   );
   
-  CREATE TABLE "navigation" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"updated_at" timestamp(3) with time zone,
-  	"created_at" timestamp(3) with time zone
+  CREATE TABLE "navigation_nav_footer_coulisses" (
+  	"_order" integer NOT NULL,
+  	"_parent_id" integer NOT NULL,
+  	"id" varchar PRIMARY KEY NOT NULL,
+  	"label" varchar NOT NULL,
+  	"href" varchar NOT NULL,
+  	"external" boolean DEFAULT false
   );
   
-  CREATE TABLE "index_pages" (
+  CREATE TABLE "navigation" (
   	"id" serial PRIMARY KEY NOT NULL,
-  	"home_hero_title" varchar DEFAULT 'Notes de recherche',
-  	"home_hero_lede" varchar DEFAULT 'Analyses longues, notes de lecture et fiches thématiques.',
-  	"archives_enabled" boolean DEFAULT true,
-  	"archives_hero_title" varchar DEFAULT 'Toutes les publications, par année.',
-  	"archives_hero_lede" varchar DEFAULT 'Chaque publication porte un numéro, une date de publication et, le cas échéant, une date de mise à jour.',
-  	"themes_enabled" boolean DEFAULT true,
-  	"themes_hero_title" varchar DEFAULT 'Nos *thématiques*.',
-  	"themes_hero_lede" varchar DEFAULT 'Chaque publication est rattachée à une ou plusieurs thématiques. La taxonomie est libre et évolue avec nos travaux.',
-  	"subscribe_enabled" boolean DEFAULT true,
-  	"subscribe_hero_title" varchar DEFAULT '*S''abonner* aux billets',
-  	"subscribe_hero_lede" varchar DEFAULT 'Plusieurs façons de recevoir les nouveaux billets : sur les réseaux où l''autrice est présente, ou via un flux RSS — sans algorithme, sans publicité, sans pisteur.',
   	"updated_at" timestamp(3) with time zone,
   	"created_at" timestamp(3) with time zone
   );
@@ -503,6 +579,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"author_name" varchar DEFAULT '',
   	"baseline" varchar DEFAULT 'Collectif féministe intersectionnel. Auto-hébergé.',
   	"copyright_line" varchar DEFAULT 'CC BY-NC-SA 4.0',
+  	"contact_email" varchar,
   	"updated_at" timestamp(3) with time zone,
   	"created_at" timestamp(3) with time zone
   );
@@ -511,6 +588,9 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"id" serial PRIMARY KEY NOT NULL,
   	"rss_enabled" boolean DEFAULT true,
   	"email_enabled" boolean DEFAULT true,
+  	"podcast_cover_id" integer,
+  	"podcast_explicit" boolean DEFAULT false,
+  	"podcast_owner_email" varchar,
   	"mastodon" varchar,
   	"bluesky" varchar,
   	"orcid" varchar,
@@ -521,42 +601,59 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   
   ALTER TABLE "articles_authors" ADD CONSTRAINT "articles_authors_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "articles_authors" ADD CONSTRAINT "articles_authors_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."articles"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "articles" ADD CONSTRAINT "articles_series_id_series_id_fk" FOREIGN KEY ("series_id") REFERENCES "public"."series"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "articles_rels" ADD CONSTRAINT "articles_rels_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."articles"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "articles_rels" ADD CONSTRAINT "articles_rels_themes_fk" FOREIGN KEY ("themes_id") REFERENCES "public"."themes"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "articles_rels" ADD CONSTRAINT "articles_rels_tags_fk" FOREIGN KEY ("tags_id") REFERENCES "public"."tags"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "articles_rels" ADD CONSTRAINT "articles_rels_bibliography_fk" FOREIGN KEY ("bibliography_id") REFERENCES "public"."bibliography"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "analyses_authors" ADD CONSTRAINT "analyses_authors_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "analyses_authors" ADD CONSTRAINT "analyses_authors_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."analyses"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "analyses" ADD CONSTRAINT "analyses_series_id_series_id_fk" FOREIGN KEY ("series_id") REFERENCES "public"."series"("id") ON DELETE set null ON UPDATE no action;
+  ALTER TABLE "analyses" ADD CONSTRAINT "analyses_image_id_media_id_fk" FOREIGN KEY ("image_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "analyses_rels" ADD CONSTRAINT "analyses_rels_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."analyses"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "analyses_rels" ADD CONSTRAINT "analyses_rels_themes_fk" FOREIGN KEY ("themes_id") REFERENCES "public"."themes"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "analyses_rels" ADD CONSTRAINT "analyses_rels_tags_fk" FOREIGN KEY ("tags_id") REFERENCES "public"."tags"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "analyses_rels" ADD CONSTRAINT "analyses_rels_bibliography_fk" FOREIGN KEY ("bibliography_id") REFERENCES "public"."bibliography"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "actus_authors" ADD CONSTRAINT "actus_authors_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "actus_authors" ADD CONSTRAINT "actus_authors_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."actus"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "actus_sources" ADD CONSTRAINT "actus_sources_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."actus"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "actus" ADD CONSTRAINT "actus_image_id_media_id_fk" FOREIGN KEY ("image_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "actus_rels" ADD CONSTRAINT "actus_rels_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."actus"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "actus_rels" ADD CONSTRAINT "actus_rels_themes_fk" FOREIGN KEY ("themes_id") REFERENCES "public"."themes"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "actus_rels" ADD CONSTRAINT "actus_rels_tags_fk" FOREIGN KEY ("tags_id") REFERENCES "public"."tags"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "actus_rels" ADD CONSTRAINT "actus_rels_bibliography_fk" FOREIGN KEY ("bibliography_id") REFERENCES "public"."bibliography"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "podcasts_authors" ADD CONSTRAINT "podcasts_authors_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "podcasts_authors" ADD CONSTRAINT "podcasts_authors_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."podcasts"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "podcasts" ADD CONSTRAINT "podcasts_series_id_series_id_fk" FOREIGN KEY ("series_id") REFERENCES "public"."series"("id") ON DELETE set null ON UPDATE no action;
+  ALTER TABLE "podcasts" ADD CONSTRAINT "podcasts_audio_id_media_id_fk" FOREIGN KEY ("audio_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
+  ALTER TABLE "podcasts" ADD CONSTRAINT "podcasts_image_id_media_id_fk" FOREIGN KEY ("image_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
+  ALTER TABLE "podcasts_texts" ADD CONSTRAINT "podcasts_texts_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."podcasts"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "podcasts_rels" ADD CONSTRAINT "podcasts_rels_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."podcasts"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "podcasts_rels" ADD CONSTRAINT "podcasts_rels_themes_fk" FOREIGN KEY ("themes_id") REFERENCES "public"."themes"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "podcasts_rels" ADD CONSTRAINT "podcasts_rels_tags_fk" FOREIGN KEY ("tags_id") REFERENCES "public"."tags"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "podcasts_rels" ADD CONSTRAINT "podcasts_rels_bibliography_fk" FOREIGN KEY ("bibliography_id") REFERENCES "public"."bibliography"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "outils_authors" ADD CONSTRAINT "outils_authors_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "outils_authors" ADD CONSTRAINT "outils_authors_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."outils"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "outils_resources" ADD CONSTRAINT "outils_resources_fichier_id_media_id_fk" FOREIGN KEY ("fichier_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
+  ALTER TABLE "outils_resources" ADD CONSTRAINT "outils_resources_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."outils"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "outils_rels" ADD CONSTRAINT "outils_rels_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."outils"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "outils_rels" ADD CONSTRAINT "outils_rels_themes_fk" FOREIGN KEY ("themes_id") REFERENCES "public"."themes"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "outils_rels" ADD CONSTRAINT "outils_rels_tags_fk" FOREIGN KEY ("tags_id") REFERENCES "public"."tags"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "outils_rels" ADD CONSTRAINT "outils_rels_bibliography_fk" FOREIGN KEY ("bibliography_id") REFERENCES "public"."bibliography"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "series" ADD CONSTRAINT "series_image_id_media_id_fk" FOREIGN KEY ("image_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
+  ALTER TABLE "series_rels" ADD CONSTRAINT "series_rels_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."series"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "series_rels" ADD CONSTRAINT "series_rels_themes_fk" FOREIGN KEY ("themes_id") REFERENCES "public"."themes"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "bibliography_authors" ADD CONSTRAINT "bibliography_authors_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."bibliography"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "bibliography" ADD CONSTRAINT "bibliography_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "pages_blocks_prose" ADD CONSTRAINT "pages_blocks_prose_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."pages"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "pages_blocks_depliant" ADD CONSTRAINT "pages_blocks_depliant_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."pages"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "pages_blocks_figure" ADD CONSTRAINT "pages_blocks_figure_image_id_media_id_fk" FOREIGN KEY ("image_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "pages_blocks_figure" ADD CONSTRAINT "pages_blocks_figure_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."pages"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "pages_blocks_citation_bloc" ADD CONSTRAINT "pages_blocks_citation_bloc_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."pages"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "users_trusted_devices" ADD CONSTRAINT "users_trusted_devices_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "users" ADD CONSTRAINT "users_photo_id_media_id_fk" FOREIGN KEY ("photo_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "users" ADD CONSTRAINT "users_invitation_invited_by_id_users_id_fk" FOREIGN KEY ("invitation_invited_by_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+  ALTER TABLE "subscribers_rythmes" ADD CONSTRAINT "subscribers_rythmes_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."subscribers"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_parent_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."payload_locked_documents"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_articles_fk" FOREIGN KEY ("articles_id") REFERENCES "public"."articles"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_analyses_fk" FOREIGN KEY ("analyses_id") REFERENCES "public"."analyses"("id") ON DELETE cascade ON UPDATE no action;
@@ -564,6 +661,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_podcasts_fk" FOREIGN KEY ("podcasts_id") REFERENCES "public"."podcasts"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_outils_fk" FOREIGN KEY ("outils_id") REFERENCES "public"."outils"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_themes_fk" FOREIGN KEY ("themes_id") REFERENCES "public"."themes"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_series_fk" FOREIGN KEY ("series_id") REFERENCES "public"."series"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_tags_fk" FOREIGN KEY ("tags_id") REFERENCES "public"."tags"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_bibliography_fk" FOREIGN KEY ("bibliography_id") REFERENCES "public"."bibliography"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_pages_fk" FOREIGN KEY ("pages_id") REFERENCES "public"."pages"("id") ON DELETE cascade ON UPDATE no action;
@@ -575,11 +673,14 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "navigation_blocks_nav_item" ADD CONSTRAINT "navigation_blocks_nav_item_page_id_pages_id_fk" FOREIGN KEY ("page_id") REFERENCES "public"."pages"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "navigation_blocks_nav_item" ADD CONSTRAINT "navigation_blocks_nav_item_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."navigation"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "navigation_nav_footer" ADD CONSTRAINT "navigation_nav_footer_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."navigation"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "navigation_nav_footer_coulisses" ADD CONSTRAINT "navigation_nav_footer_coulisses_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."navigation"("id") ON DELETE cascade ON UPDATE no action;
+  ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_podcast_cover_id_media_id_fk" FOREIGN KEY ("podcast_cover_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
   CREATE INDEX "articles_authors_order_idx" ON "articles_authors" USING btree ("_order");
   CREATE INDEX "articles_authors_parent_id_idx" ON "articles_authors" USING btree ("_parent_id");
   CREATE INDEX "articles_authors_user_idx" ON "articles_authors" USING btree ("user_id");
-  CREATE UNIQUE INDEX "articles_numero_idx" ON "articles" USING btree ("numero");
-  CREATE UNIQUE INDEX "articles_slug_idx" ON "articles" USING btree ("slug");
+  CREATE UNIQUE INDEX "articles_public_id_idx" ON "articles" USING btree ("public_id");
+  CREATE INDEX "articles_series_idx" ON "articles" USING btree ("series_id");
+  CREATE INDEX "articles_featured_idx" ON "articles" USING btree ("featured");
   CREATE INDEX "articles_has_draft_zones_idx" ON "articles" USING btree ("has_draft_zones");
   CREATE INDEX "articles_updated_at_idx" ON "articles" USING btree ("updated_at");
   CREATE INDEX "articles_created_at_idx" ON "articles" USING btree ("created_at");
@@ -593,8 +694,10 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "analyses_authors_order_idx" ON "analyses_authors" USING btree ("_order");
   CREATE INDEX "analyses_authors_parent_id_idx" ON "analyses_authors" USING btree ("_parent_id");
   CREATE INDEX "analyses_authors_user_idx" ON "analyses_authors" USING btree ("user_id");
-  CREATE UNIQUE INDEX "analyses_numero_idx" ON "analyses" USING btree ("numero");
-  CREATE UNIQUE INDEX "analyses_slug_idx" ON "analyses" USING btree ("slug");
+  CREATE UNIQUE INDEX "analyses_public_id_idx" ON "analyses" USING btree ("public_id");
+  CREATE INDEX "analyses_series_idx" ON "analyses" USING btree ("series_id");
+  CREATE INDEX "analyses_image_idx" ON "analyses" USING btree ("image_id");
+  CREATE INDEX "analyses_featured_idx" ON "analyses" USING btree ("featured");
   CREATE INDEX "analyses_has_draft_zones_idx" ON "analyses" USING btree ("has_draft_zones");
   CREATE INDEX "analyses_updated_at_idx" ON "analyses" USING btree ("updated_at");
   CREATE INDEX "analyses_created_at_idx" ON "analyses" USING btree ("created_at");
@@ -608,8 +711,11 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "actus_authors_order_idx" ON "actus_authors" USING btree ("_order");
   CREATE INDEX "actus_authors_parent_id_idx" ON "actus_authors" USING btree ("_parent_id");
   CREATE INDEX "actus_authors_user_idx" ON "actus_authors" USING btree ("user_id");
-  CREATE UNIQUE INDEX "actus_numero_idx" ON "actus" USING btree ("numero");
-  CREATE UNIQUE INDEX "actus_slug_idx" ON "actus" USING btree ("slug");
+  CREATE INDEX "actus_sources_order_idx" ON "actus_sources" USING btree ("_order");
+  CREATE INDEX "actus_sources_parent_id_idx" ON "actus_sources" USING btree ("_parent_id");
+  CREATE UNIQUE INDEX "actus_public_id_idx" ON "actus" USING btree ("public_id");
+  CREATE INDEX "actus_image_idx" ON "actus" USING btree ("image_id");
+  CREATE INDEX "actus_featured_idx" ON "actus" USING btree ("featured");
   CREATE INDEX "actus_has_draft_zones_idx" ON "actus" USING btree ("has_draft_zones");
   CREATE INDEX "actus_updated_at_idx" ON "actus" USING btree ("updated_at");
   CREATE INDEX "actus_created_at_idx" ON "actus" USING btree ("created_at");
@@ -623,12 +729,16 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "podcasts_authors_order_idx" ON "podcasts_authors" USING btree ("_order");
   CREATE INDEX "podcasts_authors_parent_id_idx" ON "podcasts_authors" USING btree ("_parent_id");
   CREATE INDEX "podcasts_authors_user_idx" ON "podcasts_authors" USING btree ("user_id");
-  CREATE UNIQUE INDEX "podcasts_numero_idx" ON "podcasts" USING btree ("numero");
-  CREATE UNIQUE INDEX "podcasts_slug_idx" ON "podcasts" USING btree ("slug");
+  CREATE UNIQUE INDEX "podcasts_public_id_idx" ON "podcasts" USING btree ("public_id");
+  CREATE INDEX "podcasts_series_idx" ON "podcasts" USING btree ("series_id");
+  CREATE INDEX "podcasts_audio_idx" ON "podcasts" USING btree ("audio_id");
+  CREATE INDEX "podcasts_image_idx" ON "podcasts" USING btree ("image_id");
+  CREATE INDEX "podcasts_featured_idx" ON "podcasts" USING btree ("featured");
   CREATE INDEX "podcasts_has_draft_zones_idx" ON "podcasts" USING btree ("has_draft_zones");
   CREATE INDEX "podcasts_updated_at_idx" ON "podcasts" USING btree ("updated_at");
   CREATE INDEX "podcasts_created_at_idx" ON "podcasts" USING btree ("created_at");
   CREATE INDEX "podcasts_search_vector_idx" ON "podcasts" USING gin ("search_vector");
+  CREATE INDEX "podcasts_texts_order_parent" ON "podcasts_texts" USING btree ("order","parent_id");
   CREATE INDEX "podcasts_rels_order_idx" ON "podcasts_rels" USING btree ("order");
   CREATE INDEX "podcasts_rels_parent_idx" ON "podcasts_rels" USING btree ("parent_id");
   CREATE INDEX "podcasts_rels_path_idx" ON "podcasts_rels" USING btree ("path");
@@ -638,8 +748,11 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "outils_authors_order_idx" ON "outils_authors" USING btree ("_order");
   CREATE INDEX "outils_authors_parent_id_idx" ON "outils_authors" USING btree ("_parent_id");
   CREATE INDEX "outils_authors_user_idx" ON "outils_authors" USING btree ("user_id");
-  CREATE UNIQUE INDEX "outils_numero_idx" ON "outils" USING btree ("numero");
-  CREATE UNIQUE INDEX "outils_slug_idx" ON "outils" USING btree ("slug");
+  CREATE INDEX "outils_resources_order_idx" ON "outils_resources" USING btree ("_order");
+  CREATE INDEX "outils_resources_parent_id_idx" ON "outils_resources" USING btree ("_parent_id");
+  CREATE INDEX "outils_resources_fichier_idx" ON "outils_resources" USING btree ("fichier_id");
+  CREATE UNIQUE INDEX "outils_public_id_idx" ON "outils" USING btree ("public_id");
+  CREATE INDEX "outils_featured_idx" ON "outils" USING btree ("featured");
   CREATE INDEX "outils_has_draft_zones_idx" ON "outils" USING btree ("has_draft_zones");
   CREATE INDEX "outils_updated_at_idx" ON "outils" USING btree ("updated_at");
   CREATE INDEX "outils_created_at_idx" ON "outils" USING btree ("created_at");
@@ -653,6 +766,15 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE UNIQUE INDEX "themes_slug_idx" ON "themes" USING btree ("slug");
   CREATE INDEX "themes_updated_at_idx" ON "themes" USING btree ("updated_at");
   CREATE INDEX "themes_created_at_idx" ON "themes" USING btree ("created_at");
+  CREATE UNIQUE INDEX "series_slug_idx" ON "series" USING btree ("slug");
+  CREATE INDEX "series_format_idx" ON "series" USING btree ("format");
+  CREATE INDEX "series_image_idx" ON "series" USING btree ("image_id");
+  CREATE INDEX "series_updated_at_idx" ON "series" USING btree ("updated_at");
+  CREATE INDEX "series_created_at_idx" ON "series" USING btree ("created_at");
+  CREATE INDEX "series_rels_order_idx" ON "series_rels" USING btree ("order");
+  CREATE INDEX "series_rels_parent_idx" ON "series_rels" USING btree ("parent_id");
+  CREATE INDEX "series_rels_path_idx" ON "series_rels" USING btree ("path");
+  CREATE INDEX "series_rels_themes_id_idx" ON "series_rels" USING btree ("themes_id");
   CREATE UNIQUE INDEX "tags_slug_idx" ON "tags" USING btree ("slug");
   CREATE INDEX "tags_updated_at_idx" ON "tags" USING btree ("updated_at");
   CREATE INDEX "tags_created_at_idx" ON "tags" USING btree ("created_at");
@@ -666,6 +788,9 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "pages_blocks_prose_order_idx" ON "pages_blocks_prose" USING btree ("_order");
   CREATE INDEX "pages_blocks_prose_parent_id_idx" ON "pages_blocks_prose" USING btree ("_parent_id");
   CREATE INDEX "pages_blocks_prose_path_idx" ON "pages_blocks_prose" USING btree ("_path");
+  CREATE INDEX "pages_blocks_depliant_order_idx" ON "pages_blocks_depliant" USING btree ("_order");
+  CREATE INDEX "pages_blocks_depliant_parent_id_idx" ON "pages_blocks_depliant" USING btree ("_parent_id");
+  CREATE INDEX "pages_blocks_depliant_path_idx" ON "pages_blocks_depliant" USING btree ("_path");
   CREATE INDEX "pages_blocks_figure_order_idx" ON "pages_blocks_figure" USING btree ("_order");
   CREATE INDEX "pages_blocks_figure_parent_id_idx" ON "pages_blocks_figure" USING btree ("_parent_id");
   CREATE INDEX "pages_blocks_figure_path_idx" ON "pages_blocks_figure" USING btree ("_path");
@@ -673,11 +798,13 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "pages_blocks_citation_bloc_order_idx" ON "pages_blocks_citation_bloc" USING btree ("_order");
   CREATE INDEX "pages_blocks_citation_bloc_parent_id_idx" ON "pages_blocks_citation_bloc" USING btree ("_parent_id");
   CREATE INDEX "pages_blocks_citation_bloc_path_idx" ON "pages_blocks_citation_bloc" USING btree ("_path");
+  CREATE INDEX "pages_kind_idx" ON "pages" USING btree ("kind");
   CREATE UNIQUE INDEX "pages_slug_idx" ON "pages" USING btree ("slug");
   CREATE INDEX "pages_updated_at_idx" ON "pages" USING btree ("updated_at");
   CREATE INDEX "pages_created_at_idx" ON "pages" USING btree ("created_at");
   CREATE INDEX "users_trusted_devices_order_idx" ON "users_trusted_devices" USING btree ("_order");
   CREATE INDEX "users_trusted_devices_parent_id_idx" ON "users_trusted_devices" USING btree ("_parent_id");
+  CREATE INDEX "users_photo_idx" ON "users" USING btree ("photo_id");
   CREATE INDEX "users_invitation_invitation_token_hash_idx" ON "users" USING btree ("invitation_token_hash");
   CREATE INDEX "users_invitation_invitation_invited_by_idx" ON "users" USING btree ("invitation_invited_by_id");
   CREATE INDEX "users_updated_at_idx" ON "users" USING btree ("updated_at");
@@ -686,6 +813,8 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "media_updated_at_idx" ON "media" USING btree ("updated_at");
   CREATE INDEX "media_created_at_idx" ON "media" USING btree ("created_at");
   CREATE UNIQUE INDEX "media_filename_idx" ON "media" USING btree ("filename");
+  CREATE INDEX "subscribers_rythmes_order_idx" ON "subscribers_rythmes" USING btree ("order");
+  CREATE INDEX "subscribers_rythmes_parent_idx" ON "subscribers_rythmes" USING btree ("parent_id");
   CREATE UNIQUE INDEX "subscribers_email_idx" ON "subscribers" USING btree ("email");
   CREATE INDEX "subscribers_updated_at_idx" ON "subscribers" USING btree ("updated_at");
   CREATE INDEX "subscribers_created_at_idx" ON "subscribers" USING btree ("created_at");
@@ -702,6 +831,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "payload_locked_documents_rels_podcasts_id_idx" ON "payload_locked_documents_rels" USING btree ("podcasts_id");
   CREATE INDEX "payload_locked_documents_rels_outils_id_idx" ON "payload_locked_documents_rels" USING btree ("outils_id");
   CREATE INDEX "payload_locked_documents_rels_themes_id_idx" ON "payload_locked_documents_rels" USING btree ("themes_id");
+  CREATE INDEX "payload_locked_documents_rels_series_id_idx" ON "payload_locked_documents_rels" USING btree ("series_id");
   CREATE INDEX "payload_locked_documents_rels_tags_id_idx" ON "payload_locked_documents_rels" USING btree ("tags_id");
   CREATE INDEX "payload_locked_documents_rels_bibliography_id_idx" ON "payload_locked_documents_rels" USING btree ("bibliography_id");
   CREATE INDEX "payload_locked_documents_rels_pages_id_idx" ON "payload_locked_documents_rels" USING btree ("pages_id");
@@ -722,7 +852,10 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "navigation_blocks_nav_item_path_idx" ON "navigation_blocks_nav_item" USING btree ("_path");
   CREATE INDEX "navigation_blocks_nav_item_page_idx" ON "navigation_blocks_nav_item" USING btree ("page_id");
   CREATE INDEX "navigation_nav_footer_order_idx" ON "navigation_nav_footer" USING btree ("_order");
-  CREATE INDEX "navigation_nav_footer_parent_id_idx" ON "navigation_nav_footer" USING btree ("_parent_id");`)
+  CREATE INDEX "navigation_nav_footer_parent_id_idx" ON "navigation_nav_footer" USING btree ("_parent_id");
+  CREATE INDEX "navigation_nav_footer_coulisses_order_idx" ON "navigation_nav_footer_coulisses" USING btree ("_order");
+  CREATE INDEX "navigation_nav_footer_coulisses_parent_id_idx" ON "navigation_nav_footer_coulisses" USING btree ("_parent_id");
+  CREATE INDEX "subscriptions_podcast_cover_idx" ON "subscriptions" USING btree ("podcast_cover_id");`)
 }
 
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
@@ -734,25 +867,32 @@ export async function down({ db, payload, req }: MigrateDownArgs): Promise<void>
   DROP TABLE "analyses" CASCADE;
   DROP TABLE "analyses_rels" CASCADE;
   DROP TABLE "actus_authors" CASCADE;
+  DROP TABLE "actus_sources" CASCADE;
   DROP TABLE "actus" CASCADE;
   DROP TABLE "actus_rels" CASCADE;
   DROP TABLE "podcasts_authors" CASCADE;
   DROP TABLE "podcasts" CASCADE;
+  DROP TABLE "podcasts_texts" CASCADE;
   DROP TABLE "podcasts_rels" CASCADE;
   DROP TABLE "outils_authors" CASCADE;
+  DROP TABLE "outils_resources" CASCADE;
   DROP TABLE "outils" CASCADE;
   DROP TABLE "outils_rels" CASCADE;
   DROP TABLE "themes" CASCADE;
+  DROP TABLE "series" CASCADE;
+  DROP TABLE "series_rels" CASCADE;
   DROP TABLE "tags" CASCADE;
   DROP TABLE "bibliography_authors" CASCADE;
   DROP TABLE "bibliography" CASCADE;
   DROP TABLE "pages_blocks_prose" CASCADE;
+  DROP TABLE "pages_blocks_depliant" CASCADE;
   DROP TABLE "pages_blocks_figure" CASCADE;
   DROP TABLE "pages_blocks_citation_bloc" CASCADE;
   DROP TABLE "pages" CASCADE;
   DROP TABLE "users_trusted_devices" CASCADE;
   DROP TABLE "users" CASCADE;
   DROP TABLE "media" CASCADE;
+  DROP TABLE "subscribers_rythmes" CASCADE;
   DROP TABLE "subscribers" CASCADE;
   DROP TABLE "payload_kv" CASCADE;
   DROP TABLE "payload_locked_documents" CASCADE;
@@ -763,8 +903,8 @@ export async function down({ db, payload, req }: MigrateDownArgs): Promise<void>
   DROP TABLE "site" CASCADE;
   DROP TABLE "navigation_blocks_nav_item" CASCADE;
   DROP TABLE "navigation_nav_footer" CASCADE;
+  DROP TABLE "navigation_nav_footer_coulisses" CASCADE;
   DROP TABLE "navigation" CASCADE;
-  DROP TABLE "index_pages" CASCADE;
   DROP TABLE "identity" CASCADE;
   DROP TABLE "subscriptions" CASCADE;
   DROP TYPE "public"."enum_articles_authors_kind";
@@ -773,13 +913,16 @@ export async function down({ db, payload, req }: MigrateDownArgs): Promise<void>
   DROP TYPE "public"."enum_podcasts_authors_kind";
   DROP TYPE "public"."enum_outils_authors_kind";
   DROP TYPE "public"."enum_outils_audience";
+  DROP TYPE "public"."enum_series_format";
   DROP TYPE "public"."enum_bibliography_authors_role";
   DROP TYPE "public"."enum_bibliography_type";
   DROP TYPE "public"."enum_bibliography_source";
   DROP TYPE "public"."enum_pages_blocks_figure_align";
+  DROP TYPE "public"."enum_pages_kind";
   DROP TYPE "public"."enum_users_role";
   DROP TYPE "public"."enum_users_status";
   DROP TYPE "public"."enum_users_zotero_library_type";
+  DROP TYPE "public"."enum_subscribers_rythmes";
   DROP TYPE "public"."enum_subscribers_status";
   DROP TYPE "public"."enum_site_branding_accent_color";
   DROP TYPE "public"."enum_site_branding_background_color";
