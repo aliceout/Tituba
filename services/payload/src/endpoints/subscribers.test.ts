@@ -223,6 +223,44 @@ test("l'accès direct est refusé quand le secret de proxy est posé", async () 
   }
 })
 
+test('le rythme choisi est enregistré tel quel', async () => {
+  rincer('deux@example.com')
+  const { req, journal } = faireReq({
+    email: 'deux@example.com',
+    rythmes: ['newsletter', 'publications'],
+  })
+  let ecrit: string[] | undefined
+  const payload = (req as unknown as { payload: { create: unknown } }).payload
+  const creerOriginal = payload.create as (a: {
+    data: { email: string; rythmes?: string[] }
+  }) => Promise<unknown>
+  payload.create = async (a: { data: { email: string; rythmes?: string[] } }) => {
+    ecrit = a.data.rythmes
+    return creerOriginal(a)
+  }
+  await subscribe.handler!(req)
+  assert.deepEqual(ecrit, ['newsletter', 'publications'])
+  assert.deepEqual(journal.mails, ['deux@example.com'])
+})
+
+test('un rythme inventé est écarté, et le repli est « chaque parution »', async () => {
+  for (const brut of [['patate'], [], 'newsletter', undefined]) {
+    rincer('rythme@example.com')
+    const { req } = faireReq({ email: 'rythme@example.com', rythmes: brut })
+    let ecrit: string[] | undefined
+    const payload = (req as unknown as { payload: { create: unknown } }).payload
+    payload.create = async (a: { data: { rythmes?: string[] } }) => {
+      ecrit = a.data.rythmes
+      return { id: 1 }
+    }
+    await subscribe.handler!(req)
+    // Une chaîne seule est acceptée si elle nomme un rythme connu ; tout
+    // le reste retombe sur les parutions, jamais sur une liste vide —
+    // qui ne recevrait plus rien du tout.
+    assert.deepEqual(ecrit, brut === 'newsletter' ? ['newsletter'] : ['publications'])
+  }
+})
+
 test('une adresse malformée est refusée sans mail', async () => {
   rincer('pas-une-adresse')
   const { status, body, journal } = await appeler({ email: 'pas-une-adresse' })

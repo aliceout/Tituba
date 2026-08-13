@@ -80,6 +80,42 @@ export const Subscribers: CollectionConfig = {
           "« En attente » : lien de confirmation pas encore cliqué. « Actif·ve » : reçoit les mails de nouveaux billets. « Désabonné·e » : a cliqué sur le lien de désabo dans un mail, ne reçoit plus rien.",
       },
     },
+    {
+      /**
+       * Ce à quoi la personne s'est abonnée.
+       *
+       * Le formulaire posait la question depuis toujours et la réponse
+       * n'allait nulle part : les deux rythmes atterrissaient sur la
+       * même liste, et qui demandait « une fois par trimestre » recevait
+       * un mail à chaque parution. Une promesse faite à l'écran que le
+       * système ne tenait pas.
+       *
+       * Plusieurs valeurs, parce que le panneau dit « ou les deux » —
+       * et qu'il n'y a aucune raison de forcer à choisir.
+       *
+       * ABSENCE DE VALEUR = « publications ». Les inscriptions
+       * antérieures à ce champ n'ont rien d'enregistré, et elles
+       * recevaient les parutions : les traiter comme vides les couperait
+       * en silence. La règle est appliquée à l'envoi (cf.
+       * hooks/notify-new-post.ts), pas par une reprise de données — une
+       * colonne remplie après coup se lirait comme un choix que
+       * personne n'a fait.
+       */
+      name: 'rythmes',
+      type: 'select',
+      hasMany: true,
+      required: false,
+      defaultValue: ['publications'],
+      label: 'Ce qu’iel reçoit',
+      options: [
+        { label: 'La lettre (une fois par trimestre)', value: 'newsletter' },
+        { label: 'Chaque parution', value: 'publications' },
+      ],
+      admin: {
+        description:
+          "Choisi à l'inscription. Vide sur les inscriptions antérieures à ce champ, qui sont traitées comme « Chaque parution ». La lettre trimestrielle n'a pas encore d'outil d'envoi : la cocher n'envoie rien pour l'instant.",
+      },
+    },
     /**
      * Mécanique du lien de confirmation — masquée de l'admin.
      *

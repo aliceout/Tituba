@@ -151,7 +151,30 @@ async function isEmailFeatureEnabled(req: PayloadRequest): Promise<boolean> {
 type Subscriber = {
   id: number | string;
   email: string;
+  rythmes?: string[] | null;
 };
+
+/**
+ * Est-ce que cette personne a demandé les parutions ?
+ *
+ * Le filtrage se fait ici et non dans la requête : une inscription
+ * antérieure au champ `rythmes` n'a rien d'enregistré, et elle recevait
+ * les parutions. Un `where` sur la valeur l'exclurait sans que rien ne
+ * le dise — c'est le genre de coupure qu'on ne découvre que le jour où
+ * quelqu'un signale ne plus rien recevoir. Vide vaut donc « parutions »,
+ * ce qui préserve exactement le comportement d'avant pour qui était déjà
+ * là.
+ *
+ * Personne ne reçoit encore la lettre trimestrielle : elle n'a pas
+ * d'outil d'envoi. Qui n'a coché qu'elle ne reçoit donc rien, et c'est
+ * bien ce qui a été demandé — plutôt que de lui envoyer chaque parution
+ * en faisant comme si.
+ */
+export function veutLesParutions(sub: Subscriber): boolean {
+  const rythmes = sub.rythmes;
+  if (!Array.isArray(rythmes) || rythmes.length === 0) return true;
+  return rythmes.includes('publications');
+}
 
 // Ne prend pas `req` mais `payload` : la tâche s'exécute après le
 // retour du hook (cf. setImmediate côté caller), il ne faut pas
@@ -200,10 +223,17 @@ async function dispatchPostNotifications(
     depth: 0,
     overrideAccess: true,
   });
-  const subs = found.docs as unknown as Subscriber[];
+  const actifs = found.docs as unknown as Subscriber[];
+  const subs = actifs.filter(veutLesParutions);
   if (subs.length === 0) {
     payload.logger.info({ postId: post.id }, 'notify_new_post: no active subscribers');
     return;
+  }
+  if (subs.length < actifs.length) {
+    payload.logger.info(
+      { postId: post.id, retenus: subs.length, actifs: actifs.length },
+      'notify_new_post: abonné·es ne voulant que la lettre, écarté·es de cet envoi',
+    );
   }
 
   const siteName = await getSiteName(payload);

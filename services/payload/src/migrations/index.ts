@@ -26,6 +26,7 @@ import * as migration_20260809_211636_outil_sans_url from './20260809_211636_out
 import * as migration_20260809_211919_outil_fichier from './20260809_211919_outil_fichier';
 import * as migration_20260809_220021_outil_fichiers_multiples from './20260809_220021_outil_fichiers_multiples';
 import * as migration_20260810_071925_outil_ressources from './20260810_071925_outil_ressources';
+import * as migration_20260813_114611_auto_20260813_134338 from './20260813_114611_auto_20260813_134338';
 
 export const migrations = [
   {
@@ -166,6 +167,11 @@ export const migrations = [
   {
     up: migration_20260810_071925_outil_ressources.up,
     down: migration_20260810_071925_outil_ressources.down,
-    name: '20260810_071925_outil_ressources'
+    name: '20260810_071925_outil_ressources',
+  },
+  {
+    up: migration_20260813_114611_auto_20260813_134338.up,
+    down: migration_20260813_114611_auto_20260813_134338.down,
+    name: '20260813_114611_auto_20260813_134338'
   },
 ];

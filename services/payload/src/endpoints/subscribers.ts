@@ -1,10 +1,11 @@
 // Endpoints publics pour les alertes mail (collection Subscribers).
 //
 // Pattern double opt-in :
-//  - POST /api/subscribers/subscribe { email }
+//  - POST /api/subscribers/subscribe { email, rythmes, site }
 //     → crée/réactive un doc en status `pending`, envoie le mail de
 //       confirmation. Toujours 200 (générique) pour éviter
-//       l'énumération d'adresses.
+//       l'énumération d'adresses. `rythmes` dit ce à quoi la personne
+//       s'abonne, `site` est le pot de miel (cf. plus bas).
 //  - POST /api/subscribers/confirm { token }
 //     → valide le hash, flip `pending` → `active`, efface le confirm
 //       token.
@@ -77,6 +78,27 @@ const CONFIRM_TTL_DAYS = 7;
  * il tient au travers des redémarrages.
  */
 const RENVOI_MIN_MS = 10 * 60 * 1000;
+
+/** Les seules valeurs de rythme que le formulaire peut envoyer. */
+const RYTHMES = ['newsletter', 'publications'] as const;
+type Rythme = (typeof RYTHMES)[number];
+
+/**
+ * Nettoie ce que le navigateur annonce avoir coché.
+ *
+ * Le corps de la requête n'est pas le formulaire : c'est une liste de
+ * chaînes qu'on nous donne. On garde les valeurs connues, on écarte le
+ * reste, et on retombe sur « parutions » si rien de valide ne subsiste —
+ * une inscription sans rythme ne recevrait jamais rien, ce qui est le
+ * contraire de ce qu'on vient demander.
+ */
+function rythmesValides(brut: unknown): Rythme[] {
+  const liste = Array.isArray(brut) ? brut : [brut];
+  const propres = [...new Set(liste.map(String))].filter((v): v is Rythme =>
+    (RYTHMES as readonly string[]).includes(v),
+  );
+  return propres.length > 0 ? propres : ['publications'];
+}
 
 // URL publique du site Astro — la valeur d'ADDRESS est généralement le
 // domaine sans schème (convention Infisical). On préfixe https:// si
@@ -171,10 +193,12 @@ const subscribeEndpoint: Endpoint = {
 
     let email = '';
     let potDeMiel = '';
+    let rythmes: Rythme[] = ['publications'];
     try {
       const data = req.json ? await req.json() : null;
       email = String((data as { email?: unknown })?.email ?? '').trim().toLowerCase();
       potDeMiel = String((data as { site?: unknown })?.site ?? '').trim();
+      rythmes = rythmesValides((data as { rythmes?: unknown })?.rythmes);
     } catch {
       /* invalid JSON → email reste vide */
     }
@@ -247,6 +271,10 @@ const subscribeEndpoint: Endpoint = {
         overrideAccess: true,
         data: {
           status: 'pending',
+          // Le rythme est celui de la demande en cours, pas de la
+          // précédente : quelqu'un qui se réinscrit en cochant autre
+          // chose a manifestement changé d'avis.
+          rythmes,
           confirmTokenHash: tokenHash,
           confirmTokenExpiresAt: expiresAt,
           subscribedAt: now,
@@ -261,6 +289,7 @@ const subscribeEndpoint: Endpoint = {
         data: {
           email,
           status: 'pending',
+          rythmes,
           confirmTokenHash: tokenHash,
           confirmTokenExpiresAt: expiresAt,
           subscribedAt: now,

@@ -109,9 +109,13 @@ if (Astro.request.method === 'POST') {
     // rendrait inopérant pour tout robot qui poste le formulaire tel
     // qu'il est servi — c'est-à-dire exactement ceux qu'il vise.
     const site = String(form.get('site') ?? '').trim();
+    // `getAll` : deux cases à cocher portent le même nom, et `get` n'en
+    // rendrait que la première — qui ne cocherait que « la lettre »
+    // verrait son choix ignoré une fois sur deux.
+    const rythmes = form.getAll('rythmes').map(String);
     const { body } = await postPayload<{ ok?: boolean; code?: string }>(
       '/subscribers/subscribe',
-      { email, site },
+      { email, site, rythmes },
       entetesProxy(Astro.request, Astro.clientAddress),
     );
     statutAbonnement = body?.ok

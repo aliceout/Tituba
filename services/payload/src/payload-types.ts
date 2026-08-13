@@ -1067,6 +1067,10 @@ export interface Subscriber {
    * « En attente » : lien de confirmation pas encore cliqué. « Actif·ve » : reçoit les mails de nouveaux billets. « Désabonné·e » : a cliqué sur le lien de désabo dans un mail, ne reçoit plus rien.
    */
   status: 'pending' | 'active' | 'unsubscribed';
+  /**
+   * Choisi à l'inscription. Vide sur les inscriptions antérieures à ce champ, qui sont traitées comme « Chaque parution ». La lettre trimestrielle n'a pas encore d'outil d'envoi : la cocher n'envoie rien pour l'instant.
+   */
+  rythmes?: ('newsletter' | 'publications')[] | null;
   confirmTokenHash?: string | null;
   confirmTokenExpiresAt?: string | null;
   subscribedAt?: string | null;
@@ -1608,6 +1612,7 @@ export interface MediaSelect<T extends boolean = true> {
 export interface SubscribersSelect<T extends boolean = true> {
   email?: T;
   status?: T;
+  rythmes?: T;
   confirmTokenHash?: T;
   confirmTokenExpiresAt?: T;
   subscribedAt?: T;

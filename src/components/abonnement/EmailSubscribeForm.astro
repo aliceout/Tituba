@@ -19,7 +19,12 @@ const { statut = '' } = Astro.props;
 
 /** Les deux lignes de choix sont identiques au libellé près. */
 const CHOIX = 'flex cursor-pointer items-baseline gap-2 py-1.5';
-const RADIO = 'm-0 flex-none self-center accent-[var(--c-vert-deep)]';
+/**
+ * Cases à cocher et non boutons radio. Le chapô promet « ou les deux »
+ * depuis toujours, et des radios n'en laissaient prendre qu'un — la
+ * phrase décrivait un formulaire qui n'existait pas.
+ */
+const COCHE = 'm-0 flex-none self-center accent-[var(--c-vert-deep)]';
 const QUOI = 'font-serif text-courant text-ink';
 const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-panel-mute)]';
 ---
@@ -69,15 +74,21 @@ const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-pan
       </legend>
       <label class={CHOIX}>
         {
-          /* Le bouton radio prend la couleur de famille plutôt que le bleu
-            du système, qui serait la seule note étrangère du panneau. */
+          /* La case prend la couleur de famille plutôt que le bleu du
+            système, qui serait la seule note étrangère du panneau. */
         }
-        <input type="radio" name="kind" value="newsletter" class={RADIO} checked />
+        <input type="checkbox" name="rythmes" value="newsletter" class={COCHE} />
         <span class={QUOI}>La lettre</span>
         <span class={QUAND}>une fois par trimestre</span>
       </label>
+      {
+        /* Cochée d’avance, et c’est la seule : c’est le rythme que le
+          site sait tenir aujourd’hui. La lettre trimestrielle attend
+          encore son outil d’envoi — la proposer pré-cochée reviendrait à
+          promettre par défaut ce qu’on ne délivre pas. */
+      }
       <label class={CHOIX}>
-        <input type="radio" name="kind" value="publications" class={RADIO} />
+        <input type="checkbox" name="rythmes" value="publications" class={COCHE} checked />
         <span class={QUOI}>Chaque parution</span>
         <span class={QUAND}>dès sa mise en ligne</span>
       </label>
@@ -118,11 +129,6 @@ const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-pan
   // /abonnement/, dont le frontmatter la relaie — c'est ce chemin-là
   // qui interdit d'exiger une preuve de travail côté serveur.
   //
-  // Le type choisi (newsletter / publications) part déjà dans la
-  // requête même si le serveur ne le lit pas encore — la table
-  // subscribers n'a pas de champ pour le distinguer, les deux
-  // inscriptions atterrissent pour l'instant sur la même liste.
-  // L'interface est prête, le branchement reste à faire.
   // Sur `astro:page-load` : avec le ClientRouter, un module ne
   // s'exécute qu'une fois par URL — le formulaire de la page suivante
   // repartirait en soumission classique, donc en rechargement.
@@ -133,9 +139,10 @@ const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-pan
       const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement;
       const pot = form.querySelector('input[name="site"]') as HTMLInputElement | null;
 
-      function kindOf(f: HTMLFormElement): string {
-        const coche = f.querySelector<HTMLInputElement>('input[name="kind"]:checked');
-        return coche?.value ?? 'newsletter';
+      function rythmesDe(f: HTMLFormElement): string[] {
+        return Array.from(
+          f.querySelectorAll<HTMLInputElement>('input[name="rythmes"]:checked'),
+        ).map((c) => c.value);
       }
 
       // On pose un attribut au lieu de réécrire `class` : les
@@ -155,6 +162,15 @@ const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-pan
           input.focus();
           return;
         }
+        // Rien de coché : le serveur retomberait sur « chaque parution »
+        // sans le dire, et on recevrait autre chose que ce qu'on a
+        // demandé. Mieux vaut poser la question une fois de plus.
+        const rythmes = rythmesDe(form);
+        if (rythmes.length === 0) {
+          setStatus('Choisissez au moins un des deux rythmes.', 'err');
+          form.querySelector<HTMLInputElement>('input[name="rythmes"]')?.focus();
+          return;
+        }
         submit.disabled = true;
         setStatus('Envoi en cours…');
 
@@ -165,7 +181,7 @@ const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-pan
             // `site` est le pot de miel : vide chez une personne, il
             // part quand même pour que les deux corps de requête aient
             // la même forme.
-            body: JSON.stringify({ email, kind: kindOf(form), site: pot?.value ?? '' }),
+            body: JSON.stringify({ email, rythmes, site: pot?.value ?? '' }),
           });
           const body = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string };
 
