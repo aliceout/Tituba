@@ -22,7 +22,12 @@ pnpm-debug.log*
 .idea/
 
 # Payload — Postgres local (dev) + uploads, jamais commiter
-data/
+#
+# `/data/` et non `data/` : sans la barre de tête, le motif vise tout
+# dossier nommé « data » à n'importe quelle profondeur. Il emportait les
+# données des seeds (services/payload/scripts/data/), qui sont du code
+# versionné — et sans lesquelles les seeds n'ont rien à poser.
+/data/
 services/payload/.next/
 services/payload/dist/
 

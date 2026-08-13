@@ -52,7 +52,35 @@ pnpm --dir services/payload generate:types
 pnpm --dir services/payload generate:importmap
 ```
 
-Seed de démo (idempotent, refuse en prod) : `pnpm --dir services/payload seed:dev`
+## Partir d'une base vide
+
+Trois commandes, dans cet ordre. C'est aussi ce que fait une première
+mise en ligne.
+
+```bash
+# 1. Le schéma — 47 tables, une seule migration.
+pnpm --dir services/payload migrate
+
+# 2. La configuration : réglages, pages, thématiques, navigation, et le
+#    compte administrateur. Les deux variables sont lues dans
+#    l'environnement et ne sont écrites nulle part ; sans elles, le seed
+#    s'arrête plutôt que d'inventer un mot de passe.
+SEED_ROOT_EMAIL=vous@example.org SEED_ROOT_PASSWORD='…' \
+  pnpm --dir services/payload seed:config
+
+# 3. Le jeu de démonstration — faux comptes, faux billets, fausses
+#    images. Refuse de tourner si NODE_ENV vaut « production ».
+pnpm --dir services/payload seed:test
+```
+
+Les deux seeds se relancent sans dommage : ce qui existe est laissé tel
+quel. `seed:config --forcer` réécrit réglages et pages depuis le fichier
+de données ; `seed:test:reset` efface le jeu de démonstration avant de le
+reposer.
+
+Les fichiers du jeu de démonstration ne sont pas dans le dépôt — ils sont
+fabriqués à l'exécution : images unies par sharp, son de synthèse et PDF
+écrits octet par octet. 308 ko au total, contre 38 Mo pour les vrais.
 
 ## Tests & CI
 
