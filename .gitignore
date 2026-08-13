@@ -37,3 +37,6 @@ services/payload/dist/
 # sans underscore elle est une vraie route, donc elle ne doit pas partir
 # dans le dépôt.
 src/pages/verif-composants.astro
+
+# Rapport d'audit — document de travail, pas du code livré.
+AUDIT.md
