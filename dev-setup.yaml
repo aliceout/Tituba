@@ -34,5 +34,6 @@ secrets:
     - dev/services/tituba/payload
     - dev/services/tituba/postgres
     - dev/services/tituba/smtp
+    - dev/services/tituba/contact
     - dev/services/tituba/web
     - dev/services/tituba

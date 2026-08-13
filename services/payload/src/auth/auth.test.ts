@@ -15,7 +15,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { authEndpoints } from './endpoints/index.js'
-import { hashToken, safeEqualHex, generateNumericCode } from './crypto.js'
+import { hashToken, safeEqual, safeEqualHex, generateNumericCode } from './crypto.js'
 import { signCookie, verifyCookie } from './cookies.js'
 
 // PAYLOAD_SECRET est nécessaire pour les helpers crypto/cookies.
@@ -66,6 +66,34 @@ test('safeEqualHex compare en temps constant et tolère différentes longueurs',
   assert.equal(safeEqualHex(null, 'abcd'), false)
   assert.equal(safeEqualHex('abcd', undefined), false)
   assert.equal(safeEqualHex(null, null), false)
+})
+
+test("safeEqualHex refuse ce qui n'est pas de l'hexadécimal", () => {
+  // Le défaut que ceci empêche de revenir : `Buffer.from(x, 'hex')` ne
+  // lève rien sur une chaîne qui n'en est pas — il s'arrête au premier
+  // caractère invalide. Deux chaînes quelconques de même longueur se
+  // décodaient donc toutes deux en zéro octet, et `timingSafeEqual` sur
+  // deux tampons vides répond `true`. La fonction déclarait égaux deux
+  // secrets qui n'ont rien à voir.
+  assert.equal(safeEqualHex('Zm9vYmFyYmF6', 'XXXXXXXXXXXX'), false)
+  assert.equal(safeEqualHex('mon-secret-a-moi', 'n@wak-quelconque'), false)
+  // Un hexadécimal partiel ne doit pas être comparé sur son seul préfixe.
+  assert.equal(safeEqualHex('abcdZZZZ', 'abcdWWWW'), false)
+  // L'hexadécimal majuscule reste de l'hexadécimal.
+  assert.equal(safeEqualHex('ABCD', 'abcd'), true)
+})
+
+test('safeEqual compare des chaînes quelconques sans rien supposer', () => {
+  assert.equal(safeEqual('mon-secret-a-moi', 'mon-secret-a-moi'), true)
+  assert.equal(safeEqual('mon-secret-a-moi', 'n@wak-quelconque'), false)
+  // Longueurs différentes, valeurs vides : false, jamais d'exception.
+  assert.equal(safeEqual('court', 'beaucoup plus long'), false)
+  assert.equal(safeEqual('', 'abc'), false)
+  assert.equal(safeEqual(null, null), false)
+  // Un secret non ASCII se compare sur ses octets, pas sur ses
+  // caractères — deux chaînes de même longueur visible mais d'octets
+  // différents ne doivent pas converger.
+  assert.equal(safeEqual('clé-é', 'clé-e'), false)
 })
 
 test("Comparaison d'IDs : number vs string doit converger après String()", () => {

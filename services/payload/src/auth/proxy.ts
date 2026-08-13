@@ -19,7 +19,7 @@
  * Ce fichier vivait dans endpoints/contact.ts, où il ne gardait qu'une
  * route ; l'abonnement en avait autant besoin.
  */
-import { safeEqualHex } from './crypto';
+import { safeEqual } from './crypto';
 
 const signales = new Set<string>();
 
@@ -42,5 +42,11 @@ export function proxyLegitime(headers: Headers, route: string): boolean {
     }
     return true;
   }
-  return safeEqualHex(headers.get('x-tituba-proxy'), attendu);
+  // `safeEqual` et non `safeEqualHex` : le secret vient d'une variable
+  // d'environnement, personne ne garantit qu'il est hexadécimal. Comparé
+  // comme de l'hexadécimal, un secret qui n'en est pas se décodait en
+  // zéro octet — des deux côtés — et la comparaison répondait « égaux »
+  // pour n'importe quel en-tête de la même longueur. La garde paraissait
+  // en place et laissait tout passer.
+  return safeEqual(headers.get('x-tituba-proxy'), attendu);
 }
