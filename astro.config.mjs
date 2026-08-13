@@ -2,6 +2,30 @@
 import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
 import tailwindcss from '@tailwindcss/vite';
+import dotenv from 'dotenv';
+
+/**
+ * Charge le `.env` de la racine dans `process.env`.
+ *
+ * `astro dev` ne le fait pas : Vite lit bien le fichier, mais n'en
+ * expose les valeurs que par `import.meta.env`, et seulement celles qui
+ * portent son préfixe. Or tout le code serveur d'ici lit `process.env`.
+ * Payload, lui, est enveloppé dans `dotenv-cli` par ses scripts ; le
+ * site n'avait rien d'équivalent. Il tournait donc en dev sur ses seules
+ * valeurs de repli, sans que rien ne le signale :
+ *
+ *  - ADDRESS valait `https://tituba.example.com`, affiché tel quel dans
+ *    le bloc « URL du flux » de /abonnement/ ;
+ *  - INTERNAL_PROXY_SECRET n'était jamais joint aux appels vers Payload,
+ *    qui refusait donc tout envoi de formulaire en 403 dès que le secret
+ *    était posé de son côté.
+ *
+ * En production la question ne se pose pas : compose passe les variables
+ * au conteneur, elles sont déjà dans l'environnement. D'où `override`
+ * laissé à faux — l'environnement réel gagne toujours, le fichier ne
+ * fait que combler ce qui manque.
+ */
+dotenv.config({ quiet: true });
 
 // URL canonique du site — utilisée pour Astro.site, le sitemap et le
 // flux RSS. Passée en env via Infisical (ADDRESS). Fallback générique
