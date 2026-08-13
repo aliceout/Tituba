@@ -50,13 +50,7 @@ import {
   type PublicationTheme,
   type PublicationTag,
 } from '../lib/publications';
-import {
-  audioFileUrl,
-  fetchIdentity,
-  fetchSite,
-  mediaUrl,
-  uploadedImageUrl,
-} from '../lib/payload';
+import { fetchIdentity, fetchSite } from '../lib/payload';
 import {
   extractToc,
   renderLexicalSidenotes,
@@ -272,7 +266,6 @@ const sansEcartHaut =
  */
 const COLONNES = estActu ? 'large:grid-cols-[440px_1fr]' : 'large:grid-cols-[1fr_220px]';
 const dateDansAside = dateDansColonne(contexteAffichage);
-afficherToc && (heroPlayer || collection === 'analyses' || collection === 'articles');
 
 const related = await fetchRelatedPosts(collection, primaryTheme?.slug, post.id);
 

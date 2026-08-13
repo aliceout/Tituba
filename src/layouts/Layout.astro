@@ -225,24 +225,24 @@ const fullTitle = pageTitle
     */}
     <script is:inline>
       (function () {
-        var DEFAUTS = {
-          taille: '100',
-          espacement: 'normal',
-          police: 'defaut',
-          contraste: 'normal',
-          couleurs: 'normal',
-          liens: 'normal',
-          animations: 'normal',
-          guide: 'off',
-        };
+        const DEFAUTS = {
+    taille: '100',
+    espacement: 'normal',
+    police: 'defaut',
+    contraste: 'normal',
+    couleurs: 'normal',
+    liens: 'normal',
+    animations: 'normal',
+    guide: 'off',
+  };
         function poser() {
           try {
-            var brut = localStorage.getItem('a11y');
-            var r = brut ? JSON.parse(brut) : {};
+            const brut = localStorage.getItem('a11y');
+            let r = brut ? JSON.parse(brut) : {};
             if (!r || typeof r !== 'object') r = {};
-            for (var cle in DEFAUTS) {
-              var attr = 'data-a11y-' + cle;
-              var val = r[cle];
+            for (const cle in DEFAUTS) {
+              const attr = 'data-a11y-' + cle;
+              const val = r[cle];
               if (val && val !== DEFAUTS[cle]) {
                 document.documentElement.setAttribute(attr, val);
               } else {

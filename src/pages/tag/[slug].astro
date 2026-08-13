@@ -10,12 +10,7 @@
 import PageShell from '../../components/ui/PageShell.astro';
 import PublicationCard from '../../components/PublicationCard.astro';
 import Empty from '../../components/ui/Empty.astro';
-import {
-  fetchBySlug,
-  fetchCollection,
-  filterPublished,
-  publishedOnly,
-} from '../../lib/payload';
+import { fetchBySlug } from '../../lib/payload';
 import { fetchFeed } from '../../lib/publications';
 import type { FeedDoc } from '../../lib/payload';
 import { serviceIndisponible } from '../../lib/indisponible';
