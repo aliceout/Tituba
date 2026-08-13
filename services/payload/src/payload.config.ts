@@ -60,9 +60,29 @@ const dirname = path.dirname(filename);
  * Le seuil de 32 caractères n'est pas décoratif : un secret court se
  * retrouve par force brute, et c'est exactement le genre de valeur qu'on
  * pose « en attendant » avec quatre lettres.
+ *
+ * ─── L'exception de la construction d'image ─────────────────────────
+ *
+ * `next build` importe cette configuration pour recenser les routes. Il
+ * ne signe rien — mais il n'a pas non plus de secret, et cette exigence
+ * a d'abord fait échouer la construction de l'image :
+ *
+ *   Failed to collect page data for /cms/api/[...slug]
+ *
+ * D'où l'exception, bornée à la phase de construction, que Next annonce
+ * lui-même (`NEXT_PHASE`, posé dans next/dist/build/index.js). Elle ne
+ * peut pas fuir jusqu'à l'exécution : cette fonction est rappelée au
+ * démarrage de chaque process, et le conteneur qui sert le site n'a pas
+ * cette variable. Le secret de complaisance ne franchit donc jamais la
+ * frontière de l'image.
  */
+const EN_CONSTRUCTION = process.env.NEXT_PHASE === 'phase-production-build';
+
 function secretRequis(): string {
   const secret = process.env.PAYLOAD_SECRET?.trim();
+  if (!secret && EN_CONSTRUCTION) {
+    return 'construction-sans-secret-rien-ne-sera-signe-avec-ceci';
+  }
   if (!secret) {
     throw new Error(
       'PAYLOAD_SECRET est absent. Payload signe avec lui les sessions, les ' +
