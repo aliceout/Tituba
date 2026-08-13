@@ -12,14 +12,33 @@
  *
  *   compte racine    depuis SEED_ROOT_EMAIL / SEED_ROOT_PASSWORD
  *   réglages         identité, apparence, abonnements
- *   pages            les cinq pages d'index et les trois pages libres
- *   thématiques      les dix axes éditoriaux
+ *   thématiques      les dix axes de classement
+ *   pages            trois coquilles vides, en brouillon
  *   navigation       en-tête et pied, une fois les pages en place
- *   un billet d'actu celui sur l'arrêt britannique, déjà écrit
  *
- * Rien ici n'est fictif. Le jeu de démonstration — faux comptes, faux
- * billets, fausses images — est dans `seed-test.ts`, qui refuse de
- * tourner en production.
+ * ─── Ce qu'il ne pose PAS, et c'est la règle ────────────────────────
+ *
+ * Aucun contenu. Pas un billet, pas un compte d'auteur·ice, pas une
+ * image, pas un document. Un site s'installe vide et se remplit depuis
+ * l'administration ; un seed qui écrit des textes fabrique une histoire
+ * que personne n'a écrite, et qu'on retrouve six mois plus tard en
+ * croyant l'avoir voulue.
+ *
+ * Les cinq pages d'index (`home`, `formats`, `themes`, `archives`,
+ * `subscribe`) ne sont pas posées non plus, et ce n'est pas un oubli :
+ * leur titre EST le titre affiché en tête de page (cf.
+ * `fetchIndexPages`). Une coquille intitulée « formats » remplacerait le
+ * texte de repli du site par le mot « formats ». Ne rien poser laisse
+ * ces replis en place — le site est correct dès la première seconde, et
+ * créer la page depuis l'administration suffit pour les remplacer.
+ *
+ * Les trois pages éditoriales, elles, sont posées : en brouillon, donc
+ * invisibles du public, avec un libellé qui n'est qu'une poignée pour
+ * les retrouver dans l'administration. Sans elles, l'entrée
+ * « association » du menu ne désignerait rien.
+ *
+ * Le jeu de démonstration — faux comptes, faux billets, fausses images —
+ * est dans `seed-test.ts`, qui refuse de tourner en production.
  *
  * ─── Il se relance sans dommage ─────────────────────────────────────
  *
@@ -67,7 +86,6 @@ type Donnees = {
   }
   pages: Array<Bloc & { slug: string }>
   themes: Array<{ slug: string; name: string; description?: string }>
-  actus: Array<Bloc & { title: string; themeSlugs?: string[] }>
 }
 
 let poses = 0
@@ -274,49 +292,6 @@ async function poserNavigation(pages: Map<string, number | string>): Promise<voi
   dit('posé', 'navigation')
 }
 
-// ─── Le billet d'actu déjà écrit ─────────────────────────────────────
-async function poserActus(): Promise<void> {
-  for (const actu of DONNEES.actus) {
-    const trouve = await payload.find({
-      collection: 'actus',
-      where: { title: { equals: actu.title } },
-      limit: 1,
-      depth: 0,
-      overrideAccess: true,
-    })
-    if (trouve.totalDocs > 0) {
-      dit('laissé', `actu « ${actu.title.slice(0, 40)}… »`)
-      continue
-    }
-
-    const { themeSlugs, ...corps } = actu
-    const themes: Array<number | string> = []
-    for (const slug of themeSlugs ?? []) {
-      const t = await payload.find({
-        collection: 'themes',
-        where: { slug: { equals: slug } },
-        limit: 1,
-        depth: 0,
-        overrideAccess: true,
-      })
-      const doc = t.docs[0] as { id: number | string } | undefined
-      if (doc) themes.push(doc.id)
-    }
-
-    // Le billet arrive avec son `notificationsSentAt` déjà rempli, et
-    // c'est voulu : le hook d'alerte se déclenche à la première
-    // publication d'un billet, et un seed n'est pas une parution. Sans
-    // cette date, installer le site enverrait un mail « nouveau billet »
-    // à qui serait déjà abonné·e — pour un texte du 5 août.
-    await payload.create({
-      collection: 'actus',
-      data: { ...corps, themes } as never,
-      overrideAccess: true,
-    })
-    dit('posé', `actu « ${actu.title.slice(0, 40)}… »`)
-  }
-}
-
 // ─── Déroulé ─────────────────────────────────────────────────────────
 
 console.log(
@@ -330,7 +305,6 @@ await poserGlobals()
 await poserThemes()
 const pages = await poserPages()
 await poserNavigation(pages)
-await poserActus()
 
 console.log(`\n${poses} entrée(s) posée(s), ${laisses} laissée(s) en place.`)
 if (poses > 0) {
