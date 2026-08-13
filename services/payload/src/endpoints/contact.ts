@@ -55,7 +55,7 @@ import { createHash, randomBytes, randomInt } from 'crypto';
 
 import { signCookie, verifyCookie } from '../auth/cookies';
 import { errorResponse, jsonResponse } from '../auth/helpers';
-import { safeEqualHex } from '../auth/crypto';
+import { proxyLegitime } from '../auth/proxy';
 import { clientIpFromHeaders, consume, RATE_PROFILES } from '../auth/rate-limit';
 
 /** Durée de validité d'un défi. Assez long pour rédiger, assez court
@@ -186,40 +186,6 @@ function consommer(jti: string, exp: number): boolean {
   return false;
 }
 
-/**
- * Refuse les appels qui n'ont pas transité par le proxy Astro.
- *
- * Nécessaire parce que nginx expose `/cms/*` directement : sans ce
- * contrôle, on peut poster sur cet endpoint sans passer par le site et
- * en forgeant soi-même l'en-tête d'IP, ce qui réduit la limitation par
- * IP à néant.
- *
- * Ne s'active que si INTERNAL_PROXY_SECRET est défini. Le choix est
- * délibéré : rendre le secret obligatoire ferait échouer tout envoi sur
- * un déploiement existant qui ne l'a pas encore, et un formulaire qui
- * répond 403 en silence est pire qu'un formulaire un peu moins gardé.
- * L'absence est signalée au démarrage du premier appel.
- */
-let secretSignale = false;
-function proxyLegitime(headers: Headers): boolean {
-  const attendu = process.env.INTERNAL_PROXY_SECRET;
-  if (!attendu) {
-    if (!secretSignale) {
-      secretSignale = true;
-      console.warn(
-        JSON.stringify({
-          level: 'warn',
-          event: 'contact_proxy_secret_absent',
-          message:
-            'INTERNAL_PROXY_SECRET non défini : /cms/api/contact est joignable sans passer par le site, la limitation par IP est contournable.',
-        }),
-      );
-    }
-    return true;
-  }
-  return safeEqualHex(headers.get('x-tituba-proxy'), attendu);
-}
-
 /** Échappe pour un corps de mail en HTML. */
 function ech(s: string): string {
   return s
@@ -328,7 +294,7 @@ const challengeEndpoint: Endpoint = {
   path: '/contact-challenge',
   method: 'get',
   handler: async (req) => {
-    if (!proxyLegitime(req.headers)) {
+    if (!proxyLegitime(req.headers, '/cms/api/contact')) {
       return errorResponse('Accès direct refusé.', 403, 'direct_access');
     }
     const ip = clientIpFromHeaders(req.headers);
@@ -365,7 +331,7 @@ const contactEndpoint: Endpoint = {
   path: '/contact',
   method: 'post',
   handler: async (req) => {
-    if (!proxyLegitime(req.headers)) {
+    if (!proxyLegitime(req.headers, '/cms/api/contact')) {
       return errorResponse('Accès direct refusé.', 403, 'direct_access');
     }
 
@@ -529,7 +495,7 @@ const confirmEndpoint: Endpoint = {
   path: '/contact-confirm',
   method: 'post',
   handler: async (req) => {
-    if (!proxyLegitime(req.headers)) {
+    if (!proxyLegitime(req.headers, '/cms/api/contact')) {
       return errorResponse('Accès direct refusé.', 403, 'direct_access');
     }
 

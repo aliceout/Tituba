@@ -23,10 +23,23 @@ export const RATE_PROFILES = {
   otp: { name: 'otp', max: 5, windowMs: 10 * 60 * 1000 },
   send: { name: 'send', max: 3, windowMs: 10 * 60 * 1000 },
   invite: { name: 'invite', max: 20, windowMs: 60 * 60 * 1000 },
-  // Inscription publique aux alertes mail : 5 essais / 15 min par IP.
-  // Anti-flood du formulaire /abonnement/ sans bloquer l'utilisatrice
-  // qui ressaisit une typo dans son email.
+  // Inscription publique aux alertes mail. Trois plafonds, qui ne
+  // bornent pas la même chose :
+  //  - subscribe      : par IP. Cinq essais par quart d'heure — assez
+  //                     pour ressaisir une adresse mal tapée, pas assez
+  //                     pour arroser.
+  //  - subscribeFlood : coupe-circuit, clé fixe. Le seul plafond qu'une
+  //                     rotation d'IP ne contourne pas, donc le seul qui
+  //                     borne ce que le site peut émettre au total.
+  //  - subscribeEmail : par adresse VISÉE, pas par appelant. Les deux
+  //                     autres bornent l'émission ; celui-ci borne la
+  //                     réception — ce qu'une même personne peut se voir
+  //                     infliger depuis n'importe où. Trois mails par
+  //                     jour vers une boîte donnée, c'est déjà large
+  //                     pour une inscription qui se confirme en un clic.
   subscribe: { name: 'subscribe', max: 5, windowMs: 15 * 60 * 1000 },
+  subscribeFlood: { name: 'subscribeFlood', max: 60, windowMs: 60 * 60 * 1000 },
+  subscribeEmail: { name: 'subscribeEmail', max: 3, windowMs: 24 * 60 * 60 * 1000 },
   // Formulaire de contact public. Trois profils, qui ne protègent pas
   // la même chose :
   //  - contact      : envois aboutis, par IP. Trois messages par heure

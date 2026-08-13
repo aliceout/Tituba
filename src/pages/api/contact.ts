@@ -8,11 +8,11 @@
  * directement à Payload, ce qui évite d'avoir à gérer une URL absolue
  * côté client et de configurer CORS.
  *
- * Une différence importante avec le proxy d'abonnement : celui-ci
- * transmet l'IP réelle de l'appelant. Sans elle, la limitation « par
- * IP » de Payload voit toutes les requêtes arriver du même endroit et
- * devient un plafond global — le défaut que porte /api/subscribe
- * depuis toujours.
+ * Les deux proxys transmettent l'IP réelle de l'appelant et le secret
+ * de proxy. Sans la première, la limitation « par IP » de Payload voit
+ * toutes les requêtes arriver du même endroit et devient un plafond
+ * global ; sans le second, on court-circuite le proxy et on écrit
+ * l'IP qu'on veut.
  *
  * Les deux routes répondent `no-store` : la réponse du GET contient un
  * défi à usage unique, qu'un cache servirait à plusieurs personnes —

@@ -122,12 +122,12 @@ export function ipReelle(request: Request, clientAddress?: string): string {
  * Sans eux, aucune information sur l'appelant ne franchit le proxy, et
  * les endpoints protégés « par IP » voient toutes les requêtes arriver
  * de la même origine inconnue — leur plafond devient global au site
- * entier. C'était le cas de l'inscription aux alertes depuis toujours :
- * cinq inscriptions par quart d'heure pour la planète.
+ * entier. Ce fut longtemps le cas de l'inscription aux alertes : cinq
+ * inscriptions par quart d'heure pour la planète.
  *
  * Le secret partagé n'est posé que s'il est configuré ; Payload ne
  * l'exige que dans le même cas, les deux s'accordant sur son absence
- * plutôt que de tomber en panne (cf endpoints/contact.ts).
+ * plutôt que de tomber en panne (cf auth/proxy.ts).
  */
 export function entetesProxy(
   request: Request,
@@ -148,11 +148,8 @@ export async function postPayload<T = unknown>(
    * Existe pour une raison précise : sans eux, aucune information sur
    * l'appelant ne franchit ce proxy, et les endpoints protégés par une
    * limitation « par IP » voient tous leurs appels arriver de la même
-   * origine inconnue. Leur plafond devient alors GLOBAL au site entier
-   * — c'est le cas de l'inscription aux alertes depuis toujours (cinq
-   * inscriptions par quart d'heure pour toute la planète), et ce serait
-   * arrivé au formulaire de contact. Facultatif, donc sans effet sur
-   * les appels existants.
+   * origine inconnue. Leur plafond devient alors GLOBAL au site entier.
+   * Facultatif, donc sans effet sur les appels existants.
    */
   headers?: Record<string, string>,
 ): Promise<{ status: number; body: T }> {

@@ -105,9 +105,13 @@ if (Astro.request.method === 'POST') {
   try {
     const form = await Astro.request.formData();
     const email = String(form.get('email') ?? '').trim();
+    // Le pot de miel voyage aussi par ce chemin. L'oublier ici le
+    // rendrait inopérant pour tout robot qui poste le formulaire tel
+    // qu'il est servi — c'est-à-dire exactement ceux qu'il vise.
+    const site = String(form.get('site') ?? '').trim();
     const { body } = await postPayload<{ ok?: boolean; code?: string }>(
       '/subscribers/subscribe',
-      { email },
+      { email, site },
       entetesProxy(Astro.request, Astro.clientAddress),
     );
     statutAbonnement = body?.ok
@@ -116,7 +120,9 @@ if (Astro.request.method === 'POST') {
         ? 'Trop de tentatives récentes. Réessayez dans un quart d’heure.'
         : body?.code === 'invalid_email'
           ? 'Cette adresse ne semble pas valide.'
-          : 'L’inscription a échoué. Réessayez dans quelques minutes.';
+          : body?.code === 'saturated'
+            ? 'Les inscriptions sont momentanément suspendues, le temps que le trafic retombe. Réessayez dans une heure.'
+            : 'L’inscription a échoué. Réessayez dans quelques minutes.';
   } catch (err) {
     console.warn('[abonnement] soumission native impossible :', (err as Error).message);
     statutAbonnement = 'L’inscription a échoué. Réessayez dans quelques minutes.';

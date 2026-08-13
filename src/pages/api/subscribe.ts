@@ -26,9 +26,13 @@ import { entetesProxy, postPayload } from '../../lib/payload';
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   let email = '';
+  let site = '';
   try {
-    const data = (await request.json()) as { email?: unknown };
+    const data = (await request.json()) as { email?: unknown; site?: unknown };
     email = String(data?.email ?? '').trim();
+    // Pot de miel — recopié tel quel. Le filtrer ici, ou l'oublier,
+    // reviendrait à le désarmer : c'est Payload qui décide.
+    site = String(data?.site ?? '').trim();
   } catch {
     /* body non-JSON → email reste vide, Payload renverra invalid_email */
   }
@@ -36,7 +40,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   try {
     const { status, body } = await postPayload<unknown>(
       '/subscribers/subscribe',
-      { email },
+      { email, site },
       // Sans cet en-tête, Payload voyait toutes les inscriptions
       // arriver de la même origine inconnue : son plafond « 5 par
       // quart d'heure et par IP » était en réalité un plafond global
