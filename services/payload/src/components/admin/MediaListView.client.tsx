@@ -52,6 +52,11 @@ export default function MediaListViewClient(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  // Images et fichiers audio partagent cette liste depuis la fusion des
+  // deux collections. Le filtre est ce qui rend la fusion vivable :
+  // sans lui, un épisode s'intercale au milieu des couvertures quand on
+  // en cherche une.
+  const [type, setType] = useState<'tous' | 'image' | 'audio' | 'document'>('tous');
 
   useEffect(() => {
     setLoading(true);
@@ -62,6 +67,21 @@ export default function MediaListViewClient(): React.ReactElement {
     params.set('sort', '-updatedAt');
     params.set('depth', '0');
     if (search.trim()) params.append('where[filename][like]', search.trim());
+    // `like` sur le type MIME plutôt qu'une égalité : un mp3 arrive en
+    // « audio/mpeg », un m4a en « audio/x-m4a », et une image en
+    // « image/jpeg » ou « image/png » — c'est la famille qui compte, pas
+    // le format exact.
+    // Les documents n'ont pas de famille MIME commune — un PDF est
+    // « application/pdf », un docx « application/vnd.openxmlformats-… »,
+    // un tableur « text/csv ». On les prend donc par exclusion : tout ce
+    // qui n'est ni image ni audio. Deux conditions sur le même champ,
+    // d'où la forme « and » de l'API REST.
+    if (type === 'document') {
+      params.append('where[and][0][mimeType][not_like]', 'image');
+      params.append('where[and][1][mimeType][not_like]', 'audio');
+    } else if (type !== 'tous') {
+      params.append('where[mimeType][like]', type);
+    }
 
     fetch(`/cms/api/media?${params.toString()}`, { credentials: 'include' })
       .then((r) => {
@@ -78,9 +98,9 @@ export default function MediaListViewClient(): React.ReactElement {
         setMedia([]);
       })
       .finally(() => setLoading(false));
-  }, [page, search]);
+  }, [page, search, type]);
 
-  useEffect(() => setPage(1), [search]);
+  useEffect(() => setPage(1), [search, type]);
 
   const startIdx = (page - 1) * PER_PAGE + 1;
   const endIdx = Math.min(page * PER_PAGE, totalDocs);
@@ -89,18 +109,18 @@ export default function MediaListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="media"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Médias' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Médias' }]}
       topbarActions={
         <Link
           href="/cms/admin/collections/media/create"
-          className="carnet-btn carnet-btn--accent"
+          className="tituba-btn tituba-btn--accent"
         >
           Nouveau média
         </Link>
       }
     >
-      <div className="carnet-listview__toolbar">
-        <div className="carnet-listview__search">
+      <div className="tituba-listview__toolbar">
+        <div className="tituba-listview__search">
           <span className="ic" aria-hidden="true">
             ⌕
           </span>
@@ -111,12 +131,28 @@ export default function MediaListViewClient(): React.ReactElement {
             placeholder={`Rechercher dans ${totalDocs} média${totalDocs > 1 ? 's' : ''}…`}
           />
         </div>
+
+        {/* Même gabarit de filtre que la liste des billets et celle de
+            la bibliographie — c'est le même geste, restreindre une liste
+            à une famille. */}
+        <label className="tituba-listview__filter">
+          <span className="lbl">Type :</span>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as 'tous' | 'image' | 'audio' | 'document')}
+          >
+            <option value="tous">tous</option>
+            <option value="image">images</option>
+            <option value="audio">fichiers audio</option>
+            <option value="document">documents</option>
+          </select>
+        </label>
       </div>
 
-      {error && <div className="carnet-listview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-listview__error">Erreur : {error}</div>}
 
-      <div className="carnet-listview__table" role="table">
-        <div className="carnet-listview__row carnet-listview__row--head" role="row">
+      <div className="tituba-listview__table" role="table">
+        <div className="tituba-listview__row tituba-listview__row--head" role="row">
           <div role="columnheader">Aperçu</div>
           <div role="columnheader">Fichier</div>
           <div role="columnheader">Type</div>
@@ -125,9 +161,9 @@ export default function MediaListViewClient(): React.ReactElement {
         </div>
 
         {loading && media.length === 0 ? (
-          <div className="carnet-listview__loading">Chargement…</div>
+          <div className="tituba-listview__loading">Chargement…</div>
         ) : media.length === 0 ? (
-          <div className="carnet-listview__empty">Aucun média.</div>
+          <div className="tituba-listview__empty">Aucun média.</div>
         ) : (
           media.map((m) => {
             const thumbUrl =
@@ -138,7 +174,7 @@ export default function MediaListViewClient(): React.ReactElement {
               <Link
                 key={m.id}
                 href={`/cms/admin/collections/media/${m.id}`}
-                className="carnet-listview__row"
+                className="tituba-listview__row"
                 role="row"
               >
                 <div role="cell" className="thumb">
@@ -168,14 +204,14 @@ export default function MediaListViewClient(): React.ReactElement {
         )}
       </div>
 
-      <div className="carnet-listview__pagination">
-        <span className="carnet-listview__pagination-info">
+      <div className="tituba-listview__pagination">
+        <span className="tituba-listview__pagination-info">
           {totalDocs === 0
             ? 'Aucun résultat'
             : `Affichage ${startIdx}–${endIdx} sur ${totalDocs} · ${PER_PAGE} par page`}
         </span>
         {totalPages > 1 && (
-          <div className="carnet-listview__pagination-pages">
+          <div className="tituba-listview__pagination-pages">
             <button
               type="button"
               disabled={page <= 1}

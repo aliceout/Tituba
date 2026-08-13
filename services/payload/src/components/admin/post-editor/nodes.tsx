@@ -1,6 +1,6 @@
 'use client';
 
-// Decorator nodes Lexical pour les 4 blocks Carnet :
+// Decorator nodes Lexical pour les 4 blocks Tituba :
 //   - footnote        (inline) : note de bas de page
 //   - biblio_inline   (inline) : référence biblio « (Auteur, an) »
 //   - citation_bloc   (block)  : citation longue avec source
@@ -32,9 +32,15 @@ import type {
   Spread,
 } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { LinkNode, type SerializedLinkNode } from '@lexical/link';
 
 import { formatAuthorsShort } from '@/lib/format-authors';
-import { useBiblioOptions, useMediaOptions, type MediaEntry } from './context';
+import {
+  useBiblioOptions,
+  useBiblioRang,
+  useMediaOptions,
+  type MediaEntry,
+} from './context';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -223,6 +229,7 @@ function BiblioInlineRenderer({
   // Position verticale du popover en mobile (cf. FootnoteRenderer).
   const [popoverTop, setPopoverTop] = useState<number | null>(null);
   const biblioOptions = useBiblioOptions();
+  const rang = useBiblioRang(local.entry);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -241,15 +248,19 @@ function BiblioInlineRenderer({
     setOpen((o) => !o);
   }
 
-  // Affichage : (auteur, année) si la référence est trouvée, sinon
-  // « (réf. à choisir) ».
+  // Affichage : le numéro de la référence dans la bibliographie du
+  // billet, « [12] » — le même que sur le site. Tant qu'elle n'y figure
+  // pas, ce numéro n'existe pas : on nomme alors la source, ce qui dit
+  // aussi qu'il reste un geste à faire.
   const selected = local.entry
     ? biblioOptions.find((b) => String(b.id) === String(local.entry))
     : null;
   const shortAuthors = selected ? formatAuthorsShort(selected.authors) : '';
-  const label = selected
-    ? `(${shortAuthors || '—'}${selected.year ? `, ${selected.year}` : ''})`
-    : '(réf. à choisir)';
+  const label = rang
+    ? `[${rang}]`
+    : selected
+      ? `(${shortAuthors || '—'}${selected.year ? `, ${selected.year}` : ''})`
+      : '(réf. à choisir)';
 
   // Liste filtrée par la recherche : substring match insensible à la
   // casse sur authorLabel, year, title. Cap à 30 résultats pour éviter
@@ -889,7 +900,7 @@ export class DraftContainerNode extends ElementNode {
       e.preventDefault();
       e.stopPropagation();
       btn.dispatchEvent(
-        new CustomEvent('carnet:validate-draft', {
+        new CustomEvent('site:validate-draft', {
           detail: { nodeKey },
           bubbles: true,
         }),
@@ -928,4 +939,67 @@ export function $unwrapDraftContainer(node: DraftContainerNode): void {
     cursor = child;
   }
   node.remove();
+}
+
+// ─── Liens ────────────────────────────────────────────────────────
+//
+// Le lien du site range son adresse dans `fields.url` — c'est ce que
+// lit le rendu public (cf src/lib/lexical.ts) et ce qu'écrivent les
+// scripts de contenu. Le nœud fourni par Lexical, lui, la range à la
+// racine, sous `url`.
+//
+// Tant que rien n'insérait de lien depuis cet éditeur, l'écart ne se
+// voyait pas. Avec l'import de documents, il devient visible et
+// coûteux : un texte importé contient des liens, et un aller-retour
+// par l'éditeur les aurait vidés de leur adresse — un lien mort est
+// pire qu'un lien absent, il ment.
+//
+// La lecture accepte les deux formes, l'écriture les produit toutes
+// les deux — elles sortent du même endroit, elles ne peuvent donc pas
+// se contredire, et rien de ce qui existe déjà n'a besoin d'être migré.
+
+type SerializedCarnetLink = Spread<
+  { fields: { url: string; newTab: boolean; linkType: 'custom' } },
+  SerializedLinkNode
+>;
+
+export class CarnetLinkNode extends LinkNode {
+  static getType(): string {
+    return 'link';
+  }
+
+  static clone(node: CarnetLinkNode): CarnetLinkNode {
+    return new CarnetLinkNode(
+      node.__url,
+      { rel: node.__rel, target: node.__target, title: node.__title },
+      node.__key,
+    );
+  }
+
+  static importJSON(json: SerializedCarnetLink): CarnetLinkNode {
+    const url = json.fields?.url ?? json.url ?? '';
+    const node = new CarnetLinkNode(url, {
+      target: json.fields?.newTab ? '_blank' : null,
+      rel: json.fields?.newTab ? 'noopener' : null,
+    });
+    node.setFormat(json.format ?? '');
+    node.setIndent(json.indent ?? 0);
+    node.setDirection(json.direction ?? null);
+    return node;
+  }
+
+  exportJSON(): SerializedCarnetLink {
+    // Les deux formes sont écrites : celle du site, qui fait foi, et
+    // celle de Lexical, que tient le nœud d'origine. Elles ne peuvent
+    // pas diverger — elles sortent du même endroit à chaque export — et
+    // un lecteur qui ne connaîtrait que l'une des deux s'y retrouve.
+    return {
+      ...super.exportJSON(),
+      fields: {
+        url: this.getURL(),
+        newTab: this.getTarget() === '_blank',
+        linkType: 'custom',
+      },
+    } as SerializedCarnetLink;
+  }
 }

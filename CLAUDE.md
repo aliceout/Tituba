@@ -1,4 +1,4 @@
-# Instructions de collaboration — Carnet
+# Instructions de collaboration — Tituba
 
 ## Règle absolue : pas de push sans demande explicite
 
@@ -62,3 +62,25 @@ L'utilisatrice peut bumper différemment ou refuser le tag.
 - Convention version : `git describe --tags --abbrev=0` côté CI → la
   version affichée dans Payload (footer sidebar) reste celle du tag
   Git le plus récent. Tag manuel à chaque release significative.
+
+## Boucle de dev Payload — ce qui coûte cher
+
+Mesuré : première visite d'une page admin après un restart ≈ **2 min**,
+les suivantes 0,3 à 1 s. Le « Ready in 430ms » de Next.js est trompeur :
+Turbopack ne compile qu'à la demande, et la route admin tire d'un coup
+l'UI Payload + Lexical + les ~13 500 lignes de vues custom de
+`components/admin/`.
+
+- **Les endpoints ne se rechargent pas à chaud.** Payload les lie à la
+  config à l'initialisation : toute modif de `endpoints/*.ts` ou de
+  `payload.config.ts` exige un redémarrage complet du serveur dev, sinon
+  l'ancien handler continue de répondre (symptôme trompeur : un correctif
+  qui « ne marche pas » alors que le code source est bon). Les composants
+  admin (`*.client.tsx`), eux, se rechargent normalement.
+- **Éviter de toucher `payload.config.ts` et les collections en série.**
+  Ils sont à la racine du graphe de dépendances : chaque modif invalide
+  une grosse partie du cache Turbopack, donc recompilation quasi complète
+  à la visite suivante. Grouper ces changements plutôt que les enchaîner.
+- **Exclusions antivirus** : `node_modules` (791 Mo) et `.next` (654 Mo)
+  sont relus en permanence par Turbopack ; sous Windows, les faire
+  exclure de Defender change nettement le ressenti.

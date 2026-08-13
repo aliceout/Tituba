@@ -20,9 +20,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import CarnetPage from './CarnetPage';
+import { stripHeroMarkers } from '@/lib/hero-markers';
 
 const NAV_API = '/cms/api/globals/navigation';
-const INDEX_PAGES_API = '/cms/api/globals/index-pages';
+// Les pages fixes sont des documents de `pages` marqués `kind: 'fixe'`
+// depuis la fusion des deux listes — plus de global à interroger.
+const PAGES_FIXES_API = '/cms/api/pages?where[kind][equals]=fixe&limit=10&depth=0';
 const PAGES_API = '/cms/api/pages';
 
 // ─── Types navHeader (un seul bloc) ─────────────────────────────────
@@ -93,11 +96,14 @@ type FooterLink = {
 type NavigationData = {
   navHeader?: HeaderNavItem[];
   navFooter?: FooterLink[];
+  /** Colonne « Coulisses » : administration, tickets, contact. */
+  navFooterCoulisses?: FooterLink[];
 };
 
 const EMPTY: NavigationData = {
   navHeader: [],
   navFooter: [],
+  navFooterCoulisses: [],
 };
 
 type RawNavItem = {
@@ -141,6 +147,11 @@ function normalize(doc: NavigationData): NavigationData {
       href: n.href ?? '',
       external: Boolean(n.external),
     })),
+    navFooterCoulisses: (doc.navFooterCoulisses ?? []).map((n) => ({
+      label: n.label ?? '',
+      href: n.href ?? '',
+      external: Boolean(n.external),
+    })),
   };
 }
 
@@ -150,6 +161,8 @@ export default function NavigationEditViewClient(): React.ReactElement {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Erreurs par champ, indexées par ligne pour les liens de pied. */
+  const [champsEnErreur, setChampsEnErreur] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [pageOptions, setPageOptions] = useState<PageOption[]>([]);
   const [indexPages, setIndexPages] = useState<IndexPagesGlobal>({});
@@ -157,7 +170,12 @@ export default function NavigationEditViewClient(): React.ReactElement {
   // Liste des pages éditoriales — sert au <select>. depth=0 pour ne pas
   // hydrater les sections (lourdes et inutiles ici).
   useEffect(() => {
-    fetch(`${PAGES_API}?depth=0&limit=200&sort=title`, { credentials: 'include' })
+    // Pages libres seulement : une page fixe a déjà son entrée câblée
+    // dans le menu, la proposer une seconde fois comme lien éditorial
+    // permettrait de la mettre deux fois dans la même barre.
+    fetch(`${PAGES_API}?where[kind][equals]=libre&depth=0&limit=200&sort=title`, {
+      credentials: 'include',
+    })
       .then((r) => (r.ok ? r.json() : { docs: [] }))
       .then((res: { docs?: Array<{ id: number | string; title?: string; slug?: string }> }) => {
         const docs = (res.docs ?? [])
@@ -170,12 +188,21 @@ export default function NavigationEditViewClient(): React.ReactElement {
       });
   }, []);
 
-  // État `enabled` des pages d'index — pour exclure du sélecteur celles
-  // qui sont désactivées (cf. global IndexPages).
+  // État « affichée » des pages fixes — pour exclure du sélecteur celles
+  // qui sont masquées. Recomposé sous la forme qu'attendait le global
+  // qu'elles remplacent : la source a changé, pas ce qui la lit.
   useEffect(() => {
-    fetch(`${INDEX_PAGES_API}?depth=0`, { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : {}))
-      .then((res: IndexPagesGlobal) => setIndexPages(res ?? {}))
+    fetch(PAGES_FIXES_API, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : { docs: [] }))
+      .then((res: { docs?: { slug?: string; enabled?: boolean }[] }) => {
+        const etat: IndexPagesGlobal = {};
+        for (const d of res.docs ?? []) {
+          if (d.slug === 'archives' || d.slug === 'themes' || d.slug === 'subscribe') {
+            etat[d.slug] = { enabled: d.enabled !== false };
+          }
+        }
+        setIndexPages(etat);
+      })
       .catch(() => {
         /* fallback : toutes considérées actives. */
       });
@@ -270,36 +297,206 @@ export default function NavigationEditViewClient(): React.ReactElement {
   }
 
   // ─── Footer ───────────────────────────────────────────────────────
-  function updateFooter(idx: number, patch: Partial<FooterLink>) {
+  //
+  // Le pied compte deux colonnes de liens éditables — « Naviguer » et
+  // « Coulisses ». Les manipulateurs prennent donc le nom de la colonne
+  // plutôt que d'exister en double : cent lignes dupliquées auraient
+  // fini par diverger, et une correction n'aurait été appliquée qu'à
+  // l'une des deux.
+  type ColonneFooter = 'navFooter' | 'navFooterCoulisses';
+
+  function updateFooter(champ: ColonneFooter, idx: number, patch: Partial<FooterLink>) {
     setData((d) => {
-      const nav = [...(d.navFooter ?? [])];
+      const nav = [...(d[champ] ?? [])];
       nav[idx] = { ...nav[idx], ...patch };
-      return { ...d, navFooter: nav };
+      return { ...d, [champ]: nav };
     });
   }
-  function addFooter() {
+  function addFooter(champ: ColonneFooter) {
     setData((d) => ({
       ...d,
-      navFooter: [...(d.navFooter ?? []), { label: '', href: '', external: false }],
+      [champ]: [...(d[champ] ?? []), { label: '', href: '', external: false }],
     }));
   }
-  function removeFooter(idx: number) {
+  function removeFooter(champ: ColonneFooter, idx: number) {
     setData((d) => ({
       ...d,
-      navFooter: (d.navFooter ?? []).filter((_, i) => i !== idx),
+      [champ]: (d[champ] ?? []).filter((_, i) => i !== idx),
     }));
   }
-  function moveFooter(idx: number, delta: -1 | 1) {
+  function moveFooter(champ: ColonneFooter, idx: number, delta: -1 | 1) {
     setData((d) => {
-      const nav = [...(d.navFooter ?? [])];
+      const nav = [...(d[champ] ?? [])];
       const target = idx + delta;
       if (target < 0 || target >= nav.length) return d;
       [nav[idx], nav[target]] = [nav[target], nav[idx]];
-      return { ...d, navFooter: nav };
+      return { ...d, [champ]: nav };
+    });
+  }
+
+  /**
+   * Rend une colonne de liens du pied. Appelée deux fois — « Naviguer »
+   * et « Coulisses » — plutôt que recopiée : c'est le même formulaire,
+   * et deux copies auraient fini par ne plus se ressembler.
+   *
+   * `prefixe` sépare les clés d'erreur des deux colonnes : sans lui,
+   * un lien incomplet dans l'une signalerait le lien de même rang dans
+   * l'autre.
+   */
+  function colonneLiens(
+    champ: ColonneFooter,
+    prefixe: string,
+    titre: string,
+    aide: string,
+  ): React.ReactElement {
+    const longueur = (data[champ] ?? []).length;
+    return (
+              <section className="tituba-editview__section">
+                <h2 className="tituba-editview__section-title">{titre}</h2>
+                <p className="tituba-editview__section-help">{aide}</p>
+
+                <div className="tituba-editview__rows">
+                  {longueur === 0 && (
+                    <div className="tituba-editview__empty">Aucun lien.</div>
+                  )}
+                  {(data[champ] ?? []).map((row, idx) => (
+                    <div key={idx} className="tituba-editview__rowitem">
+                      {/* Chaque lien de pied porte ses propres erreurs : sur
+                          une liste de huit, un message général laisserait
+                          chercher laquelle est incomplète. D'où des clés
+                          indexées, `footer.<n>.label` et `.href`. */}
+                      <label
+                        className={`tituba-editview__field tituba-editview__field--inline${
+                          champsEnErreur[`${prefixe}.${idx}.label`] ? ' tituba-editview__field--invalid' : ''
+                        }`}
+                      >
+                        <span className="lbl">
+                          Label <span className="req" aria-hidden="true">*</span>
+                          <span className="sr-only"> (obligatoire)</span>
+                        </span>
+                        <input
+                          type="text"
+                          value={row.label}
+                          aria-invalid={champsEnErreur[`${prefixe}.${idx}.label`] ? true : undefined}
+                          onChange={(e) => {
+                            updateFooter(champ, idx, { label: e.target.value });
+                            oublierErreur(`${prefixe}.${idx}.label`);
+                          }}
+                        />
+                        {champsEnErreur[`${prefixe}.${idx}.label`] && (
+                          <span className="err">{champsEnErreur[`${prefixe}.${idx}.label`]}</span>
+                        )}
+                      </label>
+                      <label
+                        className={`tituba-editview__field tituba-editview__field--inline${
+                          champsEnErreur[`${prefixe}.${idx}.href`] ? ' tituba-editview__field--invalid' : ''
+                        }`}
+                      >
+                        <span className="lbl">
+                          Href <span className="req" aria-hidden="true">*</span>
+                          <span className="sr-only"> (obligatoire)</span>
+                        </span>
+                        <input
+                          type="text"
+                          value={row.href}
+                          aria-invalid={champsEnErreur[`${prefixe}.${idx}.href`] ? true : undefined}
+                          onChange={(e) => {
+                            updateFooter(champ, idx, { href: e.target.value });
+                            oublierErreur(`${prefixe}.${idx}.href`);
+                          }}
+                        />
+                        {champsEnErreur[`${prefixe}.${idx}.href`] && (
+                          <span className="err">{champsEnErreur[`${prefixe}.${idx}.href`]}</span>
+                        )}
+                      </label>
+                      <label className="tituba-editview__field tituba-editview__field--inline tituba-editview__field--check">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(row.external)}
+                          onChange={(e) => updateFooter(champ, idx, { external: e.target.checked })}
+                        />
+                        <span className="lbl">Externe</span>
+                      </label>
+                      <div className="tituba-editview__rowitem-actions">
+                        <button
+                          type="button"
+                          className="tituba-btn tituba-btn--ghost"
+                          onClick={() => moveFooter(champ, idx, -1)}
+                          disabled={idx === 0}
+                          aria-label="Monter"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="tituba-btn tituba-btn--ghost"
+                          onClick={() => moveFooter(champ, idx, 1)}
+                          disabled={idx === longueur - 1}
+                          aria-label="Descendre"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          className="tituba-btn tituba-btn--ghost"
+                          onClick={() => removeFooter(champ, idx)}
+                          aria-label="Supprimer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="tituba-editview__rows-actions">
+                  <button
+                    type="button"
+                    className="tituba-btn tituba-btn--ghost"
+                    onClick={() => addFooter(champ)}
+                  >
+                    + Ajouter un lien
+                  </button>
+                </div>
+              </section>
+    );
+  }
+  /** Retire l'erreur d'un champ dès qu'on le corrige. */
+  function oublierErreur(cle: string) {
+    setChampsEnErreur((prev) => {
+      if (!prev[cle]) return prev;
+      const suite = { ...prev };
+      delete suite[cle];
+      return suite;
     });
   }
 
   async function save() {
+    // Validation cliente avant l'envoi : un lien de pied incomplet
+    // remontait en 400 dont le corps JSON s'affichait tel quel, sans
+    // dire lequel des liens était en cause.
+    const manquants: Record<string, string> = {};
+    // Les deux colonnes du pied se valident pareil ; le préfixe des
+    // clés est ce qui distingue leurs messages à l'affichage.
+    for (const [champ, prefixe] of [
+      ['navFooter', 'footer'],
+      ['navFooterCoulisses', 'coulisses'],
+    ] as const) {
+      (data[champ] ?? []).forEach((l, i) => {
+        if (!String(l.label ?? '').trim()) {
+          manquants[`${prefixe}.${i}.label`] = 'Le libellé est obligatoire.';
+        }
+        if (!String(l.href ?? '').trim()) {
+          manquants[`${prefixe}.${i}.href`] = 'L’adresse est obligatoire.';
+        }
+      });
+    }
+    if (Object.keys(manquants).length > 0) {
+      setChampsEnErreur(manquants);
+      setError(null);
+      return;
+    }
+    setChampsEnErreur({});
     setSaving(true);
     setError(null);
     try {
@@ -315,6 +512,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
           label: item.label || undefined,
         })),
         navFooter: data.navFooter ?? [],
+        navFooterCoulisses: data.navFooterCoulisses ?? [],
       };
       const res = await fetch(NAV_API, {
         method: 'POST',
@@ -351,22 +549,22 @@ export default function NavigationEditViewClient(): React.ReactElement {
   return (
     <CarnetPage
       variant="editview"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Navigation' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Navigation' }]}
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={save}
             disabled={!dirty || saving || loading}
           >
@@ -375,21 +573,28 @@ export default function NavigationEditViewClient(): React.ReactElement {
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {Object.keys(champsEnErreur).length > 0 && (
+        <div className="tituba-editview__error" role="alert">
+          {Object.keys(champsEnErreur).length === 1
+            ? 'Un champ obligatoire n’est pas rempli — il est signalé ci-dessous.'
+            : `${Object.keys(champsEnErreur).length} champs obligatoires ne sont pas remplis — ils sont signalés ci-dessous.`}
+        </div>
+      )}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Header</h2>
-            <p className="carnet-editview__section-help">
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Header</h2>
+            <p className="tituba-editview__section-help">
               Onglets du header, dans l&apos;ordre d&apos;affichage. Le lien
               « Billets » reste toujours en première position et n&apos;apparaît
               pas ici. Un onglet pointe soit vers une page d&apos;index
@@ -398,24 +603,24 @@ export default function NavigationEditViewClient(): React.ReactElement {
               ne peut être référencée qu&apos;une fois.
             </p>
 
-            <div className="carnet-editview__rows">
+            <div className="tituba-editview__rows">
               {headerLen === 0 && (
-                <div className="carnet-editview__empty">
+                <div className="tituba-editview__empty">
                   Aucun onglet — le header n&apos;affichera que « Billets ».
                 </div>
               )}
               {(data.navHeader ?? []).map((item, idx) => {
                 const currentKey = encodeKey(item);
                 return (
-                  <div key={idx} className="carnet-editview__rowitem">
-                    <label className="carnet-editview__field carnet-editview__field--inline">
+                  <div key={idx} className="tituba-editview__rowitem">
+                    <label className="tituba-editview__field tituba-editview__field--inline">
                       <span className="lbl">Page</span>
                       <select
                         value={currentKey}
                         onChange={(e) => applySelect(idx, e.target.value)}
                       >
                         <option value="">— sélectionner —</option>
-                        <optgroup label="Pages principales">
+                        <optgroup label="Pages fixes">
                           {enabledIndexTargets.map((t) => {
                             const key = `index:${t}`;
                             const taken = selectedKeys.includes(key) && key !== currentKey;
@@ -427,13 +632,13 @@ export default function NavigationEditViewClient(): React.ReactElement {
                             );
                           })}
                         </optgroup>
-                        <optgroup label="Pages éditoriales">
+                        <optgroup label="Pages">
                           {pageOptions.map((p) => {
                             const key = `editorial:${p.id}`;
                             const taken = selectedKeys.includes(key) && key !== currentKey;
                             return (
                               <option key={key} value={key} disabled={taken}>
-                                {p.title} (/{p.slug}/)
+                                {stripHeroMarkers(p.title)} (/{p.slug}/)
                                 {taken ? ' — déjà ajoutée' : ''}
                               </option>
                             );
@@ -441,7 +646,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                         </optgroup>
                       </select>
                     </label>
-                    <label className="carnet-editview__field carnet-editview__field--inline">
+                    <label className="tituba-editview__field tituba-editview__field--inline">
                       <span className="lbl">Libellé (optionnel)</span>
                       <input
                         type="text"
@@ -450,10 +655,10 @@ export default function NavigationEditViewClient(): React.ReactElement {
                         placeholder="Sinon : libellé natif de la page"
                       />
                     </label>
-                    <div className="carnet-editview__rowitem-actions">
+                    <div className="tituba-editview__rowitem-actions">
                       <button
                         type="button"
-                        className="carnet-btn carnet-btn--ghost"
+                        className="tituba-btn tituba-btn--ghost"
                         onClick={() => moveItem(idx, -1)}
                         disabled={idx === 0}
                         aria-label="Monter"
@@ -462,7 +667,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                       </button>
                       <button
                         type="button"
-                        className="carnet-btn carnet-btn--ghost"
+                        className="tituba-btn tituba-btn--ghost"
                         onClick={() => moveItem(idx, 1)}
                         disabled={idx === headerLen - 1}
                         aria-label="Descendre"
@@ -471,7 +676,7 @@ export default function NavigationEditViewClient(): React.ReactElement {
                       </button>
                       <button
                         type="button"
-                        className="carnet-btn carnet-btn--ghost"
+                        className="tituba-btn tituba-btn--ghost"
                         onClick={() => removeItem(idx)}
                         aria-label="Supprimer"
                       >
@@ -483,92 +688,26 @@ export default function NavigationEditViewClient(): React.ReactElement {
               })}
             </div>
 
-            <div className="carnet-editview__rows-actions">
-              <button type="button" className="carnet-btn carnet-btn--ghost" onClick={addItem}>
+            <div className="tituba-editview__rows-actions">
+              <button type="button" className="tituba-btn tituba-btn--ghost" onClick={addItem}>
                 + Ajouter un onglet
               </button>
             </div>
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Footer</h2>
-            <p className="carnet-editview__section-help">
-              Liens affichés dans la colonne « Naviguer » du footer du site.
-              L&apos;ordre ici détermine l&apos;ordre d&apos;affichage.
-            </p>
+          {colonneLiens(
+            'navFooter',
+            'footer',
+            'Footer — colonne « Naviguer »',
+            'Les grandes destinations du site. L’ordre ici détermine l’ordre d’affichage.',
+          )}
 
-            <div className="carnet-editview__rows">
-              {footerLen === 0 && (
-                <div className="carnet-editview__empty">Aucun lien.</div>
-              )}
-              {(data.navFooter ?? []).map((row, idx) => (
-                <div key={idx} className="carnet-editview__rowitem">
-                  <label className="carnet-editview__field carnet-editview__field--inline">
-                    <span className="lbl">Label</span>
-                    <input
-                      type="text"
-                      value={row.label}
-                      onChange={(e) => updateFooter(idx, { label: e.target.value })}
-                    />
-                  </label>
-                  <label className="carnet-editview__field carnet-editview__field--inline">
-                    <span className="lbl">Href</span>
-                    <input
-                      type="text"
-                      value={row.href}
-                      onChange={(e) => updateFooter(idx, { href: e.target.value })}
-                    />
-                  </label>
-                  <label className="carnet-editview__field carnet-editview__field--inline carnet-editview__field--check">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(row.external)}
-                      onChange={(e) => updateFooter(idx, { external: e.target.checked })}
-                    />
-                    <span className="lbl">Externe</span>
-                  </label>
-                  <div className="carnet-editview__rowitem-actions">
-                    <button
-                      type="button"
-                      className="carnet-btn carnet-btn--ghost"
-                      onClick={() => moveFooter(idx, -1)}
-                      disabled={idx === 0}
-                      aria-label="Monter"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="carnet-btn carnet-btn--ghost"
-                      onClick={() => moveFooter(idx, 1)}
-                      disabled={idx === footerLen - 1}
-                      aria-label="Descendre"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="carnet-btn carnet-btn--ghost"
-                      onClick={() => removeFooter(idx)}
-                      aria-label="Supprimer"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="carnet-editview__rows-actions">
-              <button
-                type="button"
-                className="carnet-btn carnet-btn--ghost"
-                onClick={addFooter}
-              >
-                + Ajouter un lien
-              </button>
-            </div>
-          </section>
+          {colonneLiens(
+            'navFooterCoulisses',
+            'coulisses',
+            'Footer — colonne « Coulisses »',
+            'L’envers du site plutôt que son contenu : l’administration, le suivi des tickets, le formulaire de contact.',
+          )}
         </form>
       )}
     </CarnetPage>

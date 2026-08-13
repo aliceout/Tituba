@@ -1,0 +1,10 @@
+# Le plugin Astro de Prettier ne sait pas analyser le <script is:inline>
+# de ce fichier (« SyntaxError: Unexpected token »), et l'erreur
+# interrompt la passe : tous les fichiers venant après lui dans l'ordre
+# alphabétique étaient silencieusement sautés. On l'écarte donc, pour
+# que `pnpm format` aille jusqu'au bout.
+#
+# À retirer le jour où le plugin sait le lire — il n'y a rien de
+# particulier dans ce fichier, sinon un script anti-FOUC qui doit rester
+# en ligne.
+src/layouts/Layout.astro

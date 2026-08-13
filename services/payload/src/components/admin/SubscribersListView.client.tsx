@@ -3,7 +3,7 @@
 // Vue Liste custom pour la collection Subscribers — abonné·es aux
 // alertes mail des nouveaux billets.
 //
-// Layout standard Carnet : crumbs, toolbar (search + filtre statut),
+// Layout standard Tituba : crumbs, toolbar (search + filtre statut),
 // table 4 colonnes (email · statut · inscription · confirmation),
 // pagination. Le clic sur une ligne ouvre la vue Édition native
 // Payload (où admin/root peut supprimer manuellement). Pas de bouton
@@ -116,17 +116,17 @@ export default function SubscribersListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="subscribers"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Abonné·es' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Abonné·es' }]}
       topbarActions={
         activeCount !== null ? (
-          <span className="carnet-listview__count">
+          <span className="tituba-listview__count">
             {activeCount} actif·ve{activeCount > 1 ? 's' : ''}
           </span>
         ) : null
       }
     >
-      <div className="carnet-listview__toolbar">
-        <div className="carnet-listview__search">
+      <div className="tituba-listview__toolbar">
+        <div className="tituba-listview__search">
           <span className="ic" aria-hidden="true">
             ⌕
           </span>
@@ -137,7 +137,7 @@ export default function SubscribersListViewClient(): React.ReactElement {
             placeholder={`Rechercher dans ${totalDocs} abonné·e${totalDocs > 1 ? 's' : ''}…`}
           />
         </div>
-        <label className="carnet-listview__filter">
+        <label className="tituba-listview__filter">
           <span className="lbl">Statut :</span>
           <select
             value={status}
@@ -151,10 +151,10 @@ export default function SubscribersListViewClient(): React.ReactElement {
         </label>
       </div>
 
-      {error && <div className="carnet-listview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-listview__error">Erreur : {error}</div>}
 
-      <div className="carnet-listview__table" role="table">
-        <div className="carnet-listview__row carnet-listview__row--head" role="row">
+      <div className="tituba-listview__table" role="table">
+        <div className="tituba-listview__row tituba-listview__row--head" role="row">
           <div role="columnheader">Email</div>
           <div role="columnheader">Statut</div>
           <div role="columnheader">Inscription</div>
@@ -162,23 +162,23 @@ export default function SubscribersListViewClient(): React.ReactElement {
         </div>
 
         {loading && subs.length === 0 ? (
-          <div className="carnet-listview__loading">Chargement…</div>
+          <div className="tituba-listview__loading">Chargement…</div>
         ) : subs.length === 0 ? (
-          <div className="carnet-listview__empty">Aucun·e abonné·e.</div>
+          <div className="tituba-listview__empty">Aucun·e abonné·e.</div>
         ) : (
           subs.map((s) => (
             <Link
               key={s.id}
               href={`/cms/admin/collections/subscribers/${s.id}`}
-              className="carnet-listview__row"
+              className="tituba-listview__row"
               role="row"
             >
               <div role="cell" className="email">
                 {s.email}
               </div>
               <div role="cell" className="status-cell">
-                <span className={`carnet-status carnet-status--${s.status}`}>
-                  <span className="carnet-status__dot" aria-hidden="true" />
+                <span className={`tituba-status tituba-status--${s.status}`}>
+                  <span className="tituba-status__dot" aria-hidden="true" />
                   {STATUS_LABEL[s.status]}
                 </span>
               </div>
@@ -193,14 +193,14 @@ export default function SubscribersListViewClient(): React.ReactElement {
         )}
       </div>
 
-      <div className="carnet-listview__pagination">
-        <span className="carnet-listview__pagination-info">
+      <div className="tituba-listview__pagination">
+        <span className="tituba-listview__pagination-info">
           {totalDocs === 0
             ? 'Aucun résultat'
             : `Affichage ${startIdx}–${endIdx} sur ${totalDocs} · ${PER_PAGE} par page`}
         </span>
         {totalPages > 1 && (
-          <div className="carnet-listview__pagination-pages">
+          <div className="tituba-listview__pagination-pages">
             <button
               type="button"
               disabled={page <= 1}

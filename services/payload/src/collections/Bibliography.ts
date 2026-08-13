@@ -23,7 +23,7 @@ export const Bibliography: CollectionConfig = {
     delete: authenticated,
   },
   hooks: {
-    // Verrouillage des refs Zotero : le Carnet est lecteur seul pour
+    // Verrouillage des refs Zotero : le Tituba est lecteur seul pour
     // tout ce qui vient du sync. Les modifs doivent passer par Zotero
     // puis un nouveau sync. Le endpoint `/users/me/zotero-sync` met
     // `req.context.zoteroSync = true` pour bypass cette protection.
@@ -34,7 +34,7 @@ export const Bibliography: CollectionConfig = {
         const fromSync = (req?.context as { zoteroSync?: boolean } | undefined)?.zoteroSync === true;
         if (fromSync) return data;
         throw new Error(
-          'Cette référence vient de Zotero et ne peut pas être modifiée depuis le Carnet. Modifiez-la dans Zotero puis lancez un nouveau sync.',
+          'Cette référence vient de Zotero et ne peut pas être modifiée depuis le Tituba. Modifiez-la dans Zotero puis lancez un nouveau sync.',
         );
       },
     ],
@@ -111,12 +111,16 @@ export const Bibliography: CollectionConfig = {
       // citation courte est `authors[0]` — pas de flag séparé, juste l'ordre.
       name: 'authors',
       type: 'array',
-      required: true,
-      minRows: 1,
+      // Facultatif : un article de presse non signé n'a pas
+      // d'auteur·ice, et lui en attribuer un — l'organe de presse, par
+      // exemple — revient à écrire quelque chose que la source ne dit
+      // pas. La place reste vide, le titre identifie l'œuvre.
+      required: false,
+      minRows: 0,
       label: 'Auteur·ice·s',
       admin: {
         description:
-          'Une ligne par personne (1er = auteur·ice principal·e, utilisé pour le tri et la citation courte). `firstName` peut rester vide pour les auteurs corporatifs (UNESCO, Conseil de l’Europe…).',
+          'Une ligne par personne (1re = auteur·ice principal·e, utilisée pour le tri et la citation courte). Le prénom peut rester vide pour les auteurs collectifs (UNESCO, Conseil de l’Europe…). Laissez la liste vide pour un texte non signé.',
         initCollapsed: false,
       },
       fields: [
@@ -226,8 +230,8 @@ export const Bibliography: CollectionConfig = {
     },
 
     // ─── Provenance & sync Zotero ────────────────────────────────────
-    // `source` distingue les refs saisies à la main au Carnet de celles
-    // importées depuis Zotero. Pour les Zotero, le Carnet est lecture
+    // `source` distingue les refs saisies à la main au Tituba de celles
+    // importées depuis Zotero. Pour les Zotero, le Tituba est lecture
     // seule : les modifs se font dans Zotero, puis un nouveau sync les
     // remonte. Cette règle est appliquée par le hook beforeChange en
     // fin de fichier (refuse les updates sauf si req.context.zoteroSync).
@@ -244,7 +248,7 @@ export const Bibliography: CollectionConfig = {
       admin: {
         position: 'sidebar',
         readOnly: true,
-        description: "Posée à la création — détermine si la ref est éditable au Carnet ou pilotée par Zotero.",
+        description: "Posée à la création — détermine si la ref est éditable au Tituba ou pilotée par Zotero.",
       },
     },
     {
@@ -313,10 +317,14 @@ export const Bibliography: CollectionConfig = {
       hooks: {
         beforeChange: [
           ({ data }) => {
+            // Assemblé morceau par morceau : sans auteur·ice — un texte
+            // non signé — la composition directe laissait le libellé
+            // s'ouvrir sur une espace, et la liste s'alignait de travers.
             const author = buildAuthorLabel(data);
             const year = data?.year ?? '';
             const title = data?.title ?? '';
-            return `${author}${year ? ` (${year})` : ''}${title ? ` — ${title}` : ''}`;
+            const tete = [author, year ? `(${year})` : ''].filter(Boolean).join(' ');
+            return [tete, title].filter(Boolean).join(' — ');
           },
         ],
       },

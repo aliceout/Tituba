@@ -173,10 +173,10 @@ export default function TagListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="tags"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Tags' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Tags' }]}
     >
-      <div className="carnet-listview__toolbar">
-        <div className="carnet-listview__search">
+      <div className="tituba-listview__toolbar">
+        <div className="tituba-listview__search">
           <span className="ic" aria-hidden="true">
             ⌕
           </span>
@@ -189,10 +189,10 @@ export default function TagListViewClient(): React.ReactElement {
         </div>
       </div>
 
-      {error && <div className="carnet-listview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-listview__error">Erreur : {error}</div>}
 
-      <div className="carnet-listview__table" role="table">
-        <div className="carnet-listview__row carnet-listview__row--head" role="row">
+      <div className="tituba-listview__table" role="table">
+        <div className="tituba-listview__row tituba-listview__row--head" role="row">
           <div role="columnheader">Nom</div>
           <div role="columnheader">Slug</div>
           <div role="columnheader">Billets</div>
@@ -200,9 +200,9 @@ export default function TagListViewClient(): React.ReactElement {
         </div>
 
         {loading && tags.length === 0 ? (
-          <div className="carnet-listview__loading">Chargement…</div>
+          <div className="tituba-listview__loading">Chargement…</div>
         ) : tags.length === 0 ? (
-          <div className="carnet-listview__empty">Aucun tag.</div>
+          <div className="tituba-listview__empty">Aucun tag.</div>
         ) : (
           tags.map((t) => (
             <TagRow
@@ -220,14 +220,14 @@ export default function TagListViewClient(): React.ReactElement {
         )}
       </div>
 
-      <div className="carnet-listview__pagination">
-        <span className="carnet-listview__pagination-info">
+      <div className="tituba-listview__pagination">
+        <span className="tituba-listview__pagination-info">
           {totalDocs === 0
             ? 'Aucun résultat'
             : `Affichage ${startIdx}–${endIdx} sur ${totalDocs} · ${PER_PAGE} par page`}
         </span>
         {totalPages > 1 && (
-          <div className="carnet-listview__pagination-pages">
+          <div className="tituba-listview__pagination-pages">
             <button
               type="button"
               disabled={page <= 1}
@@ -260,7 +260,7 @@ export default function TagListViewClient(): React.ReactElement {
 
       {deleteTarget && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteSubmitting) {
               setDeleteTarget(null);
@@ -268,12 +268,12 @@ export default function TagListViewClient(): React.ReactElement {
             }
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer ce tag&nbsp;?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => {
                   if (deleteSubmitting) return;
                   setDeleteTarget(null);
@@ -286,10 +286,10 @@ export default function TagListViewClient(): React.ReactElement {
             </header>
 
             {deleteError && (
-              <div className="carnet-modal__error">Erreur&nbsp;: {deleteError}</div>
+              <div className="tituba-modal__error">Erreur&nbsp;: {deleteError}</div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               {(() => {
                 const usages = counts.get(String(deleteTarget.id)) ?? 0;
                 return (
@@ -304,10 +304,10 @@ export default function TagListViewClient(): React.ReactElement {
               })()}
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => {
                   setDeleteTarget(null);
                   setDeleteError(null);
@@ -318,7 +318,7 @@ export default function TagListViewClient(): React.ReactElement {
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void confirmDeleteTag()}
                 disabled={deleteSubmitting}
               >
@@ -378,13 +378,13 @@ function TagRow({
   }
 
   return (
-    <div className="carnet-listview__row carnet-listview__row--tag" role="row">
+    <div className="tituba-listview__row tituba-listview__row--tag" role="row">
       <div role="cell" className="title">
         {editing ? (
           <input
             ref={inputRef}
             type="text"
-            className="carnet-listview__inline-input"
+            className="tituba-listview__inline-input"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onBlur={() => void commit()}
@@ -403,7 +403,7 @@ function TagRow({
         ) : (
           <button
             type="button"
-            className="carnet-listview__inline-static"
+            className="tituba-listview__inline-static"
             onClick={() => setEditing(true)}
             disabled={busy}
             title="Cliquer pour renommer"
@@ -421,7 +421,7 @@ function TagRow({
       <div role="cell" className="actions">
         <button
           type="button"
-          className="carnet-listview__rowact"
+          className="tituba-listview__rowact"
           onClick={onDelete}
           disabled={busy}
           aria-label={`Supprimer le tag ${tag.name}`}

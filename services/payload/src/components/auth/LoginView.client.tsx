@@ -114,17 +114,17 @@ export default function LoginView(): React.ReactElement {
         gap: 'calc(var(--base) * 1.25)',
       }}
     >
-      {/* Branding Carnet — h1 Source Serif 4 64px, point en accent.
+      {/* Branding Tituba — h1 Source Serif 4 64px, point en accent.
           Réf : Design/design_handoff_admin/README.md → écran Login. */}
       <header style={{ marginBottom: 12 }}>
         <h1
-          className="carnet-h1 carnet-h1--brand"
+          className="tituba-h1 tituba-h1--brand"
           style={{ margin: 0, marginBottom: 8 }}
         >
-          Carnet<span className="dot">.</span>
+          Tituba<span className="dot">.</span>
         </h1>
         <p
-          className="carnet-kicker"
+          className="tituba-kicker"
           style={{ margin: 0, fontSize: 11, color: 'var(--b-muted)' }}
         >
           Espace d&apos;écriture

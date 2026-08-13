@@ -1,6 +1,6 @@
 // Champs réutilisables entre les blocs.
 //
-// Le carnet a une charte sobre et monochrome (un seul accent violet) —
+// Le tituba a une charte sobre et monochrome (un seul accent violet) —
 // pas de palette multi-fonds comme un site associatif. Ce fichier reste
 // donc minimal et expose surtout des helpers de typage.
 //

@@ -1,7 +1,7 @@
 // Nav latérale custom — remplace la nav native Payload (qui empile
 // les collections à plat) par la structure éditoriale du handoff :
 //
-//   Carnet.                          (brand Source Serif 22px)
+//   Tituba.                          (brand Source Serif 22px)
 //
 //   CONTENU
 //     Billets        (47)
@@ -10,7 +10,7 @@
 //     Médias         (24)
 //
 //   PAGES
-//     Pages éditoriales
+//     Pages
 //
 //   RÉGLAGES
 //     Utilisateurs    (3)
@@ -23,7 +23,7 @@
 // pathname actif est passé au composant client qui marque l'item.
 
 import React from 'react';
-import { getPayload } from 'payload';
+import { getPayload, type Where } from 'payload';
 import { headers } from 'next/headers';
 
 import config from '@/payload.config';
@@ -32,14 +32,26 @@ import NavClient from './Nav.client';
 async function fetchCount(
   payload: Awaited<ReturnType<typeof getPayload>>,
   collection:
-    | 'posts'
+    | 'articles'
+    | 'analyses'
+    | 'actus'
+    | 'podcasts'
+    | 'outils'
     | 'themes'
+    | 'series'
     | 'tags'
     | 'bibliography'
     | 'media'
     | 'users'
     | 'pages'
     | 'subscribers',
+  /**
+   * Filtre optionnel — sert aux séries, qui vivent dans une seule
+   * collection mais s'affichent derrière deux entrées de nav selon leur
+   * format (cf Series.ts). Sans lui, les deux entrées porteraient le
+   * même total et aucune ne dirait la vérité.
+   */
+  where?: Where,
 ): Promise<number> {
   try {
     const res = await payload.find({
@@ -47,6 +59,7 @@ async function fetchCount(
       limit: 1,
       depth: 0,
       overrideAccess: true,
+      ...(where ? { where } : {}),
     });
     return res.totalDocs;
   } catch {
@@ -57,9 +70,28 @@ async function fetchCount(
 export default async function Nav(): Promise<React.ReactElement> {
   const payload = await getPayload({ config });
 
-  const [posts, themes, tags, bibliography, media, users, pages, subscribers] =
+  const [
+    articles,
+    analyses,
+    actus,
+    podcasts,
+    outils,
+    themes,
+    tags,
+    bibliography,
+    media,
+    users,
+    pages,
+    subscribers,
+    seriesEmissions,
+    seriesTextes,
+  ] =
     await Promise.all([
-      fetchCount(payload, 'posts'),
+      fetchCount(payload, 'articles'),
+      fetchCount(payload, 'analyses'),
+      fetchCount(payload, 'actus'),
+      fetchCount(payload, 'podcasts'),
+      fetchCount(payload, 'outils'),
       fetchCount(payload, 'themes'),
       fetchCount(payload, 'tags'),
       fetchCount(payload, 'bibliography'),
@@ -67,6 +99,10 @@ export default async function Nav(): Promise<React.ReactElement> {
       fetchCount(payload, 'users'),
       fetchCount(payload, 'pages'),
       fetchCount(payload, 'subscribers'),
+      fetchCount(payload, 'series', { format: { equals: 'podcasts' } }),
+      // « Séries d'articles » réunit les deux formats de texte : c'est
+      // une seule entrée de nav, elle doit donc compter les deux.
+      fetchCount(payload, 'series', { format: { in: ['articles', 'analyses'] } }),
     ]);
 
   // Pathname courant (server-side via les headers Next) pour l'active state.
@@ -107,7 +143,22 @@ export default async function Nav(): Promise<React.ReactElement> {
   return (
     <NavClient
       activePath={activePath}
-      counts={{ posts, themes, tags, bibliography, media, users, pages, subscribers }}
+      counts={{
+        articles,
+        analyses,
+        actus,
+        podcasts,
+        outils,
+        themes,
+        tags,
+        bibliography,
+        media,
+        users,
+        pages,
+        subscribers,
+        seriesEmissions,
+        seriesTextes,
+      }}
       version={version}
       initialMe={me}
     />

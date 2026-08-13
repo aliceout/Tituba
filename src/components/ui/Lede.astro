@@ -1,0 +1,30 @@
+---
+/**
+ * Chapô de section — le paragraphe qui suit un titre intermédiaire.
+ *
+ * Distinct du chapô de page, qui est porté par PageTitle. Les deux
+ * étaient au même corps, si bien que « Inscrivez-vous pour recevoir un
+ * mail… » pesait autant que le chapô d'ouverture de la page : deux
+ * niveaux de hiérarchie, une seule taille.
+ *
+ * Deux crans séparent maintenant les trois registres — 18 px pour le
+ * chapô de page, 16 pour celui d'une section, 17 pour le texte courant.
+ * Le chapô de section est plus petit que le corps de texte mais en
+ * sans et en gris : c'est le contraste de police et de couleur qui le
+ * détache, pas sa taille.
+ */
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<p
+  class:list={[
+    'text-sublede leading-body text-muted max-w-mesure mt-0 mb-[22px] font-sans',
+    className,
+  ]}
+>
+  <slot />
+</p>

@@ -1,0 +1,251 @@
+---
+/**
+ * Invitation à écouter un épisode — la seule trace du lecteur dans la
+ * page. Le lecteur lui-même vit dans le chrome (cf PodcastDock) : c'est
+ * ce qui lui permet de survivre à la navigation.
+ *
+ * Le bouton ne fait donc rien tout seul. Il décrit son épisode en
+ * attributs de données et s'adresse à la barre par
+ * `window.titubaPodcast`. Il se met à jour en écoutant l'évènement
+ * qu'elle émet — plusieurs boutons peuvent ainsi coexister sur une même
+ * page (une liste d'épisodes, un jour) sans qu'aucun n'affiche un état
+ * démenti par la barre.
+ */
+export interface Props {
+  src: string;
+  title: string;
+  /** Durée connue de la fiche, en secondes. */
+  durationSeconds?: number | null;
+  /** Vignette de couverture, reprise dans la barre. */
+  coverUrl?: string | null;
+  /** Lien de retour vers l'épisode, depuis la barre. */
+  href?: string;
+  /**
+   * Rond seul, sans libellé ni durée. Pour les emplacements où le
+   * contexte dit déjà de quoi il s'agit — collé au chapô d'un épisode,
+   * par exemple, où « Écouter l'épisode » ne ferait que répéter la page.
+   */
+  compact?: boolean;
+}
+
+const { src, title, durationSeconds, coverUrl, href, compact = false } = Astro.props as Props;
+
+/** « 46:02 », ou « 1:12:30 » au-delà de l'heure. */
+function chrono(secondes: number | null | undefined): string {
+  if (typeof secondes !== 'number' || !Number.isFinite(secondes) || secondes <= 0) return '';
+  const h = Math.floor(secondes / 3600);
+  const m = Math.floor((secondes % 3600) / 60);
+  const s = Math.floor(secondes % 60);
+  const deux = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${deux(m)}:${deux(s)}` : `${m}:${deux(s)}`;
+}
+
+const duree = chrono(durationSeconds);
+---
+
+{
+  /* La classe `lancer` reste : c'est par elle que le hero d'épisode
+    repose ses couleurs sur le bouton (cf PodcastHero). `group` sert au
+    survol du rond en variante nue, et `data-joue` à la permutation des
+    deux pictogrammes — un attribut plutôt qu'une classe, puisque
+    Tailwind ne génère que les classes qu'il lit dans les sources.
+
+    Au survol, le fond s'éclaire d'un voile de la couleur d'accent :
+    `color-mix` plutôt qu'une teinte figée, pour que le bouton suive la
+    couleur de marque réglée dans l'admin — et pour qu'il tienne aussi
+    bien sur le fond clair d'une page que sur le fond sombre d'un hero
+    d'épisode, où c'est la même règle qui joue.
+
+    Variante nue : le rond seul, sans cadre ni fond — la pastille
+    n'aurait plus rien à enfermer. */
+}
+<button
+  type="button"
+  class:list={[
+    'lancer group inline-flex cursor-pointer items-center gap-3 rounded-full bg-transparent',
+    'text-ink font-sans text-[calc(14px*var(--a11y-echelle))]',
+    'transition-[border-color,color,background] duration-[120ms]',
+    'hover:border-accent hover:text-accent hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]',
+    'focus-visible:outline-accent focus-visible:outline-2 focus-visible:outline-offset-[3px]',
+    compact ? 'border-0 p-0' : 'border-rule border py-2.5 pr-[22px] pl-2.5',
+  ]}
+  data-podcast-launch
+  data-src={src}
+  data-titre={title}
+  data-cover={coverUrl ?? ''}
+  data-href={href ?? ''}
+  aria-label={compact ? "Écouter l'épisode" : undefined}
+>
+  <span class="relative grid place-items-center" aria-hidden="true">
+    {
+      /* Anneau de progression, autour du rond. Pas de cercle de fond : un
+        tour complet en gris se lit comme un anneau déjà rempli, et l'arc
+        qui avance dessus ne s'en distingue plus. Seule la part écoutée
+        est peinte. */
+    }
+    <span class="anneau"></span>
+    <span
+      class:list={[
+        'bg-accent grid size-[38px] place-items-center rounded-full text-white transition-[filter] duration-[120ms]',
+        compact && 'group-hover:brightness-[1.12]',
+      ]}
+    >
+      {
+        /* Les deux pictogrammes occupent la même case de la grille : ils se
+          superposent, et seul celui de l'état courant est visible. Les
+          permuter par affichage plutôt que par remplacement du balisage
+          évite un saut de mise en page à chaque bascule. */
+      }
+      <svg
+        class="col-start-1 row-start-1 group-data-[joue]:hidden"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+      >
+        <path d="M8 5.5v13l11-6.5z"></path>
+      </svg>
+      <svg
+        class="col-start-1 row-start-1 hidden group-data-[joue]:block"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+      >
+        <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"></path>
+      </svg>
+    </span>
+  </span>
+  {!compact && <span data-txt>Écouter l'épisode</span>}
+  {
+    !compact && duree && (
+      <span class="text-muted text-label font-mono tabular-nums">{duree}</span>
+    )
+  }
+</button>
+
+{
+  /* Le seul CSS qui reste, et il ne peut pas être ailleurs : `@property`
+    est une règle de feuille, sans équivalent en utilitaire, et l'anneau
+    en dépend — sans elle, `--part` n'est qu'une chaîne et la transition
+    saute d'une valeur à l'autre au lieu de s'interpoler. */
+}
+<style>
+  /* Part écoutée, déclarée pour pouvoir être animée. */
+  @property --part {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 0;
+  }
+
+  /* L'anneau cercle le rond sans le toucher : il déborde de son écart de
+     chaque côté, ce qui laisse le disque intact et le trait lisible.
+     Dégradé conique masqué plutôt que tracé SVG : l'épaisseur y est en
+     pixels réels et l'angle se lit directement en tours, là où un
+     <circle> imposait de compter en unités de viewBox — mises à
+     l'échelle pour le trait, mais pas pour les tirets dès qu'on demande
+     un trait d'épaisseur constante. Deux systèmes d'unités sur le même
+     élément, et un anneau qui démarrait aux trois quarts. */
+  .anneau {
+    position: absolute;
+    inset: calc(-1 * var(--anneau-ecart, 5px));
+    border-radius: 50%;
+    /* Départ à midi : c'est de là qu'on lit une progression circulaire. */
+    background: conic-gradient(
+      from 0deg,
+      var(--color-accent) calc(var(--part, 0) * 360deg),
+      transparent 0
+    );
+    /* Évide le disque pour n'en garder qu'un anneau de --anneau-trait. */
+    mask: radial-gradient(
+      closest-side,
+      transparent calc(100% - var(--anneau-trait, 2px)),
+      #000 calc(100% - var(--anneau-trait, 2px))
+    );
+    -webkit-mask: radial-gradient(
+      closest-side,
+      transparent calc(100% - var(--anneau-trait, 2px)),
+      #000 calc(100% - var(--anneau-trait, 2px))
+    );
+    transition: --part 0.28s linear;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .anneau {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // Sur `astro:page-load` et non au chargement du module : avec le
+  // ClientRouter, un module ne s'exécute qu'une fois par URL, si bien
+  // qu'après une navigation le bouton de la nouvelle page resterait
+  // muet. Cet évènement, lui, se déclenche au premier chargement *et*
+  // après chaque échange de document.
+  document.addEventListener('astro:page-load', () => {
+    const boutons = document.querySelectorAll<HTMLButtonElement>('[data-podcast-launch]');
+    if (!boutons.length) return;
+
+    type Fenetre = Window & {
+      titubaPodcast?: {
+        ouvrir(ep: { src: string; titre: string; cover?: string | null; href?: string }): void;
+        basculer(): void;
+        joue(src: string): boolean;
+      };
+    };
+    const api = (window as Fenetre).titubaPodcast;
+    if (!api) return;
+
+    const rafraichir = (btn: HTMLButtonElement, part?: number, srcEcoute?: string) => {
+      const src = btn.dataset.src ?? '';
+      const txt = btn.querySelector<HTMLElement>('[data-txt]');
+      const joue = api.joue(src);
+      // Un attribut et non une classe : la mise en forme est en
+      // utilitaires Tailwind, qui ne génère que les classes lues dans
+      // les sources.
+      if (joue) btn.dataset.joue = '';
+      else delete btn.dataset.joue;
+      if (txt) txt.textContent = joue ? 'Mettre en pause' : "Écouter l'épisode";
+      // L'anneau ne suit que l'épisode réellement chargé dans la barre :
+      // sur une page qui en listerait plusieurs, les autres boutons
+      // afficheraient sinon la progression de celui d'à côté.
+      if (typeof part === 'number' && srcEcoute && memeSrc(src, srcEcoute)) {
+        btn.style.setProperty('--part', String(part));
+      }
+    };
+
+    /** Deux adresses désignent-elles le même fichier ? */
+    const memeSrc = (a: string, b: string) => {
+      try {
+        return new URL(a, location.href).href === new URL(b, location.href).href;
+      } catch {
+        return a === b;
+      }
+    };
+
+    for (const btn of boutons) {
+      btn.addEventListener('click', () => {
+        const src = btn.dataset.src ?? '';
+        // Ouvrir puis basculer : si l'épisode est déjà celui de la
+        // barre, `ouvrir` ne fait que la ré-afficher sans rembobiner —
+        // le bouton reprend donc l'écoute là où elle en était.
+        api.ouvrir({
+          src,
+          titre: btn.dataset.titre ?? '',
+          cover: btn.dataset.cover || null,
+          href: btn.dataset.href || undefined,
+        });
+        api.basculer();
+      });
+      rafraichir(btn);
+    }
+
+    // La barre annonce chaque changement d'état ; le bouton s'y accorde
+    // plutôt que de tenir son propre compte, qui divergerait dès qu'on
+    // met en pause depuis la barre elle-même.
+    document.addEventListener('tituba:podcast', (e) => {
+      const d = (e as CustomEvent<{ src?: string; part?: number }>).detail ?? {};
+      for (const btn of boutons) rafraichir(btn, d.part, d.src);
+    });
+  });
+</script>

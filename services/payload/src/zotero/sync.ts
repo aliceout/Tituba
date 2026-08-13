@@ -19,6 +19,19 @@ import { fetchAllItems, type ZoteroCreds, type ZoteroLibraryType } from './api';
 import { mapItem, makeSlug } from './mapping';
 import type { ZoteroSyncResult } from './types';
 
+/**
+ * Collections susceptibles de citer une référence bibliographique.
+ * Littéral figé plutôt que dérivé de PUBLICATION_TABLES : Payload exige
+ * ici un slug littéral pour typer le retour de `find`.
+ */
+const PUBLICATION_COLLECTIONS = [
+  'articles',
+  'analyses',
+  'actus',
+  'podcasts',
+  'outils',
+] as const;
+
 type UserDoc = {
   id: string | number;
   zotero?: {
@@ -28,6 +41,16 @@ type UserDoc = {
     lastSyncVersion?: number | null;
   };
 };
+
+/**
+ * Zotero n'est pas branché sur ce compte.
+ *
+ * Distingué d'une panne, parce que ce n'en est pas une : la plupart
+ * des comptes n'utiliseront jamais Zotero, et leur répondre « erreur
+ * serveur » remplissait le journal d'alertes qui n'en étaient pas —
+ * de quoi masquer les vraies.
+ */
+export class ZoteroNonConfigure extends Error {}
 
 /**
  * Lit le user en bypassant l'access read (sinon afterRead masque la
@@ -53,10 +76,10 @@ async function loadCreds(
 
   const z = raw.zotero;
   if (!z?.apiKey) {
-    throw new Error('Aucune clé API Zotero configurée pour ce compte.');
+    throw new ZoteroNonConfigure('Aucune clé API Zotero configurée pour ce compte.');
   }
   if (!z.libraryId) {
-    throw new Error('Aucun ID utilisateur Zotero configuré.');
+    throw new ZoteroNonConfigure('Aucun ID utilisateur Zotero configuré.');
   }
   const libType: ZoteroLibraryType = z.libraryType === 'group' ? 'group' : 'user';
 
@@ -81,7 +104,7 @@ async function loadCreds(
  * Cherche une ref Bibliography déjà importée pour ce user et cette
  * clé Zotero. Renvoie `null` si elle n'existe pas (à créer), ou
  * `{ id, zoteroVersion }` si elle existe (la version stockée sert à
- * skip les refs déjà à jour côté Carnet).
+ * skip les refs déjà à jour côté Tituba).
  */
 async function findExistingRef(
   payload: Payload,
@@ -107,10 +130,10 @@ async function findExistingRef(
  * Sync principal. Appelé par l'endpoint POST `/users/me/zotero-sync`.
  *
  * Note : on ne fait PAS de diff incrémental via `since=<lastSyncVersion>`
- * — ça raterait les refs supprimées localement au Carnet (Zotero ne
+ * — ça raterait les refs supprimées localement au Tituba (Zotero ne
  * sait pas qu'on les a viées, donc elles n'apparaissent pas dans son
  * diff). À la place, on scanne toute la biblio à chaque sync. L'upsert
- * gère les 3 cas naturellement : ref absente du Carnet → create ; ref
+ * gère les 3 cas naturellement : ref absente de Tituba → create ; ref
  * existante avec version Zotero plus récente → update ; ref à jour →
  * skip silencieux. Coût : un scan complet par sync, OK jusqu'à
  * quelques milliers de refs.
@@ -213,7 +236,7 @@ export async function syncZoteroForUser(opts: {
 
   // ─── Détection des suppressions Zotero ──────────────────────────
   // Les refs présentes en DB pour ce user mais absentes du scan ont été
-  // supprimées côté Zotero. On les efface du Carnet — sauf si elles
+  // supprimées côté Zotero. On les efface de Tituba — sauf si elles
   // sont encore citées dans un billet, auquel cas on les garde et on
   // signale à l'autrice de retirer la citation d'abord.
   const dbRefs = await payload.find({
@@ -239,24 +262,33 @@ export async function syncZoteroForUser(opts: {
     if (!key || seenKeys.has(key)) continue;
 
     // Cette ref est en DB mais disparue côté Zotero. Cherche les
-    // billets qui la citent.
+    // publications qui la citent, dans les cinq formats : une référence
+    // citée par un seul podcast doit être conservée au même titre
+    // qu'une référence citée par dix articles.
     let cited: { totalDocs: number; docs: Array<{ numero?: number }> } = {
       totalDocs: 0,
       docs: [],
     };
     try {
-      const r = await payload.find({
-        collection: 'posts',
-        where: { bibliography: { in: [ref.id] } },
-        limit: 50,
-        depth: 0,
-        overrideAccess: true,
-      });
-      cited = { totalDocs: r.totalDocs, docs: r.docs as Array<{ numero?: number }> };
+      const results = await Promise.all(
+        PUBLICATION_COLLECTIONS.map((collection) =>
+          payload.find({
+            collection,
+            where: { bibliography: { in: [ref.id] } },
+            limit: 50,
+            depth: 0,
+            overrideAccess: true,
+          }),
+        ),
+      );
+      cited = {
+        totalDocs: results.reduce((acc, r) => acc + r.totalDocs, 0),
+        docs: results.flatMap((r) => r.docs as Array<{ numero?: number }>),
+      };
     } catch {
-      // Lecture des billets impossible — par prudence on conserve
-      // la ref (mieux vaut un faux positif "gardé" qu'une suppression
-      // qui casserait des citations).
+      // Lecture impossible — par prudence on conserve la ref. Mieux
+      // vaut un faux positif « gardé » qu'une suppression qui casserait
+      // des citations existantes.
       cited = { totalDocs: 1, docs: [] };
     }
 
@@ -273,7 +305,7 @@ export async function syncZoteroForUser(opts: {
       continue;
     }
 
-    // Pas citée → suppression côté Carnet.
+    // Pas citée → suppression côté Tituba.
     try {
       await payload.delete({
         collection: 'bibliography',

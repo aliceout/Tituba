@@ -1,6 +1,6 @@
 name: Docker build
 
-# CI du Carnet — push main → test → build images Docker → push GHCR.
+# CI de Tituba — push main → test → build images Docker → push GHCR.
 # Le déclenchement du deploy côté VPS se fait via le webhook GitHub
 # natif configuré dans Settings → Webhooks (event « package » ou
 # « workflow_run »), pas dans ce workflow. Référence : 2mains/.github/
@@ -76,6 +76,12 @@ jobs:
       # pose un fallback en interne, mais on l'expose ici aussi pour
       # tout module qui pourrait le checker au top-level. Aucune valeur
       # sensible : c'est un secret de test fixé, jamais utilisé en prod.
+      # Les huit cas du front ne tournaient nulle part : il n'y avait pas
+      # de script `test` à la racine, et donc aucune étape ici. Un test
+      # qu'aucune machine ne lance ne protège de rien.
+      - name: Test frontend (Astro, node --test)
+        run: pnpm test
+
       - name: Test backend (Payload, node --test)
         env:
           PAYLOAD_SECRET: ci-test-secret-not-sensitive-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -142,7 +148,7 @@ jobs:
       # Mode Infisical — Auth Universal Auth via Machine Identity dédiée
       # CI. Même instance Infisical Cloud que celle qui alimente le
       # runtime VPS via deploy.sh ; tous deux fetchent sous le path
-      # /services/carnet (la CI lit la racine pour ADDRESS, le VPS
+      # /services/tituba (la CI lit la racine pour ADDRESS, le VPS
       # itère sur chaque sous-dossier pour reconstruire le .env).
       - name: Fetch build-time secrets from Infisical
         if: steps.detect.outputs.use_infisical == 'true'
@@ -155,10 +161,10 @@ jobs:
           # L'action exige `project-slug` (pas l'UUID). Le GH secret est
           # nommé INFISICAL_PROJECT_ID pour des raisons historiques mais
           # doit contenir le SLUG du projet (visible dans l'URL admin
-          # Infisical, ex. « carnet-ayz-p »).
+          # Infisical, ex. « tituba-ayz-p »).
           project-slug: ${{ secrets.INFISICAL_PROJECT_ID }}
           env-slug: prod
-          secret-path: /services/carnet
+          secret-path: /services/tituba
           export-type: env
 
       # Fallback fork — récupère ADDRESS depuis un GH secret unique.
@@ -200,8 +206,8 @@ jobs:
             GIT_TAG=${{ steps.version.outputs.tag }}
           push: true
           tags: |
-            ghcr.io/aliceout/carnet/web:latest
-            ghcr.io/aliceout/carnet/web:${{ github.sha }}
+            ghcr.io/aliceout/tituba/web:latest
+            ghcr.io/aliceout/tituba/web:${{ github.sha }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
 
@@ -244,7 +250,7 @@ jobs:
             GIT_TAG=${{ steps.version.outputs.tag }}
           push: true
           tags: |
-            ghcr.io/aliceout/carnet/payload:latest
-            ghcr.io/aliceout/carnet/payload:${{ github.sha }}
+            ghcr.io/aliceout/tituba/payload:latest
+            ghcr.io/aliceout/tituba/payload:${{ github.sha }}
           cache-from: type=gha,scope=payload
           cache-to: type=gha,scope=payload,mode=max

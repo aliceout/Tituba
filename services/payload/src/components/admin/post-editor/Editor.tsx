@@ -23,7 +23,6 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { mergeRegister } from '@lexical/utils';
 import { HeadingNode, QuoteNode, $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
-import { LinkNode } from '@lexical/link';
 import { ListNode, ListItemNode } from '@lexical/list';
 import {
   $createParagraphNode,
@@ -37,6 +36,7 @@ import {
   KEY_DOWN_COMMAND,
   FORMAT_TEXT_COMMAND,
   $insertNodes,
+  $parseSerializedNode,
   type EditorState,
   type LexicalEditor,
   type LexicalNode,
@@ -50,6 +50,7 @@ import {
   $createCarnetInlineBlockNode,
   $isCarnetInlineBlockNode,
   DraftContainerNode,
+  CarnetLinkNode,
   $createDraftContainerNode,
   $isDraftContainerNode,
   $unwrapDraftContainer,
@@ -58,6 +59,7 @@ import {
 } from './nodes';
 import {
   BiblioOptionsContext,
+  BiblioOrdreContext,
   type BibEntry,
   MediaOptionsContext,
   type MediaEntry,
@@ -80,7 +82,7 @@ export type { BibEntry } from './context';
 
 // ─── Theme ────────────────────────────────────────────────────────
 // Classes CSS appliquées par Lexical aux nodes natifs. Toutes scoped
-// sous .ed-body — cf custom.scss (.carnet-postedit .ed-body …).
+// sous .ed-body — cf custom.scss (.tituba-postedit .ed-body …).
 
 const carnetTheme = {
   paragraph: 'ed-p',
@@ -229,6 +231,37 @@ function $walkLiveTree(cb: (node: LexicalNode) => void): void {
 // du JSON ne matche pas la key live de Lexical — on doit donc
 // walker l'arbre vivant et compter dans l'ordre d'apparition pour
 // retrouver le bon node.
+/**
+ * Remplace tout le corps par un texte importé.
+ *
+ * Passe par une mise à jour de l'éditeur et non par un remplacement
+ * d'état complet : le second
+ * repart d'un état neuf et efface l'historique, alors qu'ici l'import
+ * doit rester annulable. Quelqu'un qui se trompe de document doit
+ * pouvoir revenir en arrière par Ctrl+Z, sans avoir rien perdu.
+ *
+ * Les nœuds qui ne peuvent pas vivre à la racine — du texte nu, un
+ * bloc en ligne — sont enveloppés dans un paragraphe : les déposer
+ * tels quels casserait l'éditeur au premier rendu.
+ */
+export function remplacerContenu(editor: LexicalEditor, etat: LexicalState): void {
+  editor.update(() => {
+    const root = $getRoot();
+    root.clear();
+    for (const brut of etat.root.children ?? []) {
+      const noeud = $parseSerializedNode(brut);
+      if ($isElementNode(noeud) && !noeud.isInline()) {
+        root.append(noeud);
+        continue;
+      }
+      const para = $createParagraphNode();
+      para.append(noeud);
+      root.append(para);
+    }
+    if (root.getChildrenSize() === 0) root.append($createParagraphNode());
+  });
+}
+
 export function deleteFootnoteByIndex(editor: LexicalEditor, index: number): void {
   editor.update(() => {
     let i = 0;
@@ -273,12 +306,12 @@ export function deleteBiblioInlinesByEntry(
 // ─── Slash menu ───────────────────────────────────────────────────
 // Trigger : touche `/` en début de paragraphe ou après un espace.
 // Affiché en popover sous le curseur. Items : structure (H2/H3/quote)
-// + blocks Carnet (Note de bas de page, Citation longue, Biblio inline,
+// + blocks Tituba (Note de bas de page, Citation longue, Biblio inline,
 // Figure).
 
 type SlashItem = {
   id: string;
-  group: 'Blocs Carnet' | 'Mise en forme';
+  group: 'Blocs Tituba' | 'Mise en forme';
   ic: string;
   label: string;
   desc?: string;
@@ -293,7 +326,7 @@ type SlashItem = {
 const SLASH_ITEMS: SlashItem[] = [
   {
     id: 'fn',
-    group: 'Blocs Carnet',
+    group: 'Blocs Tituba',
     ic: 'fn',
     label: 'Note de bas de page',
     desc: 'Note numérotée, retour automatique',
@@ -309,7 +342,7 @@ const SLASH_ITEMS: SlashItem[] = [
   },
   {
     id: 'bi',
-    group: 'Blocs Carnet',
+    group: 'Blocs Tituba',
     ic: '@',
     label: 'Bibliographie inline',
     desc: 'Insère une référence par sa clé',
@@ -325,7 +358,7 @@ const SLASH_ITEMS: SlashItem[] = [
   },
   {
     id: 'fig',
-    group: 'Blocs Carnet',
+    group: 'Blocs Tituba',
     ic: '▢',
     label: 'Figure',
     desc: 'Image + légende',
@@ -341,7 +374,7 @@ const SLASH_ITEMS: SlashItem[] = [
   },
   {
     id: 'draft',
-    group: 'Blocs Carnet',
+    group: 'Blocs Tituba',
     ic: '⚠',
     label: 'Zone brouillon',
     desc: 'Marque une zone du billet comme inachevée',
@@ -551,7 +584,7 @@ function SlashMenuPlugin({ biblioOptions }: { biblioOptions: BibEntry[] }) {
   });
 
   // Rendu via portal dans <body> pour échapper aux parents positionnés
-  // (.ed-body / .ed-card / .carnet-postedit__center qui ont des
+  // (.ed-body / .ed-card / .tituba-postedit__center qui ont des
   // overflow et des transforms qui clipperaient le menu). Avec
   // position: absolute + coords document, le menu reste accroché au
   // point où on a tapé `/` et suit le scroll comme le texte.
@@ -650,7 +683,7 @@ function KeyboardPlugin() {
 }
 
 // ─── Plugin pour exposer l'éditeur au parent ─────────────────────
-// PostEditView a besoin d'une référence à l'éditeur Lexical pour
+// PublicationEditView a besoin d'une référence à l'éditeur Lexical pour
 // pouvoir supprimer un node par sa key (× sur les rangées du
 // .fn-block / .bib-block). On l'expose via une callback prop dans
 // un Plugin qui vit à l'intérieur de <LexicalComposer> (donc a
@@ -666,7 +699,7 @@ function EditorRefPlugin({ onMount }: { onMount: (editor: LexicalEditor) => void
 
 // ─── Plugin : validation d'une zone brouillon ────────────────────
 // Le bouton « ✓ valider » rendu par DraftContainerNode.createDOM
-// dispatch un CustomEvent `carnet:validate-draft` qui bubble jusqu'au
+// dispatch un CustomEvent `site:validate-draft` qui bubble jusqu'au
 // document. Ce plugin l'écoute et lance l'unwrap dans editor.update().
 // Pourquoi pas un click direct dans createDOM : createDOM n'a pas
 // accès à l'editor, et le click sortirait du contexte Lexical.
@@ -685,8 +718,8 @@ function DraftValidatePlugin() {
         }
       });
     }
-    document.addEventListener('carnet:validate-draft', handler as EventListener);
-    return () => document.removeEventListener('carnet:validate-draft', handler as EventListener);
+    document.addEventListener('site:validate-draft', handler as EventListener);
+    return () => document.removeEventListener('site:validate-draft', handler as EventListener);
   }, [editor]);
   return null;
 }
@@ -697,12 +730,15 @@ export default function PostBodyEditor({
   value,
   onChange,
   biblioOptions,
+  biblioOrdre,
   mediaOptions,
   onEditor,
 }: {
   value: LexicalState | null;
   onChange: (v: LexicalState) => void;
   biblioOptions: BibEntry[];
+  /** Ordre des références du billet — c'est lui qui les numérote. */
+  biblioOrdre: Array<number | string>;
   mediaOptions: MediaEntry[];
   onEditor?: (editor: LexicalEditor) => void;
 }): React.ReactElement {
@@ -720,7 +756,7 @@ export default function PostBodyEditor({
       nodes: [
         HeadingNode,
         QuoteNode,
-        LinkNode,
+        CarnetLinkNode,
         ListNode,
         ListItemNode,
         CarnetBlockNode,
@@ -744,7 +780,7 @@ export default function PostBodyEditor({
     [onChange],
   );
 
-  // Note : pas de mécanisme de re-load externe. PostEditView ne monte
+  // Note : pas de mécanisme de re-load externe. PublicationEditView ne monte
   // ce composant qu'après le fetch initial (loading=false), donc value
   // est déjà bon au mount. Les changements de value viennent de notre
   // propre onChange — on ne veut pas re-injecter (sinon on perd le
@@ -752,6 +788,7 @@ export default function PostBodyEditor({
 
   return (
     <BiblioOptionsContext.Provider value={biblioOptions}>
+      <BiblioOrdreContext.Provider value={biblioOrdre}>
       <MediaOptionsContext.Provider value={mediaOptions}>
       <div className="ed-body">
         <LexicalComposer initialConfig={initialConfig}>
@@ -776,6 +813,7 @@ export default function PostBodyEditor({
         </LexicalComposer>
       </div>
       </MediaOptionsContext.Provider>
+      </BiblioOrdreContext.Provider>
     </BiblioOptionsContext.Provider>
   );
 }

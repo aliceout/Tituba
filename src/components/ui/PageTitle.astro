@@ -1,0 +1,190 @@
+---
+/**
+ * Titre de page — le bloc d'ouverture de toutes les pages, sans
+ * exception et sans variante.
+ *
+ * Il n'y a qu'un seul traitement : même corps, même graisse, même
+ * surlignage, même chapô, même air. L'accueil ne fait pas exception et
+ * n'a droit à aucun réglage propre.
+ *
+ * C'est le point qui manquait. Une version précédente offrait deux
+ * variantes — l'accueil en 76 px avec surlignage au marqueur, le reste
+ * en 62 px avec des mots en italique bleu. Résultat : « S'abonner aux
+ * billets » et « Le genre aux prismes féministe… » ne s'écrivaient ni à
+ * la même taille ni avec la même accentuation. Une option de
+ * personnalisation dans un composant partagé, c'est la porte ouverte à
+ * la divergence qu'on cherchait à fermer.
+ *
+ * `title` et `lede` acceptent du HTML : ils viennent de l'admin via
+ * formatHeroTitle / formatHeroLede, qui échappent le contenu puis
+ * transforment les *astérisques* en <em> et les retours ligne en <br>.
+ *
+ * Un titre long (typiquement un titre d'article de recherche) bascule
+ * automatiquement sur une échelle réduite (--text-display-long) au-delà
+ * d'un seuil de signes — pas un choix laissé à la page, une règle qui
+ * s'applique à tout titre, où qu'il soit.
+ *
+ * Une seule exception, assumée et nommée, via le prop `taille` — le
+ * comptage de signes ne peut pas tout décider :
+ *  - `pleine` : ignore le seuil, toujours --t-display. Réservé au hero
+ *    de l'accueil. Un compte de signes ne peut pas distinguer « le
+ *    titre de l'accueil » d'« un titre d'article très long » — les deux
+ *    font une longueur voisine (~100 et ~114 signes), et un seuil entre
+ *    les deux resterait fragile au moindre changement de libellé dans
+ *    l'admin. L'accueil est le seul endroit du site pensé pour porter
+ *    un titre en pleine grandeur même long.
+ * Sans `taille`, la règle de seuil s'applique normalement.
+ *
+ * Il y en avait une seconde, `compacte`, qui forçait l'échelle réduite
+ * sur les cinq index de format. Résultat : « Articles de recherche »
+ * s'écrivait plus petit que « Genre & solidarité internationale », deux
+ * pages du même genre listant des publications sous un intitulé court.
+ * Elle est retirée plutôt que généralisée aux six autres index — le
+ * défaut du site redevient le défaut, ce que l'en-tête ci-dessus
+ * réclame.
+ *
+ * Pas de gouttière posée ici : PageTitle vit toujours dans <main>, qui
+ * la porte déjà (cf Layout.astro).
+ */
+interface Props {
+  /** HTML autorisé. */
+  title: string;
+  /** HTML autorisé. */
+  lede?: string;
+  /**
+   * Famille dominante de la page. Quand elle est posée, tous les mots
+   * surlignés la portent — une page verte a un titre surligné en vert.
+   * Sans elle, les trois familles se relaient dans l ordre des
+   * astérisques, ce qui est le cas de l accueil. `marque` porte la
+   * couleur de marque configurable (--color-accent) plutôt qu'une des
+   * quatre familles fixes — cas de la page de lecture d'un article.
+   */
+  famille?: 'bleu' | 'vert' | 'jaune' | 'violet' | 'marque';
+  /**
+   * Force une échelle plutôt que de la déduire de la longueur du titre
+   * (cf commentaire d'en-tête). Ne pas poser ailleurs que sur les cas
+   * déjà identifiés.
+   */
+  taille?: 'pleine';
+}
+
+const { title, lede, famille, taille } = Astro.props;
+
+// Seuil empirique : à --t-display plein, ~2 lignes de contenu sur la
+// largeur de page courante. Au-delà, le titre bascule sur l'échelle
+// réduite plutôt que de courir sur 4-5 lignes.
+const SEUIL_TITRE_LONG = 70;
+const longueur = title.replace(/<[^>]+>/g, '').trim().length;
+const estLong = taille === 'pleine' ? false : longueur > SEUIL_TITRE_LONG;
+
+/**
+ * Échelle réduite au-delà du seuil. C’était une règle
+ * [data-longueur='long'] h1 ; le calcul est ici, à côté du seuil qui
+ * le décide, plutôt qu’à cent lignes de là.
+ */
+const echelle = estLong ? 'text-display-long' : 'text-display';
+---
+
+{
+  /* Pas de marge basse : c’est le bloc suivant qui porte l’écart, comme
+    partout ailleurs sur le site (cf. --block-gap). La faire porter des
+    deux côtés ferait doubler certains blancs selon le voisinage — le
+    défaut déjà corrigé sur l’accueil.
+
+    Pas de padding non plus en haut : c’est <main> (Layout.astro) qui le
+    porte, pour toutes les pages sans exception, afin que l’écart entre
+    l’en-tête et le hero vive au même endroit que le reste de la
+    géométrie de page. */
+}
+<section class="titre py-0" data-famille={famille}>
+  <h1
+    class:list={[
+      'font-display leading-display tracking-display max-poche:mb-[26px] m-0 mb-9 font-serif',
+      echelle,
+    ]}
+    set:html={title}
+  />
+  {
+    /* Chapô en sans : il contraste avec le serif du titre plutôt que de
+      le prolonger. */
+  }
+  {lede && <p class="text-muted text-lede m-0 font-sans leading-[1.55]" set:html={lede} />}
+  <slot />
+</section>
+
+{
+  /* Le seul CSS qui reste ici, et il ne peut pas être ailleurs : ces
+    règles visent les <em> du titre, qui ne viennent pas de ce fichier
+    mais de `set:html` — formatHeroTitle transforme en <em> les mots mis
+    entre astérisques dans l’admin. On ne peut pas leur poser de classe
+    utilitaire : ils n’existent pas au moment où on écrit le composant. */
+}
+<style>
+  /* Surlignage au marqueur : le trait passe derrière le mot au lieu de
+     le repeindre, donc le titre reste d'une seule encre et se lit d'un
+     trait. Le dégradé à seuil net simule un feutre passé sous la ligne
+     de base, sans dépendre d'une hauteur de police.
+
+     Les trois familles se relaient dans l'ordre d'apparition : le
+     premier mot marqué est bleu, le deuxième vert, le troisième jaune,
+     puis on recycle. Les couleurs se pilotent donc par le seul ordre des
+     astérisques saisis dans l'admin — rien à configurer. */
+  .titre h1 :global(em) {
+    font-style: normal;
+    font-weight: inherit;
+    color: inherit;
+    padding: 0 4px;
+    /* Garde le fond sur chaque ligne quand un groupe marqué passe à la
+       ligne, au lieu d'un unique aplat qui déborderait dans la marge. */
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .titre h1 :global(em:nth-of-type(3n + 1)) {
+    background: linear-gradient(
+      180deg,
+      transparent 62%,
+      color-mix(in srgb, var(--c-bleu) 33%, transparent) 62%
+    );
+  }
+  .titre h1 :global(em:nth-of-type(3n + 2)) {
+    background: linear-gradient(
+      180deg,
+      transparent 62%,
+      color-mix(in srgb, var(--c-vert) 33%, transparent) 62%
+    );
+  }
+  .titre h1 :global(em:nth-of-type(3n + 3)) {
+    background: linear-gradient(
+      180deg,
+      transparent 62%,
+      color-mix(in srgb, var(--c-jaune) 33%, transparent) 62%
+    );
+  }
+
+  /* Famille imposée — une page verte a un titre surligné en vert.
+     Placée après les règles de rotation, et non avant : les deux ont
+     exactement la même spécificité, donc seul l'ordre source départage.
+     Écrite plus haut, elle n'aurait rien fait. */
+  [data-famille='bleu'] {
+    --fam-marqueur: var(--c-bleu);
+  }
+  [data-famille='vert'] {
+    --fam-marqueur: var(--c-vert);
+  }
+  [data-famille='jaune'] {
+    --fam-marqueur: var(--c-jaune);
+  }
+  [data-famille='violet'] {
+    --fam-marqueur: var(--c-violet);
+  }
+  [data-famille='marque'] {
+    --fam-marqueur: var(--color-accent);
+  }
+  [data-famille] h1 :global(em) {
+    background: linear-gradient(
+      180deg,
+      transparent 62%,
+      color-mix(in srgb, var(--fam-marqueur) 33%, transparent) 62%
+    );
+  }
+</style>

@@ -4,10 +4,12 @@
 import React from 'react';
 
 import UserEditViewClient from './UserEditView.client';
+import AccesReserve, { estAdministratrice } from './AccesReserve';
 
-export default function UserEditView(props: {
+export default async function UserEditView(props: {
   routeSegments?: string[];
-}): React.ReactElement {
+}): Promise<React.ReactElement> {
+  if (!(await estAdministratrice())) return <AccesReserve titre="Utilisateur·ices" />;
   const segments = props.routeSegments ?? [];
   const last = segments[segments.length - 1];
   const id = !last || last === 'create' ? null : last;

@@ -7,49 +7,32 @@
  *  - lignes `120px 100px 1fr 160px` (date ISO, type uppercase accent,
  *    titre, pôle aligné à droite)
  *
- * Réf : design_handoff_carnet/Carnet B.html → Archives.
+ * Réf : design_handoff_tituba/Tituba B.html → Archives.
  */
-import Layout from '../layouts/Layout.astro';
-import Hero from '../components/Hero.astro';
-import { fetchCollection, fetchIndexPages, filterPublished } from '../lib/payload';
-import { formatDateIso, formatHeroLede, formatHeroTitle } from '../lib/site';
+import PageShell from '../components/ui/PageShell.astro';
+import Empty from '../components/ui/Empty.astro';
+import { fetchIndexPages, type FeedDoc } from '../lib/payload';
+import { PUBLICATIONS, fetchFeed, publicationHref } from '../lib/publications';
+import { formatDateIso, formatHeroLede, formatHeroTitle, stripHeroMarkers } from '../lib/site';
 
-type Theme = { id: number | string; slug: string; name: string };
-
-type Post = {
-  id: number | string;
-  numero: number;
-  slug: string;
-  title: string;
-  type: 'analyse' | 'note' | 'fiche';
-  themes?: Theme[] | null;
-  publishedAt: string;
-  draft?: boolean;
-};
+type Post = FeedDoc;
 
 type IndexPagesGlobal = {
   archives?: { enabled?: boolean; heroTitle?: string; heroLede?: string };
 };
 
-const TYPE_LABEL: Record<Post['type'], string> = {
-  analyse: 'Article',
-  note: 'Note',
-  fiche: 'Fiche',
-};
-
-const DEFAULT_TITLE = 'Tous les billets, par année.';
+const DEFAULT_TITLE = 'Toutes les *publications*, par année.';
 const DEFAULT_LEDE =
-  'Le carnet est versionné : chaque billet a un numéro, une date de publication et, le cas échéant, une date de mise à jour. Les fiches thématiques sont régulièrement révisées.';
+  'Chaque publication porte un numéro, une date de publication et, le cas échéant, une date de mise à jour. Les fiches thématiques sont régulièrement révisées.';
 
 let posts: Post[] = [];
 let indexPages: IndexPagesGlobal = {};
 try {
-  const raw = await fetchCollection<Post>('posts', {
-    sort: '-publishedAt',
-    limit: 1000,
-    depth: 1,
-  });
-  posts = filterPublished(raw);
+  // Archives non paginées, groupées par année : un seul appel au flux
+  // fusionné suffit au volume d'une association. Paginer une fusion de
+  // cinq sources côté client coûterait bien plus cher que ça ne rapporte.
+  const feed = await fetchFeed({ limit: 100 });
+  posts = feed.docs;
 } catch (err) {
   console.warn('[archives] fetch failed, rendering empty:', (err as Error).message);
 }
@@ -66,158 +49,71 @@ if (indexPages.archives?.enabled === false) {
 // Group by year (descending)
 const byYear = new Map<string, Post[]>();
 for (const p of posts) {
-  const y = new Date(p.publishedAt).getFullYear().toString();
+  const y = (p.publishedAt ? new Date(p.publishedAt) : new Date()).getFullYear().toString();
   if (!byYear.has(y)) byYear.set(y, []);
   byYear.get(y)!.push(p);
 }
 const years = [...byYear.keys()].sort().reverse();
 
-const total = posts.length;
-
-const heroTitleHtml = formatHeroTitle(
-  indexPages.archives?.heroTitle?.trim() || DEFAULT_TITLE,
-);
-const heroLedeHtml = formatHeroLede(
-  indexPages.archives?.heroLede?.trim() || DEFAULT_LEDE,
-);
+const heroTitleHtml = formatHeroTitle(indexPages.archives?.heroTitle?.trim() || DEFAULT_TITLE);
+const heroLedeHtml = formatHeroLede(indexPages.archives?.heroLede?.trim() || DEFAULT_LEDE);
 ---
 
-<Layout
-  title="Archives"
-  description="Tous les billets du Carnet, par année."
+<PageShell
+  documentTitle="Archives"
+  description="Toutes les publications de Tituba, par année."
+  title={heroTitleHtml}
+  lede={heroLedeHtml}
 >
-  <Hero
-    kicker={`Archives · ${total} billet${total > 1 ? 's' : ''}`}
-    title={heroTitleHtml}
-    lede={heroLedeHtml}
-  />
-
-  <section class="container archives">
-    {years.length === 0 ? (
-      <p class="empty">Aucun billet publié pour l'instant.</p>
+  {
+    /* Gouttière et rythme vertical viennent de PageShell. Pas de famille
+      dominante : les archives traversent les cinq formats et n’ont pas de
+      couleur propre, comme le titre de l’accueil dont les mots se
+      relaient plutôt qu’imposer une seule teinte. */
+  }
+  {
+    years.length === 0 ? (
+      <Empty>Aucune publication pour l'instant.</Empty>
     ) : (
       years.map((y) => {
         const list = byYear.get(y)!;
         return (
-          <div class="arch-year">
-            <h2>
-              {y}
-              {' '}
-              <span class="mono count">· {list.length} billet{list.length > 1 ? 's' : ''}</span>
+          <div class="border-rule border-b py-8">
+            {/* Le corps du titre d’année reste hors de l’échelle des titres
+              de section : c’est un repère chronologique, pas un titre de
+              contenu, et il doit dominer la page comme un numéro de
+              sommaire. */}
+            <h2 class="font-heading max-mobile:text-[calc(32px*var(--a11y-echelle))] m-0 mb-6 font-serif text-[calc(48px*var(--a11y-echelle))] tracking-[-0.02em]">
+              {y}{' '}
+              <span class="mono text-muted font-mono text-[calc(13px*var(--a11y-echelle))] font-normal tracking-normal">
+                · {list.length} publication{list.length > 1 ? 's' : ''}
+              </span>
             </h2>
             {list.map((p) => {
-              const primaryTheme = (p.themes ?? []).filter(
-                (t): t is Theme => typeof t === 'object' && t !== null && 'slug' in t,
-              )[0];
+              const primaryTheme = (p.themeSlugs ?? [])[0];
               return (
-                <a class="arch-row" href={`/billets/${p.slug}/`}>
-                  <div class="d">{formatDateIso(p.publishedAt)}</div>
-                  <div class="ty">{TYPE_LABEL[p.type]}</div>
-                  <div class="t">{p.title}</div>
-                  <div class="p">{primaryTheme?.name ?? '—'}</div>
+                <a
+                  class="group border-rule max-mobile:grid-cols-[100px_1fr] max-mobile:gap-4 grid grid-cols-[120px_100px_1fr_160px] items-baseline gap-8 border-t py-3.5 text-inherit transition-colors duration-[120ms]"
+                  href={publicationHref(p.collection, p.publicId)}
+                >
+                  <div class="text-muted text-meta font-mono">
+                    {p.publishedAt ? formatDateIso(p.publishedAt) : ''}
+                  </div>
+                  <div class="text-label max-mobile:col-span-full font-mono tracking-[0.08em] text-[var(--c-bleu-deep)] uppercase">
+                    {PUBLICATIONS[p.collection]?.badge ?? ''}
+                  </div>
+                  <div class="font-serif text-[calc(18px*var(--a11y-echelle))] leading-[1.35] font-normal transition-colors duration-[120ms] group-hover:text-[var(--c-bleu-deep)]">
+                    {stripHeroMarkers(p.title)}
+                  </div>
+                  <div class="text-muted text-label max-mobile:col-span-full max-mobile:text-left text-right font-sans">
+                    {primaryTheme ?? '—'}
+                  </div>
                 </a>
               );
             })}
           </div>
         );
       })
-    )}
-  </section>
-</Layout>
-
-<style>
-  .container {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 0 80px;
+    )
   }
-
-  /* Hero : centralisé dans src/components/Hero.astro */
-
-  .archives {
-    padding-top: 24px;
-  }
-  .archives .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
-  }
-
-  /* Year groups */
-  .arch-year {
-    padding: 32px 0;
-    border-bottom: 1px solid var(--color-rule);
-  }
-  .arch-year h2 {
-    font-size: 48px;
-    font-weight: 600;
-    letter-spacing: -0.5px;
-    margin: 0 0 24px;
-  }
-  .arch-year h2 .count {
-    font-size: 14px;
-    color: var(--color-muted);
-    font-weight: 400;
-  }
-  .arch-row {
-    display: grid;
-    grid-template-columns: 120px 100px 1fr 160px;
-    gap: 32px;
-    padding: 14px 0;
-    border-top: 1px solid var(--color-rule);
-    align-items: baseline;
-    color: inherit;
-    transition: color 0.12s;
-  }
-  .arch-row:hover .t {
-    color: var(--color-accent);
-  }
-  .arch-row .d {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--color-muted);
-  }
-  .arch-row .ty {
-    font-family: var(--font-sans);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-accent);
-  }
-  .arch-row .t {
-    font-size: 18px;
-    line-height: 1.35;
-    font-weight: 500;
-    transition: color 0.12s;
-  }
-  .arch-row .p {
-    font-family: var(--font-sans);
-    font-size: 11px;
-    color: var(--color-muted);
-    text-align: right;
-  }
-
-  @media (max-width: 900px) {
-    .container {
-      padding: 0 24px;
-    }
-    .hero h1 {
-      font-size: 40px;
-    }
-    .arch-year h2 {
-      font-size: 32px;
-    }
-    .arch-row {
-      grid-template-columns: 100px 1fr;
-      gap: 16px;
-    }
-    .arch-row .ty,
-    .arch-row .p {
-      grid-column: 1 / -1;
-    }
-    .arch-row .p {
-      text-align: left;
-    }
-  }
-</style>
+</PageShell>

@@ -1,10 +1,16 @@
-/* Tokens du design Carnet — repris depuis design_handoff_carnet/.
+/* Tokens du design Tituba — repris depuis design_handoff_tituba/.
    Valeurs figées par le client : accent violet #5a3a7a, fond #f6f5f1,
    notes classiques, lettrine activée, justify+hyphens. */
 
 @import 'tailwindcss';
 
 /* Polices self-hostées via @fontsource (importées dans Layout.astro). */
+
+/* Le mode sombre du site est un attribut sur <html>, posé par le script
+   anti-FOUC du Layout — pas la préférence système. La variante `dark:`
+   de Tailwind, qui lit `prefers-color-scheme`, ne le verrait donc pas.
+   `sombre:` s'écrit devant n'importe quel utilitaire. */
+@custom-variant sombre (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 @theme {
   /* Couleurs (valeurs light mode par défaut — surchargeables par
@@ -22,9 +28,69 @@
   --color-body-soft: #3b3f4d;
 
   /* Familles */
-  --font-serif: 'Source Serif 4', Georgia, serif;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-serif: 'Fraunces Variable', Georgia, serif;
+  --font-sans: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+
+  /* ── Échelle typographique, en utilitaires ────────────────────────
+     Les mêmes valeurs que `--t-*` plus bas, mais déclarées ici pour
+     que Tailwind en fasse des classes : `text-display`, `text-h2`,
+     `text-body`…
+
+     Elles gardent leur `calc(… * var(--a11y-echelle))`, et c'est tout
+     l'enjeu : le panneau d'accessibilité change cette variable, et
+     toutes les tailles suivent — y compris celles écrites en classe.
+     Une échelle figée à la compilation aurait rendu le panneau
+     inopérant du jour où l'on cesse d'écrire du CSS à la main. */
+  --text-display: calc(clamp(32px, 5.2vw, 76px) * var(--a11y-echelle));
+  --text-display-long: calc(clamp(28px, 3.6vw, 48px) * var(--a11y-echelle));
+  --text-h2: calc(30px * var(--a11y-echelle));
+  --text-h3: calc(21px * var(--a11y-echelle));
+  --text-lede: calc(18px * var(--a11y-echelle));
+  /* `courant` et non `body` : le thème porte déjà `--color-body`, et
+     Tailwind sert `text-*` pour la taille COMME pour la couleur. Les
+     deux jetons se disputaient `text-body`, la couleur gagnait, et la
+     taille n'existait tout simplement pas — sans le moindre message. */
+  --text-courant: calc(17px * var(--a11y-echelle));
+  --text-sublede: calc(16px * var(--a11y-echelle));
+  --text-meta: calc(12px * var(--a11y-echelle));
+  --text-label: calc(11px * var(--a11y-echelle));
+
+  /* ── Points de rupture ────────────────────────────────────────────
+     Ceux du site, et rien d'autre. Les valeurs par défaut de Tailwind
+     (640 / 768 / 1024…) ne sont pas celles de cette maquette : écrire
+     `max-md:` en croyant viser 900 px aurait basculé la mise en page à
+     768, à côté du point où elle a été dessinée.
+
+     `mobile` couvre les vingt-quatre `@media (max-width: 900px)` du
+     projet ; `poche` les six à 720 ; `large` le passage à trois
+     colonnes de l'accueil. On les écrit `max-mobile:` pour descendre
+     et `mobile:` pour monter. */
+  --breakpoint-etroit: 560px;
+  --breakpoint-poche: 720px;
+  --breakpoint-mobile: 900px;
+  --breakpoint-tablette: 1100px;
+  --breakpoint-large: 1300px;
+
+  /* Interlignes et interlettrages, mêmes valeurs, en classes :
+     `leading-display`, `tracking-label`… */
+  --leading-display: 1.08;
+  --leading-heading: 1.15;
+  --leading-body: 1.6;
+  --tracking-display: -0.02em;
+  --tracking-label: 0.2em;
+
+  /* Graisses nommées. Elles sortent bien en `font-display` /
+     `font-heading` : Tailwind sert `font-*` pour la famille COMME pour
+     la graisse, et départage sur le nom du jeton — aucune famille ne
+     s'appelle `display`, la graisse passe donc. (Vérifié : un div
+     `font-display` pèse 300, un `font-w-display` ne pèse rien.) */
+  --font-weight-display: 300;
+  --font-weight-heading: 400;
+
+  /* Largeur de lecture d'un paragraphe : `max-w-mesure`. */
+  --container-mesure: 68ch;
+
 
   /* Densité du flux d'accueil — multiplicateur sur paddings d'item.
      Valeur figée par le client : 0.7 (serré). */
@@ -37,6 +103,242 @@
    sans casser le rythme. */
 :root {
   --color-citation-bg: #ece9e0;
+}
+
+/* ── Géométrie de page ───────────────────────────────────────────────
+   Seize composants et pages déclaraient chacun la même `.container`.
+   La valeur vit désormais ici, eux ne font plus que la lire : changer
+   la gouttière du site est une seule ligne au lieu de seize, et surtout
+   il n'est plus possible qu'un composant dérive des autres.
+
+   Calé sur la maquette, qui travaille à 56 px de gouttière sur un plan
+   de 1440 — soit 1328 px de contenu, nettement plus large que les
+   1120 px d'avant. C'est le choix éditorial de la maquette : les
+   panneaux de l'accueil sont des pièces posées sur la page, elles ont
+   besoin d'aller chercher le bord pour ne pas flotter. */
+:root {
+  --page-max: 1440px;
+  --page-gutter: 56px;
+  /* Sous 900 px : la gouttière se resserre, le pouce reprend la place. */
+  --page-gutter-narrow: 24px;
+  /* Écart entre le header et le premier bloc de la page. Nommé parce
+     qu'un hero pleine largeur doit pouvoir l'annuler pour venir toucher
+     le header — et le remonter d'une valeur devinée finirait par
+     décoller le jour où celle-ci change. */
+  --page-pad-top: 32px;
+
+  /* ── Échelle typographique ────────────────────────────────────────
+     Corps, graisses, interlignes et interlettrages, à un seul endroit.
+     Les composants de src/components/ui/ les lisent ; aucune page ne
+     redéclare de taille de titre.
+
+     Avant, chaque page fixait ses propres valeurs : la page Abonnement
+     avait des h2 en 26/600, les pages éditoriales en 30/600, l'accueil
+     en 42/300. Trois pages, trois échelles, aucune raison. */
+  /* Une seule taille de display, pour toutes les pages sans exception.
+     Il y en avait deux — l'accueil à 76 px, le reste à 62 — ce qui
+     faisait que « S'abonner aux billets » et le titre de l'accueil ne
+     s'écrivaient pas pareil. Une option de personnalisation dans un
+     token partagé, c'est la divergence garantie. */
+  /* Échelle réduite pour les titres longs et descriptifs (typiquement
+     un titre d'article de recherche) — au-delà d'un certain nombre de
+     signes, --t-display les ferait courir sur trop de lignes. Le seuil
+     et la bascule vivent dans PageTitle, pas ici : ce token n'est que
+     la valeur d'arrivée. */
+  --t-h2: calc(30px * var(--a11y-echelle));
+  --t-h3: calc(21px * var(--a11y-echelle));
+  /* Trois registres, trois crans. Le chapo de page et celui d une
+     section etaient au meme corps : deux niveaux de hierarchie pour
+     une seule taille. */
+  --t-sublede: calc(16px * var(--a11y-echelle));
+  --t-body: calc(17px * var(--a11y-echelle));
+  --t-meta: calc(12px * var(--a11y-echelle));
+
+  --w-heading: 400;
+
+  --ls-display: -0.02em;
+
+  --lh-heading: 1.15;
+  --lh-body: 1.6;
+
+  /* Largeur de lecture d'un paragraphe. Posée sur la prose et non sur
+     le conteneur : un formulaire ou un cartouche doit pouvoir prendre
+     toute la largeur pendant que le texte reste lisible. */
+  --mesure: 68ch;
+
+  /* Écart vertical entre les grands blocs de l'accueil — une, sommaire,
+     cartes de format, lettre. Un seul endroit, et surtout une seule
+     marge par écart : chaque bloc ne porte que sa marge basse, le
+     suivant n'en porte aucune en haut. Faire porter la marge des deux
+     côtés donnait des écarts qui doublaient selon le voisinage, ce qui
+     s'était déjà vu entre la une et le sommaire. */
+  --block-gap: 64px;
+}
+@media (max-width: 900px) {
+  :root {
+    --block-gap: 40px;
+  }
+}
+
+/* ── Palette de famille (accueil) ────────────────────────────────────
+   Trois couleurs — bleu, vert, jaune — qui rythment la page d'accueil
+   au lieu de l'accent unique. Elles ne remplacent pas --color-accent,
+   qui reste piloté depuis Payload (Site → Branding) et continue de
+   régir les articles, le header et le footer : l'accueil est la seule
+   surface où l'on assume trois voix, parce que c'est la seule où trois
+   registres cohabitent (une mise en avant, un ours, des formats).
+
+   Chaque famille porte six valeurs, parce que six usages distincts :
+     --c-X        trait, numéro, petite capitale sur fond de page
+     --c-X-tint   aplat très dilué, pour un panneau posé sur le fond
+     --c-X-deep   texte lisible sur ce fond ou sur --c-X-tint
+     --c-X-fill   fond d'une carte pleine
+     --c-X-on     texte principal sur --c-X-fill
+     --c-X-on-soft  texte secondaire sur --c-X-fill
+
+   La distinction fill/tint compte : en clair, la carte bleue est un
+   aplat saturé à texte blanc et la carte verte un aplat dilué à texte
+   sombre. En sombre, aucun aplat saturé ne tient — tous passent en
+   surface profonde à texte clair, d'où des valeurs entièrement
+   redéfinies plus bas plutôt qu'un simple ajustement de luminosité.
+   Trois valeurs s'écartent de la maquette, et toujours dans le même
+   sens — assombries jusqu'à franchir 4,5:1 sur leur fond d'usage. Le
+   vert (4,47:1) et le jaune profond (3,50:1) d'origine échouaient sur
+   la teinte du sommaire, et le jaune secondaire (3,21:1) sur la carte
+   pleine. Ce sont des textes de 11 px : c'est précisément la taille où
+   le contraste cesse d'être négociable. L'écart reste invisible à
+   l'œil, la maquette est respectée. */
+:root {
+  --c-bleu: #3d5a8a;
+  --c-bleu-tint: color-mix(in srgb, var(--c-bleu) 14%, var(--color-bg));
+  --c-bleu-deep: #2b436b;
+  --c-bleu-fill: #3d5a8a;
+  --c-bleu-on: #ffffff;
+  --c-bleu-on-soft: #c8d3e6;
+
+  --c-vert: #4a7355;
+  --c-vert-tint: color-mix(in srgb, var(--c-vert) 20%, var(--color-bg));
+  --c-vert-deep: #365a41;
+  --c-vert-fill: #3f6b4d;
+  --c-vert-on: #ffffff;
+  --c-vert-on-soft: #d5e3d9;
+
+  /* Quatrième famille, réservée à la une. Même gamme que les trois
+     autres — H 270 / S 36 / L 35, contre 217/39/39 pour le bleu et
+     136/22/37 pour le vert. C'est la valeur de l'accent historique du
+     site, mais figée ici : --color-accent reste pilotable depuis
+     l'admin, et la une ne doit pas changer de couleur quand on change
+     la charte. */
+  --c-violet: #5a3a7a;
+  --c-violet-tint: color-mix(in srgb, var(--c-violet) 14%, var(--color-bg));
+  --c-violet-deep: #4a2f66;
+
+  --c-jaune: #d9a441;
+  --c-jaune-tint: color-mix(in srgb, var(--c-jaune) 14%, var(--color-bg));
+  --c-jaune-deep: #7d5612;
+  --c-jaune-fill: #d9a441;
+  --c-jaune-on: #4a3305;
+  --c-jaune-on-soft: #543c12;
+
+  /* Carte « À la une » — bleu dilué.
+     La maquette la posait en encre pleine. Un aplat noir dans le tiers
+     supérieur d'une page d'accueil pèse trop : il arrête l'œil au lieu
+     de l'amener plus bas, et il annonce un registre — grave, définitif —
+     qui n'est pas celui du reste de la page.
+
+     En bleu dilué, la une prend simplement sa place dans la série :
+     bleu ici, jaune au sommaire, vert à la lettre. Une famille par
+     panneau, dans l'ordre où le filet du header les présente. Ce n'est
+     plus le contraste qui désigne la une, c'est sa position et la
+     taille de son titre — ce qui suffisait déjà.
+
+     Le fond n'est pas une valeur en dur mais le bleu de famille dilué
+     dans le fond de page — exactement comme le surlignage du hero, qui
+     est ce même bleu à 33 %. Les deux ne peuvent donc plus diverger de
+     teinte : c'est le même pigment, à deux concentrations.
+
+     Les valeurs fixes essayées avant tombaient toutes dans le même
+     piège. Un bleu d'ardoise éclairci au blanc vire au lavande, et posé
+     sur le crème chaud du fond le contraste simultané l'y pousse encore
+     — on lisait un violet pâle. Le diluer dans le crème plutôt que dans
+     du blanc le réchauffe et supprime le problème à la source. Effet de
+     bord utile : si le fond du site change depuis Payload, le panneau
+     suit. */
+  /* Quelle famille habille quel panneau. Ces deux paires existent pour
+     que permuter les couleurs soit une ligne ici, et non une chasse aux
+     var(--c-jaune-*) dans les composants. */
+  --c-une-bg: color-mix(in srgb, var(--c-jaune) 14%, var(--color-bg));
+  --c-une-fg: #1a1d28;
+  --c-une-soft: #4a4640;
+  --c-une-mute: #57534c;
+  /* Ligne de métadonnées en tête de carte. Le jaune de la maquette y
+     tenait parce que le fond était noir ; sur un bleu clair il tombe
+     sous le seuil de contraste. */
+  --c-une-accent: var(--c-jaune-deep);
+
+  --c-sommaire-bg: var(--c-violet-tint);
+  --c-sommaire-accent: var(--c-violet-deep);
+
+  /* Carré du dernier épisode. Même recette que les deux panneaux
+     voisins — la famille diluée dans le fond de page — pour qu il se
+     tienne dans leur registre au lieu de trancher. Et comme la teinte
+     descend du même --c-bleu que le surlignage du titre, les deux se
+     répondent à 214° sans qu on ait à les accorder à la main. */
+  --c-podcast-bg: color-mix(in srgb, var(--c-bleu) 14%, var(--color-bg));
+  --c-podcast-fg: var(--color-ink);
+  --c-podcast-accent: var(--c-bleu-deep);
+
+  /* Rayon des grands panneaux d'accueil. Généreux — c'est ce qui
+     distingue le registre « pièces posées sur une page » du reste du
+     site, qui travaille au filet. */
+  /* Gris de texte secondaire SUR un panneau teinté, par opposition à
+     --color-muted qui est calibré sur le fond de page. En clair les
+     deux coïncident ; en sombre le panneau est plus clair que la page,
+     donc le gris doit remonter avec lui pour tenir le seuil. */
+  --c-panel-mute: #565b6a;
+
+  --radius-panel: 24px;
+}
+
+[data-theme='dark'] {
+  --c-bleu: #8aa5d6;
+  --c-bleu-tint: color-mix(in srgb, var(--c-bleu) 14%, var(--color-bg));
+  --c-bleu-deep: #a8bde4;
+  --c-bleu-fill: #33456a;
+  --c-bleu-on: #eef1f8;
+  --c-bleu-on-soft: #b6c3dd;
+
+  --c-vert: #8bbd99;
+  --c-vert-tint: #243029;
+  --c-vert-deep: #a3ccae;
+  --c-vert-fill: #2b3a30;
+  --c-vert-on: #cfe4d5;
+  --c-vert-on-soft: #93ac9b;
+
+  --c-violet: #a888c8;
+  --c-violet-tint: color-mix(in srgb, var(--c-violet) 18%, var(--color-bg));
+  --c-violet-deep: #c3a8dc;
+
+  --c-jaune: #e0b96a;
+  --c-jaune-tint: color-mix(in srgb, var(--c-jaune) 16%, var(--color-bg));
+  --c-jaune-deep: #edcf95;
+  --c-jaune-fill: #4d3d1c;
+  --c-jaune-on: #f6e3bd;
+  --c-jaune-on-soft: #c6ab7c;
+
+  /* En sombre, la carte remonte au-dessus de --color-bg au lieu de
+     descendre : c'est la même surface bleutée, mais posée en relief. */
+  --c-une-bg: color-mix(in srgb, var(--c-jaune) 16%, var(--color-bg));
+  --c-une-fg: #e8e6e0;
+  --c-une-soft: #b8c2d4;
+  --c-une-mute: #a8aebb;
+  --c-une-accent: var(--c-jaune-deep);
+  --c-sommaire-bg: var(--c-violet-tint);
+  --c-sommaire-accent: var(--c-violet-deep);
+  --c-podcast-bg: color-mix(in srgb, var(--c-bleu) 14%, var(--color-bg));
+  --c-podcast-fg: var(--color-ink);
+  --c-podcast-accent: var(--c-bleu-deep);
+  --c-panel-mute: #b0b5c0;
 }
 
 /* Dark mode — appliqué quand <html> porte data-theme="dark" (cf.
@@ -75,38 +377,77 @@
   --color-accent: #8ec4a4;
 }
 
-/* Reset minimal */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* ── Les règles de fond, en couche `base` ─────────────────────────
+   Sans couche, elles battaient les utilitaires Tailwind : du CSS non
+   layered l'emporte toujours sur du CSS layered, quelle que soit la
+   spécificité. Une classe `mb-[22px]` posée sur un paragraphe rendait
+   donc la marge du CSS global, et la classe n'avait l'air de rien
+   faire — le pire des symptômes, puisqu'il ressemble à une faute de
+   frappe.
 
-html,
-body {
-  margin: 0;
-  background: var(--color-bg);
-  color: var(--color-ink);
-  font-family: var(--font-serif);
-  /* Transition douce sur le changement de thème — uniquement les
-     couleurs, pas tout (pour éviter de transitionner les layouts). */
-  transition: background-color 0.18s ease, color 0.18s ease;
-}
+   Dans `base`, ces mêmes règles gardent leur rôle — poser le fond —
+   et cèdent devant une classe posée à la main. C'est l'ordre que
+   Tailwind attend. */
+@layer base {
+  /* Reset minimal */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  html,
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-serif);
+    /* Rognage horizontal au niveau du document, pour les blocs qui sortent
+       de la gouttière et vont jusqu'aux bords de la fenêtre (le hero d'un
+       épisode). Leurs marges se calculent en `vw`, qui compte la barre de
+       défilement : sans ce rognage, il resterait un défilement horizontal
+       de la largeur de celle-ci.
+       Posé ici et non sur <main>, qui est plafonné à --page-max : au-delà
+       de cette largeur, il rognait le bloc à sa propre boîte et la pleine
+       largeur devenait celle du composant.
+       `clip` et non `hidden` : `hidden` ferait de <body> un conteneur de
+       défilement et casserait le `position: sticky` de l'aside. */
+    overflow-x: clip;
+    /* Transition douce sur le changement de thème — uniquement les
+       couleurs, pas tout (pour éviter de transitionner les layouts). */
+    transition: background-color 0.18s ease, color 0.18s ease;
+  }
 
-/* Helpers utilitaires repris du prototype */
-.sans {
-  font-family: var(--font-sans);
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-.mono {
-  font-family: var(--font-mono);
-}
+  /* Masque un element a l ecran en le laissant lisible par les lecteurs
+     d ecran. La classe etait utilisee par les libelles de formulaire mais
+     n etait definie nulle part : ils s affichaient donc en clair. */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
 
-.accent {
-  color: var(--color-accent);
+  /* Helpers utilitaires repris du prototype */
+  .sans {
+    font-family: var(--font-sans);
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+  }
+
+  .accent {
+    color: var(--color-accent);
+  }
 }

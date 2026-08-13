@@ -4,7 +4,10 @@
 import React from 'react';
 
 import IdentityEditViewClient from './IdentityEditView.client';
+import AccesReserve, { estAdministratrice } from './AccesReserve';
 
-export default function IdentityEditView(): React.ReactElement {
+export default async function IdentityEditView(): Promise<React.ReactElement> {
+  if (!(await estAdministratrice())) return <AccesReserve titre="Identité" />;
+
   return <IdentityEditViewClient />;
 }

@@ -5,7 +5,10 @@
 import React from 'react';
 
 import SubscriptionsEditViewClient from './SubscriptionsEditView.client';
+import AccesReserve, { estAdministratrice } from './AccesReserve';
 
-export default function SubscriptionsEditView(): React.ReactElement {
+export default async function SubscriptionsEditView(): Promise<React.ReactElement> {
+  if (!(await estAdministratrice())) return <AccesReserve titre="Abonnements" />;
+
   return <SubscriptionsEditViewClient />;
 }

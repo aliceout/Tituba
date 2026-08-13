@@ -6,7 +6,7 @@
 //
 // Fetch /cms/api/users/me au mount pour afficher le footer user
 // (displayName + rôle muted) cf maquette
-// Design/design_handoff_admin/carnet-admin.html → footer sidebar.
+// Design/design_handoff_admin/tituba-admin.html → footer sidebar.
 //
 // C'est aussi ici qu'on pose data-theme et data-accent sur <html> au
 // mount, pour piloter le theming admin (cf custom.scss). data-theme
@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import ZoteroAutoSync from './ZoteroAutoSync.client';
+import { stripHeroMarkers } from '@/lib/hero-markers';
 
 type Me = {
   user?: {
@@ -41,11 +42,24 @@ const ACCENT_HEX_TO_SLUG: Record<string, string> = {
 };
 
 type Counts = {
-  posts: number;
+  articles: number;
+  analyses: number;
+  actus: number;
+  podcasts: number;
+  outils: number;
   themes: number;
   tags: number;
   bibliography: number;
+  /** Images et fichiers audio confondus depuis la fusion des deux collections. */
   media: number;
+  /**
+   * Les séries sont comptées en deux fois, une par porte de la nav :
+   * elles vivent dans une seule collection, distinguée par son champ
+   * `format` (cf Series.ts). Un compte global n'aurait rien voulu dire
+   * à côté d'une entrée qui n'en montre qu'une partie.
+   */
+  seriesEmissions: number;
+  seriesTextes: number;
   users: number;
   pages: number;
   subscribers: number;
@@ -93,8 +107,8 @@ export default function NavClient({ activePath: serverActive, counts, version, i
     function onToggle() {
       setNavOpen((v) => !v);
     }
-    window.addEventListener('carnet-nav-toggle', onToggle);
-    return () => window.removeEventListener('carnet-nav-toggle', onToggle);
+    window.addEventListener('tituba-nav-toggle', onToggle);
+    return () => window.removeEventListener('tituba-nav-toggle', onToggle);
   }, []);
 
   // Ferme la nav automatiquement à chaque navigation (sinon elle reste
@@ -172,7 +186,7 @@ export default function NavClient({ activePath: serverActive, counts, version, i
       });
   }, []);
 
-  const userName = me?.displayName?.trim() || me?.email?.split('@')[0] || '—';
+  const userName = stripHeroMarkers(me?.displayName?.trim()) || me?.email?.split('@')[0] || '—';
   const rawRole = me?.role ?? '';
   // Libellés inclusifs des rôles, affichés dans le footer de la sidebar.
   // Source des rôles bruts : services/payload/src/access/roles.ts.
@@ -183,42 +197,101 @@ export default function NavClient({ activePath: serverActive, counts, version, i
   };
   const userRole = ROLE_LABEL[rawRole] ?? rawRole;
 
-  // Accès aux sections Config + Utilisateur·ices : réservés aux rôles
-  // qui peuvent gérer le site (admin/root). Un editor ne voit que
-  // Contenu + Mon compte.
+  // Accès aux sections Config site + Gestion : réservés aux rôles qui
+  // peuvent gérer le site (admin/root). Un editor ne voit que ce qui
+  // touche à la publication et à son propre compte.
   const isPrivileged = rawRole === 'admin' || rawRole === 'root';
 
+  /**
+   * La nav suit ce qu'on vient y faire, pas la liste des collections.
+   *
+   * « Contenu » ne porte que les cinq formats : ce sont les seules
+   * entrées qu'on ouvre pour écrire. Tout ce qui les outille — la
+   * taxonomie, les fichiers, les séries — descend dans « Config
+   * contenu » : on y va pour ranger, rarement, et sa présence en tête
+   * noyait les cinq formats dans une liste de onze.
+   *
+   * La bibliographie rejoint « Mes espaces » et non la configuration :
+   * elle est synchronisée depuis le compte Zotero de chacun·e, c'est
+   * donc un espace personnel et non un réglage partagé.
+   */
   const sections: NavSection[] = [
     {
       label: 'Contenu',
       items: [
-        { label: 'Billets', href: `${ADMIN}/collections/posts`, count: counts.posts },
+        {
+          label: 'Articles de recherche',
+          href: `${ADMIN}/collections/articles`,
+          count: counts.articles,
+        },
+        { label: "Billets d'analyse", href: `${ADMIN}/collections/analyses`, count: counts.analyses },
+        { label: "Billets d'actu", href: `${ADMIN}/collections/actus`, count: counts.actus },
+        { label: 'Podcasts', href: `${ADMIN}/collections/podcasts`, count: counts.podcasts },
+        { label: 'Outils', href: `${ADMIN}/collections/outils`, count: counts.outils },
+      ],
+    },
+    {
+      label: 'Config contenu',
+      items: [
         { label: 'Thèmes', href: `${ADMIN}/collections/themes`, count: counts.themes },
-        { label: 'Bibliographie', href: `${ADMIN}/collections/bibliography`, count: counts.bibliography },
         { label: 'Tags', href: `${ADMIN}/collections/tags`, count: counts.tags },
+        // Une seule entrée pour tous les fichiers, images comme
+        // épisodes : c'est « où est mon fichier » qu'on se demande, pas
+        // « dans quelle collection l'ai-je rangé ». Le tri par type se
+        // fait dans la liste elle-même.
         { label: 'Médias', href: `${ADMIN}/collections/media`, count: counts.media },
-        { label: 'Pages éditoriales', href: `${ADMIN}/collections/pages`, count: counts.pages },
+        // Deux portes sur une seule collection, distinguées par le
+        // paramètre `format` que la vue de liste lit dans l'URL : le
+        // vocabulaire et le travail diffèrent (une émission porte un
+        // flux RSS, une série d'articles non), l'objet est le même.
+        {
+          label: 'Émissions',
+          href: `${ADMIN}/collections/series?format=podcasts`,
+          count: counts.seriesEmissions,
+        },
+        {
+          label: "Séries d'articles",
+          href: `${ADMIN}/collections/series?format=textes`,
+          count: counts.seriesTextes,
+        },
+      ],
+    },
+    {
+      label: 'Mes espaces',
+      items: [
+        { label: 'Bibliographie', href: `${ADMIN}/collections/bibliography`, count: counts.bibliography },
+        { label: 'Mon compte', href: `${ADMIN}/account` },
       ],
     },
     ...(isPrivileged
       ? [
           {
-            label: 'Config',
+            label: 'Config site',
             items: [
               { label: 'Identité', href: `${ADMIN}/globals/identity` },
               { label: 'Options', href: `${ADMIN}/globals/site` },
               { label: 'Abonnements', href: `${ADMIN}/globals/subscriptions` },
-              { label: 'Pages principales', href: `${ADMIN}/globals/index-pages` },
+              // Une seule entrée pour toutes les pages du site. Les
+              // quatre pages fixes (accueil, archives, thèmes,
+              // abonnement) y figurent parmi les autres, distinguées
+              // par leur nature — elles ne se créent ni ne se
+              // suppriment, la collection le fait respecter (cf
+              // Pages.ts). Deux entrées aux noms voisins ne disaient pas
+              // laquelle était laquelle.
+              { label: 'Pages', href: `${ADMIN}/collections/pages`, count: counts.pages },
               { label: 'Navigation', href: `${ADMIN}/globals/navigation` },
             ],
           },
         ]
       : []),
-    {
-      label: 'Réglages',
-      items: [
-        ...(isPrivileged
-          ? [
+    // Section entièrement réservée, et non simplement vidée de ses
+    // entrées : un titre « Gestion » seul sous lequel rien n'apparaît
+    // se lit comme une panne.
+    ...(isPrivileged
+      ? [
+          {
+            label: 'Gestion',
+            items: [
               {
                 label: 'Utilisateur·ices',
                 href: `${ADMIN}/collections/users`,
@@ -229,11 +302,10 @@ export default function NavClient({ activePath: serverActive, counts, version, i
                 href: `${ADMIN}/collections/subscribers`,
                 count: counts.subscribers,
               },
-            ]
-          : []),
-        { label: 'Mon compte', href: `${ADMIN}/account` },
-      ],
-    },
+            ],
+          },
+        ]
+      : []),
   ];
 
   function isActive(href: string): boolean {
@@ -250,30 +322,30 @@ export default function NavClient({ activePath: serverActive, counts, version, i
           plutôt que flotter par-dessus. */}
       {navOpen && (
         <div
-          className="carnet-nav-backdrop"
+          className="tituba-nav-backdrop"
           aria-hidden="true"
           onClick={() => setNavOpen(false)}
         />
       )}
 
       <nav
-        className={navOpen ? 'carnet-nav is-open' : 'carnet-nav'}
+        className={navOpen ? 'tituba-nav is-open' : 'tituba-nav'}
         aria-label="Navigation principale"
       >
       {/* Auto-sync Zotero invisible : se déclenche au login et toutes
           les 30 min de navigation. Cf ZoteroAutoSync.client.tsx. */}
       <ZoteroAutoSync />
 
-      <Link href={ADMIN} className="carnet-nav__brand">
-        Carnet<span className="dot">.</span>
+      <Link href={ADMIN} className="tituba-nav__brand">
+        Tituba<span className="dot">.</span>
       </Link>
       {/* Top row : « Voir le site » à gauche + actions icônes à
           droite (theme toggle + logout). Compacte tout en haut, libère
           le footer pour ne montrer que user/rôle. */}
-      <div className="carnet-nav__top-row">
+      <div className="tituba-nav__top-row">
         <a
           href={siteUrl}
-          className="carnet-nav__view-site"
+          className="tituba-nav__view-site"
           target="_blank"
           rel="noreferrer"
           suppressHydrationWarning
@@ -281,10 +353,10 @@ export default function NavClient({ activePath: serverActive, counts, version, i
           Voir le site
           <span aria-hidden="true" className="arrow">↗</span>
         </a>
-        <div className="carnet-nav__top-actions">
+        <div className="tituba-nav__top-actions">
           <button
             type="button"
-            className="carnet-nav__theme-toggle"
+            className="tituba-nav__theme-toggle"
             aria-label={
               theme === 'dark'
                 ? 'Passer en thème clair'
@@ -313,7 +385,7 @@ export default function NavClient({ activePath: serverActive, counts, version, i
           </button>
           <a
             href={`${ADMIN}/logout`}
-            className="carnet-nav__logout-icon"
+            className="tituba-nav__logout-icon"
             aria-label="Se déconnecter"
             title="Se déconnecter"
           >
@@ -327,42 +399,42 @@ export default function NavClient({ activePath: serverActive, counts, version, i
       </div>
 
       {sections.map((section) => (
-        <div key={section.label} className="carnet-nav__section">
-          <div className="carnet-nav__section-label">{section.label}</div>
+        <div key={section.label} className="tituba-nav__section">
+          <div className="tituba-nav__section-label">{section.label}</div>
           {section.items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={
                 isActive(item.href)
-                  ? 'carnet-nav__link carnet-nav__link--active'
-                  : 'carnet-nav__link'
+                  ? 'tituba-nav__link tituba-nav__link--active'
+                  : 'tituba-nav__link'
               }
             >
-              <span className="carnet-nav__link-label">{item.label}</span>
+              <span className="tituba-nav__link-label">{item.label}</span>
               {typeof item.count === 'number' && (
-                <span className="carnet-nav__link-count">{item.count}</span>
+                <span className="tituba-nav__link-count">{item.count}</span>
               )}
             </Link>
           ))}
         </div>
       ))}
 
-      <div className="carnet-nav__spacer" />
+      <div className="tituba-nav__spacer" />
 
       {me && (
-        <div className="carnet-nav__footer">
-          <div className="carnet-nav__user">
-            <div className="carnet-nav__user-name">{userName}</div>
+        <div className="tituba-nav__footer">
+          <div className="tituba-nav__user">
+            <div className="tituba-nav__user-name">{userName}</div>
             {userRole && (
-              <div className="carnet-nav__user-role">
-                <span className="carnet-nav__user-role-prefix">Rôle :</span> {userRole}
+              <div className="tituba-nav__user-role">
+                <span className="tituba-nav__user-role-prefix">Rôle :</span> {userRole}
               </div>
             )}
           </div>
           {version && (
             <div
-              className="carnet-nav__version"
+              className="tituba-nav__version"
               title={`Version : ${version.tag} · commit ${version.commit}`}
             >
               {version.tag} · {version.commit}

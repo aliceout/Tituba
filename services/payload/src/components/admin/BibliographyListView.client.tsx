@@ -1,10 +1,15 @@
 'use client';
 
 // BibliographyListView (client) — vue Liste custom Bibliographie :
-// recherche par auteur, filtre par type + provenance, bouton × par
-// ligne pour supprimer (avec modale de confirmation). Les refs Zotero
-// supprimées reviennent au prochain sync — l'autrice peut donc nettoyer
-// sans crainte côté Carnet.
+// recherche par auteur, filtre par type + provenance, et sélection
+// multiple pour agir sur plusieurs entrées d'un coup.
+//
+// La croix en bout de ligne a cédé la place aux cases : ce qu'on vient
+// faire dans cette liste, c'est du ménage — retirer une série de
+// doublons, par exemple — et une par une, on renonce.
+//
+// Les refs Zotero supprimées reviennent au prochain sync ; les échecs
+// sont comptés puis affichés plutôt que tus.
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -58,11 +63,6 @@ export default function BibliographyListViewClient(): React.ReactElement {
   const [source, setSource] = useState<FilterSource>('all');
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Modale de confirmation de suppression (target = ref à supprimer ;
-  // null = fermée). Pattern aligné sur TagListView.
-  const [deleteTarget, setDeleteTarget] = useState<BiblioEntry | null>(null);
-  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -95,37 +95,88 @@ export default function BibliographyListViewClient(): React.ReactElement {
 
   useEffect(() => setPage(1), [search, type, source]);
 
-  function openDelete(entry: BiblioEntry) {
-    setDeleteTarget(entry);
-    setDeleteError(null);
+  // ─── Sélection et actions groupées ───────────────────────────
+  //
+  // La croix en bout de ligne ne servait qu'à une chose à la fois. Or
+  // ce qu'on vient faire dans cette liste, c'est du ménage : retirer
+  // une série de doublons d'un coup. Une par une, on renonce.
+  //
+  // La sélection traverse les pages : on repère des entrées de proche
+  // en proche, la pagination ne doit pas défaire ce qu'on a coché. En
+  // contrepartie la confirmation dit exactement combien d'entrées sont
+  // en jeu, et lesquelles — sans quoi on agirait sur ce qu'on ne voit
+  // plus.
+  const [selection, setSelection] = useState<Set<string>>(new Set());
+  const [aConfirmer, setAConfirmer] = useState(false);
+  const [enCours, setEnCours] = useState(false);
+  const [echecs, setEchecs] = useState<string[]>([]);
+
+  function basculer(id: number | string) {
+    setSelection((prev) => {
+      const suite = new Set(prev);
+      const k = String(id);
+      if (suite.has(k)) suite.delete(k);
+      else suite.add(k);
+      return suite;
+    });
   }
 
-  function closeDelete() {
-    if (deleteSubmitting) return;
-    setDeleteTarget(null);
-    setDeleteError(null);
+  const idsPage = entries.map((b) => String(b.id));
+  const toutePage = idsPage.length > 0 && idsPage.every((k) => selection.has(k));
+
+  function basculerPage() {
+    setSelection((prev) => {
+      const suite = new Set(prev);
+      if (toutePage) for (const k of idsPage) suite.delete(k);
+      else for (const k of idsPage) suite.add(k);
+      return suite;
+    });
   }
 
-  async function confirmDelete() {
-    if (!deleteTarget) return;
-    setDeleteSubmitting(true);
-    setDeleteError(null);
-    try {
-      const res = await fetch(`${API_BIBLIO}/${encodeURIComponent(String(deleteTarget.id))}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(`HTTP ${res.status} — ${t.slice(0, 200)}`);
+  /** Les entrées cochées qu'on a sous la main, pour les nommer. */
+  const nommees = entries.filter((b) => selection.has(String(b.id)));
+  const vide = selection.size === 0;
+
+  function fermerAction() {
+    if (enCours) return;
+    setAConfirmer(false);
+    setEchecs([]);
+  }
+
+  /**
+   * Supprime chaque entrée cochée.
+   *
+   * Une par une, et les échecs sont comptés plutôt qu'ignorés : il
+   * vaut mieux dire que trois références ont résisté que laisser
+   * croire que tout est passé.
+   */
+  async function executer() {
+    setEnCours(true);
+    setEchecs([]);
+    const rates: string[] = [];
+
+    for (const id of selection) {
+      try {
+        const res = await fetch(`${API_BIBLIO}/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          const t = await res.text();
+          rates.push(`#${id} — ${t.slice(0, 120)}`);
+        }
+      } catch (err) {
+        rates.push(`#${id} — ${err instanceof Error ? err.message : 'erreur inconnue'}`);
       }
-      setDeleteTarget(null);
-      setReloadKey((k) => k + 1);
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Erreur inconnue');
-    } finally {
-      setDeleteSubmitting(false);
     }
+
+    setEnCours(false);
+    setEchecs(rates);
+    if (rates.length === 0) {
+      setSelection(new Set());
+      setAConfirmer(false);
+    }
+    setReloadKey((k) => k + 1);
   }
 
   const startIdx = (page - 1) * PER_PAGE + 1;
@@ -135,18 +186,18 @@ export default function BibliographyListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="biblio"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Bibliographie' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Bibliographie' }]}
       topbarActions={
         <Link
           href="/cms/admin/collections/bibliography/create"
-          className="carnet-btn carnet-btn--accent"
+          className="tituba-btn tituba-btn--accent"
         >
           Nouvelle référence
         </Link>
       }
     >
-      <div className="carnet-listview__toolbar">
-        <div className="carnet-listview__search">
+      <div className="tituba-listview__toolbar">
+        <div className="tituba-listview__search">
           <span className="ic" aria-hidden="true">
             ⌕
           </span>
@@ -157,7 +208,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
             placeholder={`Rechercher par auteur dans ${totalDocs} référence${totalDocs > 1 ? 's' : ''}…`}
           />
         </div>
-        <label className="carnet-listview__filter">
+        <label className="tituba-listview__filter">
           <span className="lbl">Type :</span>
           <select value={type} onChange={(e) => setType(e.target.value as FilterType)}>
             <option value="all">tous</option>
@@ -169,7 +220,7 @@ export default function BibliographyListViewClient(): React.ReactElement {
             <option value="other">Autre</option>
           </select>
         </label>
-        <label className="carnet-listview__filter">
+        <label className="tituba-listview__filter">
           <span className="lbl">Provenance :</span>
           <select value={source} onChange={(e) => setSource(e.target.value as FilterSource)}>
             <option value="all">toutes</option>
@@ -177,84 +228,138 @@ export default function BibliographyListViewClient(): React.ReactElement {
             <option value="zotero">Zotero</option>
           </select>
         </label>
+        {/* Les actions groupées, au bout de la barre d'outils.
+
+            Elles ont eu une barre à elles, qui n'apparaissait qu'à la
+            première case cochée et poussait alors tout le tableau vers
+            le bas : la ligne qu'on visait se dérobait sous le curseur
+            au moment même où l'on cochait la précédente. Pénible à la
+            souris, hostile pour qui vise difficilement.
+
+            Ici elles n'apparaissent toujours qu'une fois quelque chose
+            de coché, mais sans rien décaler : la ligne existe déjà, et
+            sa hauteur est celle du champ de recherche — les boutons
+            sont plus courts, ils s'y logent sans la pousser.
+
+            `aria-live` annonce le décompte aux lecteurs d'écran. */}
+        <div className="tituba-listview__lot" aria-live="polite">
+          {!vide && (
+            <>
+              <span className="tituba-listview__lot-compte">
+                {selection.size} sélectionnée{selection.size > 1 ? 's' : ''}
+              </span>
+              <button
+                type="button"
+                className="tituba-btn tituba-btn--danger"
+                onClick={() => setAConfirmer(true)}
+              >
+                Supprimer
+              </button>
+              <button
+                type="button"
+                className="tituba-listview__lot-annuler"
+                onClick={() => setSelection(new Set())}
+              >
+                Tout décocher
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      {error && <div className="carnet-listview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-listview__error">Erreur : {error}</div>}
 
-      <div className="carnet-listview__table" role="table">
-        <div className="carnet-listview__row carnet-listview__row--head" role="row">
+      <div className="tituba-listview__table" role="table">
+        <div className="tituba-listview__row tituba-listview__row--head" role="row">
+          <div role="columnheader" className="pick">
+            <input
+              type="checkbox"
+              checked={toutePage}
+              onChange={basculerPage}
+              aria-label="Tout cocher sur cette page"
+              title="Tout cocher sur cette page"
+            />
+          </div>
           <div role="columnheader">Prénom</div>
           <div role="columnheader">Nom</div>
           <div role="columnheader">Année</div>
           <div role="columnheader">Titre</div>
           <div role="columnheader">Éditeur / Revue</div>
           <div role="columnheader">Type</div>
-          <div role="columnheader" aria-label="Actions" />
         </div>
 
         {loading && entries.length === 0 ? (
-          <div className="carnet-listview__loading">Chargement…</div>
+          <div className="tituba-listview__loading">Chargement…</div>
         ) : entries.length === 0 ? (
-          <div className="carnet-listview__empty">Aucune référence.</div>
+          <div className="tituba-listview__empty">Aucune référence.</div>
         ) : (
           entries.map((b) => {
             const first = b.authors?.[0];
             const hasMore = (b.authors?.length ?? 0) > 1;
             return (
-              <Link
-                key={b.id}
-                href={`/cms/admin/collections/bibliography/${b.id}`}
-                className="carnet-listview__row"
-                role="row"
-              >
-                <div role="cell" className="firstname">
-                  {first?.firstName || '—'}
+              <div key={b.id} className="tituba-listview__row" role="row">
+                {/* La case est HORS du lien, et c'est la seule façon
+                    correcte de s'y prendre.
+
+                    Tant qu'elle vivait dedans, il fallait annuler le
+                    clic pour que cocher n'ouvre pas la fiche — or
+                    annuler le clic d'une case à cocher en rétablit
+                    l'état antérieur, que React ne réapplique pas
+                    puisque le sien n'a pas changé. Trois cases cochées,
+                    deux affichées : le décompte disait vrai, l'écran
+                    mentait.
+
+                    Le lien couvre donc les colonnes de données et rien
+                    d'autre. `display: contents` le fait disparaître de
+                    la grille, si bien que ses cellules restent celles
+                    de la ligne. */}
+                <div role="cell" className="pick">
+                  <input
+                    type="checkbox"
+                    checked={selection.has(String(b.id))}
+                    onChange={() => basculer(b.id)}
+                    aria-label={`Sélectionner ${b.title}`}
+                  />
                 </div>
-                <div role="cell" className="lastname">
-                  {first?.lastName || '—'}
-                  {hasMore && <span className="lastname__etal"> et al.</span>}
-                </div>
-                <div role="cell" className="year">
-                  {b.year}
-                </div>
-                <div role="cell" className="title">
-                  {b.title}
-                </div>
-                <div role="cell" className="venue">
-                  {b.publisher || b.journal || '—'}
-                </div>
-                <div role="cell" className="type-cell">
-                  {TYPE_LABEL[b.type as Exclude<FilterType, 'all'>] ?? b.type}
-                </div>
-                <div role="cell">
-                  <button
-                    type="button"
-                    className="row-delete"
-                    aria-label={`Supprimer ${b.title}`}
-                    title="Supprimer cette référence"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      openDelete(b);
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              </Link>
+                <Link
+                  href={`/cms/admin/collections/bibliography/${b.id}`}
+                  className="tituba-listview__rowlink"
+                  tabIndex={0}
+                >
+                  <div role="cell" className="firstname">
+                    {first?.firstName || '—'}
+                  </div>
+                  <div role="cell" className="lastname">
+                    {first?.lastName || '—'}
+                    {hasMore && <span className="lastname__etal"> et al.</span>}
+                  </div>
+                  <div role="cell" className="year">
+                    {b.year}
+                  </div>
+                  <div role="cell" className="title">
+                    {b.title}
+                  </div>
+                  <div role="cell" className="venue">
+                    {b.publisher || b.journal || '—'}
+                  </div>
+                  <div role="cell" className="type-cell">
+                    {TYPE_LABEL[b.type as Exclude<FilterType, 'all'>] ?? b.type}
+                  </div>
+                </Link>
+              </div>
             );
           })
         )}
       </div>
 
-      <div className="carnet-listview__pagination">
-        <span className="carnet-listview__pagination-info">
+      <div className="tituba-listview__pagination">
+        <span className="tituba-listview__pagination-info">
           {totalDocs === 0
             ? 'Aucun résultat'
             : `Affichage ${startIdx}–${endIdx} sur ${totalDocs} · ${PER_PAGE} par page`}
         </span>
         {totalPages > 1 && (
-          <div className="carnet-listview__pagination-pages">
+          <div className="tituba-listview__pagination-pages">
             <button
               type="button"
               disabled={page <= 1}
@@ -285,58 +390,85 @@ export default function BibliographyListViewClient(): React.ReactElement {
         )}
       </div>
 
-      {deleteTarget && (
+      {aConfirmer && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
-            if (e.target === e.currentTarget) closeDelete();
+            if (e.target === e.currentTarget) fermerAction();
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
-              <h2>Supprimer cette référence ?</h2>
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
+              <h2>
+                Supprimer {selection.size} référence{selection.size > 1 ? 's' : ''} ?
+              </h2>
               <button
                 type="button"
-                className="carnet-modal__close"
-                onClick={closeDelete}
+                className="tituba-modal__close"
+                onClick={fermerAction}
                 aria-label="Fermer"
               >
                 ×
               </button>
             </header>
 
-            {deleteError && (
-              <div className="carnet-modal__error">Erreur : {deleteError}</div>
+            {echecs.length > 0 && (
+              <div className="tituba-modal__error">
+                {echecs.length} référence{echecs.length > 1 ? 's' : ''} n’
+                {echecs.length > 1 ? 'ont' : 'a'} pas pu être supprimée
+                {echecs.length > 1 ? 's' : ''} :
+                <ul>
+                  {echecs.slice(0, 5).map((e) => (
+                    <li key={e}>{e}</li>
+                  ))}
+                </ul>
+              </div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
-                «&nbsp;{deleteTarget.title}&nbsp;» sera supprimée du Carnet.
-                {deleteTarget.source === 'zotero' && (
-                  <>
-                    {' '}Cette référence vient de Zotero — elle sera
-                    réimportée au prochain sync.
-                  </>
-                )}
+                Elles seront effacées du Tituba, définitivement. Celles qui viennent de
+                Zotero reviendront au prochain sync.
               </p>
+
+              {/* Nommer ce qui est en jeu : la sélection traverse les
+                  pages, et l'on ne voit plus forcément tout ce qu'on a
+                  coché. */}
+              {nommees.length > 0 && (
+                <ul className="tituba-modal__liste">
+                  {nommees.slice(0, 8).map((b) => (
+                    <li key={b.id}>
+                      {b.authors?.[0]?.lastName ? `${b.authors[0].lastName} — ` : ''}
+                      {b.title}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {selection.size > nommees.length && (
+                <p className="tituba-modal__reste">
+                  et {selection.size - nommees.length} autre
+                  {selection.size - nommees.length > 1 ? 's' : ''} cochée
+                  {selection.size - nommees.length > 1 ? 's' : ''} sur les autres pages.
+                </p>
+              )}
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
-                onClick={closeDelete}
-                disabled={deleteSubmitting}
+                className="tituba-btn tituba-btn--ghost"
+                onClick={fermerAction}
+                disabled={enCours}
               >
                 Annuler
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
-                onClick={() => void confirmDelete()}
-                disabled={deleteSubmitting}
+                className="tituba-btn tituba-btn--danger"
+                onClick={() => void executer()}
+                disabled={enCours}
               >
-                {deleteSubmitting ? 'Suppression…' : 'Supprimer'}
+                {enCours ? 'Suppression…' : 'Supprimer'}
               </button>
             </footer>
           </div>

@@ -1,23 +1,23 @@
 ---
 /**
- * Footer 3 colonnes — signature + baseline + copyright (col 1),
- * "Naviguer" (col 2), "Suivre" (col 3, social + colophon).
+ * Footer 4 colonnes — signature + baseline + licence (col 1),
+ * « Formats » (col 2), « Naviguer » (col 3), « Coulisses » (col 4).
  *
- * Lit trois globals Payload : Identity (siteName/baseline/copyright),
- * Navigation (navFooter) et Subscriptions (profils sociaux). Si Payload
- * n'est pas joignable au SSR, on retombe sur des defaults (le footer
- * reste affichable sans dépendre de la DB).
+ * Les deux dernières se distinguent par ce qu'elles désignent :
+ * « Naviguer » mène au contenu du site, « Coulisses » à son envers —
+ * l'administration, le suivi des tickets, le formulaire de contact.
  *
- * Réf : design_handoff_carnet/Carnet B.html → footer.site.
+ * La colonne des formats est dérivée de la table PUBLICATIONS plutôt que
+ * saisie : ajouter un sixième format le ferait apparaître ici sans autre
+ * geste, et il ne peut pas y avoir de divergence entre ce que le pied
+ * annonce et ce que le site sert réellement.
+ *
+ * Lit deux globals Payload : Identity (siteName/baseline/copyright) et
+ * Navigation (navFooter). Si Payload n'est pas joignable au SSR, on
+ * retombe sur des defaults — le footer reste affichable sans la DB.
  */
-import { fetchIdentity, fetchNavigation, fetchSubscriptions } from '../lib/payload';
-
-type SocialLinks = {
-  mastodon?: string;
-  bluesky?: string;
-  orcid?: string;
-  hal?: string;
-};
+import { fetchIdentity, fetchNavigation } from '../lib/payload';
+import { PUBLICATIONS, PUBLICATION_ORDER } from '../lib/publications';
 
 type NavFooterLink = {
   label: string;
@@ -33,25 +33,35 @@ type IdentityGlobal = {
 
 type NavigationGlobal = {
   navFooter?: NavFooterLink[];
+  navFooterCoulisses?: NavFooterLink[];
 };
 
-type SubscriptionsGlobal = SocialLinks & { rssEnabled?: boolean };
-
 // Fallbacks génériques — utilisés uniquement si Payload est down ou
-// si les globals n'ont pas encore été remplis côté admin. Le contenu
-// réel (avec le nom de l'auteur·ice, le domaine prod) vient toujours
-// de Payload → ces strings ne devraient jamais s'afficher en prod.
-const DEFAULT_BASELINE = 'Carnet de recherche. Auto-hébergé.';
+// si les globals n'ont pas encore été remplis côté admin.
+const DEFAULT_BASELINE = 'Collectif féministe intersectionnel. Auto-hébergé.';
 const DEFAULT_COPYRIGHT = 'CC BY-NC-SA 4.0';
+
+// Les grandes destinations du site — ce qu'on va y lire.
 const DEFAULT_NAV: NavFooterLink[] = [
-  { label: 'Thèmes', href: '/themes/' },
+  { label: 'Formats', href: '/formats/' },
+  { label: 'Thématiques', href: '/themes/' },
+  { label: 'Auteur·ices', href: '/auteurices/' },
+  { label: 'Mots-clés', href: '/tags/' },
   { label: 'Archives', href: '/archives/' },
+  { label: "L'association", href: '/association/' },
+];
+
+// Colonne « Coulisses » — l'envers du site plutôt que son contenu. Le
+// suivi des tickets n'y figure pas : il vient de la configuration
+// (TICKETING_URL), pas de cette liste éditoriale.
+const DEFAULT_COULISSES: NavFooterLink[] = [
+  { label: 'Nous rejoindre', href: '/nous-rejoindre/' },
+  { label: 'Nous écrire', href: '/contact/' },
   { label: 'Admin', href: '/cms/admin' },
 ];
 
 let identity: IdentityGlobal = {};
 let nav: NavigationGlobal = {};
-let subscriptions: SubscriptionsGlobal = {};
 try {
   identity = await fetchIdentity<IdentityGlobal>();
 } catch (err) {
@@ -62,150 +72,163 @@ try {
 } catch (err) {
   console.warn('[footer] fetchNavigation failed, using defaults:', (err as Error).message);
 }
-try {
-  subscriptions = await fetchSubscriptions<SubscriptionsGlobal>();
-} catch (err) {
-  console.warn('[footer] fetchSubscriptions failed, using defaults:', (err as Error).message);
-}
 
-const siteName = identity.siteName?.trim() || 'Carnet';
+const siteName = identity.siteName?.trim() || 'Tituba';
 const baseline = identity.baseline || DEFAULT_BASELINE;
 // Tag git injecté au build du container (process.env.GIT_TAG).
 // Fallback 'dev' si non défini (build local ou CI sans build-args).
 const gitTag = process.env.GIT_TAG || 'dev';
 const copyrightLine = identity.copyrightLine || DEFAULT_COPYRIGHT;
 const navFooter = nav.navFooter && nav.navFooter.length > 0 ? nav.navFooter : DEFAULT_NAV;
-const social = subscriptions ?? {};
-const rssEnabled = subscriptions.rssEnabled !== false;
+// Un lien sans adresse est écarté plutôt qu'affiché mort.
+const coulissesSaisies = (
+  nav.navFooterCoulisses && nav.navFooterCoulisses.length > 0
+    ? nav.navFooterCoulisses
+    : DEFAULT_COULISSES
+).filter((l) => l.href && l.href.trim());
 
-const socialLinks = [
-  // Footer "Suivre" : Flux RSS pointe directement sur le flux brut
-  // /rss.xml (lecture par les feed readers). La page /abonnement/ regroupe
-  // ces mêmes liens + une intro pour les humains, accessible depuis
-  // la nav du header. Le lien disparaît si le flux est désactivé côté
-  // Abonnements.
-  rssEnabled ? { label: 'Flux RSS', href: '/rss.xml' } : null,
-  social.mastodon ? { label: 'Mastodon', href: social.mastodon, external: true } : null,
-  social.bluesky ? { label: 'Bluesky', href: social.bluesky, external: true } : null,
-  social.orcid ? { label: 'ORCID', href: social.orcid, external: true } : null,
-  social.hal ? { label: 'HAL', href: social.hal, external: true } : null,
-  { label: 'Colophon', href: '/about/#colophon' },
-].filter((x): x is { label: string; href: string; external?: boolean } => x !== null);
+/**
+ * Suivi des tickets — ajouté depuis la configuration, pas depuis
+ * l'admin.
+ *
+ * C'est une adresse d'infrastructure : elle change le jour où l'on
+ * change de service, pas au gré d'une décision éditoriale. La saisir
+ * dans Payload aurait mis une donnée de déploiement dans la base de
+ * contenu, et obligé à la retaper sur chaque environnement.
+ *
+ * Absente, le lien ne s'affiche pas : un service qu'on n'a pas encore
+ * ne doit pas laisser d'entrée morte dans le pied.
+ */
+const ticketing = (process.env.TICKETING_URL ?? '').trim();
+const navCoulisses =
+  ticketing && !coulissesSaisies.some((l) => l.href === ticketing)
+    ? [...coulissesSaisies, { label: 'Suivi des tickets', href: ticketing, external: true }]
+    : coulissesSaisies;
+
+// Un paragraphe par ligne saisie dans l'admin, plutôt qu'un seul bloc
+// laissé à `white-space: pre-line`. Deux raisons : ce sont deux énoncés
+// distincts — ce que fait l'association, puis comment le site est servi
+// — donc deux paragraphes est le balisage juste ; et la variante CSS
+// n'a pas fonctionné ici, la déclaration disparaissant de la feuille
+// compilée alors que le reste de la même règle s'appliquait.
+const baselineLignes = baseline
+  .split(/\r?\n/)
+  .map((l) => l.trim())
+  .filter(Boolean);
+
+// Les cinq formats, dans l'ordre éditorial, lus depuis la table qui fait
+// déjà autorité sur leurs libellés et leurs racines d'URL.
+const formatLinks = PUBLICATION_ORDER.map((c) => ({
+  label: PUBLICATIONS[c].labelPlural,
+  href: `${PUBLICATIONS[c].routePrefix}/`,
+}));
+
+/**
+ * Intitulé de colonne. En <h2> et non en <h4> : il suit un <h2> de la
+ * page, et sauter deux niveaux fait perdre le fil à qui parcourt le
+ * document par ses titres — axe le signalait sur vingt-huit pages sur
+ * trente et une, le pied étant partout.
+ *
+ * Mono largement interlettré, comme « À LA UNE », « AU SOMMAIRE » et
+ * « LA LETTRE » plus haut. C’était du sans demi-gras à 0,08 em : le pied
+ * était le seul endroit du site où une étiquette de section parlait une
+ * autre langue typographique.
+ */
+const INTITULE =
+  'text-muted m-0 mb-3.5 font-mono text-label font-normal tracking-label uppercase';
+
+/**
+ * Le bleu de famille au survol, comme le filet de l’onglet actif du
+ * header. C’était --color-accent, le violet pilotable depuis l’admin, qui
+ * jure avec la palette de l’accueil.
+ */
+const COLONNE_LIENS =
+  'grid gap-1.5 [&_a]:text-ink [&_a]:transition-colors [&_a]:duration-[120ms] [&_a:hover]:text-[var(--c-bleu-deep)]';
+
+const BASELINE =
+  'text-muted m-0 max-w-[460px] font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]';
+const MENTION = 'mono text-muted text-label';
 ---
 
-<footer class="site">
-  <div class="container">
-    <div class="grid">
+<footer class="bg-bg border-rule mt-(--block-gap) border-t pt-16 pb-14">
+  <div
+    class="max-mobile:px-(--page-gutter-narrow) mx-auto max-w-(--page-max) px-(--page-gutter)"
+  >
+    {
+      /* La signature garde deux parts, les trois colonnes de liens une
+        chacune. Passer de deux à trois colonnes de liens sans élargir la
+        première l’aurait écrasée : la baseline s’y hachait en lignes de
+        quatre mots. */
+    }
+    <div
+      class="text-ink max-mobile:grid-cols-[1fr] max-mobile:gap-8 grid grid-cols-[2fr_1fr_1fr_1fr] gap-x-10 gap-y-14 font-sans text-[calc(13px*var(--a11y-echelle))]"
+    >
       <div>
-        <div class="brand-foot">{siteName}<span class="dot">.</span></div>
-        <p>{baseline}</p>
-        <div class="mono copyright">{copyrightLine}</div>
-        <div class="mono version">Version : {gitTag}</div>
+        {
+          /* Même graphie que le wordmark du header : italique bas de casse
+            en graisse 400, point droit en jaune profond. Le pied affichait
+            jusqu’ici un « Tituba. » capitale droite demi-gras — deux
+            graphies du même nom sur une seule page. */
+        }
+        <div
+          class="mb-2.5 font-serif text-[calc(22px*var(--a11y-echelle))] font-normal tracking-[-0.01em] lowercase italic"
+        >
+          {siteName}<span class="text-[var(--c-jaune-deep)] not-italic">.</span>
+        </div>
+        {
+          /* Les deux lignes de baseline se serrent l’une contre l’autre :
+            elles forment un seul bloc de sens malgré les deux
+            paragraphes. */
+        }
+        {
+          baselineLignes.map((l, rang) => (
+            <p class:list={[BASELINE, rang > 0 && 'mt-1']}>{l}</p>
+          ))
+        }
+        <div class={MENTION + ' mt-6'}>{copyrightLine}</div>
+        <div class={MENTION + ' mt-1'}>Version : {gitTag}</div>
       </div>
       <div>
-        <h4>Naviguer</h4>
-        <div class="links">
-          {navFooter.map((link) => (
-            <a
-              href={link.href}
-              rel={link.external ? 'noopener' : undefined}
-            >
-              {link.label}
-            </a>
-          ))}
+        <h2 class={INTITULE}>Formats</h2>
+        <div class={COLONNE_LIENS}>
+          {formatLinks.map((link) => <a href={link.href}>{link.label}</a>)}
         </div>
       </div>
       <div>
-        <h4>S'abonner</h4>
-        <div class="links">
-          {socialLinks.map((link) => (
-            <a
-              href={link.href}
-              rel={link.external ? 'noopener' : undefined}
-            >
-              {link.label}
-            </a>
-          ))}
+        <h2 class={INTITULE}>Naviguer</h2>
+        <div class={COLONNE_LIENS}>
+          {
+            navFooter.map((link) => (
+              <a href={link.href} rel={link.external ? 'noopener' : undefined}>
+                {link.label}
+              </a>
+            ))
+          }
         </div>
       </div>
+      {
+        /* L’envers du site plutôt que son contenu. La colonne disparaît si
+          elle est vide — un titre seul ne vaut pas d’occuper un quart du
+          pied. */
+      }
+      {
+        navCoulisses.length > 0 && (
+          <div>
+            <h2 class={INTITULE}>Coulisses</h2>
+            <div class={COLONNE_LIENS}>
+              {navCoulisses.map((link) => (
+                <a
+                  href={link.href}
+                  rel={link.external ? 'noopener' : undefined}
+                  target={link.external ? '_blank' : undefined}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        )
+      }
     </div>
   </div>
 </footer>
-
-<style>
-  footer.site {
-    background: var(--color-bg);
-    border-top: 1px solid var(--color-rule);
-    margin-top: 80px;
-    padding: 64px 0 56px;
-  }
-  footer.site .container {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 0 80px;
-  }
-  footer.site .grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
-    gap: 56px;
-    font-family: var(--font-sans);
-    font-size: 13px;
-    color: var(--color-ink);
-  }
-  footer.site h4 {
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-muted);
-    margin: 0 0 12px;
-    font-weight: 600;
-  }
-  footer.site .links {
-    display: grid;
-    gap: 6px;
-  }
-  footer.site .links a {
-    color: var(--color-ink);
-    transition: color 0.12s;
-  }
-  footer.site .links a:hover {
-    color: var(--color-accent);
-  }
-  footer.site .brand-foot {
-    font-family: var(--font-serif);
-    font-size: 22px;
-    font-weight: 600;
-    margin-bottom: 8px;
-  }
-  footer.site .brand-foot .dot {
-    color: var(--color-accent);
-  }
-  footer.site p {
-    font-family: var(--font-serif);
-    font-size: 15px;
-    line-height: 1.55;
-    color: var(--color-muted);
-    margin: 0;
-    max-width: 460px;
-  }
-  footer.site .copyright {
-    font-size: 11px;
-    color: var(--color-accent);
-    margin-top: 24px;
-  }
-  footer.site .version {
-    font-size: 11px;
-    color: var(--color-muted);
-    margin-top: 4px;
-  }
-
-  @media (max-width: 900px) {
-    footer.site .container {
-      padding: 0 24px;
-    }
-    footer.site .grid {
-      grid-template-columns: 1fr;
-      gap: 32px;
-    }
-  }
-</style>

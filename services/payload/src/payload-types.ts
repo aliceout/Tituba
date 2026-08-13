@@ -67,8 +67,13 @@ export interface Config {
   };
   blocks: {};
   collections: {
-    posts: Post;
+    articles: Article;
+    analyses: Analysis;
+    actus: Actus;
+    podcasts: Podcast;
+    outils: Outil;
     themes: Theme;
+    series: Series;
     tags: Tag;
     bibliography: Bibliography;
     pages: Page;
@@ -82,8 +87,13 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
-    posts: PostsSelect<false> | PostsSelect<true>;
+    articles: ArticlesSelect<false> | ArticlesSelect<true>;
+    analyses: AnalysesSelect<false> | AnalysesSelect<true>;
+    actus: ActusSelect<false> | ActusSelect<true>;
+    podcasts: PodcastsSelect<false> | PodcastsSelect<true>;
+    outils: OutilsSelect<false> | OutilsSelect<true>;
     themes: ThemesSelect<false> | ThemesSelect<true>;
+    series: SeriesSelect<false> | SeriesSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
     bibliography: BibliographySelect<false> | BibliographySelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
@@ -102,14 +112,12 @@ export interface Config {
   globals: {
     site: Site;
     navigation: Navigation;
-    'index-pages': IndexPage;
     identity: Identity;
     subscriptions: Subscription;
   };
   globalsSelect: {
     site: SiteSelect<false> | SiteSelect<true>;
     navigation: NavigationSelect<false> | NavigationSelect<true>;
-    'index-pages': IndexPagesSelect<false> | IndexPagesSelect<true>;
     identity: IdentitySelect<false> | IdentitySelect<true>;
     subscriptions: SubscriptionsSelect<false> | SubscriptionsSelect<true>;
   };
@@ -143,20 +151,15 @@ export interface UserAuthOperations {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "posts".
+ * via the `definition` "articles".
  */
-export interface Post {
+export interface Article {
   id: number;
   /**
-   * Numéro de série du carnet — affiché « n° 042 » côté lecteur. Manuel et stable.
+   * Attribué à la création — c’est lui qui forme l’URL publique.
    */
-  numero: number;
+  publicId?: string | null;
   title: string;
-  /**
-   * URL-safe, ex : 'homonationalisme-diplomatie'. Sert à la route /billets/<slug>/.
-   */
-  slug: string;
-  type: 'analyse' | 'note' | 'fiche';
   /**
    * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
    */
@@ -166,7 +169,15 @@ export interface Post {
    */
   tags?: (number | Tag)[] | null;
   /**
-   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Carnet), choisir « Externe » et saisir le nom + rattachement.
+   * Facultatif. Ne sont proposées que les séries de ce format — une émission pour un podcast, une série d’articles pour un article.
+   */
+  series?: (number | null) | Series;
+  /**
+   * Laissez vide pour classer par date de publication. Ne le renseignez que si l’ordre de lecture diffère de l’ordre de parution.
+   */
+  seriesNumber?: number | null;
+  /**
+   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
    */
   authors?:
     | {
@@ -211,13 +222,17 @@ export interface Post {
    */
   bibliography?: (number | Bibliography)[] | null;
   /**
+   * Identifiant pérenne, si l'article est aussi déposé sur HAL, Zenodo ou une revue. Ex. « 10.5281/zenodo.1234567 ». Repris dans les exports de citation.
+   */
+  doi?: string | null;
+  /**
    * Calculé automatiquement depuis le corps au save.
    */
   readingTime?: number | null;
   /**
-   * Identifiant stable, dérivé de l’année et du numéro (ex : carnet:2026-042).
+   * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
    */
-  idCarnet?: string | null;
+  featured?: boolean | null;
   draft?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
@@ -270,11 +285,113 @@ export interface Tag {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "series".
+ */
+export interface Series {
+  id: number;
+  /**
+   * Ex : « Voix de la mer » pour une émission, « Homonationalismes » pour une série d’articles.
+   */
+  name: string;
+  /**
+   * Identifiant URL, ex : « voix-de-la-mer ». Forme l’adresse /series/<slug>/, définitivement.
+   */
+  slug: string;
+  /**
+   * Décide de ce qu’on peut ranger dans cette série, et du mot employé pour ses entrées. Non modifiable une fois la série créée.
+   */
+  format: 'podcasts' | 'articles' | 'analyses';
+  /**
+   * Ce dont traite la série dans son ensemble. Indépendantes de celles de ses billets, qui peuvent être plus précises.
+   */
+  themes?: (number | Theme)[] | null;
+  /**
+   * 2 à 4 phrases — en tête de la page de la série, et reprise comme description du flux pour une émission.
+   */
+  lede?: string | null;
+  /**
+   * Fond du hero des billets de la série. Pour une émission, elle sert aussi de couverture dans les applications d’écoute : carrée, entre 1400 et 3000 px de côté.
+   */
+  image?: (number | null) | Media;
+  /**
+   * Laissez vide pour reprendre les réglages du global Abonnements. Ne renseignez ici que ce qui doit différer pour cette émission.
+   */
+  feed?: {
+    /**
+     * À cocher si les épisodes de cette émission comportent des propos crus. Une omission peut faire retirer le flux.
+     */
+    explicit?: boolean | null;
+    /**
+     * Sert à Apple et Spotify pour vérifier que le flux est bien déposé par vous. Publique, puisque présente dans le flux.
+     */
+    ownerEmail?: string | null;
+  };
+  /**
+   * Tant que la case est cochée, la série n’a pas de page publique et son flux n’est pas publié.
+   */
+  draft?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  /**
+   * Affiché en légende ou en infobulle selon le contexte.
+   */
+  title: string;
+  /**
+   * Ce que décrit l’image pour qui ne la voit pas. Laissé vide sur un fichier audio, qui n’a rien à décrire.
+   */
+  alt?: string | null;
+  /**
+   * Rempli automatiquement pour les images importées depuis Unsplash.
+   */
+  unsplash?: {
+    photoId?: string | null;
+    photographerName?: string | null;
+    photographerProfileUrl?: string | null;
+    photoPageUrl?: string | null;
+  };
+  /**
+   * Zone visible en couverture. Réglée depuis le sélecteur de zone.
+   */
+  crop?: {
+    x?: number | null;
+    y?: number | null;
+    w?: number | null;
+    h?: number | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
 export interface User {
   id: number;
   displayName?: string | null;
+  /**
+   * Quelques phrases sur vous — parcours, terrain, sujets de travail. Affichées sur votre page publique, sous votre nom.
+   */
+  bio?: string | null;
+  /**
+   * Affiché en rond sur votre page publique. Cadré en carré au dépôt.
+   */
+  photo?: (number | null) | Media;
   /**
    * Format Chicago author-date « Nom, P. » utilisé pour vous dans le bloc « Pour citer » des billets que vous co-signez. Si vide, la signature est dérivée automatiquement du nom affiché.
    */
@@ -356,14 +473,16 @@ export interface Bibliography {
   type: 'book' | 'chapter' | 'article' | 'paper' | 'web' | 'other';
   year: number;
   /**
-   * Une ligne par personne (1er = auteur·ice principal·e, utilisé pour le tri et la citation courte). `firstName` peut rester vide pour les auteurs corporatifs (UNESCO, Conseil de l’Europe…).
+   * Une ligne par personne (1re = auteur·ice principal·e, utilisée pour le tri et la citation courte). Le prénom peut rester vide pour les auteurs collectifs (UNESCO, Conseil de l’Europe…). Laissez la liste vide pour un texte non signé.
    */
-  authors: {
-    lastName: string;
-    firstName?: string | null;
-    role: 'author' | 'editor' | 'translator';
-    id?: string | null;
-  }[];
+  authors?:
+    | {
+        lastName: string;
+        firstName?: string | null;
+        role: 'author' | 'editor' | 'translator';
+        id?: string | null;
+      }[]
+    | null;
   title: string;
   /**
    * Pour les livres : éditeur. Pour les articles : revue.
@@ -386,7 +505,7 @@ export interface Bibliography {
    */
   annotation?: string | null;
   /**
-   * Posée à la création — détermine si la ref est éditable au Carnet ou pilotée par Zotero.
+   * Posée à la création — détermine si la ref est éditable au Tituba ou pilotée par Zotero.
    */
   source: 'manual' | 'zotero';
   /**
@@ -408,11 +527,431 @@ export interface Bibliography {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "analyses".
+ */
+export interface Analysis {
+  id: number;
+  /**
+   * Attribué à la création — c’est lui qui forme l’URL publique.
+   */
+  publicId?: string | null;
+  title: string;
+  /**
+   * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
+   */
+  themes?: (number | Theme)[] | null;
+  /**
+   * Mots-clés libres, ajoutés à la volée depuis l’édition du billet. Différents des thèmes (qui sont structurants).
+   */
+  tags?: (number | Tag)[] | null;
+  /**
+   * Facultatif. Ne sont proposées que les séries de ce format — une émission pour un podcast, une série d’articles pour un article.
+   */
+  series?: (number | null) | Series;
+  /**
+   * Laissez vide pour classer par date de publication. Ne le renseignez que si l’ordre de lecture diffère de l’ordre de parution.
+   */
+  seriesNumber?: number | null;
+  /**
+   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
+   */
+  authors?:
+    | {
+        kind: 'user' | 'external';
+        user?: (number | null) | User;
+        /**
+         * Ex. « Aïcha Touré »
+         */
+        name?: string | null;
+        /**
+         * Optionnel, ex. « LATTS ».
+         */
+        affiliation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  publishedAt: string;
+  /**
+   * ~2-3 phrases — affichées en deck sous le titre.
+   */
+  lede: string;
+  /**
+   * Lexical — slash menu pour insérer des notes, citations longues, références biblio, figures.
+   */
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Références listées en pied du billet, dans l’ordre choisi ici. Cliquables depuis les biblio_inline du corps.
+   */
+  bibliography?: (number | Bibliography)[] | null;
+  /**
+   * Affichée à côté du titre en haut du billet. Sans image, la page garde son rendu actuel (titre pleine largeur).
+   */
+  image?: (number | null) | Media;
+  /**
+   * Calculé automatiquement depuis le corps au save.
+   */
+  readingTime?: number | null;
+  /**
+   * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
+   */
+  featured?: boolean | null;
+  draft?: boolean | null;
+  /**
+   * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
+   */
+  notificationsSentAt?: string | null;
+  /**
+   * Calculé automatiquement — vrai si le corps contient au moins une zone marquée brouillon. Filtrable depuis la liste des billets.
+   */
+  hasDraftZones?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "actus".
+ */
+export interface Actus {
+  id: number;
+  /**
+   * Attribué à la création — c’est lui qui forme l’URL publique.
+   */
+  publicId?: string | null;
+  title: string;
+  /**
+   * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
+   */
+  themes?: (number | Theme)[] | null;
+  /**
+   * Mots-clés libres, ajoutés à la volée depuis l’édition du billet. Différents des thèmes (qui sont structurants).
+   */
+  tags?: (number | Tag)[] | null;
+  /**
+   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
+   */
+  authors?:
+    | {
+        kind: 'user' | 'external';
+        user?: (number | null) | User;
+        /**
+         * Ex. « Aïcha Touré »
+         */
+        name?: string | null;
+        /**
+         * Optionnel, ex. « LATTS ».
+         */
+        affiliation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  publishedAt: string;
+  /**
+   * ~2-3 phrases — affichées en deck sous le titre.
+   */
+  lede: string;
+  /**
+   * Lexical — slash menu pour insérer des notes, citations longues, références biblio, figures.
+   */
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Références listées en pied du billet, dans l’ordre choisi ici. Cliquables depuis les biblio_inline du corps.
+   */
+  bibliography?: (number | Bibliography)[] | null;
+  /**
+   * Deux à quatre phrases factuelles : ce qui s’est passé, quand, décidé par qui. Affiché en colonne à côté du texte, pas dans le billet.
+   */
+  enBref?: string | null;
+  /**
+   * Les liens qui permettent de vérifier le fait résumé ci-dessus.
+   */
+  sources?:
+    | {
+        /**
+         * Ex : « Cour suprême du Royaume-Uni », « Le Monde ».
+         */
+        label: string;
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Facultative. Affichée en bandeau au-dessus du titre, et en vignette dans les listes.
+   */
+  image?: (number | null) | Media;
+  /**
+   * Calculé automatiquement depuis le corps au save.
+   */
+  readingTime?: number | null;
+  /**
+   * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
+   */
+  featured?: boolean | null;
+  draft?: boolean | null;
+  /**
+   * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
+   */
+  notificationsSentAt?: string | null;
+  /**
+   * Calculé automatiquement — vrai si le corps contient au moins une zone marquée brouillon. Filtrable depuis la liste des billets.
+   */
+  hasDraftZones?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "podcasts".
+ */
+export interface Podcast {
+  id: number;
+  /**
+   * Attribué à la création — c’est lui qui forme l’URL publique.
+   */
+  publicId?: string | null;
+  title: string;
+  /**
+   * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
+   */
+  themes?: (number | Theme)[] | null;
+  /**
+   * Mots-clés libres, ajoutés à la volée depuis l’édition du billet. Différents des thèmes (qui sont structurants).
+   */
+  tags?: (number | Tag)[] | null;
+  /**
+   * Facultatif. Ne sont proposées que les séries de ce format — une émission pour un podcast, une série d’articles pour un article.
+   */
+  series?: (number | null) | Series;
+  /**
+   * Laissez vide pour classer par date de publication. Ne le renseignez que si l’ordre de lecture diffère de l’ordre de parution.
+   */
+  seriesNumber?: number | null;
+  /**
+   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
+   */
+  authors?:
+    | {
+        kind: 'user' | 'external';
+        user?: (number | null) | User;
+        /**
+         * Ex. « Aïcha Touré »
+         */
+        name?: string | null;
+        /**
+         * Optionnel, ex. « LATTS ».
+         */
+        affiliation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  publishedAt: string;
+  /**
+   * ~2-3 phrases — affichées en deck sous le titre.
+   */
+  lede: string;
+  /**
+   * Lexical — slash menu pour insérer des notes, citations longues, références biblio, figures.
+   */
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Références listées en pied du billet, dans l’ordre choisi ici. Cliquables depuis les biblio_inline du corps.
+   */
+  bibliography?: (number | Bibliography)[] | null;
+  /**
+   * Épisode à déposer (mp3 de préférence). Il est servi depuis nos serveurs et alimente le lecteur du site comme le flux podcast.
+   */
+  audio?: (number | null) | Media;
+  /**
+   * Affichée à côté du titre en haut de l'épisode. Sans image, la page garde son rendu actuel (titre pleine largeur).
+   */
+  image?: (number | null) | Media;
+  /**
+   * Relevée dans le fichier au moment du dépôt.
+   */
+  durationSeconds?: number | null;
+  /**
+   * Personnes reçues dans l'épisode. Distinct des auteur·ices, qui signent la production.
+   */
+  guests?: string[] | null;
+  /**
+   * Calculé automatiquement depuis le corps au save.
+   */
+  readingTime?: number | null;
+  /**
+   * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
+   */
+  featured?: boolean | null;
+  draft?: boolean | null;
+  /**
+   * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
+   */
+  notificationsSentAt?: string | null;
+  /**
+   * Calculé automatiquement — vrai si le corps contient au moins une zone marquée brouillon. Filtrable depuis la liste des billets.
+   */
+  hasDraftZones?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "outils".
+ */
+export interface Outil {
+  id: number;
+  /**
+   * Attribué à la création — c’est lui qui forme l’URL publique.
+   */
+  publicId?: string | null;
+  title: string;
+  /**
+   * Taxonomie multivaluée — un billet peut appartenir à plusieurs thèmes.
+   */
+  themes?: (number | Theme)[] | null;
+  /**
+   * Mots-clés libres, ajoutés à la volée depuis l’édition du billet. Différents des thèmes (qui sont structurants).
+   */
+  tags?: (number | Tag)[] | null;
+  /**
+   * Au moins un·e. La première entrée est auto-remplie au create avec l’utilisateur·rice connecté·e. Pour les externes (collègues hors Tituba), choisir « Externe » et saisir le nom + rattachement.
+   */
+  authors?:
+    | {
+        kind: 'user' | 'external';
+        user?: (number | null) | User;
+        /**
+         * Ex. « Aïcha Touré »
+         */
+        name?: string | null;
+        /**
+         * Optionnel, ex. « LATTS ».
+         */
+        affiliation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  publishedAt: string;
+  /**
+   * ~2-3 phrases — affichées en deck sous le titre.
+   */
+  lede: string;
+  /**
+   * Lexical — slash menu pour insérer des notes, citations longues, références biblio, figures.
+   */
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Références listées en pied du billet, dans l’ordre choisi ici. Cliquables depuis les biblio_inline du corps.
+   */
+  bibliography?: (number | Bibliography)[] | null;
+  /**
+   * Les documents mis à disposition — PDF, ODT, tableur. C’est ce que l’outil sert à transmettre ; le texte du billet ne fait que les présenter. Un outil peut en réunir plusieurs : un guide et sa grille, un support et son corrigé.
+   */
+  resources: {
+    fichier: number | Media;
+    /**
+     * Une ou deux lignes sur ce que contient ce document, et à quoi il sert. Affichée sous son intitulé.
+     */
+    description?: string | null;
+    id?: string | null;
+  }[];
+  audience?: ('tous' | 'militantes' | 'pros' | 'structures') | null;
+  /**
+   * Calculé automatiquement depuis le corps au save.
+   */
+  readingTime?: number | null;
+  /**
+   * Affichée en grand en haut de l'accueil. Si plusieurs publications sont cochées, la plus récente l'emporte.
+   */
+  featured?: boolean | null;
+  draft?: boolean | null;
+  /**
+   * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
+   */
+  notificationsSentAt?: string | null;
+  /**
+   * Calculé automatiquement — vrai si le corps contient au moins une zone marquée brouillon. Filtrable depuis la liste des billets.
+   */
+  hasDraftZones?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages".
  */
 export interface Page {
   id: number;
+  /**
+   * Une page libre se crée et se supprime. Une page fixe titre une route existante du site (accueil, archives, thèmes, abonnement) — non modifiable.
+   */
+  kind?: ('libre' | 'fixe') | null;
+  /**
+   * Les *astérisques* surlignent un mot dans le hero, comme sur les titres de billets.
+   */
   title: string;
+  /**
+   * Décochée, la page disparaît du menu du site. Sa route continue d’exister — c’est le lien qui s’en va, pas la page.
+   */
+  enabled?: boolean | null;
+  /**
+   * Cochée, la page n’est plus servie sur le site — elle reste modifiable ici. À décocher pour la publier.
+   */
+  draft?: boolean | null;
   /**
    * URL-safe, ex : 'about', 'colophon', 'mentions-legales'. Sert de match de route Astro.
    */
@@ -463,6 +1002,34 @@ export interface Page {
             blockType: 'prose';
           }
         | {
+            /**
+             * La ligne toujours visible, sur laquelle on clique pour ouvrir. Obligatoire : sans elle, il n’y aurait rien à cliquer.
+             */
+            titre: string;
+            /**
+             * Coché, le contenu est visible dès l’arrivée sur la page — le bloc ne sert plus qu’à pouvoir le replier.
+             */
+            ouvert?: boolean | null;
+            content: {
+              root: {
+                type: string;
+                children: {
+                  type: any;
+                  version: number;
+                  [k: string]: unknown;
+                }[];
+                direction: ('ltr' | 'rtl') | null;
+                format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                indent: number;
+                version: number;
+              };
+              [k: string]: unknown;
+            };
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'depliant';
+          }
+        | {
             image?: (number | null) | Media;
             legende?: string | null;
             /**
@@ -491,29 +1058,6 @@ export interface Page {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: number;
-  /**
-   * Affiché en légende ou en infobulle selon le contexte.
-   */
-  title: string;
-  alt: string;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "subscribers".
  */
 export interface Subscriber {
@@ -524,8 +1068,9 @@ export interface Subscriber {
    */
   status: 'pending' | 'active' | 'unsubscribed';
   /**
-   * SHA-256 du token envoyé dans le mail de confirmation. Stocké en base, jamais affiché en clair. Effacé après confirmation.
+   * Choisi à l'inscription. Vide sur les inscriptions antérieures à ce champ, qui sont traitées comme « Chaque parution ». La lettre trimestrielle n'a pas encore d'outil d'envoi : la cocher n'envoie rien pour l'instant.
    */
+  rythmes?: ('newsletter' | 'publications')[] | null;
   confirmTokenHash?: string | null;
   confirmTokenExpiresAt?: string | null;
   subscribedAt?: string | null;
@@ -559,12 +1104,32 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: 'posts';
-        value: number | Post;
+        relationTo: 'articles';
+        value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'analyses';
+        value: number | Analysis;
+      } | null)
+    | ({
+        relationTo: 'actus';
+        value: number | Actus;
+      } | null)
+    | ({
+        relationTo: 'podcasts';
+        value: number | Podcast;
+      } | null)
+    | ({
+        relationTo: 'outils';
+        value: number | Outil;
       } | null)
     | ({
         relationTo: 'themes';
         value: number | Theme;
+      } | null)
+    | ({
+        relationTo: 'series';
+        value: number | Series;
       } | null)
     | ({
         relationTo: 'tags';
@@ -634,13 +1199,77 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "posts_select".
+ * via the `definition` "articles_select".
  */
-export interface PostsSelect<T extends boolean = true> {
-  numero?: T;
+export interface ArticlesSelect<T extends boolean = true> {
+  publicId?: T;
   title?: T;
-  slug?: T;
-  type?: T;
+  themes?: T;
+  tags?: T;
+  series?: T;
+  seriesNumber?: T;
+  authors?:
+    | T
+    | {
+        kind?: T;
+        user?: T;
+        name?: T;
+        affiliation?: T;
+        id?: T;
+      };
+  publishedAt?: T;
+  lede?: T;
+  body?: T;
+  bibliography?: T;
+  doi?: T;
+  readingTime?: T;
+  featured?: T;
+  draft?: T;
+  notificationsSentAt?: T;
+  hasDraftZones?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "analyses_select".
+ */
+export interface AnalysesSelect<T extends boolean = true> {
+  publicId?: T;
+  title?: T;
+  themes?: T;
+  tags?: T;
+  series?: T;
+  seriesNumber?: T;
+  authors?:
+    | T
+    | {
+        kind?: T;
+        user?: T;
+        name?: T;
+        affiliation?: T;
+        id?: T;
+      };
+  publishedAt?: T;
+  lede?: T;
+  body?: T;
+  bibliography?: T;
+  image?: T;
+  readingTime?: T;
+  featured?: T;
+  draft?: T;
+  notificationsSentAt?: T;
+  hasDraftZones?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "actus_select".
+ */
+export interface ActusSelect<T extends boolean = true> {
+  publicId?: T;
+  title?: T;
   themes?: T;
   tags?: T;
   authors?:
@@ -656,8 +1285,91 @@ export interface PostsSelect<T extends boolean = true> {
   lede?: T;
   body?: T;
   bibliography?: T;
+  enBref?: T;
+  sources?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        id?: T;
+      };
+  image?: T;
   readingTime?: T;
-  idCarnet?: T;
+  featured?: T;
+  draft?: T;
+  notificationsSentAt?: T;
+  hasDraftZones?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "podcasts_select".
+ */
+export interface PodcastsSelect<T extends boolean = true> {
+  publicId?: T;
+  title?: T;
+  themes?: T;
+  tags?: T;
+  series?: T;
+  seriesNumber?: T;
+  authors?:
+    | T
+    | {
+        kind?: T;
+        user?: T;
+        name?: T;
+        affiliation?: T;
+        id?: T;
+      };
+  publishedAt?: T;
+  lede?: T;
+  body?: T;
+  bibliography?: T;
+  audio?: T;
+  image?: T;
+  durationSeconds?: T;
+  guests?: T;
+  readingTime?: T;
+  featured?: T;
+  draft?: T;
+  notificationsSentAt?: T;
+  hasDraftZones?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "outils_select".
+ */
+export interface OutilsSelect<T extends boolean = true> {
+  publicId?: T;
+  title?: T;
+  themes?: T;
+  tags?: T;
+  authors?:
+    | T
+    | {
+        kind?: T;
+        user?: T;
+        name?: T;
+        affiliation?: T;
+        id?: T;
+      };
+  publishedAt?: T;
+  lede?: T;
+  body?: T;
+  bibliography?: T;
+  resources?:
+    | T
+    | {
+        fichier?: T;
+        description?: T;
+        id?: T;
+      };
+  audience?: T;
+  readingTime?: T;
+  featured?: T;
   draft?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
@@ -672,6 +1384,27 @@ export interface ThemesSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
   description?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "series_select".
+ */
+export interface SeriesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  format?: T;
+  themes?: T;
+  lede?: T;
+  image?: T;
+  feed?:
+    | T
+    | {
+        explicit?: T;
+        ownerEmail?: T;
+      };
+  draft?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -724,7 +1457,10 @@ export interface BibliographySelect<T extends boolean = true> {
  * via the `definition` "pages_select".
  */
 export interface PagesSelect<T extends boolean = true> {
+  kind?: T;
   title?: T;
+  enabled?: T;
+  draft?: T;
   slug?: T;
   description?: T;
   noindex?: T;
@@ -737,6 +1473,15 @@ export interface PagesSelect<T extends boolean = true> {
           | T
           | {
               titre?: T;
+              content?: T;
+              id?: T;
+              blockName?: T;
+            };
+        depliant?:
+          | T
+          | {
+              titre?: T;
+              ouvert?: T;
               content?: T;
               id?: T;
               blockName?: T;
@@ -769,6 +1514,8 @@ export interface PagesSelect<T extends boolean = true> {
  */
 export interface UsersSelect<T extends boolean = true> {
   displayName?: T;
+  bio?: T;
+  photo?: T;
   citationFormat?: T;
   role?: T;
   status?: T;
@@ -830,6 +1577,22 @@ export interface UsersSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   title?: T;
   alt?: T;
+  unsplash?:
+    | T
+    | {
+        photoId?: T;
+        photographerName?: T;
+        photographerProfileUrl?: T;
+        photoPageUrl?: T;
+      };
+  crop?:
+    | T
+    | {
+        x?: T;
+        y?: T;
+        w?: T;
+        h?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -849,6 +1612,7 @@ export interface MediaSelect<T extends boolean = true> {
 export interface SubscribersSelect<T extends boolean = true> {
   email?: T;
   status?: T;
+  rythmes?: T;
   confirmTokenHash?: T;
   confirmTokenExpiresAt?: T;
   subscribedAt?: T;
@@ -909,13 +1673,13 @@ export interface Site {
      */
     accentColor?: ('#5a3a7a' | '#8a3a3a' | '#1f3a5a' | '#3a3a3a' | '#2d5a3d') | null;
     /**
-     * Teinte de fond du Carnet — appliquée au body et aux zones neutres (header, footer, fond des billets, fond admin).
+     * Teinte de fond de Tituba — appliquée au body et aux zones neutres (header, footer, fond des billets, fond admin).
      */
     backgroundColor?: ('#f6f5f1' | '#fdfcf8' | '#ffffff' | '#f1efe8' | '#eee9dd' | '#e9eaec') | null;
   };
   reading?: {
     /**
-     * Le mode classique empile les notes en bas du billet (style académique). Le mode en marge les place dans une colonne à droite, alignée sur le paragraphe qui les appelle (style « Tufte »). S'applique uniformément à tous les billets du Carnet. Cf issue #6.
+     * Le mode classique empile les notes en bas du billet (style académique). Le mode en marge les place dans une colonne à droite, alignée sur le paragraphe qui les appelle (style « Tufte »). S'applique uniformément à tous les publications de Tituba. Cf issue #6.
      */
     notesMode?: ('classic' | 'sidenotes') | null;
   };
@@ -953,67 +1717,17 @@ export interface Navigation {
         id?: string | null;
       }[]
     | null;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "index-pages".
- */
-export interface IndexPage {
-  id: number;
-  home?: {
-    /**
-     * H1 de la page d'accueil. Entourer une portion de "*" pour la mettre en italique.
-     */
-    heroTitle?: string | null;
-    /**
-     * Paragraphe sous le titre de la page d'accueil.
-     */
-    heroLede?: string | null;
-  };
-  archives?: {
-    /**
-     * Si décochée, /archives/ renvoie 404.
-     */
-    enabled?: boolean | null;
-    /**
-     * H1 de la page /archives/. Entourer une portion de "*" pour la mettre en italique.
-     */
-    heroTitle?: string | null;
-    /**
-     * Paragraphe sous le titre de /archives/.
-     */
-    heroLede?: string | null;
-  };
-  themes?: {
-    /**
-     * Si décochée, /themes/ et /theme/<slug>/ renvoient 404.
-     */
-    enabled?: boolean | null;
-    /**
-     * H1 de la page /themes/. Entourer une portion de "*" pour la mettre en italique (ex. *thèmes*).
-     */
-    heroTitle?: string | null;
-    /**
-     * Paragraphe sous le titre de /themes/.
-     */
-    heroLede?: string | null;
-  };
-  subscribe?: {
-    /**
-     * Si décochée, /abonnement/ renvoie 404.
-     */
-    enabled?: boolean | null;
-    /**
-     * H1 de la page /abonnement/. Entourer une portion de "*" pour la mettre en italique.
-     */
-    heroTitle?: string | null;
-    /**
-     * Paragraphe sous le titre de /abonnement/.
-     */
-    heroLede?: string | null;
-  };
+  /**
+   * L’envers du site plutôt que son contenu : l’administration, le suivi des tickets, le formulaire de contact. Un lien sans adresse ne s’affiche pas — laissez-la vide tant que le service n’existe pas.
+   */
+  navFooterCoulisses?:
+    | {
+        label: string;
+        href: string;
+        external?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1028,7 +1742,7 @@ export interface Identity {
    */
   siteName?: string | null;
   /**
-   * Nom du laboratoire de recherche, de la personne, du collectif… selon l'utilisation du carnet. Affiché en signature dans la baseline du footer et la description meta.
+   * Nom du laboratoire de recherche, de la personne, du collectif… selon l'utilisation du site. Affiché en signature dans la baseline du footer et la description meta.
    */
   authorName?: string | null;
   /**
@@ -1039,6 +1753,10 @@ export interface Identity {
    * Footer (col 1, sous la baseline, en mono).
    */
   copyrightLine?: string | null;
+  /**
+   * Adresse à laquelle arrivent les messages du formulaire de contact. Elle n’apparaît jamais sur le site — c’est tout l’intérêt du formulaire. Sans elle, le formulaire refuse les envois et le dit : mieux vaut une panne visible qu’un message tombé dans une boîte que personne ne relève.
+   */
+  contactEmail?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1056,6 +1774,18 @@ export interface Subscription {
    * Si décoché : le formulaire d'inscription disparaît de /abonnement/ et aucun mail n'est envoyé à la publication des nouveaux billets — même pour les abonné·es déjà actif·ves (qui ne sont pas supprimé·es pour autant : on peut réactiver plus tard).
    */
   emailEnabled?: boolean | null;
+  /**
+   * Image carrée, entre 1400 et 3000 px de côté. Affichée comme vignette dans les applications d’écoute.
+   */
+  podcastCover?: (number | null) | Media;
+  /**
+   * À cocher si les épisodes comportent des propos crus. Déclaration obligatoire : une omission peut faire retirer le flux.
+   */
+  podcastExplicit?: boolean | null;
+  /**
+   * Sert à Apple et Spotify pour vérifier que le flux est bien déposé par vous. Non affichée sur le site, mais présente dans le flux, donc publique.
+   */
+  podcastOwnerEmail?: string | null;
   /**
    * URL complète du profil Mastodon.
    */
@@ -1122,41 +1852,13 @@ export interface NavigationSelect<T extends boolean = true> {
         external?: T;
         id?: T;
       };
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "index-pages_select".
- */
-export interface IndexPagesSelect<T extends boolean = true> {
-  home?:
+  navFooterCoulisses?:
     | T
     | {
-        heroTitle?: T;
-        heroLede?: T;
-      };
-  archives?:
-    | T
-    | {
-        enabled?: T;
-        heroTitle?: T;
-        heroLede?: T;
-      };
-  themes?:
-    | T
-    | {
-        enabled?: T;
-        heroTitle?: T;
-        heroLede?: T;
-      };
-  subscribe?:
-    | T
-    | {
-        enabled?: T;
-        heroTitle?: T;
-        heroLede?: T;
+        label?: T;
+        href?: T;
+        external?: T;
+        id?: T;
       };
   updatedAt?: T;
   createdAt?: T;
@@ -1171,6 +1873,7 @@ export interface IdentitySelect<T extends boolean = true> {
   authorName?: T;
   baseline?: T;
   copyrightLine?: T;
+  contactEmail?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
@@ -1182,6 +1885,9 @@ export interface IdentitySelect<T extends boolean = true> {
 export interface SubscriptionsSelect<T extends boolean = true> {
   rssEnabled?: T;
   emailEnabled?: T;
+  podcastCover?: T;
+  podcastExplicit?: T;
+  podcastOwnerEmail?: T;
   mastodon?: T;
   bluesky?: T;
   orcid?: T;

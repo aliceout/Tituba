@@ -1,0 +1,208 @@
+{
+  "globals": {
+    "identity": {
+      "siteName": "Tituba",
+      "authorName": "Association TITUBA",
+      "baseline": "Association féministe intersectionnelle. Publications sur le genre : articles de recherche, analyses, actus, podcasts et outils. Auto-hébergé. Sans pisteur.",
+      "copyrightLine": "CC BY-NC-SA 4.0",
+      "contactEmail": "contact@tituba.org"
+    },
+    "site": {
+      "branding": {
+        "accentColor": "#1f3a5a",
+        "backgroundColor": "#fdfcf8"
+      },
+      "reading": {
+        "notesMode": "classic"
+      }
+    },
+    "subscriptions": {
+      "rssEnabled": true,
+      "emailEnabled": true,
+      "podcastExplicit": false
+    }
+  },
+  "navigation": {
+    "navHeader": [
+      {
+        "kind": "editorial",
+        "blockType": "navItem",
+        "pageSlug": "association"
+      },
+      {
+        "kind": "index",
+        "indexTarget": "subscribe",
+        "blockType": "navItem"
+      },
+      {
+        "kind": "index",
+        "indexTarget": "themes",
+        "blockType": "navItem"
+      }
+    ],
+    "navFooter": [
+      {
+        "label": "Formats",
+        "href": "/formats/",
+        "external": false
+      },
+      {
+        "label": "Thèmes",
+        "href": "/themes/",
+        "external": false
+      },
+      {
+        "label": "Auteur·ices",
+        "href": "/auteurices/",
+        "external": false
+      },
+      {
+        "label": "Mots-clés",
+        "href": "/tags/",
+        "external": false
+      },
+      {
+        "label": "Archives",
+        "href": "/archives/",
+        "external": false
+      }
+    ],
+    "navFooterCoulisses": [
+      {
+        "label": "Nous rejoindre",
+        "href": "/nous-rejoindre/",
+        "external": false
+      },
+      {
+        "label": "Nous écrire",
+        "href": "/contact/",
+        "external": false
+      },
+      {
+        "label": "Admin",
+        "href": "/cms/admin",
+        "external": false
+      }
+    ]
+  },
+  "pages": [
+    {
+      "kind": "fixe",
+      "title": "Toutes les publications, par année.",
+      "enabled": true,
+      "draft": false,
+      "slug": "archives",
+      "noindex": false,
+      "lede": "Chaque publication porte un numéro, une date de publication et, le cas échéant, une date de mise à jour."
+    },
+    {
+      "kind": "libre",
+      "slug": "association",
+      "title": "L’association",
+      "enabled": true,
+      "draft": true
+    },
+    {
+      "kind": "libre",
+      "slug": "charte",
+      "title": "Charte",
+      "enabled": true,
+      "draft": true
+    },
+    {
+      "kind": "fixe",
+      "title": "Cinq *formats*, une même exigence.",
+      "enabled": true,
+      "draft": false,
+      "slug": "formats",
+      "noindex": false,
+      "lede": "Un texte long avec son appareil de notes n'appelle pas la même lecture qu'un rebond d'actualité ou qu'un kit d'animation. Chaque format a sa place, ses codes et sa page."
+    },
+    {
+      "kind": "fixe",
+      "title": "Le genre aux prismes *féministe*, *décoloniaux*, et *intersectionnels* — recherches, analyses, ressources.",
+      "enabled": true,
+      "draft": false,
+      "slug": "home",
+      "noindex": false,
+      "lede": "Association loi 1901 fondée à Paris en octobre 2024. Nous construisons un espace de ressources en accès libre autour d'une conviction : les inégalités structurelles se nouent ensemble — orientation sexuelle, construction sociale de la race, classe, colonialité — et ne se démêlent pas une à une. Dix thématiques, cinq formats, rien derrière un mur payant."
+    },
+    {
+      "kind": "libre",
+      "slug": "nous-rejoindre",
+      "title": "Nous rejoindre",
+      "enabled": true,
+      "draft": true
+    },
+    {
+      "kind": "fixe",
+      "title": "*S'abonner* aux billets",
+      "enabled": true,
+      "draft": false,
+      "slug": "subscribe",
+      "noindex": false,
+      "lede": "Plusieurs façons de recevoir les nouveaux billets : sur les réseaux où l'autrice est présente, ou via un flux RSS — sans algorithme, sans publicité, sans pisteur."
+    },
+    {
+      "kind": "fixe",
+      "title": "Nos *thématiques*.",
+      "enabled": true,
+      "draft": false,
+      "slug": "themes",
+      "noindex": false,
+      "lede": "Chaque publication est rattachée à une ou plusieurs thématiques. La taxonomie est libre et évolue avec nos travaux."
+    }
+  ],
+  "themes": [
+    {
+      "name": "Écoféminismes",
+      "slug": "ecofeminismes",
+      "description": "Croisements entre justice de genre et justice environnementale."
+    },
+    {
+      "name": "Genre et DSSR",
+      "slug": "genre-dssr",
+      "description": "Droits et santé sexuels et reproductifs, ici et ailleurs."
+    },
+    {
+      "name": "Genre et exil",
+      "slug": "genre-exil",
+      "description": "Persécutions liées au genre, asile, statut de réfugié·e LGBTQI+."
+    },
+    {
+      "name": "Genre et justice",
+      "slug": "genre-justice",
+      "description": "Justice pénale, justice transitionnelle, accès au droit."
+    },
+    {
+      "name": "Genre et mer",
+      "slug": "genre-mer",
+      "description": "Pêche, marine, littoraux, économie bleue : ce que le genre y joue."
+    },
+    {
+      "name": "Genre et politiques",
+      "slug": "genre-politiques",
+      "description": "Politiques publiques d'égalité, mouvements anti-genre, rapports de force institutionnels."
+    },
+    {
+      "name": "Genre et RI",
+      "slug": "genre-ri",
+      "description": "Le genre comme opérateur des relations internationales — et inversement."
+    },
+    {
+      "name": "Genre & solidarité internationale",
+      "slug": "genre-solidarite-internationale",
+      "description": "Angles morts de l'aide, du développement et de l'action humanitaire."
+    },
+    {
+      "name": "Genre et tech",
+      "slug": "genre-tech",
+      "description": "Technologies, données, plateformes : reproduction et contestation des rapports de genre."
+    },
+    {
+      "name": "Violences sexistes et sexuelles",
+      "slug": "violences-sexistes-sexuelles",
+      "description": "Prévention, prise en charge, responsabilité des institutions."
+    }
+  ]
+}

@@ -2,17 +2,26 @@
 /**
  * Page d'un thème individuel — /theme/<slug>/
  *
- * Hero spécifique au thème (kicker `Thème · #slug`, h1 du thème,
- * description éditoriale, compteur + lien retour vers la vue
- * d'ensemble), puis le même flux d'items que l'accueil filtré
- * sur ce thème.
+ * Hero spécifique au thème (h1 du thème, description éditoriale,
+ * compteur + lien retour vers la vue d'ensemble), puis le même flux
+ * d'items que l'accueil filtré sur ce thème.
  *
- * Réf : design_handoff_carnet/Carnet B.html → PolePage (single).
+ * Réf : design_handoff_tituba/Tituba B.html → PolePage (single).
  */
-import Layout from '../../layouts/Layout.astro';
-import Hero from '../../components/Hero.astro';
-import PostCard from '../../components/PostCard.astro';
-import { fetchBySlug, fetchCollection, fetchIndexPages, filterPublished } from '../../lib/payload';
+import PageShell from '../../components/ui/PageShell.astro';
+import PublicationCard from '../../components/PublicationCard.astro';
+import CardFilterBar from '../../components/CardFilterBar.astro';
+import Empty from '../../components/ui/Empty.astro';
+import { PUBLICATIONS, PUBLICATION_ORDER } from '../../lib/publications';
+import { fetchBySlug, fetchIndexPages } from '../../lib/payload';
+import { fetchFeed } from '../../lib/publications';
+// La description d'un thème est saisie dans un textarea et rendue par
+// PageTitle en `set:html` : elle doit être échappée, et ses retours à la
+// ligne convertis, sous peine de perdre les seconds et de laisser passer
+// le premier.
+import { formatHeroLede } from '../../lib/site';
+import type { FeedDoc } from '../../lib/payload';
+import { serviceIndisponible } from '../../lib/indisponible';
 
 type IndexPagesGlobal = { themes?: { enabled?: boolean } };
 
@@ -23,20 +32,7 @@ type Theme = {
   description?: string | null;
 };
 
-type ThemeRef = { id: number | string; slug: string; name: string };
-
-type Post = {
-  id: number | string;
-  numero: number;
-  slug: string;
-  title: string;
-  type: 'analyse' | 'note' | 'fiche';
-  themes?: ThemeRef[] | null;
-  publishedAt: string;
-  lede: string;
-  readingTime?: number | null;
-  draft?: boolean;
-};
+type Post = FeedDoc;
 
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect('/themes/');
@@ -53,102 +49,68 @@ try {
   /* Payload down — on continue, le toggle est best-effort. */
 }
 
-const theme = await fetchBySlug<Theme>('themes', slug);
+let theme: Theme | null;
+try {
+  theme = await fetchBySlug<Theme>('themes', slug);
+} catch (err) {
+  return serviceIndisponible('theme', err);
+}
 if (!theme) {
   return new Response('Thème introuvable', { status: 404 });
 }
 
 let posts: Post[] = [];
 try {
-  const raw = await fetchCollection<Post>('posts', {
-    where: [{ field: 'themes.slug', operator: 'equals', value: slug }],
-    sort: '-publishedAt',
-    limit: 500,
-    depth: 2,
-  });
-  posts = filterPublished(raw);
+  // Flux fusionné restreint à cette thématique : les cinq formats
+  // y apparaissent ensemble, triés par date.
+  const feed = await fetchFeed({ theme: slug, limit: 200 });
+  posts = feed.docs;
 } catch (err) {
   console.warn('[theme] posts fetch failed:', (err as Error).message);
 }
 
 const total = posts.length;
+
+// Formats réellement représentés sous cette thématique, dans l'ordre
+// éditorial. Un filtre vide n'aurait pas de sens ici non plus.
+const formatCounts = new Map<string, number>();
+for (const p of posts)
+  formatCounts.set(p.collection, (formatCounts.get(p.collection) ?? 0) + 1);
+const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((c) => ({
+  value: c,
+  label: PUBLICATIONS[c].labelPlural,
+  count: formatCounts.get(c) ?? 0,
+}));
 ---
 
-<Layout
+<PageShell
+  documentTitle={theme.name}
+  description={theme.description ??
+    `Toutes les publications de Tituba sur la thématique ${theme.name}.`}
   title={theme.name}
-  description={theme.description ?? `Tous les billets du Carnet sur le thème ${theme.name}.`}
+  lede={theme.description ? formatHeroLede(theme.description) : undefined}
+  famille="violet"
 >
-  <Hero
-    kicker={`Thème · #${theme.slug}`}
-    kickerVariant="mono"
-    title={theme.name}
-    lede={theme.description ?? undefined}
-  >
-    <div class="hero-bottom-meta">
-      <span>{total} billet{total > 1 ? 's' : ''}</span>
-      <span aria-hidden="true">·</span>
-      <a class="back mono" href="/themes/">← tous les thèmes</a>
-    </div>
-  </Hero>
+  <Fragment slot="sous-titre">
+    <CardFilterBar dimension="type" label="Format" options={formatOptions} total={total} />
+  </Fragment>
 
-  <section class="container feed">
-    {posts.length === 0 ? (
-      <p class="empty">Aucun billet sous ce thème pour l'instant.</p>
+  {
+    posts.length === 0 ? (
+      <Empty>Aucune publication sous cette thématique pour l'instant.</Empty>
     ) : (
       posts.map((p) => (
-        <PostCard
-          numero={p.numero}
-          slug={p.slug}
+        <PublicationCard
+          collection={p.collection}
+          docId={p.publicId}
           title={p.title}
-          type={p.type}
-          themes={p.themes}
+          themeSlugs={p.themeSlugs}
           publishedAt={p.publishedAt}
           lede={p.lede}
           readingTime={p.readingTime}
           showThemes={false}
         />
       ))
-    )}
-  </section>
-</Layout>
-
-<style>
-  .container {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 0 80px;
+    )
   }
-
-  /* Hero : centralisé dans src/components/Hero.astro. Le pied de hero
-     spécifique à cette page (compteur + back link) est passé via le
-     <slot> et stylé ci-dessous. */
-  .hero-bottom-meta {
-    font-family: var(--font-sans);
-    font-size: 13px;
-    color: var(--color-muted);
-    margin-top: 24px;
-    display: flex;
-    gap: 24px;
-    align-items: center;
-  }
-  .hero-bottom-meta .back {
-    color: var(--color-accent);
-    transition: color 0.12s;
-  }
-  .hero-bottom-meta .back:hover {
-    color: var(--color-ink);
-  }
-
-  .feed .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
-  }
-
-  @media (max-width: 900px) {
-    .container {
-      padding: 0 24px;
-    }
-  }
-</style>
+</PageShell>

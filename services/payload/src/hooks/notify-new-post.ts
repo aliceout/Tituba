@@ -55,7 +55,8 @@ function sendWithTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 type PostDoc = {
   id: number | string;
-  slug?: string | null;
+  /** Identifiant public court — celui qui forme l'URL du billet. */
+  publicId?: string | null;
   title?: string | null;
   lede?: string | null;
   draft?: boolean;
@@ -117,12 +118,25 @@ function formatByline(authors: PostAuthorEntry[] | null | undefined): string {
   return `par ${parts.slice(0, -1).join(', ')} et ${parts[parts.length - 1]}`;
 }
 
+/**
+ * Ce qui distingue une collection de publication d'une autre, du point
+ * de vue des mails d'alerte : où pointe le lien, et comment nommer le
+ * format dans le corps du message.
+ */
+type PublicationCtx = { slug: string; routePrefix: string; label: string };
+
 // Construction de l'URL publique du billet pour le lien dans le mail.
 // Convention Infisical : ADDRESS contient le domaine sans schème.
-function buildPostUrl(slug: string): string {
+//
+// Bâtie sur l'identifiant public, comme partout ailleurs depuis la
+// suppression des slugs. Le champ `slug` lu ici n'existait plus : la
+// condition de garde plus bas le trouvait donc toujours vide, et
+// l'envoi était abandonné pour tous les billets, avec pour seule trace
+// une ligne d'avertissement dans les logs du serveur.
+function buildPostUrl(routePrefix: string, publicId: string): string {
   const raw = process.env.ADDRESS || 'http://localhost:4321';
   const withScheme = /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
-  return `${withScheme.replace(/\/$/, '')}/billets/${slug}/`;
+  return `${withScheme.replace(/\/$/, '')}${routePrefix}/${publicId}/`;
 }
 
 async function isEmailFeatureEnabled(req: PayloadRequest): Promise<boolean> {
@@ -137,15 +151,45 @@ async function isEmailFeatureEnabled(req: PayloadRequest): Promise<boolean> {
 type Subscriber = {
   id: number | string;
   email: string;
+  rythmes?: string[] | null;
 };
+
+/**
+ * Est-ce que cette personne a demandé les parutions ?
+ *
+ * Le filtrage se fait ici et non dans la requête : une inscription
+ * antérieure au champ `rythmes` n'a rien d'enregistré, et elle recevait
+ * les parutions. Un `where` sur la valeur l'exclurait sans que rien ne
+ * le dise — c'est le genre de coupure qu'on ne découvre que le jour où
+ * quelqu'un signale ne plus rien recevoir. Vide vaut donc « parutions »,
+ * ce qui préserve exactement le comportement d'avant pour qui était déjà
+ * là.
+ *
+ * Personne ne reçoit encore la lettre trimestrielle : elle n'a pas
+ * d'outil d'envoi. Qui n'a coché qu'elle ne reçoit donc rien, et c'est
+ * bien ce qui a été demandé — plutôt que de lui envoyer chaque parution
+ * en faisant comme si.
+ */
+export function veutLesParutions(sub: Subscriber): boolean {
+  const rythmes = sub.rythmes;
+  if (!Array.isArray(rythmes) || rythmes.length === 0) return true;
+  return rythmes.includes('publications');
+}
 
 // Ne prend pas `req` mais `payload` : la tâche s'exécute après le
 // retour du hook (cf. setImmediate côté caller), il ne faut pas
 // dépendre d'un objet de requête potentiellement nettoyé. L'instance
 // `payload` est singleton et reste valide tant que le process tourne.
-async function dispatchPostNotifications(payload: Payload, post: PostDoc): Promise<void> {
-  if (!post.slug || !post.title) {
-    payload.logger.warn({ postId: post.id }, 'notify_new_post: missing slug/title, skipping');
+async function dispatchPostNotifications(
+  payload: Payload,
+  post: PostDoc,
+  ctx: PublicationCtx,
+): Promise<void> {
+  if (!post.publicId || !post.title) {
+    payload.logger.warn(
+      { postId: post.id },
+      'notify_new_post: publicId ou titre manquant, envoi abandonné',
+    );
     return;
   }
 
@@ -156,7 +200,7 @@ async function dispatchPostNotifications(payload: Payload, post: PostDoc): Promi
   let postFull: (PostDoc & PostRelations) = post;
   try {
     const fresh = (await payload.findByID({
-      collection: 'posts',
+      collection: ctx.slug as never,
       id: post.id,
       depth: 2,
       overrideAccess: true,
@@ -170,7 +214,7 @@ async function dispatchPostNotifications(payload: Payload, post: PostDoc): Promi
   }
 
   // Paginate-friendly : on récupère par batch de 500 active subs. Pour
-  // un Carnet typique on ne devrait pas dépasser quelques centaines de
+  // un Tituba typique on ne devrait pas dépasser quelques centaines de
   // subs. Si on dépasse, ajouter une boucle de pagination ici.
   const found = await payload.find({
     collection: 'subscribers',
@@ -179,16 +223,25 @@ async function dispatchPostNotifications(payload: Payload, post: PostDoc): Promi
     depth: 0,
     overrideAccess: true,
   });
-  const subs = found.docs as unknown as Subscriber[];
+  const actifs = found.docs as unknown as Subscriber[];
+  const subs = actifs.filter(veutLesParutions);
   if (subs.length === 0) {
     payload.logger.info({ postId: post.id }, 'notify_new_post: no active subscribers');
     return;
   }
+  if (subs.length < actifs.length) {
+    payload.logger.info(
+      { postId: post.id, retenus: subs.length, actifs: actifs.length },
+      'notify_new_post: abonné·es ne voulant que la lettre, écarté·es de cet envoi',
+    );
+  }
 
   const siteName = await getSiteName(payload);
-  const postUrl = buildPostUrl(post.slug);
+  const postUrl = buildPostUrl(ctx.routePrefix, post.publicId);
   const byline = formatByline(postFull.authors);
-  const typeLabel = postFull.type ? TYPE_LABEL[postFull.type] : '';
+  // Le format est désormais porté par la collection : son libellé vient
+  // du contexte, plutôt que d'un champ `type` sur le document.
+  const typeLabel = ctx.label;
   const themeNames = (postFull.themes ?? [])
     .map((t) => (t?.slug ?? t?.name ?? '').trim())
     .filter(Boolean);
@@ -243,7 +296,8 @@ async function dispatchPostNotifications(payload: Payload, post: PostDoc): Promi
   );
 }
 
-export const notifyNewPost: CollectionAfterChangeHook = async ({ doc, req }) => {
+export function makeNotifyNewPublication(ctx: PublicationCtx): CollectionAfterChangeHook {
+  return async ({ doc, req }) => {
   const post = doc as PostDoc;
 
   // Garde d'idempotence : déjà notifié → exit
@@ -269,11 +323,11 @@ export const notifyNewPost: CollectionAfterChangeHook = async ({ doc, req }) => 
   // l'update voit le row dans la même transaction.
   try {
     await req.payload.update({
-      collection: 'posts',
+      collection: ctx.slug as never,
       id: post.id,
       overrideAccess: true,
       req,
-      data: { notificationsSentAt: new Date().toISOString() },
+      data: { notificationsSentAt: new Date().toISOString() } as never,
     });
   } catch (err) {
     req.payload.logger.error(
@@ -293,7 +347,7 @@ export const notifyNewPost: CollectionAfterChangeHook = async ({ doc, req }) => 
   const payload = req.payload;
   const postSnapshot = post;
   setImmediate(() => {
-    dispatchPostNotifications(payload, postSnapshot).catch((err) => {
+    dispatchPostNotifications(payload, postSnapshot, ctx).catch((err) => {
       payload.logger.error(
         { err, postId: postSnapshot.id },
         'notify_new_post: dispatch failed',
@@ -301,5 +355,6 @@ export const notifyNewPost: CollectionAfterChangeHook = async ({ doc, req }) => 
     });
   });
 
-  return doc;
-};
+    return doc;
+  };
+}

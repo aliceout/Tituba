@@ -4,410 +4,243 @@
  * en accent), nav à droite (Inter 13px, muted → ink + filet 1.5px accent
  * sur l'item actif).
  *
- * Les onglets sont pilotés depuis Payload Navigation → navHeader (blocks
- * réordonnables). Trois types d'onglets intégrés (Archives, Thèmes,
- * Abonnement — câblés en dur ici car ce sont des routes Astro fixes avec
- * leur matchPaths) + pages éditoriales libres (relationship → Pages).
+ * La résolution de la nav (routes fixes + config Payload) vit dans
+ * lib/navigation.ts ; ce fichier ne fait plus que l'appeler et composer
+ * les sous-composants (NavDropdown, ThemeToggle, SearchLink).
  *
- * Le wordmark (`siteName`) vient du global Identity (siteName) — deux
- * globals donc deux fetchs.
- *
- * Si Payload est down ou que les globals sont vides, on retombe sur un
- * set par défaut (Archives, Thèmes, Abonnement) — équivalent au
- * comportement historique avant que le header soit configurable.
- *
- * Réf : design_handoff_carnet/Carnet B.html → header.site.
+ * Réf : design_handoff_tituba/Tituba B.html → header.site.
  */
-import { fetchIdentity, fetchIndexPages, fetchNavigation } from '../lib/payload';
+import { resolveHeaderNav } from '../lib/navigation';
+import { PUBLICATIONS, PUBLICATION_ORDER } from '../lib/publications';
+import FormatIcon from './FormatIcon.astro';
+import NavDropdown from './header/NavDropdown.astro';
+import ThemeToggle from './header/ThemeToggle.astro';
+import SearchLink from './header/SearchLink.astro';
 
-const pathname = Astro.url.pathname;
-
-type NavItem = { href: string; label: string; matchPaths: string[] };
-type IndexTarget = 'archives' | 'themes' | 'subscribe';
-
-// ─── Pages d'index (routes Astro fixes) ────────────────────────────
-// Mappées ici plutôt que côté Payload parce que le `matchPaths` (qui
-// détermine quand l'onglet est « actif ») dépend de la structure des
-// routes Astro — donc du code, pas du contenu.
-const INDEX_TARGETS: Record<IndexTarget, NavItem> = {
-  archives: { href: '/archives/', label: 'Archives', matchPaths: ['/archives'] },
-  themes: { href: '/themes/', label: 'Thèmes', matchPaths: ['/themes', '/theme'] },
-  subscribe: { href: '/abonnement/', label: 'Abonnement', matchPaths: ['/abonnement', '/rss'] },
-};
-
-const DEFAULT_NAV_ITEMS: NavItem[] = [
-  INDEX_TARGETS.archives,
-  INDEX_TARGETS.themes,
-  INDEX_TARGETS.subscribe,
-];
-
-// ─── Types côté globals (subset de payload-types) ──────────────────
-type PagePopulated = {
-  slug?: string;
-  title?: string;
-  eyebrow?: string | null;
-};
-type NavItemEntry = {
-  blockType: 'navItem';
-  kind?: 'index' | 'editorial';
-  indexTarget?: IndexTarget;
-  page?: PagePopulated | number | string | null;
-  label?: string | null;
-};
-type IdentityGlobal = { siteName?: string };
-type NavigationGlobal = {
-  navHeader?: Array<NavItemEntry | { blockType?: string }> | null;
-};
-type IndexPagesGlobal = {
-  archives?: { enabled?: boolean };
-  themes?: { enabled?: boolean };
-  subscribe?: { enabled?: boolean };
-};
-
-let siteName = 'Carnet';
-let items: NavItem[] = DEFAULT_NAV_ITEMS;
-let indexEnabled: Record<IndexTarget, boolean> = {
-  archives: true,
-  themes: true,
-  subscribe: true,
-};
-try {
-  const identity = await fetchIdentity<IdentityGlobal>();
-  siteName = identity.siteName?.trim() || siteName;
-} catch (err) {
-  console.warn('[header] fetchIdentity failed, using defaults:', (err as Error).message);
+interface Props {
+  /** Sur les pages article : le filet dégradé du bas laisse place à la
+   * barre de progression de lecture, plutôt que d'empiler les deux. */
+  progressBar?: boolean;
+  /**
+   * Escamote le filet dégradé, sans toucher à la barre de progression.
+   * Pour les pages dont le premier bloc est une image pleine largeur :
+   * le filet s'y lit comme un trait posé sur la photo, alors qu'il est
+   * fait pour marquer une ligne d'horizon sur du fond de page.
+   */
+  sansFilet?: boolean;
 }
-try {
-  const ip = await fetchIndexPages<IndexPagesGlobal>();
-  indexEnabled = {
-    archives: ip.archives?.enabled !== false,
-    themes: ip.themes?.enabled !== false,
-    subscribe: ip.subscribe?.enabled !== false,
-  };
-} catch (err) {
-  console.warn('[header] fetchIndexPages failed, using defaults:', (err as Error).message);
-}
-try {
-  const nav = await fetchNavigation<NavigationGlobal>();
-  const configured = nav.navHeader ?? [];
-  if (configured.length > 0) {
-    items = configured.flatMap((entry): NavItem[] => {
-      if (entry.blockType !== 'navItem') return [];
-      const e = entry as NavItemEntry;
-      if (e.kind === 'index') {
-        const target = e.indexTarget;
-        if (!target || !INDEX_TARGETS[target]) return [];
-        // Si la page d'index est désactivée (toggle off dans IndexPages),
-        // on saute silencieusement.
-        if (!indexEnabled[target]) return [];
-        // Override de libellé optionnel.
-        const base = INDEX_TARGETS[target];
-        const label = e.label?.trim() || base.label;
-        return [{ ...base, label }];
-      }
-      if (e.kind === 'editorial') {
-        // depth=1 → relationship populé en objet. Si la page a été
-        // supprimée mais l'entrée nav pas nettoyée, page = id orphelin :
-        // on skip silencieusement.
-        if (!e.page || typeof e.page !== 'object') return [];
-        const slug = e.page.slug;
-        if (!slug) return [];
-        const label =
-          e.label?.trim() ||
-          e.page.eyebrow?.trim() ||
-          e.page.title?.trim() ||
-          slug;
-        return [{ href: `/${slug}/`, label, matchPaths: [`/${slug}`] }];
-      }
-      return [];
-    });
-  } else {
-    // Pas de config → defaults filtrés par les enabled.
-    items = DEFAULT_NAV_ITEMS.filter((it) => {
-      const target = (Object.keys(INDEX_TARGETS) as IndexTarget[]).find(
-        (t) => INDEX_TARGETS[t] === it,
-      );
-      return target ? indexEnabled[target] : true;
-    });
-  }
-} catch (err) {
-  console.warn('[header] fetchNavigation failed, using defaults:', (err as Error).message);
-}
+const { progressBar = false, sansFilet = false } = Astro.props;
 
-// Recherche : rendue séparément en icône loupe à droite de la nav
-// (même placement et style que le theme-toggle), pas comme un lien
-// texte parmi les autres.
-const searchActive =
-  pathname === '/recherche' || pathname.startsWith('/recherche/');
+const nav = await resolveHeaderNav(Astro.url.pathname);
 
-function isActive(item: NavItem): boolean {
-  return item.matchPaths.some((p) => pathname === p || pathname.startsWith(p + '/'));
-}
+/**
+ * Le dégradé du filet, et le même repris par la barre de progression.
+ *
+ * Écrit deux fois en toutes lettres, et pas une fois dans une variable
+ * interpolée : Tailwind lit les sources comme du texte et ne génère que
+ * les classes qui y figurent entières. Une classe assemblée à
+ * l'exécution n'existerait dans aucune feuille.
+ */
+const FILET =
+  'after:bg-[linear-gradient(90deg,var(--c-bleu),var(--c-vert)_45%,var(--c-jaune)_80%)]';
+const BARRE = 'bg-[linear-gradient(90deg,var(--c-bleu),var(--c-vert)_45%,var(--c-jaune)_80%)]';
 
-// L'onglet « Billets » (home) reste toujours en première position,
-// hardcodé : c'est la racine du site, on ne le pilote pas depuis l'admin.
-const homeActive = pathname === '/' || pathname.startsWith('/billets');
+/**
+ * Un onglet du menu. L'état courant se lit sur `aria-current`, déjà posé
+ * pour les lecteurs d'écran : inutile de doubler d'une classe ce que
+ * l'attribut dit déjà.
+ *
+ * L'onglet actif ne peut plus se distinguer par la couleur, puisque tous
+ * sont en encre : il ne lui reste que le filet, en bleu de famille — le
+ * violet jurerait avec le dégradé trois pixels plus bas.
+ */
+const ONGLET = [
+  'text-ink pb-1 transition-opacity duration-[120ms] hover:opacity-60',
+  'aria-[current=page]:border-b-[1.5px] aria-[current=page]:border-[var(--c-bleu)] aria-[current=page]:font-semibold',
+].join(' ');
 ---
 
-<header class="site" id="site-header">
-  <div class="row">
-    <a class="brand" href="/">{siteName}<span class="dot">.</span></a>
-    <nav>
+{
+  /* `group` : l'état de défilement est posé sur le header par
+    sticky-header.client.ts, et le bandeau, la marque et la barre de
+    progression y réagissent chacun de leur côté.
+
+    Le filet traversant est en dégradé — bleu, vert, jaune — sans se caler
+    sur la gouttière : c'est ce qui en fait une ligne d'horizon plutôt
+    qu'une bordure de bloc. Points d'arrêt asymétriques (vert à 45 %, jaune
+    à 80 %) pour que ça ne se lise pas comme un drapeau. Il maigrit avec le
+    reste du bandeau, en nombres entiers (3 → 2 px) pour rester net sur un
+    écran sans densité.
+
+    Sur les pages à barre de progression, il reste affiché tant qu'on n'a
+    pas commencé à défiler — c'est au même seuil qu'il lui cède la place,
+    plutôt que d'empiler les deux dès le chargement. Sur une page à hero
+    pleine largeur, pas de filet du tout : la barre, elle, reste, c'est un
+    repère de lecture et pas un ornement. */
+}
+<header
+  class:list={[
+    'group bg-bg sticky top-0 z-10',
+    "after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:transition-[height] after:duration-[180ms] after:ease-[ease] after:content-['']",
+    FILET,
+    'data-[defile]:after:h-0.5',
+    progressBar && 'data-[defile]:after:hidden',
+    sansFilet && 'after:hidden',
+  ]}
+  id="site-header"
+>
+  {
+    /* Trois zones : logo, menus, boutons. Colonnes latérales en 1fr, donc
+      les menus tombent au centre de la page sans bouger quand le logo ou
+      les boutons changent de largeur. Sous 720 px la grille cède la place à
+      une colonne. */
+  }
+  <div
+    class="max-mobile:px-(--page-gutter-narrow) max-mobile:py-4 max-mobile:group-data-[defile]:py-2.5 max-poche:relative max-poche:flex max-poche:flex-col max-poche:items-start max-poche:gap-3 max-poche:px-6 max-poche:pt-[18px] max-poche:pb-3.5 max-poche:group-data-[defile]:py-2.5 mx-auto grid max-w-(--page-max) grid-cols-[1fr_auto_1fr] items-center px-(--page-gutter) py-6 transition-[padding] duration-[180ms] ease-[ease] group-data-[defile]:py-3"
+  >
+    <div class="flex items-center gap-[22px] justify-self-start">
+      {
+        /* Wordmark en Fraunces italique bas de casse, posée en style et non
+          dans le contenu : le nom reste « Tituba » pour un lecteur d'écran,
+          l'onglet et les métadonnées de partage. Graisse 400 : à l'italique
+          de Fraunces, c'est déjà un caractère fort.
+
+          Le point est le seul élément de marque coloré du header, et le seul
+          caractère droit du mot — deux écarts sur un demi-cadratin, ce qui le
+          fait lire comme une signature. */
+      }
       <a
+        class="text-ink font-serif text-[calc(24px*var(--a11y-echelle))] leading-none font-normal tracking-[-0.01em] lowercase italic transition-[opacity,font-size] duration-[120ms] ease-[ease] group-data-[defile]:text-[calc(20px*var(--a11y-echelle))] hover:opacity-70"
         href="/"
-        class:list={[{ active: homeActive }]}
-        aria-current={homeActive ? 'page' : undefined}
       >
-        Billets
+        {nav.siteName}<span class="text-[var(--c-jaune-deep)] not-italic">.</span>
       </a>
-      {items.map((item) => (
-        <a
-          href={item.href}
-          class:list={[{ active: isActive(item) }]}
-          aria-current={isActive(item) ? 'page' : undefined}
-        >
-          {item.label}
-        </a>
-      ))}
-      {/* Recherche : icône loupe à droite des liens texte. Comportement
-          visuel identique au theme-toggle (bouton-icône discret), avec
-          un état actif qui souligne en accent quand on est sur la page. */}
-      <a
-        href="/recherche/"
-        class:list={['nav-icon', 'search-link', { active: searchActive }]}
-        aria-label="Rechercher dans le carnet"
-        title="Rechercher"
-        aria-current={searchActive ? 'page' : undefined}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7"/>
-          <path d="m20 20-3.5-3.5"/>
-        </svg>
+    </div>
+    {
+      /* Centré sur l'axe et non sur la ligne de base : un bouton-icône sans
+        ligne de base texte se retrouverait deux ou trois pixels plus haut. */
+    }
+    <nav
+      class="max-poche:flex-wrap max-poche:gap-[18px] flex items-center gap-8 justify-self-center font-sans text-[calc(14px*var(--a11y-echelle))] font-medium"
+    >
+      <a href="/" class={ONGLET} aria-current={nav.homeActive ? 'page' : undefined}>
+        Accueil
       </a>
+
+      {
+        /* Onglets pilotés depuis Payload (Navigation → navHeader). Ils
+          viennent juste après « Accueil », donc avant les deux menus
+          déroulants : ce sont des destinations, alors que « Formats » et
+          « Thématiques » n'ouvrent qu'une liste. */
+      }
+      {
+        nav.itemsAvant.map((item) => (
+          <a
+            href={item.href}
+            class={ONGLET}
+            aria-current={nav.isActive(item) ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+
+      {
+        nav.navThemes.length > 0 && (
+          <NavDropdown label="Thématiques" active={nav.themesActive} panelId="menu-themes">
+            {nav.navThemes.map((t) => (
+              <a href={`/theme/${t.slug}/`}>{t.name}</a>
+            ))}
+            <a slot="footer" href="/themes/">
+              Voir toutes les thématiques →
+            </a>
+          </NavDropdown>
+        )
+      }
+
+      <NavDropdown label="Formats" active={nav.formatsActive} panelId="menu-formats">
+        {
+          PUBLICATION_ORDER.map((c) => (
+            <a href={`${PUBLICATIONS[c].routePrefix}/`}>
+              <FormatIcon collection={c} />
+              {PUBLICATIONS[c].labelPlural}
+            </a>
+          ))
+        }
+        {
+          /* Même pied que le menu des thématiques : les cinq entrées mènent
+            chacune à un format, celle-ci à la page qui les présente tous. */
+        }
+        <a slot="footer" href="/formats/">Voir tous les formats →</a>
+      </NavDropdown>
+
+      {
+        nav.itemsApres.map((item) => (
+          <a
+            href={item.href}
+            class={ONGLET}
+            aria-current={nav.isActive(item) ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    {
+      /* Boutons-icônes sortis du <nav> : ils forment la troisième zone de la
+        grille, à droite. Les garder dans la nav les aurait entraînés dans le
+        centrage des menus. */
+    }
+    <div class="flex items-center gap-3.5 justify-self-end">
+      <SearchLink active={nav.searchActive} />
+      <ThemeToggle class="max-poche:absolute max-poche:top-4 max-poche:right-6 ml-1" />
+      {
+        /* Ouvre le panneau de réglages d'accessibilité. Celui-ci est rendu par
+          le Layout et non ici : le header porte un `z-index`, donc un
+          contexte d'empilement dont un tiroir posé à l'intérieur ne pourrait
+          pas sortir. Le lien entre les deux passe par `aria-controls`.
+
+          Le bouton doit se lire comme un onglet — même police, corps, graisse
+          et survol. D'où le reset natif propriété par propriété. */
+      }
       <button
         type="button"
-        class="theme-toggle"
-        aria-label="Basculer entre thème clair et sombre"
-        title="Basculer le thème"
-        data-theme-toggle
+        class="text-ink cursor-pointer border-0 bg-none p-0 font-sans text-[calc(14px*var(--a11y-echelle))] font-medium whitespace-nowrap transition-opacity duration-[120ms] hover:opacity-60"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-controls="panneau-accessibilite"
+        data-a11y-menu
       >
-        {/*
-          On rend les deux icônes ; le CSS en cache une selon
-          data-theme. Évite de devoir jongler avec le DOM côté JS et
-          permet un rendu correct au premier paint (l'attribut data-theme
-          est posé par le script anti-FOUC dans Layout.astro avant le CSS).
-        */}
-        <svg class="icon icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
-        </svg>
-        <svg class="icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="4"/>
-          <path d="M12 2v2"/>
-          <path d="M12 20v2"/>
-          <path d="m4.93 4.93 1.41 1.41"/>
-          <path d="m17.66 17.66 1.41 1.41"/>
-          <path d="M2 12h2"/>
-          <path d="M20 12h2"/>
-          <path d="m6.34 17.66-1.41 1.41"/>
-          <path d="m19.07 4.93-1.41 1.41"/>
-        </svg>
+        Accessibilité
       </button>
-    </nav>
+    </div>
   </div>
+
+  {
+    progressBar && (
+      <div
+        class="absolute inset-x-0 bottom-0 hidden h-[3px] group-data-[defile]:block group-data-[defile]:h-0.5"
+        id="progress"
+        aria-hidden="true"
+      >
+        {/* Même dégradé que le filet qu'elle remplace, mais peint sur toute la
+          largeur de la fenêtre et simplement révélé au fil du défilement
+          (taille de fond en vw, pas en %) — sinon un dégradé recalculé sur
+          une largeur qui grandit se retrouverait « écrasé » différemment à
+          chaque avancement. */}
+        <div
+          class:list={[
+            'progress-fill h-full w-0 bg-[length:100vw_100%] transition-[width] duration-[120ms] ease-linear',
+            BARRE,
+          ]}
+        />
+      </div>
+    )
+  }
 </header>
 
-<style>
-  header.site {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: var(--color-bg);
-    border-bottom: 1px solid var(--color-rule);
-  }
-  header.site .row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 24px 80px 18px;
-    max-width: 1280px;
-    margin: 0 auto;
-    transition: padding 0.18s ease;
-  }
-  /* Compact sticky : on retire ~25 % de padding vertical une fois scrollé. */
-  header.site.is-scrolled .row {
-    padding-top: 18px;
-    padding-bottom: 13px;
-  }
-  header.site .brand {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.3px;
-  }
-  header.site .brand .dot {
-    color: var(--color-accent);
-  }
-  header.site nav {
-    display: flex;
-    gap: 28px;
-    /* Center-aligned plutôt que baseline pour que le bouton-icône
-       (sans baseline texte) s'aligne visuellement avec le centre
-       optique des liens nav. Avec baseline, le bouton se retrouvait
-       2-3 px plus haut. */
-    align-items: center;
-    font-family: var(--font-sans);
-    font-size: 13px;
-  }
-  header.site nav a {
-    color: var(--color-muted);
-    padding-bottom: 4px;
-    transition: color 0.12s;
-  }
-  header.site nav a:hover {
-    color: var(--color-ink);
-  }
-  header.site nav a.active {
-    color: var(--color-ink);
-    font-weight: 600;
-    border-bottom: 1.5px solid var(--color-accent);
-  }
-  header.site nav a.mono {
-    font-family: var(--font-mono);
-    font-size: 12px;
-  }
-
-  /* Lien icône recherche — même look que le theme-toggle pour rester
-     visuellement cohérent. État actif : pastille accent-tint pour
-     marquer qu'on est sur /recherche/ (vs un underline qui irait
-     bizarrement sur une icône). */
-  header.site nav .search-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-    color: var(--color-muted);
-    border-radius: 999px;
-    transition: color 0.12s, background-color 0.12s;
-    /* Override le `padding-bottom: 4px` posé sur `nav a` qui décalerait
-       l'icône d'un demi-pixel par rapport au theme-toggle voisin. */
-    padding-bottom: 4px;
-  }
-  header.site nav .search-link:hover {
-    color: var(--color-ink);
-    background: color-mix(in oklch, var(--color-ink), transparent 92%);
-  }
-  header.site nav .search-link.active {
-    color: var(--color-accent);
-    background: var(--color-accent-tint, color-mix(in oklch, var(--color-accent), transparent 88%));
-    /* Override le `border-bottom` accent posé sur `nav a.active` —
-       sur une icône ronde, ça ferait un trait inesthétique. */
-    border-bottom: 0;
-    font-weight: normal;
-  }
-  header.site nav .search-link:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-
-  /* Toggle thème — bouton icône discret en fin de nav. */
-  header.site nav .theme-toggle {
-    background: transparent;
-    border: 0;
-    padding: 4px;
-    margin-left: 4px;
-    color: var(--color-muted);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    transition: color 0.12s, background-color 0.12s;
-  }
-  header.site nav .theme-toggle:hover {
-    color: var(--color-ink);
-    background: color-mix(in oklch, var(--color-ink), transparent 92%);
-  }
-  header.site nav .theme-toggle:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-  /* Affichage conditionnel selon data-theme (posé sur <html> par le
-     script anti-FOUC du Layout). En light : on montre la lune (clic
-     → dark). En dark : on montre le soleil (clic → light). */
-  header.site nav .theme-toggle .icon-sun {
-    display: none;
-  }
-  :global([data-theme='dark']) header.site nav .theme-toggle .icon-moon {
-    display: none;
-  }
-  :global([data-theme='dark']) header.site nav .theme-toggle .icon-sun {
-    display: inline-block;
-  }
-
-  @media (max-width: 720px) {
-    header.site .row {
-      padding: 18px 24px 14px;
-      flex-direction: column;
-      gap: 12px;
-      align-items: flex-start;
-      position: relative;
-    }
-    header.site.is-scrolled .row {
-      padding-top: 14px;
-      padding-bottom: 10px;
-    }
-    header.site nav {
-      gap: 18px;
-      flex-wrap: wrap;
-    }
-    /* Sur mobile, le toggle sort du flux nav et se colle en haut à droite
-       du header, sur la même ligne visuelle que "Carnet.". */
-    header.site nav .theme-toggle {
-      position: absolute;
-      right: 24px;
-      top: 16px;
-    }
-  }
-</style>
-
-<script is:inline>
-  // Compact sticky : la classe `is-scrolled` est posée dès qu'on a quitté
-  // le haut de page. Listener passif + rAF pour éviter le jank.
-  (function () {
-    const el = document.getElementById('site-header');
-    if (!el) return;
-    let ticking = false;
-    function update() {
-      ticking = false;
-      el.classList.toggle('is-scrolled', window.scrollY > 4);
-    }
-    document.addEventListener(
-      'scroll',
-      () => {
-        if (!ticking) {
-          ticking = true;
-          requestAnimationFrame(update);
-        }
-      },
-      { passive: true },
-    );
-    update();
-  })();
-
-  // Toggle thème : flip data-theme sur <html>, persiste dans localStorage.
-  // Le script anti-FOUC du Layout.astro pose le data-theme initial avant
-  // le premier paint, donc ici on se contente de réagir aux clics.
-  (function () {
-    const btn = document.querySelector('[data-theme-toggle]');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-      const current = document.documentElement.getAttribute('data-theme') || 'light';
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      try {
-        localStorage.setItem('theme', next);
-      } catch (_) {
-        /* private mode — pas grave, le toggle marche pour cette session */
-      }
-    });
-  })();
+<script>
+  import '../scripts/nav-dropdowns.client';
+  import '../scripts/sticky-header.client';
 </script>

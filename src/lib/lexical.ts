@@ -91,13 +91,48 @@ export function slugify(s: string): string {
     .slice(0, 80);
 }
 
+/**
+ * Numérotation des références, à l'usage du corps ET de la liste.
+ *
+ * Les numéros suivent l'ordre d'APPARITION dans le texte : la première
+ * source citée est la 1, la deuxième la 2. C'est ce qu'un numéro promet
+ * — numéroter selon l'ordre d'ajout en base donnait un texte qui ouvre
+ * sur « [37] » et saute ensuite au hasard.
+ *
+ * `rang` est REMPLI pendant le rendu ; l'appelante le relit ensuite pour
+ * ranger la bibliographie dans le même ordre.
+ */
+export type BiblioNumerotation = {
+  /** Slugs présents dans la bibliographie du billet — seuls numérotables. */
+  permis: Set<string>;
+  /** slug → numéro, dans l'ordre où le texte les cite. */
+  rang: Map<string, number>;
+};
+
 type RenderContext = {
   /** Notes de bas de page collectées pendant le walk, dans l'ordre d'apparition. */
   footnotes: Array<{ n: number; html: string }>;
+  numerotation: BiblioNumerotation | null;
 };
 
-function newContext(): RenderContext {
-  return { footnotes: [] };
+function newContext(numerotation?: BiblioNumerotation | null): RenderContext {
+  return { footnotes: [], numerotation: numerotation ?? null };
+}
+
+/**
+ * Le numéro d'une référence, attribué à sa première citation.
+ *
+ * Une source hors de la bibliographie du billet n'en reçoit pas : un
+ * numéro qui ne mène à aucune ligne ne dit rien.
+ */
+function numeroDe(ctx: RenderContext, slug: string): number | null {
+  const n = ctx.numerotation;
+  if (!n || !n.permis.has(slug)) return null;
+  const deja = n.rang.get(slug);
+  if (deja) return deja;
+  const suivant = n.rang.size + 1;
+  n.rang.set(slug, suivant);
+  return suivant;
 }
 
 function renderText(node: LexicalNode): string {
@@ -150,9 +185,24 @@ function renderBlock(node: LexicalNode, ctx: RenderContext): string {
         // Référence non populated — fallback minimal.
         return `<span class="biblio-inline-empty">(réf.)</span>`;
       }
-      // Format Chicago author-date court : « (Butler 2017, p. 47) ». On
-      // utilise `authorLabel` calculé serveur-side (« Butler », « Butler
-      // & Spivak », « Butler et al. »).
+      // Numéro plutôt qu'auteur-date : « [12, p. 47] ».
+      //
+      // L'auteur-date suppose des citations rares — il dit qui et quand
+      // sans quitter la ligne, ce qui est précieux quand on cite trois
+      // fois par page. Sur un texte qui cite à chaque phrase, il enterre
+      // la prose sous les patronymes : cent cinquante « (Machin, 2017,
+      // p. 15) » ne se lisent plus.
+      //
+      // Le rang vient de la bibliographie du billet — la même liste, le
+      // même ordre, donc le même numéro des deux côtés.
+      const rang = numeroDe(ctx, entry.slug);
+      if (rang) {
+        const inner = `${prefix}${rang}${pagesPart}${suffix}`;
+        return `<a class="biblio-inline" href="#bib-${escapeHtml(entry.slug)}">[${inner}]</a>`;
+      }
+
+      // Référence citée mais absente de la liste du billet : un numéro
+      // ne mènerait nulle part, on nomme donc la source.
       const shortAuthors = (entry.authorLabel ?? '').trim();
       const yearPart = entry.year ? `, ${entry.year}` : '';
       const inner = `${prefix}${escapeHtml(shortAuthors || '—')}${yearPart}${pagesPart}${suffix}`;
@@ -163,7 +213,7 @@ function renderBlock(node: LexicalNode, ctx: RenderContext): string {
       const image = fields.image;
       const url =
         image && typeof image === 'object' && image.filename
-          ? mediaUrl(image.filename) ?? ''
+          ? (mediaUrl(image.filename) ?? '')
           : '';
       if (!url) return '';
       const alt = (image && typeof image === 'object' && image.alt) || '';
@@ -174,10 +224,7 @@ function renderBlock(node: LexicalNode, ctx: RenderContext): string {
         ? `<span class="credit">${escapeHtml(fields.credit)}</span>`
         : '';
       const align = fields.align ?? 'left';
-      const caption =
-        legende || credit
-          ? `<figcaption>${legende}${credit}</figcaption>`
-          : '';
+      const caption = legende || credit ? `<figcaption>${legende}${credit}</figcaption>` : '';
       return `<figure class="block-figure align-${align}"><img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" loading="lazy" />${caption}</figure>`;
     }
 
@@ -214,6 +261,13 @@ function renderNode(node: LexicalNode | unknown, ctx: RenderContext): string {
       const text = (n.children ?? [])
         .map((c) => (typeof c.text === 'string' ? c.text : ''))
         .join('');
+      // Un titre sans texte ne se rend pas du tout. L'éditeur en produit
+      // sans le vouloir — un retour à la ligne resté en style « Titre »
+      // suffit — et le résultat est un <h2> vide portant `id=""`, qui
+      // annonce une section qui n'existe pas et casse la suite des
+      // niveaux pour qui parcourt la page par ses titres. Le sommaire
+      // applique la même règle, cf. extractToc.
+      if (!text.trim()) return '';
       const id = slugify(text);
       return `<${tag} id="${id}">${inner}</${tag}>`;
     }
@@ -246,8 +300,11 @@ function renderNode(node: LexicalNode | unknown, ctx: RenderContext): string {
  * mais la liste en pied n'est pas générée). Convient pour les contenus
  * Pages.sections.prose qui n'ont pas de notes.
  */
-export function renderLexical(node: LexicalNode | unknown): string {
-  return renderNode(node, newContext());
+export function renderLexical(
+  node: LexicalNode | unknown,
+  numerotation?: BiblioNumerotation | null,
+): string {
+  return renderNode(node, newContext(numerotation));
 }
 
 /**
@@ -260,8 +317,9 @@ export function renderLexical(node: LexicalNode | unknown): string {
  */
 export function renderLexicalWithFootnotes(
   node: LexicalNode | unknown,
+  numerotation?: BiblioNumerotation | null,
 ): { bodyHtml: string; footnotesHtml: string } {
-  const ctx = newContext();
+  const ctx = newContext(numerotation);
   const bodyHtml = renderNode(node, ctx);
   if (ctx.footnotes.length === 0) return { bodyHtml, footnotesHtml: '' };
   const items = ctx.footnotes
@@ -284,7 +342,10 @@ export function renderLexicalWithFootnotes(
  * Style « Tufte » — chaque note est positionnée en regard du
  * paragraphe qui l'appelle, plutôt qu'empilée en pied d'article.
  */
-export function renderLexicalSidenotes(node: LexicalNode | unknown): string {
+export function renderLexicalSidenotes(
+  node: LexicalNode | unknown,
+  numerotation?: BiblioNumerotation | null,
+): string {
   if (!node || typeof node !== 'object') return '';
   const x = node as LexicalNode & { root?: LexicalNode };
   // Trouve le root.children — body Lexical = { root: { children: [...] } }
@@ -293,10 +354,10 @@ export function renderLexicalSidenotes(node: LexicalNode | unknown): string {
   else if (x.type === 'root') rootNode = x;
   if (!rootNode || !rootNode.children) {
     // Fallback : pas de root, on rend en mode classique sans collecte
-    return renderNode(node, newContext());
+    return renderNode(node, newContext(numerotation));
   }
 
-  const ctx = newContext();
+  const ctx = newContext(numerotation);
   const out: string[] = [];
   let collected = 0;
   for (const child of rootNode.children) {
@@ -331,8 +392,13 @@ export function extractToc(node: LexicalNode | unknown): TocEntry[] {
       const text = (x.children ?? [])
         .map((c) => (typeof c.text === 'string' ? c.text : ''))
         .join('');
-      const level = x.tag === 'h3' ? 3 : 2;
-      out.push({ id: slugify(text), text, level });
+      // Même règle que le rendu : sans texte, pas de titre. L'entrée
+      // produite sinon était un lien vers `#`, sans libellé — donc un
+      // arrêt de tabulation qui ne s'annonce pas et ne mène nulle part.
+      if (text.trim()) {
+        const level = x.tag === 'h3' ? 3 : 2;
+        out.push({ id: slugify(text), text, level });
+      }
     }
     if (x.children) for (const c of x.children) walk(c);
   }

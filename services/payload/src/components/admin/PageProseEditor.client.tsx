@@ -217,13 +217,13 @@ function Toolbar(): React.ReactElement {
 
       {linkOpen && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget) setLinkOpen(false);
           }}
         >
           <form
-            className="carnet-modal"
+            className="tituba-modal"
             role="dialog"
             aria-modal="true"
             onSubmit={(e) => {
@@ -233,11 +233,11 @@ function Toolbar(): React.ReactElement {
               applyLink(v);
             }}
           >
-            <header className="carnet-modal__header">
+            <header className="tituba-modal__header">
               <h2>Insérer un lien</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => setLinkOpen(false)}
                 aria-label="Fermer"
               >
@@ -245,8 +245,8 @@ function Toolbar(): React.ReactElement {
               </button>
             </header>
 
-            <div className="carnet-modal__body">
-              <label className="carnet-editview__field">
+            <div className="tituba-modal__body">
+              <label className="tituba-editview__field">
                 <span className="lbl">URL</span>
                 <input
                   type="url"
@@ -261,10 +261,10 @@ function Toolbar(): React.ReactElement {
               </label>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => applyLink(null)}
                 title="Retirer le lien de la sélection"
               >
@@ -273,14 +273,14 @@ function Toolbar(): React.ReactElement {
               <span style={{ flex: 1 }} />
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => setLinkOpen(false)}
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                className="carnet-btn carnet-btn--accent"
+                className="tituba-btn tituba-btn--accent"
                 disabled={!linkUrl.trim()}
               >
                 Appliquer

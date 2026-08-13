@@ -12,22 +12,22 @@
 // l'objectif est de ne pas casser le flux d'écriture.
 //
 // Stratégie « mount-based » plutôt qu'un setInterval persistant :
-// l'admin Carnet a une navigation côté client (Next.js App Router)
+// l'admin Tituba a une navigation côté client (Next.js App Router)
 // donc chaque clic sur un lien interne re-mount ce composant. Ça
 // suffit pour avoir un sync fréquent sans timer en arrière-plan
 // quand l'onglet est inactif.
 //
 // Stockage :
-//   - sessionStorage `carnet-zotero-synced` = '1' quand le 1er sync
+//   - sessionStorage `tituba-zotero-synced` = '1' quand le 1er sync
 //     de la session est passé (clear au close-tab → re-sync au login).
-//   - localStorage `carnet-zotero-last-sync` = timestamp ms du dernier
+//   - localStorage `tituba-zotero-last-sync` = timestamp ms du dernier
 //     sync (succès ou échec) — sert à throttler les retries.
 
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 
-const SESSION_KEY = 'carnet-zotero-synced';
-const LAST_SYNC_KEY = 'carnet-zotero-last-sync';
+const SESSION_KEY = 'tituba-zotero-synced';
+const LAST_SYNC_KEY = 'tituba-zotero-last-sync';
 const TICK_INTERVAL_MS = 30 * 60 * 1000;
 const SYNC_URL = '/cms/api/users/me/zotero-sync';
 

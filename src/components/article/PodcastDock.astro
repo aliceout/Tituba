@@ -1,0 +1,313 @@
+---
+/**
+ * Barre d'écoute, ancrée en bas de fenêtre — une seule pour tout le
+ * site, montée dans le Layout.
+ *
+ * Elle ne vit pas dans la page de l'épisode mais dans le chrome, et
+ * porte `transition:persist` : le ClientRouter la déplace telle quelle
+ * d'un document à l'autre au lieu de la reconstruire, si bien que
+ * l'élément <audio> — et donc l'écoute — traverse la navigation. Rendue
+ * depuis la page, elle serait détruite avec elle au premier lien suivi.
+ *
+ * Vide et masquée tant que rien n'a été lancé : c'est le bouton d'un
+ * épisode (cf PodcastLaunch) qui l'alimente, par `window.titubaPodcast`.
+ *
+ * Lecteur écrit ici plutôt que le `<audio controls>` du navigateur :
+ * l'apparence native change à chaque plateforme et ne connaît ni le
+ * recul de 15 secondes ni la vitesse de lecture, les deux gestes propres
+ * à l'écoute longue. Aucune bibliothèque.
+ *
+ * La barre de progression est un <input type="range"> habillé d'une
+ * onde, et non un <div> peint : elle est donc déplaçable au clavier,
+ * annoncée comme un curseur par les lecteurs d'écran et prise en charge
+ * au doigt, sans qu'on ait à réécrire ces trois comportements.
+ */
+
+/**
+ * Un outil de la rangée de droite. Sous 780 px les libellés sortent et
+ * les pictogrammes restent : quatre outils en toutes lettres ne tiennent
+ * pas sur la largeur d'un téléphone.
+ */
+const OUTIL_BASE = [
+  'inline-flex cursor-pointer items-center gap-1.5 bg-transparent text-meta',
+  'transition-colors duration-[120ms]',
+  'focus-visible:rounded-[3px] focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-accent',
+  '[&>span]:max-[780px]:hidden',
+].join(' ');
+
+/**
+ * Les trois variantes ne partagent que la base ci-dessus. Police,
+ * couleur, cadre et retrait sont écrits une fois chacun, jamais deux
+ * fois dans la même liste : deux utilitaires contradictoires s’y
+ * départageraient sur l’ordre de la feuille générée, pas sur celui où on
+ * les écrit — c’est ce qui avait fait perdre au bouton de vitesse sa
+ * mono, et au bouton de fermeture son cadre.
+ */
+const OUTIL = `${OUTIL_BASE} text-muted hover:text-accent border-0 p-0 font-sans`;
+const OUTIL_VITESSE = `${OUTIL_BASE} text-muted hover:text-accent border-0 p-0 font-mono tabular-nums`;
+const OUTIL_FERMER = [
+  OUTIL_BASE,
+  'text-ink border-rule ml-1 rounded-full border p-[7px] font-sans',
+  'hover:border-ink hover:bg-ink hover:text-bg',
+].join(' ');
+---
+
+{
+  /* L'ombre remplace ici la bordure comme signal de surplomb : le filet
+    seul, sur un fond de même valeur, ne disait pas que la barre passe
+    AU-DESSUS du texte.
+
+    `data-joue` plutôt qu'une classe pour la permutation des deux
+    pictogrammes : Tailwind ne génère que les classes qu'il lit dans les
+    sources. `group` la fait descendre jusqu'à eux. */
+}
+<div
+  class="bg-bg border-rule group fixed inset-x-0 bottom-0 z-[60] border-t shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.28)] [&[hidden]]:hidden"
+  data-podcast-dock
+  transition:persist="podcast-dock"
+  hidden
+>
+  <audio preload="metadata" data-audio></audio>
+
+  {
+    /* Mêmes bornes que <main> (cf Layout) : la barre traverse la fenêtre,
+      mais son contenu s'aligne sur la colonne de texte au-dessus. Une
+      largeur propre l'aurait décalée d'une dizaine de pixels, assez pour
+      se voir sur la verticale du titre. */
+  }
+  <div
+    class="max-mobile:px-(--page-gutter-narrow) mx-auto flex max-w-(--page-max) items-center gap-[18px] px-(--page-gutter) py-3 max-[780px]:gap-3"
+  >
+    <img
+      class="size-11 flex-none rounded-md object-cover max-[780px]:hidden [&[hidden]]:hidden"
+      data-cover
+      alt=""
+      hidden
+    />
+
+    <button
+      type="button"
+      class="bg-accent focus-visible:outline-accent grid size-11 flex-none cursor-pointer place-items-center rounded-full border-0 text-white transition-[filter] duration-[120ms] hover:brightness-[1.12] focus-visible:outline-2 focus-visible:outline-offset-[3px]"
+      data-play
+      aria-label="Lire l'épisode"
+    >
+      {
+        /* Les deux pictogrammes occupent la même case de la grille : ils se
+          superposent, et seul celui de l'état courant est visible. Les
+          permuter par affichage plutôt que par remplacement du balisage
+          évite un saut de mise en page à chaque bascule. */
+      }
+      <svg
+        class="col-start-1 row-start-1 group-data-[joue]:hidden"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M8 5.5v13l11-6.5z"></path>
+      </svg>
+      <svg
+        class="col-start-1 row-start-1 hidden group-data-[joue]:block"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"></path>
+      </svg>
+    </button>
+
+    <div class="min-w-0 flex-auto">
+      {
+        /* Le titre est un lien : la barre suit d'une page à l'autre, et
+          c'est souvent par elle qu'on veut revenir à l'épisode qu'on
+          écoute. */
+      }
+      <a
+        class="text-muted hover:text-accent text-meta mb-[5px] block overflow-hidden font-sans text-ellipsis whitespace-nowrap max-[780px]:hidden"
+        data-titre
+        href="#"></a>
+      {
+        /* Piste : la partie écoutée est une sinusoïde, la partie restante
+          la même onde en gris. Le tracé est un SVG posé sous un
+          <input type="range"> rendu transparent — l'ondulation est un
+          habillage, la saisie reste un curseur natif. */
+      }
+      <div class="relative h-3.5" data-piste>
+        {
+          /* Décoratif : toute la sémantique (valeur, minimum, maximum,
+            libellé) est portée par l'<input> qui le recouvre. */
+        }
+        <svg class="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          <defs>
+            <clipPath id="tituba-onde-dock">
+              <rect data-clip x="0" y="0" width="0" height="100%"></rect>
+            </clipPath>
+          </defs>
+          {
+            /* Deux fois le même tracé, immobile : le gris sur toute la
+              largeur, le coloré par-dessus, découpé à la position lue.
+              L'onde ne défile pas — c'est la lecture qui progresse sur
+              elle. Un motif qui se déplaçait donnait la sensation
+              inverse : une bande qui coulisse sous un point fixe. */
+          }
+          <path
+            class="stroke-rule fill-none stroke-2 [stroke-linecap:round]"
+            data-trace-reste
+            d=""
+            vector-effect="non-scaling-stroke"></path>
+          <g clip-path="url(#tituba-onde-dock)">
+            <path
+              class="stroke-accent fill-none stroke-2 [stroke-linecap:round]"
+              data-trace
+              d=""
+              vector-effect="non-scaling-stroke"></path>
+          </g>
+        </svg>
+        <input
+          class="seek"
+          type="range"
+          min="0"
+          max="100"
+          value="0"
+          step="1"
+          data-seek
+          aria-label="Position dans l'épisode"
+        />
+      </div>
+      {
+        /* Chiffres à chasse fixe : sans ça, le compteur qui défile fait
+          osciller la ligne à chaque seconde. */
+      }
+      <div class="text-muted text-label mt-1.5 flex justify-between font-mono tabular-nums">
+        <span data-now>0:00</span>
+        <span data-total>--:--</span>
+      </div>
+    </div>
+
+    <div class="flex flex-none items-center gap-4 max-[780px]:gap-3.5">
+      <button type="button" class={OUTIL} data-skip="-15" aria-label="Reculer de 15 secondes">
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M11 5 6 9.5l5 4.5"></path>
+          <path d="M6 9.5h7a5.5 5.5 0 1 1 0 11H9"></path>
+        </svg>
+        <span>15 s</span>
+      </button>
+      <button type="button" class={OUTIL} data-skip="30" aria-label="Avancer de 30 secondes">
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m13 5 5 4.5-5 4.5"></path>
+          <path d="M18 9.5h-7a5.5 5.5 0 1 0 0 11h4"></path>
+        </svg>
+        <span>30 s</span>
+      </button>
+      <button type="button" class={OUTIL_VITESSE} data-speed aria-label="Vitesse de lecture">
+        1×
+      </button>
+      {
+        /* Pas de téléchargement ici : il vit dans l'aside de l'épisode, avec
+          les autres gestes qui portent sur la publication (copier le lien,
+          citer). La barre ne garde que ce qui pilote l'écoute en cours.
+
+          Fermer n'est pas un réglage de plus : c'est le geste qui fait
+          disparaître la barre. Il sort donc de la rangée d'outils — cerné,
+          écarté d'un cran et à l'encre du texte, là où les autres restent
+          en gris. Aligné sur les mêmes 15 px de pictogramme, pour ne pas
+          peser plus lourd qu'eux pour autant. */
+      }
+      <button type="button" class={OUTIL_FERMER} data-close aria-label="Fermer le lecteur">
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="m6 6 12 12M18 6 6 18"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+{
+  /* Le seul CSS qui reste : les pseudo-éléments internes du curseur
+    natif. Tailwind sait les viser, mais il faudrait vingt-huit
+    utilitaires en variantes arbitraires sur un seul <input> pour dire ce
+    que quatre règles disent ici. */
+}
+<style>
+  .seek {
+    position: relative;
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 14px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  /* Pistes natives neutralisées : c'est le SVG en dessous qui les
+     remplace. Sans ça, Firefox continue de peindre la sienne par-dessus. */
+  .seek::-webkit-slider-runnable-track {
+    background: transparent;
+    height: 14px;
+  }
+  .seek::-moz-range-track {
+    background: transparent;
+    border: 0;
+    height: 14px;
+  }
+  /* Le disque est cerné de la couleur du fond : l'onde passe dessous et
+     ressortirait autrement de part et d'autre de la poignée. */
+  .seek::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-bg);
+    border: 0;
+    cursor: pointer;
+  }
+  .seek::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-bg);
+    border: 0;
+    cursor: pointer;
+  }
+</style>
+
+<script>
+  import '../../scripts/podcast-dock.client';
+</script>

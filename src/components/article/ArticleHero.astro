@@ -1,0 +1,194 @@
+---
+/**
+ * Le bloc d'ouverture d'un billet : surtitre de format, titre, chapô, et
+ * l'image de couverture quand il y en a une.
+ *
+ * Deux formes selon qu'une image est fournie. Sans elle, un simple bloc
+ * de titre. Avec elle, et au-dessus de 900 px, deux blocs encadrés de
+ * même facture côte à côte : le titre et son chapô à gauche, l'image à
+ * droite. Pour l'instant seules les analyses portent une image (cf
+ * Analyses.ts → extraFields), donc la seconde forme ne se voit que là où
+ * le champ est renseigné.
+ *
+ * Sorti de PublicationArticle avec une quinzaine de règles. Quatre blocs
+ * sont restés derrière parce qu'ils ne rendaient rien : le rond de
+ * lecture ouvrant le chapô (`.hero-amorce` et ses variables), la classe
+ * `has-player`, la ligne des invité·es et le bouton hors cadre. Aucun
+ * élément ne les portait sur les cinq formats.
+ */
+import FormatIcon from '../FormatIcon.astro';
+import PageTitle from '../ui/PageTitle.astro';
+import { DECK } from '../../lib/article/classes';
+import type { Credit } from '../../lib/article/couverture';
+import type { PublicationCollection } from '../../lib/publications';
+
+interface Props {
+  collection: PublicationCollection;
+  /** « Analyse », « Article de recherche »… */
+  formatLabel: string;
+  /** HTML autorisé — vient de formatHeroTitle. */
+  titleHtml: string;
+  /** Absent sur une actu : le chapô y descend en tête de colonne. */
+  lede?: string | null;
+  credit?: Credit | null;
+  coverUrl?: string | null;
+  coverAlt?: string;
+  /** Agrandissement et décalage quand une zone a été choisie dans l'admin. */
+  cadrage?: string | null;
+}
+
+const {
+  collection,
+  formatLabel,
+  titleHtml,
+  lede,
+  credit,
+  coverUrl,
+  coverAlt = '',
+  cadrage,
+} = Astro.props;
+
+const avecImage = Boolean(coverUrl);
+
+/**
+ * Le cadre du titre et la fenêtre de l'image partagent trait et arrondi
+ * — les deux doivent s'accorder au pixel près, d'où le rayon nommé. Le
+ * trait reprend celui des filets du bandeau meta (cf ArticleMeta), pour
+ * que les trois se lisent comme une même famille.
+ */
+const CADRE = 'border-rule rounded-[var(--hero-radius)] border';
+---
+
+{
+  /* Deux blocs côte à côte, étirés et non centrés : la colonne de gauche
+    prend ainsi la hauteur de la rangée, celle de l'image. Pas d'écart
+    entre eux — l'image est collée au cadre du titre, et c'est sa bordure
+    gauche qui vient fermer le rectangle resté ouvert de ce côté. Un
+    `gap` laisserait le cadre béant. */
+}
+<div
+  class:list={[
+    '[--hero-pad:32px] [--hero-radius:10px]',
+    avecImage && 'mobile:mb-10 mobile:flex mobile:items-stretch mobile:gap-0',
+  ]}
+>
+  {
+    /* La colonne prend cette forme avec ou sans image : sans elle, rien
+      n'est là pour l'étirer et le résultat ne se distingue pas d'un bloc
+      — mais la règle d'origine ne faisait pas la différence, et la
+      restreindre au cas à image changeait le rendu calculé. */
+  }
+  <div
+    class="mobile:relative mobile:flex mobile:min-w-0 mobile:flex-1 mobile:flex-col mobile:justify-center"
+  >
+    {
+      /* Surtitre de format. Reprend les valeurs de l'étiquette de section
+        de l'accueil — mono 11 px, 0,16 em, capitales. Le blanc dessous
+        s'en écarte : 60 px et non 24, parce qu'ici le surtitre précède un
+        titre d'affichage de 60 px et non une rangée de cartes. À 24 px il
+        se lisait comme une ligne du titre plutôt que comme l'étiquette
+        qui l'annonce. En couleur de marque comme le surlignage du titre
+        juste en dessous, plutôt qu'en couleur de famille : sur la page
+        d'une publication, c'est la marque qui donne le ton.
+
+        Avec une image, il est posé en absolu, calé sur deux repères
+        d'origines différentes : en vertical le haut de la colonne —
+        étirée à la hauteur de l'image, c'est donc le haut de la photo ;
+        en horizontal la verticale du texte du titre, soit le trait du
+        cadre plus son retrait. Le cadre, lui, reste centré sur la photo
+        et commence plus bas : les deux repères ne pouvaient pas venir du
+        même élément. Sa marge basse n'y joue donc plus. */
+    }
+    <p
+      class:list={[
+        'text-accent text-label m-0 mb-[60px] flex items-center gap-[7px] font-mono tracking-[0.16em] uppercase',
+        avecImage &&
+          'mobile:absolute mobile:top-0 mobile:left-[calc(var(--hero-pad)+1px)] mobile:m-0',
+      ]}
+    >
+      <FormatIcon collection={collection} />
+      {formatLabel}
+    </p>
+    {
+      /* Le cadre du titre reste ouvert à droite : l'image y est collée, et
+        c'est sa propre bordure gauche qui ferme le rectangle. Sans ça,
+        les deux traits se superposeraient en un filet deux fois plus
+        épais à la jointure. Les angles droits redeviennent vifs pour la
+        même raison — un arrondi laisserait une encoche au raccord. */
+    }
+    <div class:list={[avecImage && `${CADRE} rounded-r-none border-r-0 p-[var(--hero-pad)]`]}>
+      <PageTitle title={titleHtml} famille="marque" />
+      {
+        /* Le chapô porte l'écart qui le sépare du bandeau meta dans le flux
+          normal ; à l'intérieur du cadre c'est le retrait qui doit le
+          donner, sinon le bas du cadre s'éloigne du texte alors que le
+          haut lui reste collé. */
+      }
+      {lede && <p class:list={[DECK, avecImage && 'mobile:mb-0']}>{lede}</p>}
+    </div>
+    {
+      /* Le crédit vit sous le cadre du titre, pas sous l'image : c'est une
+        colonne à part entière du hero, sinon il deviendrait un troisième
+        bloc de la rangée. Aligné à droite, contre la bordure basse du
+        cadre — le bord droit de celui-ci est aussi le bord gauche de
+        l'image, d'où le retrait qui l'empêche de buter contre la photo. */
+    }
+    {
+      credit && (
+        <p class="text-muted text-label [&_a]:border-muted [&_a:hover]:border-b-ink [&_a:hover]:text-ink mt-2 mb-0 pr-3.5 text-right font-sans [&_a]:border-b [&_a]:border-dotted [&_a]:text-inherit">
+          Photo par{' '}
+          {credit.profileUrl ? (
+            <a href={credit.profileUrl} rel="noopener">
+              {credit.name}
+            </a>
+          ) : (
+            credit.name
+          )}{' '}
+          sur{' '}
+          <a href={credit.unsplashUrl} rel="noopener">
+            Unsplash
+          </a>
+        </p>
+      )
+    }
+  </div>
+  {
+    coverUrl && (
+      <figure class="mobile:min-w-0 mobile:flex-[0_0_39%] m-0">
+        {/* Fenêtre carrée de la couverture. `w-full` + `aspect-square` : la
+          largeur vient de la colonne, la hauteur s'en déduit. Sans
+          largeur explicite, la base flex d'une <img> part de ses
+          dimensions intrinsèques (celles du fichier) et la colonne se
+          calerait dessus plutôt que sur l'espace disponible.
+
+          Arrondi sur les quatre angles, sans conséquence à la jointure :
+          l'image dépasse largement le cadre en haut et en bas, les
+          bordures de celui-ci la rejoignent donc sur sa partie droite,
+          loin de ses angles. */}
+        <div class:list={[CADRE, 'relative aspect-square w-full overflow-hidden']}>
+          {/* Mode sombre : la photo est assombrie d'un cran. Une image
+            livrée pour un fond clair « brille » sur un fond sombre — elle
+            capte le regard plus qu'elle ne le devrait et fatigue à la
+            lecture de nuit. Léger et sans désaturation : on tempère, on
+            ne délave pas.
+
+            Avec une zone enregistrée, l'image est agrandie et décalée
+            pour que cette zone remplisse exactement la fenêtre
+            (dimensions et décalage posés en style inline). `object-fit`
+            n'a alors plus lieu d'être : c'est la géométrie qui cadre. */}
+          <img
+            class:list={[
+              'sombre:brightness-[0.82] block',
+              cadrage
+                ? 'absolute h-auto w-auto max-w-none object-fill'
+                : 'h-full w-full object-cover',
+            ]}
+            src={coverUrl}
+            alt={coverAlt}
+            style={cadrage}
+          />
+        </div>
+      </figure>
+    )
+  }
+</div>

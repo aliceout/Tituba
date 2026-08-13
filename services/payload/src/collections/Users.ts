@@ -1,8 +1,8 @@
-import type { CollectionConfig, FieldHook } from 'payload';
+import type { CollectionConfig, FieldHook } from 'payload'
 
-import { canMutateRole, isAdminOrRoot, isSelfOrAdmin, userRole } from '../access/roles';
-import { AUTH_CONFIG } from '../auth/config';
-import { encrypt, isEncrypted } from '../lib/crypto';
+import { canMutateRole, isAdminOrRoot, isSelfOrAdmin, userRole } from '../access/roles'
+import { AUTH_CONFIG } from '../auth/config'
+import { encrypt, isEncrypted } from '../lib/crypto'
 
 // Collection users — étendue pour supporter :
 //  - rôles (root unique / admin / editor)
@@ -22,15 +22,15 @@ import { encrypt, isEncrypted } from '../lib/crypto';
 
 const lockRoleField: FieldHook = ({ value, originalDoc, req, operation }) => {
   // À la création (invitation) le rôle est donné par l'inviteur.
-  if (operation === 'create') return value;
+  if (operation === 'create') return value
   // En update : seul le root peut modifier le rôle d'un admin.
   // Personne ne peut modifier le rôle du root (verrouillage hors collection).
-  if (originalDoc?.role === 'root') return 'root';
+  if (originalDoc?.role === 'root') return 'root'
   if (originalDoc?.role === 'admin' && userRole(req) !== 'root') {
-    return originalDoc.role;
+    return originalDoc.role
   }
-  return value;
-};
+  return value
+}
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -43,8 +43,8 @@ export const Users: CollectionConfig = {
     // Les access ci-dessous bloquent aussi l'API/URL directe, ceci est
     // juste pour ne pas leur montrer le lien.
     hidden: ({ user }) => {
-      const role = (user as { role?: string } | null | undefined)?.role;
-      return role !== 'admin' && role !== 'root';
+      const role = (user as { role?: string } | null | undefined)?.role
+      return role !== 'admin' && role !== 'root'
     },
     components: {
       views: {
@@ -53,7 +53,7 @@ export const Users: CollectionConfig = {
         },
         // Vue d'édition entièrement custom — remplace le rendu natif
         // Payload (form stacked + Change Password modal) par le layout
-        // Carnet (CarnetTopbar + sections + sidebar + modale danger).
+        // Tituba (CarnetTopbar + sections + sidebar + modale danger).
         // Cf UserEditView.client.tsx.
         edit: {
           root: {
@@ -61,7 +61,7 @@ export const Users: CollectionConfig = {
           },
         },
       },
-      // Header custom (crumbs Carnet / Mon compte) au-dessus de la
+      // Header custom (crumbs Tituba / Mon compte) au-dessus de la
       // barre d'actions native pour /cms/admin/account. Sur
       // /cms/admin/collections/users/[id] on a maintenant la vue
       // entièrement custom (cf views.edit.root) — beforeDocumentControls
@@ -91,16 +91,27 @@ export const Users: CollectionConfig = {
     lockTime: 10 * 60 * 1000, // 10 min
   },
   access: {
-    // Read : autorisé à admin/root et à soi-même (filtre par id).
-    // Quand req.user est null on autorise aussi : c'est le contexte de
-    // l'auth JWT interne de Payload qui appelle findByID(users, id) pour
-    // hydrater req.user — si on bloque ici, l'auth foire et req.user
-    // reste null partout (cf bug rencontré en Phase 6).
+    // Read ouvert aux anonymes, et il doit l'être : le site public lit ici
+    // le nom, la présentation et le portrait des auteur·ices (cf
+    // fetchUserDisplayName) pour les signatures et les pages /auteurice/.
+    // Il n'a pas de compte pour le faire.
+    //
+    // Ce que le public ne doit PAS voir se ferme donc champ par champ, plus
+    // bas — c'est le seul niveau qui sépare les deux besoins. Les appels
+    // internes de Payload (hydratation de req.user par la stratégie JWT)
+    // passent par l'API locale, dont overrideAccess vaut true par défaut :
+    // ni l'accès de collection ni celui de champ n'y sont consultés, donc
+    // les fermer ne casse pas l'authentification. Vérifié dans le code de
+    // payload 3.88 (auth/strategies/jwt.js appelle findByID sans req).
+    //
+    // Sans ces verrous, /cms/api/users rendait à quiconque la liste des
+    // comptes avec leur adresse et leur rôle — soit, sur ce site, la liste
+    // nominative des contributrices et le nom de qui administre.
     read: ({ req }) => {
-      if (!req.user) return true;
-      const role = userRole(req);
-      if (role === 'admin' || role === 'root') return true;
-      return { id: { equals: req.user.id } };
+      if (!req.user) return true
+      const role = userRole(req)
+      if (role === 'admin' || role === 'root') return true
+      return { id: { equals: req.user.id } }
     },
     // Création directe interdite — passage obligatoire par l'endpoint
     // /users/invite (qui génère un token et envoie le mail).
@@ -110,12 +121,12 @@ export const Users: CollectionConfig = {
     // Update : admin/root sur n'importe quel user, ou self sur soi-même.
     // Les editor ne peuvent éditer que leur propre profil (pour le 2FA, etc).
     update: ({ req, id }) => {
-      const role = userRole(req);
-      if (role === 'admin' || role === 'root') return true;
+      const role = userRole(req)
+      if (role === 'admin' || role === 'root') return true
       // Comparaison en string : id côté access et req.user.id peuvent venir
       // sous des types différents (Postgres bigint vs number JS).
-      if (req.user && id !== undefined && String(id) === String(req.user.id)) return true;
-      return false;
+      if (req.user && id !== undefined && String(id) === String(req.user.id)) return true
+      return false
     },
     // Delete : admin/root uniquement, jamais sur le root (hook).
     delete: isAdminOrRoot,
@@ -128,10 +139,61 @@ export const Users: CollectionConfig = {
   },
   fields: [
     {
+      /**
+       * Redéclaré alors que l’authentification le fournit déjà : c’est le
+       * seul moyen de lui attacher un accès en lecture. Sans ça, il
+       * partait dans chaque réponse de /cms/api/users, y compris aux
+       * appels anonymes — que la collection doit accepter pour les
+       * signatures du site.
+       *
+       * Seule la lecture est restreinte. La connexion, elle, cherche par
+       * adresse via l’API locale en overrideAccess : elle ne passe pas
+       * par ce filtre, et les mails d’authentification non plus.
+       */
+      name: 'email',
+      type: 'email',
+      access: { read: isSelfOrAdmin },
+    },
+    {
       name: 'displayName',
       type: 'text',
       label: 'Nom affiché',
       required: false,
+    },
+    {
+      /**
+       * Présentation affichée sur la page publique de la personne.
+       *
+       * Écrite par l'intéressé·e depuis « Mon compte » : c'est elle qui
+       * dit qui elle est, pas l'administration du site. L'accès en
+       * écriture du compte le permet déjà — chacun·e peut modifier son
+       * propre profil, les admins celui de tout le monde.
+       */
+      name: 'bio',
+      type: 'textarea',
+      required: false,
+      label: 'Présentation',
+      admin: {
+        description:
+          'Quelques phrases sur vous — parcours, terrain, sujets de travail. Affichées sur votre page publique, sous votre nom.',
+      },
+    },
+    {
+      /**
+       * Portrait, montré en rond sur la page publique. Le cadrage se
+       * fait en carré à la saisie (cf AccountView) : c'est la seule
+       * proportion dont on puisse tirer un cercle sans déformer, et
+       * cadrer en carré ce qui sortira en rond montre bien ce qui sera
+       * gardé — un cercle inscrit dans le carré retenu.
+       */
+      name: 'photo',
+      type: 'upload',
+      relationTo: 'media',
+      required: false,
+      label: 'Portrait',
+      admin: {
+        description: 'Affiché en rond sur votre page publique. Cadré en carré au dépôt.',
+      },
     },
     {
       // Format Chicago author-date personnel — affiché dans le bloc
@@ -157,17 +219,17 @@ export const Users: CollectionConfig = {
       // tombent sur « editor » par défaut (l'inviteur·ice peut promouvoir
       // côté formulaire d'invitation).
       defaultValue: async ({ req }) => {
-        if (!req?.payload) return 'editor';
+        if (!req?.payload) return 'editor'
         try {
           const existing = await req.payload.find({
             collection: 'users',
             limit: 1,
             depth: 0,
             overrideAccess: true,
-          });
-          return existing.totalDocs === 0 ? 'root' : 'editor';
+          })
+          return existing.totalDocs === 0 ? 'root' : 'editor'
         } catch {
-          return 'editor';
+          return 'editor'
         }
       },
       options: [
@@ -176,13 +238,16 @@ export const Users: CollectionConfig = {
         { label: 'Éditeur·ice', value: 'editor' },
       ],
       access: {
+        // Qui administre le site ne regarde pas le public.
+        read: isSelfOrAdmin,
         update: canMutateRole,
       },
       hooks: {
         beforeChange: [lockRoleField],
       },
       admin: {
-        description: 'Root = compte propriétaire (1 seul, non supprimable). Admin = peut gérer les comptes. Éditeur·ice = édite le contenu.',
+        description:
+          'Root = compte propriétaire (1 seul, non supprimable). Admin = peut gérer les comptes. Éditeur·ice = édite le contenu.',
       },
     },
     {
@@ -191,7 +256,7 @@ export const Users: CollectionConfig = {
       required: true,
       defaultValue: 'active',
       options: [
-        { label: 'En attente d\'activation', value: 'pending' },
+        { label: "En attente d'activation", value: 'pending' },
         { label: 'Actif', value: 'active' },
         { label: 'Désactivé', value: 'disabled' },
       ],
@@ -200,11 +265,12 @@ export const Users: CollectionConfig = {
       // boutons admin (active → disabled). Pas modifiable via le formulaire
       // pour éviter qu'un user en flux d'invitation puisse le changer
       // ou que quelqu'un crée des incohérences manuellement.
-      access: { update: () => false },
+      // Un compte en attente ou désactivé, ça ne se dit pas dehors.
+      access: { read: isSelfOrAdmin, update: () => false },
       admin: {
         position: 'sidebar',
         readOnly: true,
-        description: 'Géré automatiquement par le système d\'invitation.',
+        description: "Géré automatiquement par le système d'invitation.",
         // Masqué pendant la création (formulaire register-first-user et
         // toute future création directe) : la valeur est posée par
         // defaultValue/hooks, pas par l'utilisateur.
@@ -223,8 +289,8 @@ export const Users: CollectionConfig = {
       type: 'ui',
       admin: {
         condition: (data, _siblingData, { user }) => {
-          if (!user || !data?.id) return false;
-          return String(data.id) === String(user.id);
+          if (!user || !data?.id) return false
+          return String(data.id) === String(user.id)
         },
         components: {
           Field: '@/components/auth/AccountSecurity#default',
@@ -331,10 +397,10 @@ export const Users: CollectionConfig = {
             // la clé). Sinon on chiffre avant d'écrire en DB.
             beforeChange: [
               ({ value }) => {
-                if (value === null || value === undefined || value === '') return value;
-                if (typeof value !== 'string') return value;
-                if (isEncrypted(value)) return value;
-                return encrypt(value);
+                if (value === null || value === undefined || value === '') return value
+                if (typeof value !== 'string') return value
+                if (isEncrypted(value)) return value
+                return encrypt(value)
               },
             ],
           },
@@ -426,12 +492,14 @@ export const Users: CollectionConfig = {
       // plutôt que sur le field `password` parce que ce dernier est
       // auto-géré par Payload (pas surchargeable directement).
       async ({ data }) => {
-        if (typeof data?.password === 'string' && data.password.length > 0 && data.password.length < 12) {
-          throw new Error(
-            'Le mot de passe doit contenir au moins 12 caractères.',
-          );
+        if (
+          typeof data?.password === 'string' &&
+          data.password.length > 0 &&
+          data.password.length < 12
+        ) {
+          throw new Error('Le mot de passe doit contenir au moins 12 caractères.')
         }
-        return data;
+        return data
       },
       // Empêche les admins de changer le mot de passe d'un autre user.
       // Le password est self-managed : chacun le change via /cms/admin/account
@@ -450,11 +518,11 @@ export const Users: CollectionConfig = {
           String(req.user.id) !== String(originalDoc?.id)
         ) {
           throw new Error(
-            'Vous ne pouvez pas modifier le mot de passe d\'un autre utilisateur. ' +
-              'Demandez-lui d\'utiliser « Mot de passe oublié » sur la page de connexion.',
-          );
+            "Vous ne pouvez pas modifier le mot de passe d'un autre utilisateur. " +
+              "Demandez-lui d'utiliser « Mot de passe oublié » sur la page de connexion.",
+          )
         }
-        return data;
+        return data
       },
       async ({ data, originalDoc, operation, req }) => {
         if (operation === 'create' && data?.role === 'root') {
@@ -465,9 +533,9 @@ export const Users: CollectionConfig = {
             where: { role: { equals: 'root' } },
             limit: 1,
             req,
-          });
+          })
           if (existingRoot.totalDocs > 0) {
-            throw new Error('Un compte root existe déjà.');
+            throw new Error('Un compte root existe déjà.')
           }
         }
         // Empêche un changement implicite role=root via update — sauf si
@@ -479,9 +547,9 @@ export const Users: CollectionConfig = {
           originalDoc?.role !== 'root' &&
           req.user
         ) {
-          throw new Error('Le rôle root ne peut pas être attribué via mise à jour.');
+          throw new Error('Le rôle root ne peut pas être attribué via mise à jour.')
         }
-        return data;
+        return data
       },
     ],
     beforeDelete: [
@@ -492,11 +560,11 @@ export const Users: CollectionConfig = {
           req,
           depth: 0,
           overrideAccess: true,
-        });
+        })
         if ((target as { role?: string }).role === 'root') {
-          throw new Error('Le compte root ne peut pas être supprimé.');
+          throw new Error('Le compte root ne peut pas être supprimé.')
         }
       },
     ],
   },
-};
+}

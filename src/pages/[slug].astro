@@ -3,68 +3,71 @@
  * Catch-all des pages éditoriales libres — /<slug>/
  *
  * Matche tout ce qui n'est pas géré par les routes plus spécifiques
- * (/, /archives/, /themes/, /theme/<slug>/, /billets/<slug>/,
+ * (/, /archives/, /themes/, /theme/<slug>/, /articles/<slug>/,
  * /rss.xml). Lit la collection `pages` Payload par slug.
  *
- * Réf : design_handoff_carnet/Carnet B.html → About + autres pages
+ * Réf : design_handoff_tituba/Tituba B.html → About + autres pages
  * structurées (terrains, recherche, publications, colophon).
  */
-import Layout from '../layouts/Layout.astro';
-import Hero from '../components/Hero.astro';
+import PageShell from '../components/ui/PageShell.astro';
 import PageRenderer from '../components/PageRenderer.astro';
 import { fetchBySlug } from '../lib/payload';
+import { formatHeroLede, formatHeroTitle, stripHeroMarkers } from '../lib/site';
+import { serviceIndisponible } from '../lib/indisponible';
 
 type PageDoc = {
   id: number | string;
   slug: string;
   title: string;
+  /** « libre » = page composée ici ; « fixe » = en-tête d'une route dédiée. */
+  kind?: string | null;
   description?: string | null;
   noindex?: boolean;
   eyebrow?: string | null;
   lede?: string | null;
   sections?: Array<Record<string, unknown>> | null;
+  draft?: boolean | null;
 };
 
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect('/');
 
-const page = await fetchBySlug<PageDoc>('pages', slug);
-if (!page) {
+let page: PageDoc | null;
+try {
+  page = await fetchBySlug<PageDoc>('pages', slug);
+} catch (err) {
+  // Cette route attrape tout ce qui ne correspond à aucune autre : sans
+  // ce filet, une panne du CMS remontait une erreur brute, y compris sur
+  // la page « introuvable » elle-même.
+  return serviceIndisponible('page', err);
+}
+// Les pages fixes vivent dans la même collection mais ne se rendent pas
+// ici : elles ne portent que le titre et le chapô de routes qui ont leur
+// propre fichier (`archives.astro`, `abonnement.astro`…). Sans ce
+// filtre, /home/ et /subscribe/ afficheraient une page vide — un
+// gabarit sans sections, donc sans rien à montrer.
+// Un brouillon n'est pas servi : la page existe dans l'admin, pas sur
+// le site. Comme pour une publication en brouillon, on répond 404 et
+// non une page vide — une adresse qui répond 200 sur du vide serait
+// indexée comme telle.
+//
+// `SHOW_DRAFTS=1` lève le filtre, comme pour les publications (cf
+// `publishedOnly` et `filterPublished`). Sans cet accord, une page en
+// cours de rédaction serait invisible même en local : il faudrait la
+// publier pour la relire, ce qui vide le brouillon de son intérêt.
+const brouillonsVisibles = process.env.SHOW_DRAFTS === '1';
+if (!page || page.kind === 'fixe' || (page.draft === true && !brouillonsVisibles)) {
   return Astro.rewrite('/404');
 }
 ---
 
-<Layout
-  title={page.title}
+<PageShell
+  documentTitle={stripHeroMarkers(page.title)}
   description={page.description ?? page.lede ?? undefined}
   noindex={page.noindex ?? false}
+  title={formatHeroTitle(page.title)}
+  lede={page.lede ? formatHeroLede(page.lede) : undefined}
+  famille="jaune"
 >
-  <article class="page-article">
-    <Hero
-      kicker={page.eyebrow ?? undefined}
-      title={page.title}
-      lede={page.lede ?? undefined}
-    />
-
-    <div class="sections narrow">
-      <PageRenderer sections={page.sections as never} />
-    </div>
-  </article>
-</Layout>
-
-<style>
-  /* Body inset dans le Hero : container 1080 (vs Hero 1280), centré.
-     Même convention que /abonnement/ — le body apparaît visuellement
-     « niché » à l'intérieur du band Hero. */
-  .sections {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 40px 80px 64px;
-  }
-
-  @media (max-width: 900px) {
-    .sections {
-      padding: 32px 24px 48px;
-    }
-  }
-</style>
+  <PageRenderer sections={page.sections as never} />
+</PageShell>

@@ -1,0 +1,100 @@
+---
+/**
+ * Champ de saisie accompagné de son bouton d'envoi.
+ *
+ * Les angles reprennent la pastille de la bande « Nous suivre » de
+ * l'accueil : rayon complet, filet fin, bouton plein à l'intérieur. Le
+ * champ était auparavant un rectangle à angles vifs et le bouton un
+ * carré de 4 px de rayon — deux formes qui ne se retrouvaient nulle
+ * part ailleurs sur le site, où tout est soit une pastille soit un
+ * panneau largement arrondi.
+ *
+ * Pensé pour vivre dans un Panel : la pastille remplit la largeur qui
+ * lui est donnée plutôt que de la contraindre, et son filet est fin —
+ * elle est déjà posée sur une teinte, un trait épais ferait deux
+ * bordures concentriques.
+ *
+ * Le composant ne gère que la forme. La soumission, la validation et le
+ * message d'état restent à l'appelant : ce sont des comportements
+ * propres à chaque formulaire, et les enfermer ici obligerait à les
+ * paramétrer un par un.
+ */
+import Button from './Button.astro';
+
+interface Props {
+  id: string;
+  /** Libellé, lu par les lecteurs d'écran. Masqué visuellement quand le
+   *  contexte le rend évident. */
+  label: string;
+  labelVisible?: boolean;
+  type?: 'email' | 'text' | 'search';
+  name?: string;
+  placeholder?: string;
+  required?: boolean;
+  autocomplete?: string;
+  /** Texte du bouton. Sans lui, le champ est rendu seul. */
+  action?: string;
+  famille?: 'bleu' | 'vert' | 'jaune' | 'violet';
+}
+
+const {
+  id,
+  label,
+  labelVisible = false,
+  type = 'text',
+  name,
+  placeholder,
+  required,
+  autocomplete,
+  action,
+  famille = 'vert',
+} = Astro.props;
+const FAMILLES: Record<string, string> = {
+  bleu: '[--fam:var(--c-bleu-deep)] [--fam-fill:var(--c-bleu-fill)] [--fam-on:var(--c-bleu-on)]',
+  vert: '[--fam:var(--c-vert-deep)] [--fam-fill:var(--c-vert-fill)] [--fam-on:var(--c-vert-on)]',
+  jaune:
+    '[--fam:var(--c-jaune-deep)] [--fam-fill:var(--c-jaune-fill)] [--fam-on:var(--c-jaune-on)]',
+  violet: '[--fam:var(--c-violet-deep)] [--fam-fill:var(--c-violet)] [--fam-on:#fff]',
+};
+---
+
+<div class:list={[FAMILLES[famille]]}>
+  <label
+    class:list={[
+      'text-label tracking-label text-muted mb-2.5 block font-mono uppercase',
+      !labelVisible && 'sr-only',
+    ]}
+    for={id}
+  >
+    {label}
+  </label>
+  {
+    /* Une seule pastille contenant le champ et le bouton, comme celle de
+      la bande « Nous suivre ». Le rembourrage droit est réduit pour que
+      le bouton vienne se loger dans le filet sans le toucher.
+
+      Sous 560 px la pastille comprimerait le champ à quelques signes :
+      les deux se séparent et s’empilent. */
+  }
+  <div
+    class="bg-paper max-etroit:flex-col max-etroit:items-stretch max-etroit:gap-3 max-etroit:rounded-[22px] max-etroit:p-3.5 flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--fam)_35%,transparent)] py-[5px] pr-[5px] pl-4 transition-colors duration-100 focus-within:border-(--fam)"
+  >
+    <input
+      id={id}
+      type={type}
+      name={name ?? id}
+      placeholder={placeholder}
+      required={required}
+      autocomplete={autocomplete}
+      spellcheck="false"
+      class="text-ink placeholder:text-muted max-etroit:px-2 max-etroit:py-1 min-w-0 flex-auto border-0 bg-none px-0 py-[7px] font-sans text-[calc(14px*var(--a11y-echelle))] focus:outline-none"
+    />
+    {
+      action && (
+        <Button type="submit" ton="plein" famille={famille}>
+          {action}
+        </Button>
+      )
+    }
+  </div>
+</div>

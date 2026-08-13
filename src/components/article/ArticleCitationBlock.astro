@@ -1,0 +1,120 @@
+---
+/**
+ * Cartouche « Pour citer cet article » — citation Chicago author-date,
+ * bouton Copier (clipboard) et liens de téléchargement BibTeX/RIS/Zotero.
+ * Les routes de téléchargement vivent sous src/pages/<format>/
+ * [id].bib.ts et [id].ris.ts. Zotero importe RIS nativement, on
+ * pointe donc sur le même fichier ; la détection auto via les <meta>
+ * Highwire en <head> (cf src/lib/citations.ts) rend même ce bouton
+ * accessoire pour qui a l'extension installée.
+ *
+ * Même modèle que le carré « URL du flux » de RssFeedBlock.astro :
+ * Panel teinté (ici famille="marque", la couleur de marque configurable,
+ * pas une des quatre familles fixes) + label petites capitales + Button.
+ */
+import Panel from '../ui/Panel.astro';
+import Button from '../ui/Button.astro';
+
+interface Props {
+  authorCitation: string;
+  title: string;
+  publishedFr: string;
+  articleUrl: string;
+  citationText: string;
+  routePrefix: string;
+  docId: number | string;
+}
+
+const { authorCitation, title, publishedFr, articleUrl, citationText, routePrefix, docId } =
+  Astro.props;
+
+/** Les trois liens de téléchargement sont identiques au libellé près. */
+const lienFormat =
+  'font-sans text-meta text-(--accent) border-b border-(--accent) hover:text-ink hover:border-b-ink';
+---
+
+<section id="cite">
+  {
+    /* La forme vient de Panel : fond de marque dilué, rayon des panneaux
+      du site — même construction que le carré « URL du flux » de
+      RssFeedBlock. Colonne et gap plutôt que des margin-top/bottom
+      dépareillés entre le label, le corps et les actions : un seul écart
+      à régler, pas trois. */
+  }
+  <Panel famille="marque" padding="serre" class="mt-10 flex flex-col gap-3.5">
+    <div class="text-label font-mono tracking-[0.2em] text-(--accent) uppercase">
+      Pour citer cet article
+    </div>
+    <div class="font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]">
+      {authorCitation}. « {title} », <em>Tituba</em>, {publishedFr},
+      <span class="text-meta font-mono">{' '}{articleUrl}</span>.
+    </div>
+    <div class="flex flex-wrap items-center gap-4">
+      {
+        /* L’état « copié » passe par un attribut plutôt que par une classe
+          ajoutée à la main : Tailwind ne génère que les classes qu’il lit
+          dans les sources, et une classe née dans un script lui échappe. */
+      }
+      <Button
+        ton="contour"
+        famille="marque"
+        class="copy-btn data-[copie]:text-paper data-[copie]:bg-(--accent)"
+        data-citation={citationText}
+        aria-label="Copier la citation"
+      >
+        Copier
+      </Button>
+      <a
+        class={lienFormat}
+        href={`${routePrefix}/${docId}.bib`}
+        download={`tituba-${docId}.bib`}
+        aria-label="Télécharger la citation au format BibTeX"
+      >
+        BibTeX
+      </a>
+      <a
+        class={lienFormat}
+        href={`${routePrefix}/${docId}.ris`}
+        download={`tituba-${docId}.ris`}
+        aria-label="Télécharger la citation au format RIS"
+      >
+        RIS
+      </a>
+      <a
+        class={lienFormat}
+        href={`${routePrefix}/${docId}.ris`}
+        download={`tituba-${docId}.ris`}
+        aria-label="Importer la citation dans Zotero (format RIS)"
+        title="Zotero importe RIS nativement"
+      >
+        Zotero
+      </a>
+    </div>
+  </Panel>
+</section>
+
+<script>
+  // Sur `astro:page-load` : avec le ClientRouter, un module ne s’exécute
+  // qu’une fois par URL — sans cet évènement, le bouton de la page
+  // suivante resterait sans écouteur.
+  document.addEventListener('astro:page-load', () => {
+    const bouton = document.querySelector<HTMLButtonElement>('.copy-btn');
+    if (!bouton || !navigator.clipboard) return;
+    bouton.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(bouton.dataset.citation || '');
+      } catch {
+        // Pas de repli si le presse-papier refuse — rare en HTTPS, et le
+        // texte reste sélectionnable à la main.
+        return;
+      }
+      const libelle = bouton.textContent;
+      bouton.textContent = 'Copié';
+      bouton.dataset.copie = '';
+      setTimeout(() => {
+        bouton.textContent = libelle;
+        delete bouton.dataset.copie;
+      }, 2000);
+    });
+  });
+</script>

@@ -1,0 +1,99 @@
+---
+/**
+ * Menu déroulant générique du header — bouton + chevron + panneau.
+ * Utilisé pour « Thématiques » et « Formats », qui partageaient
+ * jusqu'ici un markup dupliqué avec juste le contenu qui changeait.
+ *
+ * Bouton + panneau plutôt que <details> : on garde la main sur la
+ * fermeture au clic extérieur et à Échap, que <details> ne gère pas.
+ * Sans JavaScript le bouton reste inerte — d'où le lien optionnel du
+ * slot `footer`, qui garantit un accès au contenu dans tous les cas.
+ *
+ * L'ouverture/fermeture (data-nav-menu / data-nav-menu-btn /
+ * data-nav-menu-panel) est pilotée par un script partagé entre toutes
+ * les instances (cf Header.astro) : un seul contrôleur pour fermer les
+ * autres menus quand l'un s'ouvre, plutôt qu'un script par instance.
+ */
+interface Props {
+  label: string;
+  active: boolean;
+  panelId: string;
+}
+
+const { label, active, panelId } = Astro.props;
+const hasFooter = Astro.slots.has('footer');
+---
+
+<div class="relative inline-flex" data-nav-menu>
+  {
+    /* Le chevron pivote quand le panneau est ouvert : l’état est déjà
+      porté par `aria-expanded`, on s’y accroche plutôt que d’ajouter une
+      classe — une seule source de vérité. */
+  }
+  <button
+    type="button"
+    class:list={[
+      'group text-ink inline-flex cursor-pointer items-center gap-1 border-0 bg-none px-0 pt-0 pb-1 font-[inherit] transition-opacity duration-100 hover:opacity-60',
+      active && 'border-b-[1.5px] border-[var(--c-bleu)] font-semibold',
+    ]}
+    aria-expanded="false"
+    aria-controls={panelId}
+    data-nav-menu-btn
+  >
+    {label}
+    <svg
+      class="transition-transform duration-150 group-aria-expanded:rotate-180"
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3.5 6l4.5 4.5L12.5 6"></path>
+    </svg>
+  </button>
+  <div
+    class="bg-bg border-rule absolute top-[calc(100%+10px)] left-0 z-60 flex max-h-[min(70vh,460px)] min-w-[220px] flex-col overflow-y-auto rounded-lg border p-2 shadow-[0_8px_28px_rgb(0_0_0/12%)] [&[hidden]]:hidden"
+    id={panelId}
+    hidden
+    data-nav-menu-panel
+  >
+    <slot />
+    {
+      hasFooter && (
+        <div class="border-rule text-meta mt-1 border-t pt-2.5">
+          <slot name="footer" />
+        </div>
+      )
+    }
+  </div>
+</div>
+
+<style>
+  @layer components {
+    /* Les liens arrivent par un slot : aucune classe à poser dessus. */
+    [data-nav-menu-panel] :global(a) {
+      display: flex;
+      align-items: center;
+      padding: 7px 10px;
+      border-radius: 5px;
+      color: var(--color-ink);
+      white-space: nowrap;
+      transition:
+        background 0.12s,
+        color 0.12s;
+    }
+    [data-nav-menu-panel] :global(a:hover),
+    [data-nav-menu-panel] :global(a:focus-visible) {
+      background: var(--color-rule);
+      color: var(--c-bleu-deep);
+    }
+    [data-nav-menu-panel] > div:last-child :global(a) {
+      color: var(--c-bleu-deep);
+    }
+  }
+</style>

@@ -7,7 +7,10 @@
 import React from 'react';
 
 import NavigationEditViewClient from './NavigationEditView.client';
+import AccesReserve, { estAdministratrice } from './AccesReserve';
 
-export default function NavigationEditView(): React.ReactElement {
+export default async function NavigationEditView(): Promise<React.ReactElement> {
+  if (!(await estAdministratrice())) return <AccesReserve titre="Navigation" />;
+
   return <NavigationEditViewClient />;
 }

@@ -1,0 +1,109 @@
+---
+/**
+ * Corps de texte éditorial — titres intermédiaires, paragraphes, listes
+ * et liens, à l'échelle du site.
+ *
+ * Chaque page fixait jusqu'ici ses propres valeurs : h2 en 26/600 sur
+ * Abonnement, 30/600 sur les pages éditoriales, 42/300 sur l'accueil.
+ * Trois pages, trois échelles, aucune raison. Elles lisent maintenant
+ * les mêmes tokens (--t-h2, --t-h3, --t-body, --mesure).
+ *
+ * Les styles sont globaux mais confinés sous `.prose` : c'est la seule
+ * façon d'atteindre du contenu arrivé par un slot, y compris le HTML
+ * rendu depuis Lexical côté Payload.
+ */
+interface Props {
+  /** Largeur de lecture. `pleine` pour les blocs qui ne sont pas du
+   *  texte courant — formulaires, cartouches, grilles. */
+  mesure?: 'lecture' | 'pleine';
+  class?: string;
+}
+
+const { mesure = 'lecture', class: className } = Astro.props;
+---
+
+<div class:list={['prose', `m-${mesure}`, className]}>
+  <slot />
+</div>
+
+<style is:global>
+  /* Couche `components` : ces règles habillent du contenu qui arrive
+     par un slot — y compris le HTML rendu depuis Lexical, sur lequel
+     on ne peut poser aucune classe. Elles doivent donc rester du CSS,
+     mais céder devant un utilitaire écrit à la main. */
+  @layer components {
+    .prose {
+      font-family: var(--font-serif);
+      font-size: var(--t-body);
+      line-height: var(--lh-body);
+      color: var(--color-body);
+    }
+    .prose.m-lecture > * {
+      max-width: var(--mesure);
+    }
+
+    .prose h2,
+    .prose h3 {
+      font-family: var(--font-serif);
+      font-weight: var(--w-heading);
+      line-height: var(--lh-heading);
+      letter-spacing: var(--ls-display);
+      color: var(--color-ink);
+    }
+    .prose h2 {
+      font-size: var(--t-h2);
+      /* Marge haute nettement plus grande que la basse : un titre
+         appartient à ce qui le suit, pas à ce qui le précède. */
+      margin: 52px 0 14px;
+    }
+    .prose h3 {
+      font-size: var(--t-h3);
+      margin: 36px 0 12px;
+    }
+    .prose > :first-child {
+      margin-top: 0;
+    }
+
+    .prose p {
+      margin: 0 0 18px;
+    }
+    .prose ul,
+    .prose ol {
+      margin: 0 0 18px;
+      padding-left: 1.2em;
+    }
+    .prose li + li {
+      margin-top: 6px;
+    }
+
+    /* Souligné à distance de la ligne de base plutôt que collé : les
+       jambages des lettres ne coupent plus le trait. */
+    .prose a {
+      color: var(--color-ink);
+      text-decoration: underline;
+      text-decoration-color: var(--c-bleu-deep);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+      transition: color 0.12s;
+    }
+    .prose a:hover {
+      color: var(--c-bleu-deep);
+    }
+
+    /* Chapô de section — plus clair et plus grand que le texte courant,
+       en sans pour se distinguer de ce qu'il annonce. */
+    .prose .lede {
+      font-family: var(--font-sans);
+      font-size: var(--t-sublede);
+      line-height: 1.55;
+      color: var(--color-muted);
+      margin-bottom: 22px;
+    }
+
+    .prose .meta {
+      font-family: var(--font-mono);
+      font-size: var(--t-meta);
+      color: var(--color-muted);
+    }
+  }
+</style>

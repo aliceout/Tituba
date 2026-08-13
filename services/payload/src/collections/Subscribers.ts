@@ -81,22 +81,64 @@ export const Subscribers: CollectionConfig = {
       },
     },
     {
+      /**
+       * Ce à quoi la personne s'est abonnée.
+       *
+       * Le formulaire posait la question depuis toujours et la réponse
+       * n'allait nulle part : les deux rythmes atterrissaient sur la
+       * même liste, et qui demandait « une fois par trimestre » recevait
+       * un mail à chaque parution. Une promesse faite à l'écran que le
+       * système ne tenait pas.
+       *
+       * Plusieurs valeurs, parce que le panneau dit « ou les deux » —
+       * et qu'il n'y a aucune raison de forcer à choisir.
+       *
+       * ABSENCE DE VALEUR = « publications ». Les inscriptions
+       * antérieures à ce champ n'ont rien d'enregistré, et elles
+       * recevaient les parutions : les traiter comme vides les couperait
+       * en silence. La règle est appliquée à l'envoi (cf.
+       * hooks/notify-new-post.ts), pas par une reprise de données — une
+       * colonne remplie après coup se lirait comme un choix que
+       * personne n'a fait.
+       */
+      name: 'rythmes',
+      type: 'select',
+      hasMany: true,
+      required: false,
+      defaultValue: ['publications'],
+      label: 'Ce qu’iel reçoit',
+      options: [
+        { label: 'La lettre (une fois par trimestre)', value: 'newsletter' },
+        { label: 'Chaque parution', value: 'publications' },
+      ],
+      admin: {
+        description:
+          "Choisi à l'inscription. Vide sur les inscriptions antérieures à ce champ, qui sont traitées comme « Chaque parution ». La lettre trimestrielle n'a pas encore d'outil d'envoi : la cocher n'envoie rien pour l'instant.",
+      },
+    },
+    /**
+     * Mécanique du lien de confirmation — masquée de l'admin.
+     *
+     * Ces deux champs ne se lisent pas, ne se corrigent pas et ne
+     * disent rien d'utile sur une personne abonnée : afficher le
+     * condensat d'un jeton, c'est encombrer une fiche d'une donnée
+     * technique en donnant l'impression qu'elle se règle à la main.
+     * `hidden` les retire de l'interface sans toucher au stockage, dont
+     * le flux de confirmation dépend.
+     */
+    {
       name: 'confirmTokenHash',
       type: 'text',
       required: false,
       label: 'Hash du token de confirmation',
-      admin: {
-        readOnly: true,
-        description:
-          'SHA-256 du token envoyé dans le mail de confirmation. Stocké en base, jamais affiché en clair. Effacé après confirmation.',
-      },
+      admin: { hidden: true, readOnly: true },
     },
     {
       name: 'confirmTokenExpiresAt',
       type: 'date',
       required: false,
       label: 'Expiration du token de confirmation',
-      admin: { readOnly: true },
+      admin: { hidden: true, readOnly: true },
     },
     {
       name: 'subscribedAt',

@@ -1,0 +1,140 @@
+---
+/**
+ * Carré du dernier épisode, posé à droite de la une.
+ *
+ * Format carré et non carte allongée : il occupe le quart de largeur
+ * que la une lui cède, et un carré est la seule proportion qui ne se
+ * lise pas comme une carte tronquée à cet endroit. Le bleu le distingue
+ * du jaune de la une — deux familles côte à côte, ce qui signale que ce
+ * sont deux objets et non un bloc coupé en deux.
+ *
+ * Le composant ne rend rien s'il n'y a pas d'épisode. C'est
+ * l'appelant qui décide alors de reprendre la largeur pleine (cf.
+ * FeaturedPublication et la grille de la page d'accueil) : un carré
+ * vide ou un « bientôt » serait une promesse que rien ne tient.
+ */
+import { publicationHref } from '../lib/publications';
+import type { FeedDoc } from '../lib/payload';
+import { stripHeroMarkers } from '../lib/site';
+
+export interface Props {
+  doc: (FeedDoc & { durationSeconds?: number | null }) | null;
+}
+
+const { doc } = Astro.props as Props;
+
+const href = doc ? publicationHref('podcasts', doc.publicId) : '#';
+
+/** Durée en minutes, ou chaîne vide si la source ne la connaît pas. */
+const duree =
+  doc && typeof doc.durationSeconds === 'number' && doc.durationSeconds > 0
+    ? `${Math.round(doc.durationSeconds / 60)} min`
+    : '';
+---
+
+{
+  /* Fond plus creux que les côtés, et c'est voulu : le pied reprend la
+    rangée de 38 px de la une (cf. le pied du carré, plus bas), qui la
+    tient de sa pastille d'initiales. Même rangée et même retrait des
+    deux côtés, donc « écouter » et « lire le texte » tombent sur la même
+    ligne — les deux blocs se lisent comme un seul bandeau.
+
+    La hauteur vient de la rangée de la grille, donc de la carte
+    voisine : c'est ce qui aligne les deux bas de bloc. Sous 900 px, le
+    carré passe sous la une : plus de hauteur à égaliser, le bloc reprend
+    celle de son contenu.
+
+    Le retrait mobile reste écrit côté par côté plutôt qu'en `p-[22px]` :
+    Tailwind sort `p-*` avant `px-*`, un raccourci sous variante perdrait
+    donc contre les trois valeurs de base, media query ou pas. */
+}
+{
+  doc && (
+    <a
+      class="max-mobile:h-auto max-mobile:rounded-[18px] max-mobile:px-[22px] max-mobile:pt-[22px] max-mobile:pb-[22px] flex h-full flex-col justify-between gap-4 rounded-(--radius-panel) bg-[var(--c-podcast-bg)] px-[26px] pt-[26px] pb-9 text-[var(--c-podcast-fg)] transition-[filter] duration-[120ms] hover:brightness-[0.97]"
+      href={href}
+    >
+      {/* Rubrique, titre et chapô solidaires, en haut du bloc. Sans ce
+        groupe, la répartition en espace égal porterait sur quatre enfants
+        et disperserait le titre au milieu du carré — détaché de la rubrique
+        qu'il prolonge, avec un trou au-dessus de lui. */}
+      <div class="flex flex-col gap-3.5">
+        {/* Rubrique à gauche, numéro à droite — même composition que la ligne
+          de tête de la une voisine, qui porte le format à gauche et la date
+          à droite. La durée, elle, reste en bas : c'est une information de
+          décision (« ai-je le temps ? »), elle a sa place près de l'appel à
+          écouter, pas près de l'identité de l'épisode. */}
+        <div class="text-label flex items-center justify-between gap-3 font-mono tracking-[0.16em] text-[var(--c-podcast-accent)] uppercase">
+          <span class="flex items-center gap-2">
+            {/* Pictogramme d'onde plutôt que le micro de FormatIcon : à
+              cette taille il tient le rôle d'un logo de rubrique, et
+              l'onde se reconnaît de plus loin qu'un pied de micro. */}
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" />
+            </svg>
+            Podcast
+          </span>
+        </div>
+
+        {/* clamp() fait rétrécir le titre avec la colonne, sans quoi un
+          titre long déborderait aux largeurs intermédiaires. Les trois
+          valeurs montent ensemble d'un point : ne relever que le plafond
+          aurait laissé le titre inchangé partout sauf au-delà de 1530 px,
+          où seul ce plafond s'applique.
+
+          Au-delà de quatre lignes on coupe : le carré est une invitation,
+          le titre complet est sur la page de l'épisode. */}
+        <h3 class="leading-heading font-display m-0 line-clamp-4 font-serif text-[calc(clamp(20px,1.75vw,26px)*var(--a11y-echelle))] tracking-[-0.01em]">
+          {stripHeroMarkers(doc.title)}
+        </h3>
+
+        {/* Même parti que le chapô de la une : serif italique, en retrait de
+          couleur sur le titre. C'est ce qui les fait lire comme deux fois le
+          même objet — une accroche sous un titre — malgré la différence de
+          format et de fond.
+          Le corps descend à 16 px : la une dispose de toute la largeur du
+          bloc, le carré d'un quart, et 20 px y donneraient trois mots par
+          ligne. La couleur est tirée de celle du texte plutôt que d'un jeton
+          à part, faute d'équivalent au `--c-une-soft` de la une — et parce
+          qu'un mélange suit le fond du carré dans les deux thèmes.
+          Cinq lignes au plus : au-delà, le chapô et le titre ensemble
+          dépasseraient la hauteur que la carte voisine impose au carré, et
+          le pied sortirait du bloc. */}
+        {doc.lede && (
+          <p class="text-sublede font-display m-0 line-clamp-5 font-serif leading-[1.5] whitespace-pre-line text-[color-mix(in_srgb,var(--c-podcast-fg)_72%,transparent)] italic">
+            {doc.lede}
+          </p>
+        )}
+      </div>
+
+      {/* Hauteur calquée sur la pastille d'initiales du pied de la une :
+        c'est elle qui y fixe la rangée, et l'appel s'y centre. Sans cette
+        rangée, le pied du carré ferait la hauteur de son seul texte et
+        « écouter » se retrouverait plus bas que « lire le texte ».
+        Centré et non aligné sur la ligne de base : la durée et l'appel
+        n'ont plus le même corps depuis que celui-ci est monté à 14 px, et
+        une rangée plus haute que son contenu ne sait pas où poser un
+        groupe de lignes de base. */}
+      <div class="text-label flex min-h-[38px] items-center gap-3 font-mono">
+        {duree && <span class="text-[var(--c-podcast-accent)]">{duree}</span>}
+        {/* Marge automatique et non `justify-between` : sans durée
+          renseignée, l'appel resterait quand même au bord droit.
+          Le corps est celui de la signature de la une, comme l'appel qui
+          s'y trouve : à peine au-dessus des 11 px du pied, assez pour ne
+          plus se confondre avec la durée posée à côté. */}
+        <span class="text-meta ml-auto border-b border-current pb-px whitespace-nowrap text-[var(--c-podcast-fg)]">
+          écouter →
+        </span>
+      </div>
+    </a>
+  )
+}

@@ -1,12 +1,12 @@
 // Templates HTML + texte pour les mails transactionnels du système d'auth.
 //
-// Style sobre, monochrome (accent violet du Carnet), sans images ni
+// Style sobre, monochrome (accent violet de Tituba), sans images ni
 // tracking. Le HTML est lisible aussi en plain-text (table-less, pas
 // de CSS critique). Tous les wordings en français.
 //
 // Le nom du site (wordmark) qui apparaît dans le sujet, le header HTML
 // et la signature est lu depuis Site → identity.siteName via le helper
-// `getSiteName()`. Fallback : « Carnet ».
+// `getSiteName()`. Fallback : « Tituba ».
 
 import type { Payload } from 'payload';
 
@@ -14,16 +14,16 @@ import { AUTH_CONFIG } from './config';
 
 /**
  * Lit le wordmark depuis le global Identity (siteName). Best-effort :
- * si la lecture échoue (DB down, global vide), on retombe sur « Carnet ».
+ * si la lecture échoue (DB down, global vide), on retombe sur « Tituba ».
  * À utiliser par les endpoints qui envoient un mail.
  */
 export async function getSiteName(payload: Payload): Promise<string> {
   try {
     const identity = await payload.findGlobal({ slug: 'identity' });
     const name = (identity as { siteName?: string })?.siteName;
-    return name?.trim() || 'Carnet';
+    return name?.trim() || 'Tituba';
   } catch {
-    return 'Carnet';
+    return 'Tituba';
   }
 }
 
@@ -94,7 +94,7 @@ export function invitationEmail(opts: {
   siteName?: string;
 }): { subject: string; html: string; text: string } {
   const days = AUTH_CONFIG.invitationTtlDays;
-  const siteName = opts.siteName?.trim() || 'Carnet';
+  const siteName = opts.siteName?.trim() || 'Tituba';
   const inviter = opts.inviterName?.trim() || `L'équipe du ${siteName}`;
   const subject = `Invitation à rejoindre l'espace d'administration du ${siteName}`;
 
@@ -133,7 +133,7 @@ export function twoFactorCodeEmail(opts: {
   siteName?: string;
 }): { subject: string; html: string; text: string } {
   const ttl = AUTH_CONFIG.otpTtlMinutes;
-  const siteName = opts.siteName?.trim() || 'Carnet';
+  const siteName = opts.siteName?.trim() || 'Tituba';
   const subject = `Code de vérification : ${opts.code}`;
 
   const ipLine = opts.ip ? `IP : ${opts.ip}\n` : '';
@@ -174,7 +174,7 @@ export function subscribeConfirmEmail(opts: {
   ttlDays: number;
   siteName?: string;
 }): { subject: string; html: string; text: string } {
-  const siteName = opts.siteName?.trim() || 'Carnet';
+  const siteName = opts.siteName?.trim() || 'Tituba';
   const subject = `Confirmer votre abonnement au ${siteName}`;
 
   const text = `Bonjour,
@@ -221,7 +221,7 @@ export function newPostEmail(opts: {
   /** Noms des thèmes (déjà résolus côté caller). */
   themeNames?: string[];
 }): { subject: string; html: string; text: string } {
-  const siteName = opts.siteName?.trim() || 'Carnet';
+  const siteName = opts.siteName?.trim() || 'Tituba';
   const lede = opts.postLede?.trim() || '';
   const byline = opts.byline?.trim() || '';
   const typeLabel = opts.typeLabel?.trim() || '';
@@ -280,7 +280,7 @@ export function welcomeEmail(opts: {
   loginUrl: string;
   siteName?: string;
 }): { subject: string; html: string; text: string } {
-  const siteName = opts.siteName?.trim() || 'Carnet';
+  const siteName = opts.siteName?.trim() || 'Tituba';
   const subject = `Bienvenue sur l'espace d'administration du ${siteName}`;
 
   const text = `Bonjour,

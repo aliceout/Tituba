@@ -1,6 +1,6 @@
 // Sous-ensemble du JSON renvoyé par l'API Web Zotero v3 — uniquement
 // les champs qu'on utilise pour mapper vers la collection Bibliography
-// du Carnet. Cf https://www.zotero.org/support/dev/web_api/v3/types_and_fields
+// de Tituba. Cf https://www.zotero.org/support/dev/web_api/v3/types_and_fields
 //
 // La forme réelle de Zotero a beaucoup plus de champs (date access, tags,
 // collections, relations, notes…) qu'on ignore volontairement pour l'instant.
@@ -49,11 +49,11 @@ export type ZoteroItem = {
 export type ZoteroSyncResult = {
   added: number;
   updated: number;
-  /** Refs supprimées côté Zotero ET pas citées dans des billets — effacées du Carnet. */
+  /** Refs supprimées côté Zotero ET pas citées dans des billets — effacées de Tituba. */
   deleted: number;
   /**
    * Refs supprimées côté Zotero MAIS encore citées dans des billets : on
-   * les garde côté Carnet pour ne pas casser les citations existantes.
+   * les garde côté Tituba pour ne pas casser les citations existantes.
    * L'autrice doit retirer la citation du billet (ou supprimer la ref
    * manuellement) si elle veut s'en débarrasser.
    */

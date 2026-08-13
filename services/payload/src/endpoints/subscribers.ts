@@ -1,10 +1,11 @@
 // Endpoints publics pour les alertes mail (collection Subscribers).
 //
 // Pattern double opt-in :
-//  - POST /api/subscribers/subscribe { email }
+//  - POST /api/subscribers/subscribe { email, rythmes, site }
 //     → crée/réactive un doc en status `pending`, envoie le mail de
 //       confirmation. Toujours 200 (générique) pour éviter
-//       l'énumération d'adresses.
+//       l'énumération d'adresses. `rythmes` dit ce à quoi la personne
+//       s'abonne, `site` est le pot de miel (cf. plus bas).
 //  - POST /api/subscribers/confirm { token }
 //     → valide le hash, flip `pending` → `active`, efface le confirm
 //       token.
@@ -12,12 +13,47 @@
 //     → vérifie la signature HMAC(id, PAYLOAD_SECRET), flip
 //       `active` → `unsubscribed`.
 //
-// Rate-limit IP : RATE_PROFILES.subscribe (5 / 15 min) sur subscribe.
 // Confirm + unsubscribe ne sont pas rate-limités (tokens difficiles
 // à deviner ; brute force inutile).
+//
+// ─── Ce qui garde /subscribe, et pourquoi ───────────────────────────
+//
+// Le tort possible ici n'est pas l'inscription de quelqu'un à son insu —
+// le double opt-in l'empêche — c'est le mail lui-même : l'endpoint fait
+// partir un message signé du site vers une adresse quelconque, choisie
+// par l'appelant. Non gardé, il transforme le site en distributeur de
+// courrier, et son domaine en domaine à bloquer.
+//
+//  1. GARDE D'ACCÈS DIRECT — nginx expose /cms/* à côté du site. Sans
+//     elle, on appelle Payload sans passer par Astro en écrivant soi-
+//     même `x-real-ip`, et la limitation « par IP » ne limite rien.
+//  2. COUPE-CIRCUIT GLOBAL — à clé fixe, 60 par heure. C'est le seul
+//     plafond qu'une rotation d'adresses IP ne contourne pas, donc le
+//     seul qui borne vraiment ce que le site peut émettre.
+//  3. LIMITATION PAR IP — 5 par quart d'heure. Filtre le volume
+//     ordinaire.
+//  4. PLAFOND PAR ADRESSE VISÉE — 3 par 24 h. Les trois autres bornent
+//     l'émission totale ; celui-ci borne ce qu'une même personne peut
+//     recevoir. C'est la mesure qui empêche de se servir du site pour
+//     inonder quelqu'un en particulier.
+//  5. DÉLAI DE RENVOI — une inscription encore en attente et confirmée
+//     il y a moins de dix minutes ne redéclenche pas de mail. Durable,
+//     lui : il est lu dans la base, il survit au redémarrage.
+//  6. POT DE MIEL — le champ `site` du formulaire, que personne ne voit
+//     et que les robots remplissent.
+//
+// Pas de preuve de travail, contrairement au contact : elle exige
+// `crypto.subtle`, donc JavaScript, et le formulaire d'abonnement
+// fonctionne sans — la page /abonnement/ traite la soumission native.
+// L'échanger contre une porte fermée aux navigateurs sans JavaScript
+// coûterait plus que ce qu'elle rapporte face au coupe-circuit.
+//
+// Les compteurs 2, 3 et 4 sont en mémoire : ils repartent à zéro au
+// redémarrage. Le 5 ne bouge pas.
 
 import type { Endpoint, PayloadRequest } from 'payload';
 
+import { proxyLegitime } from '../auth/proxy';
 import { clientIpFromHeaders, consume, RATE_PROFILES } from '../auth/rate-limit';
 import {
   generateUrlSafeToken,
@@ -29,6 +65,40 @@ import { getSiteName, subscribeConfirmEmail } from '../auth/email-templates';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CONFIRM_TTL_DAYS = 7;
+
+/**
+ * Délai avant qu'une même adresse encore en attente puisse redéclencher
+ * un mail de confirmation.
+ *
+ * Dix minutes : au-delà, quelqu'un qui n'a rien reçu et regarde ses
+ * indésirables a le droit de réessayer. En deçà, c'est soit un double
+ * clic, soit quelqu'un qui vise une boîte qui n'est pas la sienne.
+ *
+ * Contrairement aux compteurs de débit, celui-ci se lit dans la base :
+ * il tient au travers des redémarrages.
+ */
+const RENVOI_MIN_MS = 10 * 60 * 1000;
+
+/** Les seules valeurs de rythme que le formulaire peut envoyer. */
+const RYTHMES = ['newsletter', 'publications'] as const;
+type Rythme = (typeof RYTHMES)[number];
+
+/**
+ * Nettoie ce que le navigateur annonce avoir coché.
+ *
+ * Le corps de la requête n'est pas le formulaire : c'est une liste de
+ * chaînes qu'on nous donne. On garde les valeurs connues, on écarte le
+ * reste, et on retombe sur « parutions » si rien de valide ne subsiste —
+ * une inscription sans rythme ne recevrait jamais rien, ce qui est le
+ * contraire de ce qu'on vient demander.
+ */
+function rythmesValides(brut: unknown): Rythme[] {
+  const liste = Array.isArray(brut) ? brut : [brut];
+  const propres = [...new Set(liste.map(String))].filter((v): v is Rythme =>
+    (RYTHMES as readonly string[]).includes(v),
+  );
+  return propres.length > 0 ? propres : ['publications'];
+}
 
 // URL publique du site Astro — la valeur d'ADDRESS est généralement le
 // domaine sans schème (convention Infisical). On préfixe https:// si
@@ -86,12 +156,28 @@ type SubscriberDoc = {
   status: 'pending' | 'active' | 'unsubscribed';
   confirmTokenHash?: string | null;
   confirmTokenExpiresAt?: string | null;
+  /** Date de la dernière demande — donc du dernier mail parti. */
+  subscribedAt?: string | null;
 };
 
 const subscribeEndpoint: Endpoint = {
   path: '/subscribe',
   method: 'post',
   handler: async (req) => {
+    if (!proxyLegitime(req.headers, '/cms/api/subscribers/subscribe')) {
+      return jsonResponse({ ok: false, code: 'direct_access' }, 403);
+    }
+
+    // Le coupe-circuit avant tout le reste : quand il saute, plus rien
+    // ne part, pas même la lecture du corps.
+    if (!consume(RATE_PROFILES.subscribeFlood, 'all').ok) {
+      req.payload.logger.warn(
+        { event: 'subscribe_flood' },
+        "Coupe-circuit de l'inscription aux alertes",
+      );
+      return jsonResponse({ ok: false, code: 'saturated' }, 503);
+    }
+
     const ip = clientIpFromHeaders(req.headers);
     const rate = consume(RATE_PROFILES.subscribe, ip);
     if (!rate.ok) {
@@ -106,14 +192,39 @@ const subscribeEndpoint: Endpoint = {
     }
 
     let email = '';
+    let potDeMiel = '';
+    let rythmes: Rythme[] = ['publications'];
     try {
       const data = req.json ? await req.json() : null;
       email = String((data as { email?: unknown })?.email ?? '').trim().toLowerCase();
+      potDeMiel = String((data as { site?: unknown })?.site ?? '').trim();
+      rythmes = rythmesValides((data as { rythmes?: unknown })?.rythmes);
     } catch {
       /* invalid JSON → email reste vide */
     }
     if (!email || !EMAIL_RE.test(email) || email.length > 254) {
       return jsonResponse({ ok: false, code: 'invalid_email' }, 400);
+    }
+
+    // Le pot de miel après la validation d'adresse, pour que la réponse
+    // arrive au même moment qu'un succès : un robot qui reçoit son refus
+    // plus vite qu'un envoi normal apprend au chronomètre quel champ
+    // éviter. Réponse identique à celle d'un succès, à l'octet près.
+    if (potDeMiel) {
+      req.payload.logger.info({ event: 'subscribe_honeypot', ip }, 'Pot de miel rempli');
+      return jsonResponse({ ok: true });
+    }
+
+    // Plafond de ce qu'une même adresse peut recevoir, indépendant de
+    // qui le demande. Réponse générique, comme partout ici : dire
+    // « trop de demandes pour cette adresse » renseignerait sur une
+    // boîte qu'on ne possède pas.
+    if (!consume(RATE_PROFILES.subscribeEmail, email).ok) {
+      req.payload.logger.warn(
+        { event: 'subscribe_email_cap', ip },
+        "Plafond d'envois atteint pour une adresse",
+      );
+      return jsonResponse({ ok: true });
     }
 
     const token = generateUrlSafeToken();
@@ -140,6 +251,18 @@ const subscribeEndpoint: Endpoint = {
       return jsonResponse({ ok: true });
     }
 
+    // Demande déjà en cours et toute fraîche : le mail est parti, il
+    // n'y a rien à renvoyer. Sans ce garde-fou, on peut faire tomber un
+    // message dans la même boîte à chaque appel — le plafond par adresse
+    // au-dessus n'y suffirait pas, il est en mémoire et repart à zéro à
+    // chaque redémarrage. Celui-ci se lit dans la base.
+    if (existing?.status === 'pending' && existing.subscribedAt) {
+      const depuis = Date.now() - new Date(existing.subscribedAt).getTime();
+      if (depuis >= 0 && depuis < RENVOI_MIN_MS) {
+        return jsonResponse({ ok: true });
+      }
+    }
+
     if (existing) {
       // pending ou unsubscribed → on remet en pending avec nouveau token.
       await req.payload.update({
@@ -148,6 +271,10 @@ const subscribeEndpoint: Endpoint = {
         overrideAccess: true,
         data: {
           status: 'pending',
+          // Le rythme est celui de la demande en cours, pas de la
+          // précédente : quelqu'un qui se réinscrit en cochant autre
+          // chose a manifestement changé d'avis.
+          rythmes,
           confirmTokenHash: tokenHash,
           confirmTokenExpiresAt: expiresAt,
           subscribedAt: now,
@@ -162,6 +289,7 @@ const subscribeEndpoint: Endpoint = {
         data: {
           email,
           status: 'pending',
+          rythmes,
           confirmTokenHash: tokenHash,
           confirmTokenExpiresAt: expiresAt,
           subscribedAt: now,

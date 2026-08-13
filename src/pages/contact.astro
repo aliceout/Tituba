@@ -1,0 +1,443 @@
+---
+/**
+ * Formulaire de contact — /contact/
+ *
+ * Les messages ne sont pas stockés : ils partent par mail vers
+ * l'adresse configurée dans Identité → « Adresse de réception ». Celle-ci
+ * n'apparaît nulle part sur le site, ce qui est la raison d'être du
+ * formulaire — une adresse publiée est une adresse moissonnée.
+ *
+ * DEUX CHEMINS D'ENVOI, un seul endpoint.
+ *
+ *  - Avec JavaScript : le script résout la preuve de travail pendant
+ *    que vous rédigez, puis poste en fetch et affiche le résultat sans
+ *    recharger.
+ *  - Sans JavaScript : le <form> porte un `action` et un `method`, la
+ *    soumission native revient ici en POST, et ce frontmatter la relaie
+ *    à Payload avec `solution: null`. La preuve de travail ne pouvant
+ *    tourner sans `crypto.subtle`, le message n'est alors PAS transmis
+ *    tout de suite : il attend un clic sur un lien envoyé à l'adresse
+ *    saisie (cf. /contact/confirmer/). Ce chemin échange la preuve de
+ *    travail contre la possession vérifiée d'une boîte mail — sans quoi
+ *    il suffirait de désactiver JavaScript pour éviter la mesure la
+ *    plus coûteuse, et le repli serait l'autoroute à robots.
+ *
+ * L'`action` et le `method` ne sont pas décoratifs : le formulaire
+ * d'abonnement du site n'en a pas, si bien que sans JavaScript il part
+ * en GET sur l'URL courante et écrit l'adresse e-mail saisie dans
+ * l'historique du navigateur et dans les journaux du serveur. À ne pas
+ * reproduire ici.
+ *
+ * MISE EN CACHE — la page porte un défi à usage unique dans son HTML.
+ * Servie depuis un cache, elle donnerait le même défi à tout le monde :
+ * la première personne enverrait son message, toutes les suivantes
+ * seraient refusées pour « défi déjà consommé », et rien côté serveur
+ * ne signalerait la panne. D'où le `no-store` ci-dessous, qui n'est pas
+ * une précaution mais une condition de fonctionnement.
+ */
+import PageShell from '../components/ui/PageShell.astro';
+import { entetesProxy, getPayloadRaw, postPayload } from '../lib/payload';
+import { messageErreur } from '../lib/contact';
+import { formatHeroTitle } from '../lib/site';
+
+// Cf. le commentaire d'en-tête : condition de fonctionnement.
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+
+type ReponseDefi = {
+  ok?: boolean;
+  jeton?: string;
+  sel?: string;
+  cible?: string;
+  max?: number;
+};
+type ReponseEnvoi = { ok?: boolean; code?: string; mode?: 'direct' | 'confirmation' };
+
+/**
+ * Objets proposés.
+ *
+ * Une liste plutôt qu'un champ libre : elle oriente le message vers la
+ * bonne personne et évite les objets vides ou d'un seul mot. « Autre »
+ * reste ouvert — une liste fermée finirait par forcer les gens à ranger
+ * leur demande dans une case qui ne lui va pas.
+ *
+ * Écrite ici et non dans l'admin : cinq entrées stables, dont le
+ * libellé n'a pas vocation à bouger au fil de l'eau. Le jour où elle
+ * devra l'être, c'est un champ tableau sur le global Identité — avec la
+ * vue d'admin correspondante à écrire, celle-ci étant faite à la main.
+ *
+ * `valeur` sert aussi à la présélection par l'URL : la déclaration
+ * d'accessibilité renvoie vers /contact/?objet=accessibilite.
+ */
+const OBJETS = [
+  { valeur: 'publication', label: 'Une question sur une publication' },
+  { valeur: 'erreur', label: 'Signaler une erreur dans un texte' },
+  { valeur: 'accessibilite', label: 'Signaler un obstacle d’accessibilité' },
+  { valeur: 'collectif', label: 'Nous rejoindre' },
+  { valeur: 'presse', label: 'Presse' },
+] as const;
+
+/** Présélection par l'URL, si elle désigne un objet connu. */
+const objetUrl = Astro.url.searchParams.get('objet') ?? '';
+const objetPreselectionne = OBJETS.some((o) => o.valeur === objetUrl) ? objetUrl : '';
+
+/** Recompose l'objet envoyé : le libellé choisi, ou le texte libre. */
+function composerObjet(choix: string, autre: string): string {
+  if (choix === 'autre') return autre;
+  return OBJETS.find((o) => o.valeur === choix)?.label ?? '';
+}
+
+/** Valeurs à réafficher après un POST natif raté — perdre un long
+ *  message sur une erreur serait l'échec le plus grave de cette page. */
+let saisie = { nom: '', email: '', objetChoix: '', objetAutre: '', message: '' };
+/** 'direct' : remis. 'confirmation' : en attente d'un clic dans le mail. */
+let envoye: false | 'direct' | 'confirmation' = false;
+let erreur: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  try {
+    const form = await Astro.request.formData();
+    const lire = (c: string) => String(form.get(c) ?? '').trim();
+    saisie = {
+      nom: lire('nom'),
+      email: lire('email'),
+      objetChoix: lire('objetChoix'),
+      objetAutre: lire('objetAutre'),
+      message: lire('message'),
+    };
+    const { body } = await postPayload<ReponseEnvoi>(
+      '/contact',
+      {
+        nom: saisie.nom,
+        email: saisie.email,
+        message: saisie.message,
+        objet: composerObjet(saisie.objetChoix, saisie.objetAutre),
+        reference: lire('reference'),
+        jeton: lire('jeton'),
+        // Sans JavaScript, pas de preuve de travail — cf. en-tête.
+        solution: null,
+      },
+      entetesProxy(Astro.request, Astro.clientAddress),
+    );
+    if (body?.ok) {
+      envoye = body.mode === 'confirmation' ? 'confirmation' : 'direct';
+      saisie = { nom: '', email: '', objetChoix: '', objetAutre: '', message: '' };
+    } else {
+      erreur = messageErreur(body?.code);
+    }
+  } catch (err) {
+    console.warn('[contact] envoi natif impossible :', (err as Error).message);
+    erreur = messageErreur('proxy_error');
+  }
+}
+
+/**
+ * Défi du rendu courant. Tiré même après un envoi réussi : la page
+ * réaffichée doit rester utilisable pour écrire un second message.
+ */
+let defi: ReponseDefi = {};
+try {
+  const { body } = await getPayloadRaw<ReponseDefi>(
+    '/contact-challenge',
+    entetesProxy(Astro.request, Astro.clientAddress),
+  );
+  if (body?.ok) defi = body;
+} catch (err) {
+  console.warn('[contact] tirage du défi impossible :', (err as Error).message);
+}
+
+// Sans jeton, le formulaire ne peut rien envoyer : mieux vaut le dire
+// que présenter des champs qui échoueront à la soumission.
+const indisponible = !defi.jeton;
+
+/**
+ * Un champ du formulaire : l'intitulé, la saisie, parfois une précision.
+ * Les trois sortes de contrôle sont habillées ensemble par variante
+ * descendante — c'était `.contact-champ input, select, textarea`, et
+ * elles n'ont aucune raison de diverger.
+ *
+ * `appearance-auto` sur le <select> n'est pas décoratif : sans lui,
+ * certains navigateurs ignorent la police qu'on lui donne.
+ */
+const CHAMP = [
+  'flex flex-col gap-1.5',
+  '[&_input]:border-rule [&_select]:border-rule [&_textarea]:border-rule',
+  '[&_input]:bg-paper [&_select]:bg-paper [&_textarea]:bg-paper',
+  '[&_input]:text-ink [&_select]:text-ink [&_textarea]:text-ink',
+  '[&_input]:w-full [&_select]:w-full [&_textarea]:w-full',
+  '[&_input]:rounded-[2px] [&_select]:rounded-[2px] [&_textarea]:rounded-[2px]',
+  '[&_input]:border [&_select]:border [&_textarea]:border',
+  '[&_input]:px-3 [&_select]:px-3 [&_textarea]:px-3',
+  '[&_input]:py-2.5 [&_select]:py-2.5 [&_textarea]:py-2.5',
+  '[&_input]:font-serif [&_select]:font-serif [&_textarea]:font-serif',
+  '[&_input]:text-sublede [&_select]:text-sublede [&_textarea]:text-sublede',
+  '[&_input]:leading-[1.5] [&_select]:leading-[1.5] [&_textarea]:leading-[1.5]',
+  '[&_select]:appearance-auto',
+  '[&_textarea]:min-h-40 [&_textarea]:resize-y',
+  '[&_input:focus-visible]:outline-2 [&_input:focus-visible]:outline-offset-1 [&_input:focus-visible]:outline-[var(--c-vert-deep)]',
+  '[&_textarea:focus-visible]:outline-2 [&_textarea:focus-visible]:outline-offset-1 [&_textarea:focus-visible]:outline-[var(--c-vert-deep)]',
+  // Marqué par le script quand un champ obligatoire est vide.
+  '[&_input[aria-invalid=true]]:border-[#b63a3a] [&_textarea[aria-invalid=true]]:border-[#b63a3a]',
+].join(' ');
+
+/** L'intitulé d'un champ, et l'astérisque des champs obligatoires. */
+const INTITULE =
+  'text-muted font-sans text-meta font-medium tracking-[0.04em] uppercase [&_.req]:text-[var(--c-vert-deep)]';
+
+/** Une précision sous la saisie. */
+const PRECISION = 'text-muted font-sans text-[calc(11.5px*var(--a11y-echelle))]';
+
+/** Bandeau de réponse — succès en vert, échec en rouge. */
+const BANDEAU =
+  'text-ink m-0 mb-6 border-l-[3px] px-[18px] py-3.5 font-serif text-sublede leading-[1.55]';
+const BANDEAU_OK = `${BANDEAU} border-[var(--c-vert)] bg-[var(--c-vert-tint)]`;
+const BANDEAU_ERREUR = `${BANDEAU} border-[#b63a3a] bg-[color-mix(in_srgb,#b63a3a_8%,var(--color-bg))]`;
+---
+
+<PageShell
+  documentTitle="Nous écrire"
+  description="Écrire au collectif Tituba — une question, une proposition, un obstacle rencontré sur le site."
+  title={formatHeroTitle('Nous *écrire*.')}
+  lede="Une question, une proposition, une erreur repérée dans un texte, un obstacle rencontré sur le site : ce formulaire arrive directement dans notre boîte."
+  famille="vert"
+>
+  <div class="max-w-[46rem]">
+    {
+      envoye === 'direct' && (
+        <p class={BANDEAU_OK} role="status">
+          <strong>Message envoyé.</strong> Nous vous répondrons à l’adresse indiquée. Merci
+          d’avoir pris le temps de nous écrire.
+        </p>
+      )
+    }
+
+    {
+      /* Sans JavaScript, le message attend une confirmation. Le dire
+        franchement plutôt que d'annoncer un envoi qui n'a pas eu lieu :
+        quelqu'un qui croit son message parti n'ira pas ouvrir le mail,
+        et il se perdra. */
+    }
+    {
+      envoye === 'confirmation' && (
+        <p class={BANDEAU_OK} role="status">
+          <strong>Une dernière étape.</strong> Nous venons de vous envoyer un mail : ouvrez-le
+          et cliquez sur le lien pour que votre message nous parvienne. Il est valable trente
+          minutes, et le mail en contient le texte intégral.
+        </p>
+      )
+    }
+
+    {
+      erreur && (
+        <p class={BANDEAU_ERREUR} role="alert">
+          {erreur}
+        </p>
+      )
+    }
+
+    {
+      /* Le script recrée le bandeau de succès à la volée quand l’envoi
+
+        aboutit ; il lit sa mise en forme sur le formulaire plutôt que de la
+
+        recopier, faute de quoi elle divergerait du rendu serveur au premier
+
+        ajustement — et c’est exactement ce qui s’était produit : la classe
+
+        qu’il posait n’avait plus de règle, et le message arrivait sans la
+
+        moindre mise en forme. */
+    }
+
+    {
+      indisponible ? (
+        <p class={BANDEAU_ERREUR} role="alert">
+          Le formulaire est momentanément indisponible. Réessayez dans quelques minutes.
+        </p>
+      ) : (
+        <form
+          class="contact-form mt-2 grid gap-5"
+          method="post"
+          action="/contact/"
+          novalidate
+          data-contact-form
+          data-classe-succes={BANDEAU_OK}
+          data-max={String(defi.max ?? 0)}
+          data-sel={defi.sel}
+          data-cible={defi.cible}
+        >
+          <input type="hidden" name="jeton" value={defi.jeton} />
+          {/* Rempli par le script quand la preuve de travail a abouti.
+            Laissé vide sans JavaScript : le serveur l'accepte. */}
+          <input type="hidden" name="solution" value="" data-contact-solution />
+
+          {/*
+          Pot de miel. `display: none` et non l'utilitaire de lecture
+          d'écran du site : celui-ci procède par découpe, donc le champ
+          resterait annoncé par un lecteur d'écran, quelqu'un le
+          remplirait de bonne foi et son message serait jeté sans le
+          moindre signal. `display: none` le retire de l'arbre
+          d'accessibilité pour toutes les technologies d'assistance, et
+          dissuade au passage le remplissage automatique du navigateur.
+          Ne jamais « corriger » ceci vers .visually-hidden.
+        */}
+          <div class="hidden" aria-hidden="true">
+            <label for="ct-reference">Référence</label>
+            <input
+              id="ct-reference"
+              name="reference"
+              type="text"
+              tabindex="-1"
+              autocomplete="off"
+            />
+          </div>
+
+          {/* Deux colonnes tant que la place le permet : nom et adresse sont
+            courts, les empiler étirerait le formulaire sans rien gagner. */}
+          <div class="grid grid-cols-2 gap-5 max-[640px]:grid-cols-1">
+            <label class={CHAMP}>
+              <span class={INTITULE}>
+                Votre nom{' '}
+                <span class="req" aria-hidden="true">
+                  *
+                </span>
+              </span>
+              <input
+                type="text"
+                name="nom"
+                required
+                maxlength="120"
+                autocomplete="name"
+                value={saisie.nom}
+              />
+            </label>
+
+            <label class={CHAMP}>
+              <span class={INTITULE}>
+                Votre adresse e-mail{' '}
+                <span class="req" aria-hidden="true">
+                  *
+                </span>
+              </span>
+              <input
+                type="email"
+                name="email"
+                required
+                maxlength="254"
+                autocomplete="email"
+                value={saisie.email}
+              />
+              <span class={PRECISION}>Elle ne sert qu’à vous répondre.</span>
+            </label>
+          </div>
+
+          <label class={CHAMP}>
+            <span class={INTITULE}>Objet</span>
+            <select name="objetChoix">
+              <option value="">— choisissez un objet —</option>
+              {OBJETS.map((o) => (
+                <option
+                  value={o.valeur}
+                  selected={(saisie.objetChoix || objetPreselectionne) === o.valeur}
+                >
+                  {o.label}
+                </option>
+              ))}
+              <option value="autre" selected={saisie.objetChoix === 'autre'}>
+                Autre
+              </option>
+            </select>
+          </label>
+
+          {/*
+          Le champ libre est révélé par le CSS (`:has()`), pas par le
+          script : sans JavaScript il resterait sinon inaccessible, et
+          « Autre » ne mènerait nulle part. Il est visible par défaut et
+          masqué quand un objet de la liste est choisi — dans cet ordre,
+          un navigateur qui ne connaîtrait pas `:has()` l'affiche
+          toujours, ce qui est le défaut sûr.
+        */}
+          <label class:list={[CHAMP, 'contact-autre']}>
+            <span class={INTITULE}>Précisez l’objet</span>
+            <input
+              type="text"
+              name="objetAutre"
+              maxlength="200"
+              value={saisie.objetAutre}
+              placeholder="En quelques mots"
+            />
+          </label>
+
+          <label class={CHAMP}>
+            <span class={INTITULE}>
+              Votre message{' '}
+              <span class="req" aria-hidden="true">
+                *
+              </span>
+            </span>
+            <textarea
+              name="message"
+              rows={10}
+              required
+              maxlength="5000"
+              set:text={saisie.message}
+            />
+          </label>
+
+          <p class:list={[PRECISION, 'm-0']}>
+            Les champs marqués d’une{' '}
+            <>
+              <span aria-hidden="true">*</span>
+              <span class="sr-only">astérisque</span>
+            </>{' '}
+            sont obligatoires.
+          </p>
+
+          <div class="flex flex-wrap items-center gap-[18px]">
+            <button
+              type="submit"
+              class="cursor-pointer rounded-[2px] border-0 bg-[var(--c-vert-fill)] px-7 py-3 font-sans text-[calc(14px*var(--a11y-echelle))] font-medium text-[var(--c-vert-on)] transition-opacity duration-[120ms] hover:opacity-[0.88] disabled:cursor-progress disabled:opacity-55"
+            >
+              Envoyer
+            </button>
+            {/* Région live : c'est par elle qu'un lecteur d'écran apprend
+              que l'envoi est en cours, a réussi ou a échoué. */}
+            <p
+              class="text-muted m-0 font-sans text-[calc(13px*var(--a11y-echelle))]"
+              role="status"
+              aria-live="polite"
+              data-contact-statut
+            />
+          </div>
+        </form>
+      )
+    }
+
+    <p class="text-muted text-meta mt-8 mb-0 font-sans leading-[1.5]">
+      Vos coordonnées ne servent qu’à vous répondre. Elles ne sont pas conservées sur le site :
+      le message part directement dans notre boîte mail.
+    </p>
+  </div>
+</PageShell>
+
+{
+  /* Le seul CSS qui reste, et il porte une décision : le champ libre de
+    l'objet est révélé par `:has()` et non par le script — sans
+    JavaScript il resterait sinon inaccessible, et « Autre » ne mènerait
+    nulle part. Il est visible par défaut et masqué quand un objet de la
+    liste est choisi ; dans cet ordre, un navigateur qui ne connaîtrait
+    pas `:has()` l'affiche toujours, ce qui est le défaut sûr.
+
+    Écrit ici plutôt qu'en variante arbitraire : la même chose en
+    utilitaire demanderait d'encoder ce sélecteur entier dans un nom de
+    classe, quotes et parenthèses comprises. */
+}
+<style>
+  .contact-form:has(select[name='objetChoix'] option:not([value='autre']):checked)
+    .contact-autre {
+    display: none;
+  }
+</style>
+
+<script>
+  import '../scripts/contact-form.client';
+</script>

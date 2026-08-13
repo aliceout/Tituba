@@ -1,4 +1,4 @@
-// Mapping Zotero → Bibliography du Carnet.
+// Mapping Zotero → Bibliography de Tituba.
 //
 // On reste conservateur : si une info Zotero ne tient pas dans le schéma,
 // on la laisse tomber plutôt que de tordre le modèle. L'autrice peut
@@ -33,7 +33,7 @@ export type MappedBibliography = {
 };
 
 /**
- * Mapping itemType Zotero → type Carnet.
+ * Mapping itemType Zotero → type Tituba.
  *
  * Zotero a ~30 itemTypes ; on les regroupe en 6 buckets. Tout ce qui
  * ne tombe pas dans nos 5 catégories explicites devient `other`.
@@ -65,7 +65,7 @@ function mapItemType(zoteroType: string | undefined): BibType {
 }
 
 /**
- * Mapping creatorType Zotero → role Carnet. Tout ce qui n'est pas
+ * Mapping creatorType Zotero → role Tituba. Tout ce qui n'est pas
  * editor/translator devient 'author' (englobe author, contributor,
  * bookAuthor, seriesEditor traité comme editor, etc.)
  */
@@ -83,7 +83,7 @@ function mapCreatorRole(zoteroType: string | undefined): BibRole {
 }
 
 /**
- * Convertit la liste creators[] de Zotero en authors[] du Carnet.
+ * Convertit la liste creators[] de Zotero en authors[] de Tituba.
  *
  * Zotero supporte deux formes de créateur :
  *  - { firstName, lastName }       — personne physique
@@ -136,7 +136,7 @@ function parseYear(date: string | undefined): number {
 }
 
 /**
- * Compose un slug Carnet stable pour une ref Zotero. Préfixé par `zot-`
+ * Compose un slug Tituba stable pour une ref Zotero. Préfixé par `zot-`
  * pour distinguer du saisi-main, et inclut l'id du user pour éviter
  * les collisions entre plusieurs utilisateurs synchronisant des refs
  * potentiellement homonymes.
@@ -158,7 +158,7 @@ export type MapResult =
 /**
  * Mappe un item Zotero complet vers le shape Bibliography. Renvoie
  * `{ ok: false, reason }` avec une raison précise si l'item est
- * inutilisable côté Carnet : pas de titre, année invalide ou hors
+ * inutilisable côté Tituba : pas de titre, année invalide ou hors
  * plage 1700-3000, pas d'auteur·ice (l'auteur principal est requis
  * pour la citation Chicago courte).
  */
@@ -193,11 +193,11 @@ export function mapItem(item: ZoteroItem): MapResult {
   }
 
   // Pour les articles : Zotero met la revue dans publicationTitle
-  // (et non publisher). Le Carnet a un seul champ `journal` qu'on
+  // (et non publisher). Le Tituba a un seul champ `journal` qu'on
   // utilise pour ça, et `publisher` reste pour l'éditeur des livres.
   const isArticleLike = ['article', 'paper'].includes(mapItemType(d.itemType));
 
-  // Volume + numéro Zotero → champ `volume` Carnet (concaténé).
+  // Volume + numéro Zotero → champ `volume` Tituba (concaténé).
   const volumeStr = [d.volume, d.issue].filter(Boolean).join(', ');
 
   const mapped: MappedBibliography = {

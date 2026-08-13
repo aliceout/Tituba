@@ -1,0 +1,95 @@
+---
+/**
+ * Colonne latérale d'un billet d'actu — le fait dont il part.
+ *
+ * Elle occupe l'emplacement du sommaire des autres formats, et hérite
+ * donc de sa géométrie et de son comportement collant (cf
+ * PublicationArticle, .post-split). C'est délibéré : monter une seconde
+ * grille pour ce seul format aurait dupliqué un mécanisme qui marche.
+ *
+ * Ce qu'elle contient n'est pas un résumé du billet mais un rappel des
+ * faits. La distinction commande la mise en forme : registre sec,
+ * corps réduit, pas de rhétorique. Le billet argumente ; cette colonne
+ * établit.
+ */
+export interface Props {
+  /** Le fait, en deux à quatre phrases. */
+  texte: string;
+  /** Liens de vérification — ceux du fait, pas ceux de l'argumentation. */
+  sources?: { label?: string | null; url?: string | null }[] | null;
+}
+
+const { texte, sources } = Astro.props as Props;
+
+// Les entrées incomplètes sont écartées plutôt que rendues à moitié :
+// un intitulé sans adresse donne un lien mort, une adresse sans
+// intitulé une ligne qu'on ne sait pas lire.
+const liens = (sources ?? []).filter((s): s is { label: string; url: string } =>
+  Boolean(s?.label?.trim() && s?.url?.trim()),
+);
+---
+
+{
+  /* Pas de collage ici : c’est la colonne qui l’enveloppe qui colle (cf
+    PublicationArticle, .brief-colonne), puisqu’elle contient aussi les
+    repères et les actions. Deux blocs collants imbriqués se contraignent
+    l’un l’autre et finissent par se figer à contretemps.
+
+    Sous 1300 px la colonne n’existe plus : le bloc repasse au-dessus du
+    texte, où il garde son sens — on lit le fait avant le commentaire. */
+}
+<aside class="max-large:mb-[34px] font-sans" aria-labelledby="brief-titre">
+  {
+    /* Le titre du bloc garde le mono et la couleur d’accent : c’est le
+      titre de la colonne, pas un intitulé de rubrique. */
+  }
+  <h2
+    class="text-accent text-label m-0 mb-3 font-mono font-medium tracking-[0.14em] uppercase"
+    id="brief-titre"
+  >
+    L’actualité en question
+  </h2>
+  {
+    /* Un filet à gauche plutôt qu’un cadre : le bloc se distingue du texte
+      sans devenir un encadré, qui appellerait à être lu en premier alors
+      qu’il n’est qu’un préalable.
+
+      Justifié avec césure, comme le corps des billets : la justification
+      seule, dans une colonne de cette largeur, ouvre des blancs béants
+      entre les mots. La césure les referme. */
+  }
+  <p
+    class="text-ink border-rule m-0 border-l-2 pl-3.5 text-justify text-[calc(13.5px*var(--a11y-echelle))] leading-[1.6] hyphens-auto whitespace-pre-line"
+  >
+    {texte}
+  </p>
+
+  {
+    liens.length > 0 && (
+      <div class="border-rule mt-[18px] border-t pt-[18px]">
+        {/* Repris trait pour trait des repères du bloc commun juste en
+          dessous (cf ArticleToc) : ce sont les mêmes petits intitulés de
+          rubrique dans la même colonne — les distinguer ne signalait
+          rien, ça donnait deux systèmes à quelques centimètres l’un de
+          l’autre. */}
+        <h3 class="text-ink m-0 mb-2 font-sans text-[calc(10px*var(--a11y-echelle))] font-semibold tracking-[0.12em] uppercase">
+          Sources
+        </h3>
+        <ul class="m-0 flex list-none flex-col gap-1.5 p-0">
+          {liens.map((s) => (
+            <li>
+              <a
+                href={s.url}
+                rel="noopener noreferrer"
+                target="_blank"
+                class="text-muted border-rule hover:text-ink hover:border-b-ink border-b text-[calc(12.5px*var(--a11y-echelle))] leading-[1.4] transition-colors duration-100"
+              >
+                {s.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+</aside>

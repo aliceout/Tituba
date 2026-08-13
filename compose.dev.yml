@@ -9,27 +9,33 @@
 # capture les mails d'auth Payload (invitations, OTP 2FA).
 #
 # Données persistantes Postgres dans un volume Docker nommé `pgdata`
-# (géré par Docker, hors repo). `docker volume rm carnet_pgdata` pour wipe.
+# (géré par Docker, hors repo). `docker volume rm tituba_pgdata` pour wipe.
 # Mailpit garde les mails en mémoire — vidés à chaque restart, c'est voulu.
 
 services:
   db:
     image: postgres:16-alpine
-    container_name: carnet-db
+    container_name: tituba-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-payload}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payload}
-      POSTGRES_DB: ${POSTGRES_DB:-carnet}
+      POSTGRES_DB: ${POSTGRES_DB:-tituba}
     ports:
-      # Exposé sur 5432 host pour qu'on puisse connecter Payload local
-      # sans passer dans Docker. Pas exposé en prod (réseau interne).
-      - '5432:5432'
+      # Exposé côté host pour qu'on puisse connecter Payload local sans
+      # passer dans Docker. Pas exposé en prod (réseau interne).
+      #
+      # 5433 et non 5432 : le projet Carnet (dont ce repo est issu) écoute
+      # déjà sur 5432 en local. Sans ce décalage, le container Tituba
+      # échoue silencieusement à binder le port et Payload se connecte à
+      # la base de Carnet — même user, même nom de base. Garder
+      # POSTGRES_PORT=5433 aligné dans le .env.
+      - '${POSTGRES_PORT:-5433}:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
       test:
-        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-payload} -d ${POSTGRES_DB:-carnet}']
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-payload} -d ${POSTGRES_DB:-tituba}']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -44,15 +50,17 @@ services:
   #   SMTP_USER=dev
   #   SMTP_PASS=dev
   #   SMTP_SECURE=false
-  #   SMTP_FROM=noreply@carnet.local
+  #   SMTP_FROM=noreply@tituba.local
   # Mailpit accepte n'importe quel user/pass (auth non vérifiée).
   mailpit:
     image: axllent/mailpit:latest
-    container_name: carnet-mailpit
+    container_name: tituba-mailpit
     restart: unless-stopped
     ports:
-      - '1025:1025' # SMTP
-      - '8025:8025' # Web UI
+      # Décalés comme Postgres : le Mailpit de Carnet occupe déjà
+      # 1025/8025 en local. Cf. le commentaire sur le port du service db.
+      - '${MAILPIT_SMTP_PORT:-1026}:1025' # SMTP
+      - '${MAILPIT_UI_PORT:-8026}:8025' # Web UI
     environment:
       MP_MAX_MESSAGES: 500
       MP_SMTP_AUTH_ACCEPT_ANY: 1

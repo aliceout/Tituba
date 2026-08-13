@@ -53,33 +53,33 @@ export default function AccountSecurityClient(): React.ReactElement {
   }
 
   return (
-    <div className="carnet-account-security">
+    <div className="tituba-account-security">
       {error && (
-        <div className="carnet-editview__error" role="alert">
+        <div className="tituba-editview__error" role="alert">
           {error}
         </div>
       )}
 
-      <div className="carnet-account-security__group">
-        <div className="carnet-account-security__title">Double authentification (2FA)</div>
-        <p className="carnet-account-security__text">
+      <div className="tituba-account-security__group">
+        <div className="tituba-account-security__title">Double authentification (2FA)</div>
+        <p className="tituba-account-security__text">
           Toutes les connexions sont protégées par un{' '}
           <strong>code à 6 chiffres reçu par email</strong>. Sur un appareil de
           confiance (cf. ci-dessous), le code est demandé environ une fois par semaine.
         </p>
       </div>
 
-      <div className="carnet-account-security__group">
-        <div className="carnet-account-security__title">
+      <div className="tituba-account-security__group">
+        <div className="tituba-account-security__title">
           Appareils de confiance ({devices.length})
         </div>
-        <p className="carnet-account-security__text">
+        <p className="tituba-account-security__text">
           Ces appareils ne vous demandent pas de code à la connexion (validité 7 jours).
         </p>
         {devices.length === 0 ? (
-          <p className="carnet-account-security__empty">Aucun appareil de confiance.</p>
+          <p className="tituba-account-security__empty">Aucun appareil de confiance.</p>
         ) : (
-          <ul className="carnet-account-security__devices">
+          <ul className="tituba-account-security__devices">
             {devices.map((d) => (
               <li key={d.deviceId}>
                 <div className="info">
@@ -92,7 +92,7 @@ export default function AccountSecurityClient(): React.ReactElement {
                 </div>
                 <button
                   type="button"
-                  className="carnet-btn carnet-btn--ghost"
+                  className="tituba-btn tituba-btn--ghost"
                   onClick={() => void revokeDevice(d.deviceId)}
                 >
                   Révoquer

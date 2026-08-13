@@ -1,0 +1,143 @@
+---
+/**
+ * Fiche d'un·e auteur·ice interne — /auteurice/<id>/
+ *
+ * Calque de src/pages/theme/[slug].astro : hero (nom), compteur + lien
+ * retour, filtre par format, grille des publications de cette personne
+ * (toutes collections confondues). Id numérique plutôt que slug — pas
+ * de champ dédié sur Users, cf plan validé.
+ */
+import PageShell from '../../components/ui/PageShell.astro';
+import PublicationCard from '../../components/PublicationCard.astro';
+import CardFilterBar from '../../components/CardFilterBar.astro';
+import Empty from '../../components/ui/Empty.astro';
+import { PUBLICATIONS, PUBLICATION_ORDER, fetchFeed } from '../../lib/publications';
+import { fetchUserDisplayName, uploadedImageUrl } from '../../lib/payload';
+// Le nom part dans `title`, que PageTitle rend en `set:html` : il doit
+// être échappé, et ses astérisques deviennent ici des mots surlignés —
+// c'est la seule page où le nom fait titre, donc la seule où le
+// surlignage a lieu d'être. Ailleurs, `stripHeroMarkers` les efface.
+import { formatHeroTitle, stripHeroMarkers } from '../../lib/site';
+import type { FeedDoc } from '../../lib/payload';
+import { serviceIndisponible } from '../../lib/indisponible';
+
+type Post = FeedDoc;
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/auteurices/');
+
+let author: Awaited<ReturnType<typeof fetchUserDisplayName>>;
+try {
+  author = await fetchUserDisplayName(id);
+} catch (err) {
+  return serviceIndisponible('auteurice', err);
+}
+if (!author) {
+  return new Response('Auteur·ice introuvable', { status: 404 });
+}
+
+let posts: Post[] = [];
+try {
+  const feed = await fetchFeed({ author: id, limit: 200 });
+  posts = feed.docs;
+} catch (err) {
+  console.warn('[auteurice] posts fetch failed:', (err as Error).message);
+}
+
+const total = posts.length;
+
+const name = author.displayName ?? 'Auteur·ice';
+// Nom nu, pour tout ce qui n'est pas le h1 : onglet du navigateur,
+// description, texte alternatif du portrait.
+const nameNu = stripHeroMarkers(name);
+
+// Présentation et portrait, saisis par la personne depuis « Mon
+// compte ». Les deux sont facultatifs : une fiche sans photo ni texte
+// reste une fiche complète.
+const bio = (author.bio ?? '').trim();
+const photoUrl = uploadedImageUrl(author.photo);
+const photoAlt =
+  author.photo && typeof author.photo === 'object' ? (author.photo.alt ?? '') : '';
+
+// Formats réellement représentés chez cette personne, dans l'ordre
+// éditorial — un filtre vide n'aurait pas de sens ici non plus.
+const formatCounts = new Map<string, number>();
+for (const p of posts)
+  formatCounts.set(p.collection, (formatCounts.get(p.collection) ?? 0) + 1);
+const formatOptions = PUBLICATION_ORDER.filter((c) => formatCounts.has(c)).map((c) => ({
+  value: c,
+  label: PUBLICATIONS[c].labelPlural,
+  count: formatCounts.get(c) ?? 0,
+}));
+---
+
+<PageShell
+  documentTitle={nameNu}
+  description={`Les publications de ${nameNu} sur Tituba.`}
+  title={formatHeroTitle(name)}
+  famille="bleu"
+>
+  <Fragment slot="sous-titre">
+    {
+      /* Portrait et présentation avant le filtre : c'est la personne
+        qu'on vient lire ici, la liste de ses textes vient ensuite. Le
+        bloc entier disparaît si ni l'un ni l'autre n'est renseigné. */
+    }
+    {
+      /* Portrait au fer à gauche sur l’axe du nom, présentation sur tout ce
+        qui reste à droite — pas de cap de mesure : la ligne se règle sur la
+        largeur de la page, comme le reste.
+
+        Sous 640 px le portrait passe au-dessus : à cette largeur, la
+        colonne de texte restante ne tiendrait plus que trois ou quatre
+        mots. */
+    }
+    {
+      (photoUrl || bio) && (
+        <div class="my-2 flex items-center gap-7 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-5">
+          {/* Déposé cadré en carré côté admin ; `object-cover` en tire le
+            cercle sans déformer, y compris pour un fichier plus ancien qui
+            ne serait pas tout à fait carré. */}
+          <div class="flex-none">
+            {photoUrl && (
+              <img
+                class="bg-rule block size-[120px] rounded-full object-cover"
+                src={photoUrl}
+                alt={photoAlt || `Portrait de ${nameNu}`}
+                width="120"
+                height="120"
+                loading="lazy"
+              />
+            )}
+          </div>
+          {/* Saisie dans un textarea : les retours à la ligne sont voulus. */}
+          {bio && (
+            <p class="text-muted text-lede m-0 min-w-0 flex-1 font-serif leading-[1.7] whitespace-pre-line">
+              {bio}
+            </p>
+          )}
+        </div>
+      )
+    }
+
+    <CardFilterBar dimension="type" label="Format" options={formatOptions} total={total} />
+  </Fragment>
+
+  {
+    posts.length === 0 ? (
+      <Empty>Aucune publication pour l'instant.</Empty>
+    ) : (
+      posts.map((p) => (
+        <PublicationCard
+          collection={p.collection}
+          docId={p.publicId}
+          title={p.title}
+          themeSlugs={p.themeSlugs}
+          publishedAt={p.publishedAt}
+          lede={p.lede}
+          readingTime={p.readingTime}
+        />
+      ))
+    )
+  }
+</PageShell>

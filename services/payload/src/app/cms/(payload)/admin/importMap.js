@@ -22,10 +22,12 @@ import { BlockquoteFeatureClient as BlockquoteFeatureClient_e70f5e05f09f93e00b99
 import { UploadFeatureClient as UploadFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { HorizontalRuleFeatureClient as HorizontalRuleFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { InlineToolbarFeatureClient as InlineToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
-import { default as default_7c96febce50ca24b7bbaad53a9c8dcdb } from '@/components/admin/PostEditView'
-import { default as default_9a392549adc5e7cea5c12dbcd0e775a6 } from '@/components/admin/PostListView'
+import { default as default_92f00ed44889f59f1052230d1b9fc7c5 } from '@/components/admin/PublicationEditView'
+import { default as default_b84cbbf826b93aab328a87939022d537 } from '@/components/admin/PublicationListView'
 import { default as default_6d604e02fd948e3dc45b0ec9060c7c9c } from '@/components/admin/ThemeEditView'
 import { default as default_145dcd377f3e16019ed4fdecfff71610 } from '@/components/admin/ThemeListView'
+import { default as default_26384ce0040884f4b009b136bff80cbd } from '@/components/admin/SeriesEditView'
+import { default as default_3b8e3032719c7367fe3cb6f5f34f3169 } from '@/components/admin/SeriesListView'
 import { default as default_647f33596a337ffc33a6023b76b64f36 } from '@/components/admin/TagEditView'
 import { default as default_8afbac37d45034f52a5dc2f36e202eda } from '@/components/admin/TagListView'
 import { default as default_c2a08a78b2479e66392ea346136ef322 } from '@/components/admin/BibliographyEditView'
@@ -42,7 +44,6 @@ import { default as default_4f4a1390d781eaf766954f2462345309 } from '@/component
 import { default as default_f14ae38ebdca03e58ad6ba025ba4fff7 } from '@/components/admin/SubscribersListView'
 import { default as default_ece08040cf741a6431b879c5468cef8b } from '@/components/admin/SiteEditView'
 import { default as default_eba7cc9dae9e490f8f3ab04453c7762c } from '@/components/admin/NavigationEditView'
-import { default as default_171620f8fc08fc7fc7f0dfeeb190eb12 } from '@/components/admin/IndexPagesEditView'
 import { default as default_e572a5fe04c06dbb21c8d63fb1ccaa0d } from '@/components/admin/IdentityEditView'
 import { default as default_e0fec5daad8a68a7b75fa04d3fcef1af } from '@/components/admin/SubscriptionsEditView'
 import { default as default_a9d4b87e0306b3ddfe97926a52a69591 } from '@/components/admin/Nav'
@@ -79,10 +80,12 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#UploadFeatureClient": UploadFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#HorizontalRuleFeatureClient": HorizontalRuleFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#InlineToolbarFeatureClient": InlineToolbarFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
-  "@/components/admin/PostEditView#default": default_7c96febce50ca24b7bbaad53a9c8dcdb,
-  "@/components/admin/PostListView#default": default_9a392549adc5e7cea5c12dbcd0e775a6,
+  "@/components/admin/PublicationEditView#default": default_92f00ed44889f59f1052230d1b9fc7c5,
+  "@/components/admin/PublicationListView#default": default_b84cbbf826b93aab328a87939022d537,
   "@/components/admin/ThemeEditView#default": default_6d604e02fd948e3dc45b0ec9060c7c9c,
   "@/components/admin/ThemeListView#default": default_145dcd377f3e16019ed4fdecfff71610,
+  "@/components/admin/SeriesEditView#default": default_26384ce0040884f4b009b136bff80cbd,
+  "@/components/admin/SeriesListView#default": default_3b8e3032719c7367fe3cb6f5f34f3169,
   "@/components/admin/TagEditView#default": default_647f33596a337ffc33a6023b76b64f36,
   "@/components/admin/TagListView#default": default_8afbac37d45034f52a5dc2f36e202eda,
   "@/components/admin/BibliographyEditView#default": default_c2a08a78b2479e66392ea346136ef322,
@@ -99,7 +102,6 @@ export const importMap = {
   "@/components/admin/SubscribersListView#default": default_f14ae38ebdca03e58ad6ba025ba4fff7,
   "@/components/admin/SiteEditView#default": default_ece08040cf741a6431b879c5468cef8b,
   "@/components/admin/NavigationEditView#default": default_eba7cc9dae9e490f8f3ab04453c7762c,
-  "@/components/admin/IndexPagesEditView#default": default_171620f8fc08fc7fc7f0dfeeb190eb12,
   "@/components/admin/IdentityEditView#default": default_e572a5fe04c06dbb21c8d63fb1ccaa0d,
   "@/components/admin/SubscriptionsEditView#default": default_e0fec5daad8a68a7b75fa04d3fcef1af,
   "@/components/admin/Nav#default": default_a9d4b87e0306b3ddfe97926a52a69591,

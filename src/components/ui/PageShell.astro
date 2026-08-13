@@ -1,0 +1,98 @@
+---
+/**
+ * Enveloppe de page — le chrome, le titre, et le corps.
+ *
+ * C'est le composant qu'une page appelle, et normalement le seul. Il
+ * compose Layout (head, header, footer) et PageTitle (sur-titre, h1,
+ * chapô), puis pose la gouttière autour du contenu.
+ *
+ * L'intérêt n'est pas d'économiser des lignes mais de rendre la dérive
+ * impossible : tant qu'une page passe par ici, elle ne peut pas avoir
+ * une marge différente d'une autre, ni un h1 d'une autre taille, ni un
+ * chapô d'une autre couleur. C'est ce qui manquait — chaque page
+ * redéclarait sa propre géométrie et sa propre échelle.
+ *
+ * La gouttière n'est plus posée ici : elle vit sur `<main>` lui-même
+ * (cf le `<style>` de Layout.astro). Tout ce qui passe par PageShell en
+ * hérite donc automatiquement, y compris le slot `sous-titre` — plus
+ * aucun composant de page n'a à se poser sa propre marge.
+ */
+import Layout from '../../layouts/Layout.astro';
+import PageTitle from './PageTitle.astro';
+
+interface Props {
+  /** Titre du document — Layout y ajoute « — Tituba ». */
+  documentTitle?: string;
+  description?: string;
+  noindex?: boolean;
+  bodyClass?: string;
+
+  /** h1, HTML autorisé. */
+  title: string;
+  /** Chapô, HTML autorisé. */
+  lede?: string;
+  /** Famille dominante de la page. */
+  famille?: 'bleu' | 'vert' | 'jaune' | 'violet' | 'marque';
+  /** Cf PageTitle — force une échelle plutôt que de la déduire du titre. */
+  taille?: 'pleine';
+}
+
+const { documentTitle, description, noindex, bodyClass, title, lede, famille, taille } =
+  Astro.props;
+---
+
+<Layout
+  title={documentTitle}
+  description={description}
+  noindex={noindex}
+  bodyClass={bodyClass}
+>
+  {
+    /* Relais du slot `head` de Layout : une page passant par PageShell
+      n'avait aucun moyen d'ajouter une balise dans le <head>, alors
+      que Layout le permet. C'est par là que passe la découverte d'un
+      flux propre à la page (<link rel="alternate">). */
+  }
+  <Fragment slot="head">
+    <slot name="head" />
+  </Fragment>
+
+  <PageTitle title={title} lede={lede} famille={famille} taille={taille}>
+    {
+      /* Contenu propre au pied du hero — compteur + lien retour d'une
+        page de thème ou de tag, par exemple. Rendu dans le slot par
+        défaut de PageTitle, donc juste sous le chapô. */
+    }
+    <slot name="titre-pied" />
+  </PageTitle>
+
+  {
+    /* Slot nommé pour ce qui doit s'insérer entre le titre et le corps —
+      une barre de filtres, par exemple. */
+  }
+  <slot name="sous-titre" />
+
+  <section class="page-body">
+    <slot />
+  </section>
+</Layout>
+
+<style is:global>
+  /* Couche `components` : ces règles habillent du contenu qui arrive
+     par un slot — y compris le HTML rendu depuis Lexical, sur lequel
+     on ne peut poser aucune classe. Elles doivent donc rester du CSS,
+     mais céder devant un utilitaire écrit à la main. */
+  @layer components {
+    /* Rythme vertical du corps de page. `is:global` parce que le contenu
+       arrive par un slot : les styles à portée de composant ne
+       l'atteindraient pas. Volontairement limité à .page-body, donc sans
+       effet ailleurs. */
+    .page-body {
+      /* PageTitle ne porte aucune marge basse : sur tout le site, c est
+         le bloc suivant qui porte l ecart. C est ici que ca se joue pour
+         le corps de page. */
+      padding-top: var(--block-gap);
+      padding-bottom: 72px;
+    }
+  }
+</style>

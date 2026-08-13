@@ -1,0 +1,77 @@
+---
+/**
+ * Bouton — action, envoi de formulaire, ou lien qui se comporte comme
+ * une commande.
+ *
+ * Il manquait : le bouton d'envoi vivait à l'intérieur de Field, celui
+ * de copie du flux RSS était écrit à la main dans la page, et les deux
+ * avaient fini avec des tailles différentes pour un même rôle.
+ *
+ * Deux tons, et le choix entre eux n'est pas décoratif :
+ *   plein   — sur fond clair. C'est l'aplat qui porte la couleur.
+ *   contour — sur un panneau déjà teinté. Un aplat y ferait deux
+ *             surfaces colorées l'une dans l'autre.
+ *
+ * Rend un `<button>` par défaut, un `<a>` si `href` est fourni : un
+ * élément qui navigue doit être un lien, quelle que soit son apparence.
+ */
+interface Props {
+  ton?: 'plein' | 'contour';
+  famille?: 'bleu' | 'vert' | 'jaune' | 'violet' | 'marque';
+  /** Rend un lien plutôt qu'un bouton. */
+  href?: string;
+  type?: 'button' | 'submit';
+  class?: string;
+  'aria-label'?: string;
+  [key: string]: unknown;
+}
+
+const {
+  ton = 'plein',
+  famille = 'vert',
+  href,
+  type = 'button',
+  class: className,
+  ...reste
+} = Astro.props;
+
+const Tag = href ? 'a' : 'button';
+
+// La famille pose trois variables, le ton les lit. L’indirection vaut
+// d’être gardée : sans elle, chaque ton devrait redire chaque famille,
+// soit dix combinaisons à tenir d’accord au lieu de sept déclarations.
+const FAMILLES: Record<string, string> = {
+  bleu: '[--fam:var(--c-bleu-deep)] [--fam-fill:var(--c-bleu-fill)] [--fam-on:var(--c-bleu-on)]',
+  vert: '[--fam:var(--c-vert-deep)] [--fam-fill:var(--c-vert-fill)] [--fam-on:var(--c-vert-on)]',
+  jaune:
+    '[--fam:var(--c-jaune-deep)] [--fam-fill:var(--c-jaune-fill)] [--fam-on:var(--c-jaune-on)]',
+  violet: '[--fam:var(--c-violet-deep)] [--fam-fill:var(--c-violet)] [--fam-on:#fff]',
+  // Couleur de marque configurable depuis l’admin : seul `--fam` est
+  // posé, et `contour` est le seul ton qui s’en contente — son survol
+  // retombe sur le papier, pas sur `--fam-on`. Une valeur arbitraire
+  // n’offre aucun contraste garanti pour un fond plein.
+  marque: '[--fam:var(--color-accent)]',
+};
+
+const TONS: Record<string, string> = {
+  plein: 'bg-(--fam-fill) text-(--fam-on) border border-transparent hover:brightness-[1.12]',
+  contour:
+    'bg-transparent text-(--fam) border border-(--fam) hover:bg-(--fam) hover:text-paper',
+};
+---
+
+<Tag
+  class:list={[
+    'inline-flex flex-none cursor-pointer items-center gap-1.5 rounded-full px-4 py-[7px]',
+    'text-meta font-sans leading-[1.2] whitespace-nowrap transition duration-100',
+    'disabled:cursor-default disabled:opacity-50 disabled:filter-none',
+    FAMILLES[famille],
+    TONS[ton],
+    className,
+  ]}
+  href={href}
+  type={href ? undefined : type}
+  {...reste}
+>
+  <slot />
+</Tag>

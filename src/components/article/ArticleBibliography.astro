@@ -1,0 +1,67 @@
+---
+/** Bibliographie d'un article — ancres #bib-<slug> ciblées par les
+ *  renvois inline (.biblio-inline) rendus dans le corps.
+ *
+ *  Liste NUMÉROTÉE, et l'ordre compte : le corps cite « [12] », ce
+ *  douze est le rang de l'entrée ici. Les deux numérotations sortent
+ *  du même tableau, elles ne peuvent pas se décaler. */
+import { formatAuthorsChicago, formatTranslators } from '../../lib/format-authors';
+import type { BiblioEntry } from '../../lib/publications';
+
+interface Props {
+  entries: BiblioEntry[];
+}
+
+const { entries } = Astro.props;
+---
+
+<section id="biblio">
+  <h3
+    class="text-ink mt-0 mb-3.5 font-sans text-[calc(13px*var(--a11y-echelle))] font-semibold tracking-[0.1em] uppercase"
+  >
+    Bibliographie
+  </h3>
+  {
+    /* Numérotée explicitement : c’est le numéro que cite le corps, il ne
+      doit pas dépendre d’une remise à zéro des styles. */
+  }
+  <ol
+    class="text-body-soft marker:text-body-soft marker:text-meta m-0 list-decimal pl-7 font-serif text-[calc(14px*var(--a11y-echelle))] leading-[1.65] marker:font-sans"
+  >
+    {
+      entries.map((b) => (
+        <li id={`bib-${b.slug}`} class="mb-1.5">
+          <span class="text-ink font-medium">{formatAuthorsChicago(b.authors)}</span>
+          {`, ${b.year}, `}
+          <em>{b.title}</em>
+          {formatTranslators(b.authors) && `, ${formatTranslators(b.authors)}`}
+          {b.publisher && `, ${b.place ? b.place + ', ' : ''}${b.publisher}`}
+          {b.journal && `, ${b.journal}`}
+          {b.volume && `, ${b.volume}`}
+          {b.pages && `, p. ${b.pages}`}
+          {b.url && (
+            <>
+              {' '}
+              <a href={b.url} class="border-accent border-b text-inherit" rel="noopener">
+                {b.url}
+              </a>
+            </>
+          )}
+          {!b.url && b.doi && (
+            <>
+              {' doi:'}
+              <a
+                href={`https://doi.org/${b.doi}`}
+                class="border-accent border-b text-inherit"
+                rel="noopener"
+              >
+                {b.doi}
+              </a>
+            </>
+          )}
+          .
+        </li>
+      ))
+    }
+  </ol>
+</section>

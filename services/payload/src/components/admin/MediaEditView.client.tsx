@@ -2,7 +2,7 @@
 
 // MediaEditView (client) — vue Édition custom d'un média. Layout :
 //
-//   CarnetTopbar : crumbs Carnet / Médias / [filename] + Supprimer +
+//   CarnetTopbar : crumbs Tituba / Médias / [filename] + Supprimer +
 //                  Sauvegarder
 //   Hero         : h1 « Média » + « fichier : <filename> » mono
 //   Création (pas d'id) :
@@ -70,7 +70,7 @@ export default function MediaEditViewClient({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Erreurs par champ — affichées sous l'input concerné (cf. pattern
-  // PostEditView fieldErrors). Plus lisible qu'un message générique
+  // PublicationEditView fieldErrors). Plus lisible qu'un message générique
   // dans la bannière error en haut du form.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -251,7 +251,7 @@ export default function MediaEditViewClient({
       variant="editview"
       modifier="media"
       crumbs={[
-        { href: '/cms/admin', label: 'Carnet' },
+        { href: '/cms/admin', label: 'Tituba' },
         { href: '/cms/admin/collections/media', label: 'Médias' },
         { label: data.filename || (docId ? '—' : 'nouveau') },
       ]}
@@ -259,19 +259,19 @@ export default function MediaEditViewClient({
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           {data.id != null && (
             <button
               type="button"
-              className="carnet-btn carnet-btn--ghost"
+              className="tituba-btn tituba-btn--ghost"
               onClick={() => {
                 setDeleteOpen(true);
                 setDeleteError(null);
@@ -284,7 +284,7 @@ export default function MediaEditViewClient({
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={() => void save()}
             disabled={!dirty || saving || loading}
             title="Sauvegarder (⌘S)"
@@ -295,22 +295,22 @@ export default function MediaEditViewClient({
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <div className="carnet-editview__hero">
-            <h1 className="carnet-h1">Média</h1>
+          <div className="tituba-editview__hero">
+            <h1 className="tituba-h1">Média</h1>
             {displayName && (
-              <p className="carnet-editview__hero-key">
+              <p className="tituba-editview__hero-key">
                 fichier : <span className="mono">{displayName}</span>
               </p>
             )}
@@ -321,16 +321,16 @@ export default function MediaEditViewClient({
               représente, puis upload. Les deux champs sont obligatoires
               (cf. schema collections/Media.ts).
               En édition (data.id != null), Titre + Alt vivent dans le
-              side panel de la section Fichier (cf .carnet-media-preview
+              side panel de la section Fichier (cf .tituba-media-preview
               ci-dessous), car la prévisualisation est plus pertinente
               en haut. */}
           {!data.id && (
-            <section className="carnet-editview__section">
-              <h2 className="carnet-editview__section-title">Description</h2>
+            <section className="tituba-editview__section">
+              <h2 className="tituba-editview__section-title">Description</h2>
 
               <label
-                className={`carnet-editview__field${
-                  fieldErrors.title ? ' carnet-editview__field--invalid' : ''
+                className={`tituba-editview__field${
+                  fieldErrors.title ? ' tituba-editview__field--invalid' : ''
                 }`}
               >
                 <span className="lbl">Titre</span>
@@ -354,14 +354,14 @@ export default function MediaEditViewClient({
                 </span>
               </label>
               {fieldErrors.title && (
-                <div className="carnet-editview__field-error" role="alert">
+                <div className="tituba-editview__field-error" role="alert">
                   {fieldErrors.title}
                 </div>
               )}
 
               <label
-                className={`carnet-editview__field${
-                  fieldErrors.alt ? ' carnet-editview__field--invalid' : ''
+                className={`tituba-editview__field${
+                  fieldErrors.alt ? ' tituba-editview__field--invalid' : ''
                 }`}
               >
                 <span className="lbl">Texte alternatif (alt)</span>
@@ -386,36 +386,36 @@ export default function MediaEditViewClient({
                 </span>
               </label>
               {fieldErrors.alt && (
-                <div className="carnet-editview__field-error" role="alert">
+                <div className="tituba-editview__field-error" role="alert">
                   {fieldErrors.alt}
                 </div>
               )}
             </section>
           )}
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Fichier</h2>
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Fichier</h2>
 
             {data.id != null ? (
               // Edition : aperçu + meta. Pas de remplacement de
               // fichier dans le V1 — pour ça, il faut supprimer puis
               // recréer.
-              <div className="carnet-media-preview">
+              <div className="tituba-media-preview">
                 {isImage && displayUrl ? (
                   <img
                     src={displayUrl}
                     alt={data.alt ?? ''}
-                    className="carnet-media-preview__img"
+                    className="tituba-media-preview__img"
                   />
                 ) : (
-                  <div className="carnet-media-preview__fallback" aria-hidden="true">
+                  <div className="tituba-media-preview__fallback" aria-hidden="true">
                     {shortMime(data.mimeType).toUpperCase()}
                   </div>
                 )}
-                <div className="carnet-media-preview__side">
+                <div className="tituba-media-preview__side">
                   <label
-                    className={`carnet-editview__field${
-                      fieldErrors.title ? ' carnet-editview__field--invalid' : ''
+                    className={`tituba-editview__field${
+                      fieldErrors.title ? ' tituba-editview__field--invalid' : ''
                     }`}
                   >
                     <span className="lbl">Titre</span>
@@ -439,14 +439,14 @@ export default function MediaEditViewClient({
                     </span>
                   </label>
                   {fieldErrors.title && (
-                    <div className="carnet-editview__field-error" role="alert">
+                    <div className="tituba-editview__field-error" role="alert">
                       {fieldErrors.title}
                     </div>
                   )}
 
                   <label
-                    className={`carnet-editview__field${
-                      fieldErrors.alt ? ' carnet-editview__field--invalid' : ''
+                    className={`tituba-editview__field${
+                      fieldErrors.alt ? ' tituba-editview__field--invalid' : ''
                     }`}
                   >
                     <span className="lbl">Texte alternatif (alt)</span>
@@ -471,14 +471,14 @@ export default function MediaEditViewClient({
                     </span>
                   </label>
                   {fieldErrors.alt && (
-                    <div className="carnet-editview__field-error" role="alert">
+                    <div className="tituba-editview__field-error" role="alert">
                       {fieldErrors.alt}
                     </div>
                   )}
 
-                  <hr className="carnet-media-preview__rule" />
+                  <hr className="tituba-media-preview__rule" />
 
-                  <dl className="carnet-media-preview__meta">
+                  <dl className="tituba-media-preview__meta">
                     <div>
                       <dt>Type</dt>
                       <dd className="mono">{data.mimeType ?? '—'}</dd>
@@ -501,7 +501,7 @@ export default function MediaEditViewClient({
             ) : (
               // Création : drop zone + button picker
               <div
-                className={`carnet-media-drop${drag ? ' carnet-media-drop--drag' : ''}`}
+                className={`tituba-media-drop${drag ? ' tituba-media-drop--drag' : ''}`}
                 onDragOver={(e) => {
                   e.preventDefault();
                   setDrag(true);
@@ -513,20 +513,20 @@ export default function MediaEditViewClient({
                   <img
                     src={previewUrl}
                     alt={file?.name ?? ''}
-                    className="carnet-media-drop__preview"
+                    className="tituba-media-drop__preview"
                   />
                 ) : file ? (
-                  <div className="carnet-media-drop__filename mono">{file.name}</div>
+                  <div className="tituba-media-drop__filename mono">{file.name}</div>
                 ) : (
-                  <p className="carnet-media-drop__hint">
+                  <p className="tituba-media-drop__hint">
                     Glissez un fichier ici, ou cliquez pour en sélectionner un.
                   </p>
                 )}
 
-                <div className="carnet-media-drop__actions">
+                <div className="tituba-media-drop__actions">
                   <button
                     type="button"
-                    className="carnet-btn carnet-btn--ghost"
+                    className="tituba-btn tituba-btn--ghost"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     {file ? 'Choisir un autre fichier' : 'Sélectionner un fichier'}
@@ -534,7 +534,7 @@ export default function MediaEditViewClient({
                   {file && (
                     <button
                       type="button"
-                      className="carnet-btn carnet-btn--ghost"
+                      className="tituba-btn tituba-btn--ghost"
                       onClick={() => onPickFile(null)}
                     >
                       Retirer
@@ -556,7 +556,7 @@ export default function MediaEditViewClient({
 
       {deleteOpen && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteSubmitting) {
               setDeleteOpen(false);
@@ -564,12 +564,12 @@ export default function MediaEditViewClient({
             }
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer ce média&nbsp;?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => {
                   if (deleteSubmitting) return;
                   setDeleteOpen(false);
@@ -582,10 +582,10 @@ export default function MediaEditViewClient({
             </header>
 
             {deleteError && (
-              <div className="carnet-modal__error">Erreur&nbsp;: {deleteError}</div>
+              <div className="tituba-modal__error">Erreur&nbsp;: {deleteError}</div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
                 «&nbsp;{data.filename || data.id}&nbsp;» sera définitivement
                 supprimé. Les billets ou pages qui le référencent perdront
@@ -593,10 +593,10 @@ export default function MediaEditViewClient({
               </p>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => {
                   setDeleteOpen(false);
                   setDeleteError(null);
@@ -607,7 +607,7 @@ export default function MediaEditViewClient({
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void confirmDelete()}
                 disabled={deleteSubmitting}
               >

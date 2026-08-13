@@ -40,7 +40,7 @@ function authHeaders(apiKey: string): HeadersInit {
  * si Zotero répond OK. On utilise `/items/top` (et non `/items`) parce
  * qu'on ne s'intéresse qu'aux items bibliographiques racines — pas aux
  * pièces jointes (PDF, snapshots) ni aux notes attachées, qui n'ont
- * pas de titre ni d'auteur exploitable côté Carnet.
+ * pas de titre ni d'auteur exploitable côté Tituba.
  *
  * Renvoie `{ ok: true, itemCount }` si tout va bien, sinon
  * `{ ok: false, error: '...' }`.

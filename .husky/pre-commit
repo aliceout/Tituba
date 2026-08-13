@@ -39,8 +39,23 @@ cd services/payload
 # label ou une description sans toucher à la DB).
 BEFORE=$(ls src/migrations/*.ts 2>/dev/null | wc -l)
 
-pnpm exec dotenv -e ../../.env -- cross-env NODE_OPTIONS=--no-deprecation \
-  payload migrate:create "$MIGRATION_NAME" 2>&1 | sed 's/^/   /'
+# On passe par le script pnpm `migrate:create` et non par `payload
+# migrate:create` en direct : le bin de Payload charge sa config dans un
+# contexte tsx *namespacé* qui suffixe `?tsx-namespace=` jusqu'aux
+# modules natifs `node:`, et échoue sur un ENOENT trompeur. Le script
+# enregistre tsx globalement pour contourner ça (cf. services/payload/
+# package.json).
+#
+# `set -o pipefail` : sans lui, le code de sortie est celui de `sed`,
+# donc un échec de génération passerait inaperçu et le commit partirait
+# sans sa migration.
+set -o pipefail
+if ! pnpm migrate:create "$MIGRATION_NAME" 2>&1 | sed 's/^/   /'; then
+  echo "✗ Échec de la génération de migration — commit interrompu." >&2
+  echo "  Vérifier que Postgres tourne (docker compose -f compose.dev.yml up -d)." >&2
+  exit 1
+fi
+set +o pipefail
 
 AFTER=$(ls src/migrations/*.ts 2>/dev/null | wc -l)
 

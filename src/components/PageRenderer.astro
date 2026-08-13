@@ -15,9 +15,11 @@ import { renderLexical } from '../lib/lexical';
 type Block = {
   blockType?: string;
   id?: string;
-  // Prose
+  // Prose et Dépliant — même forme, un titre et du rich text.
   titre?: string;
   content?: unknown;
+  /** Dépliant : ouvert dès l'arrivée sur la page. */
+  ouvert?: boolean;
   // Figure
   image?: { filename?: string; alt?: string } | string | number | null;
   legende?: string;
@@ -40,155 +42,165 @@ const list = sections ?? [];
 function imageUrl(field: Block['image']): string | null {
   if (!field || typeof field !== 'object') return null;
   if (!field.filename) return null;
-  const base = (payloadPublicUrl ?? import.meta.env.PUBLIC_PAYLOAD_URL ?? '').replace(/\/$/, '');
+  const base = (payloadPublicUrl ?? import.meta.env.PUBLIC_PAYLOAD_URL ?? '').replace(
+    /\/$/,
+    '',
+  );
   return `${base}/cms/api/media/file/${encodeURIComponent(field.filename)}`;
 }
+
+/**
+ * Le corps d'un bloc de prose, partagé par la section et le dépliant.
+ *
+ * Tout est en variantes descendantes : le HTML vient de `renderLexical`,
+ * donc d'un éditeur, et on ne peut pas poser de classe sur des éléments
+ * qui n'existent pas à l'écriture. Une variante, elle, engendre bien un
+ * sélecteur descendant.
+ *
+ * Tout lien de prose se voit, interne comme externe. Seul `a.ext` était
+ * stylé : un lien vers une autre page du site ne se distinguait donc en
+ * rien du texte courant — invisible, donc inexistant pour qui lit. C'est
+ * ce qui a fait passer le renvoi vers la charte pour un oubli.
+ */
+const PROSE = [
+  'text-body font-serif text-[calc(18px*var(--a11y-echelle))] leading-[1.65]',
+  '[&_p]:m-0 [&_p]:mb-4 [&_p]:max-w-[920px]',
+  '[&_p]:text-justify [&_p]:hyphens-auto [&_li]:text-justify [&_li]:hyphens-auto',
+  '[&_a.ext]:border-accent [&_a.int]:border-accent [&_a.ext]:border-b [&_a.int]:border-b',
+  '[&_a.ext]:text-inherit [&_a.int]:text-inherit',
+  '[&_a.ext]:transition-[background-color] [&_a.int]:transition-[background-color]',
+  '[&_a.ext]:duration-[120ms] [&_a.int]:duration-[120ms]',
+  '[&_a.ext:hover]:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]',
+  '[&_a.int:hover]:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]',
+].join(' ');
+
+/** Une légende de figure, et son crédit en plus petit. */
+const LEGENDE =
+  'text-muted mt-2 flex flex-col gap-0.5 font-sans text-[calc(12.5px*var(--a11y-echelle))] leading-[1.55]';
 ---
 
-{list.map((block) => {
-  switch (block.blockType) {
-    case 'prose':
-      return (
-        <section class="block-prose">
-          {block.titre && <h2>{block.titre}</h2>}
-          {block.content && (
-            <div class="prose-body" set:html={renderLexical(block.content)} />
-          )}
-        </section>
-      );
+{
+  list.map((block, rang) => {
+    switch (block.blockType) {
+      case 'prose':
+        return (
+          /* 920 px, soit la même colonne que le corps d'un billet sans
+           sommaire. À 720, le bloc se décalait visiblement du hero, qui
+           lui s'étend plus large. */
+          <section class="mb-8 max-w-[920px]">
+            {/* Un vrai titre, pas une étiquette. Il était en sans 12 px
+              capitales, soit un tiers plus PETIT que le texte qu'il
+              annonce : sur une page dont les paragraphes commencent par
+              des mots en gras, il passait pour une mention secondaire et
+              disparaissait.
 
-    case 'figure': {
-      const url = imageUrl(block.image);
-      if (!url) return null;
-      const alignClass = `align-${block.align ?? 'left'}`;
-      return (
-        <figure class:list={['block-figure', alignClass]}>
-          <img
-            src={url}
-            alt={(typeof block.image === 'object' && block.image?.alt) || ''}
-            loading="lazy"
-          />
-          {(block.legende || block.credit) && (
-            <figcaption>
-              {block.legende && <span class="legende">{block.legende}</span>}
-              {block.credit && <span class="credit">{block.credit}</span>}
-            </figcaption>
-          )}
-        </figure>
-      );
+              Les sections s'enchaînent : celles qui en suivent une autre
+              ont besoin d'air au-dessus, sinon leur titre colle au
+              paragraphe précédent et la coupure ne se lit plus. */}
+            {block.titre && (
+              <h2
+                class:list={[
+                  'text-ink leading-heading font-heading m-0 mb-[18px] font-serif text-[calc(26px*var(--a11y-echelle))] tracking-[-0.01em]',
+                  list[rang - 1]?.blockType === 'prose' && 'mt-3',
+                ]}
+              >
+                {block.titre}
+              </h2>
+            )}
+            {block.content && <div class={PROSE} set:html={renderLexical(block.content)} />}
+          </section>
+        );
+
+      // Dépliant — `<details>` natif plutôt qu'un accordéon en script :
+      // il s'ouvre sans JavaScript, le clavier et les lecteurs d'écran le
+      // connaissent, et Ctrl+F déplie tout seul le contenu qu'il y
+      // trouve. Le corps réutilise `.prose-body` : une fois ouvert, on y
+      // lit le même texte qu'ailleurs sur la page.
+      case 'depliant':
+        return (
+          /* Un encadré qui se distingue du texte courant sans crier : filet
+           complet et fond très légèrement teinté, pour qu'on le lise comme
+           un objet à part et non comme un paragraphe de plus. */
+          <details
+            class="border-rule group mb-8 max-w-[920px] rounded-[3px] border bg-[color-mix(in_srgb,var(--color-accent)_4%,var(--color-bg))]"
+            open={block.ouvert === true}
+          >
+            {/* La ligne cliquable couvre toute la largeur du bloc — une cible
+              de la taille de l'encadré, pas du seul mot. Le triangle par
+              défaut du navigateur cède la place au chevron ci-dessous, qui
+              suit la typographie de la page. */}
+            <summary class="text-ink leading-heading flex cursor-pointer list-none items-center justify-between gap-4 px-[22px] py-[18px] font-serif text-[calc(20px*var(--a11y-echelle))] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--c-vert-deep)] [&::-webkit-details-marker]:hidden">
+              <span class="group-hover:text-accent">{block.titre}</span>
+              {/* Chevron dessiné en bordures : rien à charger, et il suit la
+                couleur du texte — donc le thème sombre comme le contraste
+                renforcé du panneau d'accessibilité. */}
+              <span
+                class="border-r-muted border-b-muted mb-1 size-[9px] flex-none rotate-45 border-r-[1.5px] border-b-[1.5px] transition-transform duration-[160ms] ease-[ease] group-open:mt-1 group-open:mb-0 group-open:rotate-[-135deg]"
+                aria-hidden="true"
+              />
+            </summary>
+            {block.content && (
+              <div
+                class:list={[
+                  PROSE,
+                  'px-[22px] pt-0 pb-1.5 [&>p:last-child]:mb-4 [&>ul:last-child]:mb-4',
+                ]}
+                set:html={renderLexical(block.content)}
+              />
+            )}
+          </details>
+        );
+
+      case 'figure': {
+        const url = imageUrl(block.image);
+        if (!url) return null;
+        const align = block.align ?? 'left';
+        return (
+          <figure
+            class:list={[
+              'my-8',
+              align === 'center' && 'text-center',
+              // Débordement des deux côtés : la figure large sort de la
+              // colonne de texte sans sortir de la page. Sous 900 px il n'y
+              // a plus de gouttière où déborder.
+              align === 'wide' && 'max-mobile:mx-0 mx-[-100px] max-w-[920px]',
+            ]}
+          >
+            <img
+              src={url}
+              alt={(typeof block.image === 'object' && block.image?.alt) || ''}
+              loading="lazy"
+              class="block h-auto max-w-full"
+            />
+            {(block.legende || block.credit) && (
+              <figcaption class={LEGENDE}>
+                {block.legende && <span>{block.legende}</span>}
+                {block.credit && (
+                  <span class="text-[calc(11px*var(--a11y-echelle))]">{block.credit}</span>
+                )}
+              </figcaption>
+            )}
+          </figure>
+        );
+      }
+
+      case 'citation_bloc':
+        return (
+          <section class="my-9">
+            <blockquote class="text-ink border-accent m-0 border-l-2 pl-[22px] text-[calc(22px*var(--a11y-echelle))] leading-[1.5] font-medium">
+              <p>{block.text}</p>
+              {block.source && (
+                <cite class="text-muted mt-3 block font-sans text-[calc(13px*var(--a11y-echelle))] not-italic">
+                  — {block.source}
+                </cite>
+              )}
+            </blockquote>
+          </section>
+        );
+
+      default:
+        console.warn('[PageRenderer] unknown blockType:', block.blockType);
+        return null;
     }
-
-    case 'citation_bloc':
-      return (
-        <section class="block-citation-bloc">
-          <blockquote>
-            <p>{block.text}</p>
-            {block.source && <cite>— {block.source}</cite>}
-          </blockquote>
-        </section>
-      );
-
-    default:
-      console.warn('[PageRenderer] unknown blockType:', block.blockType);
-      return null;
-  }
-})}
-
-<style>
-  /* Les blocs prose s'étendent sur toute la largeur utile de la page
-     éditoriale (920px max — même colonne que le corps des billets
-     sans sommaire). Avant : 720, créait un décalage visuel avec le
-     hero qui lui s'étend plus large. */
-  .block-prose {
-    margin: 0 0 32px;
-    max-width: 920px;
-  }
-  .block-prose h2 {
-    font-family: var(--font-sans);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--color-ink);
-    margin: 0 0 24px;
-  }
-  .block-prose .prose-body {
-    font-family: var(--font-serif);
-    font-size: 18px;
-    line-height: 1.65;
-    color: var(--color-body);
-  }
-  .block-prose .prose-body :global(p),
-  .block-prose .prose-body :global(li) {
-    text-align: justify;
-    hyphens: auto;
-    -webkit-hyphens: auto;
-  }
-  .block-prose .prose-body :global(p) {
-    margin: 0 0 16px;
-    max-width: 920px;
-  }
-  .block-prose .prose-body :global(a.ext) {
-    border-bottom: 1px solid var(--color-accent);
-    color: inherit;
-  }
-
-  .block-figure {
-    margin: 32px 0;
-  }
-  .block-figure.align-center {
-    text-align: center;
-  }
-  .block-figure.align-wide {
-    max-width: 920px;
-    margin-left: -100px;
-    margin-right: -100px;
-  }
-  .block-figure img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-  }
-  .block-figure figcaption {
-    font-family: var(--font-sans);
-    font-size: 12.5px;
-    line-height: 1.55;
-    color: var(--color-muted);
-    margin-top: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .block-figure figcaption .credit {
-    font-size: 11px;
-    color: var(--color-muted);
-  }
-
-  .block-citation-bloc {
-    margin: 36px 0;
-  }
-  .block-citation-bloc blockquote {
-    font-size: 22px;
-    line-height: 1.5;
-    font-weight: 500;
-    color: var(--color-ink);
-    margin: 0;
-    padding: 0 0 0 22px;
-    border-left: 2px solid var(--color-accent);
-  }
-  .block-citation-bloc cite {
-    display: block;
-    margin-top: 12px;
-    font-style: normal;
-    font-family: var(--font-sans);
-    font-size: 13px;
-    color: var(--color-muted);
-  }
-
-  @media (max-width: 900px) {
-    .block-figure.align-wide {
-      margin-left: 0;
-      margin-right: 0;
-    }
-  }
-</style>
+  })
+}

@@ -1,4 +1,4 @@
-# carnet-payload
+# tituba-payload
 
 Backend Payload CMS.
 Tourne sous Next.js 16 et expose admin sous `/cms/admin`, API REST sous

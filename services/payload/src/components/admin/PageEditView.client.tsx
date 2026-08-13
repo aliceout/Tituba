@@ -4,9 +4,9 @@
 // (Pages éditoriales : À propos, Colophon, Mentions légales…). Layout
 // aligné sur BibliographyEditView :
 //
-//   CarnetTopbar : crumbs Carnet / Pages éditoriales / [slug] +
+//   CarnetTopbar : crumbs Tituba / Pages / [slug] +
 //                  Supprimer + Sauvegarder
-//   carnet-editview__hero : h1 « Page éditoriale » + « clé : <slug> »
+//   tituba-editview__hero : h1 « Page éditoriale » + « clé : <slug> »
 //   section Identification : Titre · Slug
 //   section SEO            : Description · noindex
 //   section En-tête        : Sur-titre (kicker) · Chapô (lede)
@@ -33,6 +33,14 @@ type ProseBlock = {
   titre?: string;
   content?: LexicalState | null;
 };
+/** Même forme que la prose, plus l'état initial du pli. */
+type DepliantBlock = {
+  blockType: 'depliant';
+  id?: string;
+  titre?: string;
+  ouvert?: boolean;
+  content?: LexicalState | null;
+};
 type FigureBlock = {
   blockType: 'figure';
   id?: string;
@@ -52,12 +60,21 @@ type CitationBlock = {
 // tel quel au save sans tenter de l'éditer.
 type UnknownBlock = { blockType: string; id?: string; [k: string]: unknown };
 
-type AnyBlock = ProseBlock | FigureBlock | CitationBlock | UnknownBlock;
+type AnyBlock = ProseBlock | DepliantBlock | FigureBlock | CitationBlock | UnknownBlock;
 
 type Page = {
   id?: number | string;
   title: string;
   slug: string;
+  /**
+   * « libre » — page composée ici, créable et supprimable.
+   * « fixe »  — en-tête d'une route du site (accueil, archives, thèmes,
+   *   abonnement) : ni slug modifiable, ni suppression, ni sections.
+   */
+  kind?: 'libre' | 'fixe';
+  /** Affichage au menu — n'a de sens que pour une page fixe. */
+  enabled?: boolean;
+  draft?: boolean;
   description?: string;
   noindex?: boolean;
   eyebrow?: string;
@@ -68,6 +85,9 @@ type Page = {
 const EMPTY: Page = {
   title: '',
   slug: '',
+  kind: 'libre',
+  enabled: true,
+  draft: false,
   description: '',
   noindex: false,
   eyebrow: '',
@@ -77,6 +97,7 @@ const EMPTY: Page = {
 
 const BLOCK_LABEL: Record<string, string> = {
   prose: 'Texte (prose)',
+  depliant: 'Dépliant',
   figure: 'Figure',
   citation_bloc: 'Citation longue',
 };
@@ -89,6 +110,9 @@ const FIGURE_ALIGN_LABEL: Record<NonNullable<FigureBlock['align']>, string> = {
 
 function makeProse(): ProseBlock {
   return { blockType: 'prose', titre: '', content: null };
+}
+function makeDepliant(): DepliantBlock {
+  return { blockType: 'depliant', titre: '', ouvert: false, content: null };
 }
 function makeFigure(): FigureBlock {
   return {
@@ -106,7 +130,7 @@ function makeCitation(): CitationBlock {
 // Aperçu compact 1 ligne pour l'en-tête de carte quand elle est
 // repliée. « Untitled » si rien à afficher.
 function previewOf(b: AnyBlock): string {
-  if (b.blockType === 'prose') {
+  if (b.blockType === 'prose' || b.blockType === 'depliant') {
     const p = b as ProseBlock;
     if (p.titre && p.titre.trim()) return p.titre.trim();
     return 'Untitled';
@@ -136,10 +160,12 @@ export default function PageEditViewClient({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Erreurs par champ, posées avant l'envoi (cf save). */
+  const [champsEnErreur, setChampsEnErreur] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
   // Modale de confirmation de suppression. Réutilise le pattern
-  // .carnet-modal* déjà en place côté admin.
+  // .tituba-modal* déjà en place côté admin.
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -191,6 +217,14 @@ export default function PageEditViewClient({
   }, [docId]);
 
   const dirty = JSON.stringify(data) !== initial;
+  /**
+   * Page fixe : elle titre une route du site plutôt que d'en composer
+   * une. Trois choses s'en déduisent — slug verrouillé, pas de
+   * suppression, pas d'éditeur de sections — et la collection fait
+   * respecter les trois côté API (cf Pages.ts), ce qu'on ne fait ici
+   * que rendre visible.
+   */
+  const estFixe = data.kind === 'fixe';
 
   function patch<K extends keyof Page>(key: K, value: Page[K]) {
     setData((d) => ({ ...d, [key]: value }));
@@ -207,10 +241,16 @@ export default function PageEditViewClient({
     });
   }
 
-  function addSection(kind: 'prose' | 'figure' | 'citation_bloc') {
+  function addSection(kind: 'prose' | 'depliant' | 'figure' | 'citation_bloc') {
     setData((d) => {
       const newBlock: AnyBlock =
-        kind === 'prose' ? makeProse() : kind === 'figure' ? makeFigure() : makeCitation();
+        kind === 'prose'
+        ? makeProse()
+        : kind === 'depliant'
+          ? makeDepliant()
+          : kind === 'figure'
+            ? makeFigure()
+            : makeCitation();
       const sections = [...(d.sections ?? []), newBlock];
       return { ...d, sections };
     });
@@ -269,6 +309,18 @@ export default function PageEditViewClient({
   }
 
   async function save() {
+    // Validation cliente avant l'envoi : sans elle, un champ oublié
+    // remonte en 400 dont le corps JSON s’affiche tel quel en tête de
+    // page — illisible, et muet sur ce qu’il faut corriger.
+    const manquants: Record<string, string> = {};
+    if (!data.title.trim()) manquants.title = 'Le titre est obligatoire.';
+    if (!data.slug.trim()) manquants.slug = 'Le slug est obligatoire — il forme l’adresse de la page.';
+    if (Object.keys(manquants).length > 0) {
+      setChampsEnErreur(manquants);
+      setError(null);
+      return;
+    }
+    setChampsEnErreur({});
     setSaving(true);
     setError(null);
     try {
@@ -345,26 +397,26 @@ export default function PageEditViewClient({
       variant="editview"
       modifier="page"
       crumbs={[
-        { href: '/cms/admin', label: 'Carnet' },
-        { href: '/cms/admin/collections/pages', label: 'Pages éditoriales' },
+        { href: '/cms/admin', label: 'Tituba' },
+        { href: '/cms/admin/collections/pages', label: 'Pages' },
         { label: data.slug || (docId ? '—' : 'nouvelle') },
       ]}
       suppressHydrationWarningOnActions
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={() => void save()}
             disabled={!dirty || saving || loading}
             title="Sauvegarder"
@@ -375,59 +427,134 @@ export default function PageEditViewClient({
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {Object.keys(champsEnErreur).length > 0 && (
+        <div className="tituba-editview__error" role="alert">
+          {Object.keys(champsEnErreur).length === 1
+            ? 'Un champ obligatoire n’est pas rempli — il est signalé ci-dessous.'
+            : `${Object.keys(champsEnErreur).length} champs obligatoires ne sont pas remplis — ils sont signalés ci-dessous.`}
+        </div>
+      )}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <div className="carnet-editview__hero">
-            <h1 className="carnet-h1">Page éditoriale</h1>
+          <div className="tituba-editview__hero">
+            <h1 className="tituba-h1">{estFixe ? 'Page fixe du site' : 'Page éditoriale'}</h1>
             {data.slug && (
-              <p className="carnet-editview__hero-key">
+              <p className="tituba-editview__hero-key">
                 clé : <span className="mono">{data.slug}</span>
               </p>
             )}
           </div>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Identification</h2>
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Identification</h2>
 
-            <label className="carnet-editview__field">
-              <span className="lbl">Titre de la page</span>
+            {estFixe && (
+              <p className="tituba-editview__section-help">
+                Cette page titre une route qui existe déjà dans le site — son écran est composé
+                par le code, pas ici. Vous en réglez le titre, le chapô et l’affichage au menu.
+                Elle ne peut être ni renommée ni supprimée.
+              </p>
+            )}
+
+            <label className="tituba-editview__field">
+              <span className="lbl">
+                Titre de la page <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.title}
-                onChange={(e) => patch('title', e.target.value)}
+                aria-invalid={champsEnErreur.title ? true : undefined}
+                onChange={(e) => {
+                  patch('title', e.target.value);
+                  if (champsEnErreur.title) setChampsEnErreur(({ title: _, ...r }) => r);
+                }}
                 required
               />
+              {champsEnErreur.title && <span className="err">{champsEnErreur.title}</span>}
+              {estFixe && (
+                <span className="hint">
+                  Les *astérisques* surlignent un mot dans le hero, comme sur un titre de billet.
+                </span>
+              )}
             </label>
 
-            <label className="carnet-editview__field">
-              <span className="lbl">Slug</span>
+            <label className="tituba-editview__field">
+              <span className="lbl">
+                Slug <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.slug}
-                onChange={(e) => patch('slug', e.target.value)}
+                aria-invalid={champsEnErreur.slug ? true : undefined}
+                onChange={(e) => {
+                  patch('slug', e.target.value);
+                  if (champsEnErreur.slug) setChampsEnErreur(({ slug: _, ...r }) => r);
+                }}
                 required
+                // Verrouillé sur une page fixe : le slug est ce qui la
+                // relie à sa route. La collection refuse d'ailleurs de
+                // le changer côté API — le champ grisé ne fait que le
+                // rendre visible.
+                disabled={estFixe}
               />
+              {champsEnErreur.slug && <span className="err">{champsEnErreur.slug}</span>}
               <span className="hint">
-                URL-safe, ex&nbsp;: « about », « colophon », « mentions-legales ». Sert
-                de match de route Astro.
+                {estFixe
+                  ? 'Fixé par la route du site. Non modifiable.'
+                  : 'URL-safe, ex : « about », « colophon », « mentions-legales ». Sert de match de route Astro.'}
               </span>
             </label>
+
+            {/* Le brouillon ne concerne que les pages libres : une page
+                fixe est une route que la navigation annonce, la
+                dépublier casserait un lien du site. C’est « Affichée au
+                menu » qui joue ce rôle pour elles, et qui ne casse rien. */}
+            {!estFixe && (
+              <label className="tituba-editview__field tituba-editview__field--toggle">
+                <input
+                  type="checkbox"
+                  checked={data.draft === true}
+                  onChange={(e) => patch('draft', e.target.checked)}
+                />
+                <span className="lbl">Brouillon</span>
+                <span className="hint">
+                  Cochée, la page n’est plus servie sur le site — elle reste modifiable ici. À
+                  décocher pour la publier.
+                </span>
+              </label>
+            )}
+            {estFixe && (
+              <label className="tituba-editview__field tituba-editview__field--toggle">
+                <input
+                  type="checkbox"
+                  checked={data.enabled !== false}
+                  onChange={(e) => patch('enabled', e.target.checked)}
+                />
+                <span className="lbl">Affichée au menu</span>
+                <span className="hint">
+                  Décochée, la page disparaît du menu du site. Sa route continue d’exister — c’est
+                  le lien qui s’en va, pas la page.
+                </span>
+              </label>
+            )}
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">SEO</h2>
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">SEO</h2>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Description</span>
               <textarea
                 rows={3}
@@ -437,7 +564,7 @@ export default function PageEditViewClient({
               <span className="hint">~150 caractères, affichée dans Google.</span>
             </label>
 
-            <label className="carnet-editview__field carnet-editview__field--inline carnet-editview__field--check">
+            <label className="tituba-editview__field tituba-editview__field--inline tituba-editview__field--check">
               <input
                 type="checkbox"
                 checked={!!data.noindex}
@@ -449,10 +576,10 @@ export default function PageEditViewClient({
             </label>
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">En-tête éditorial</h2>
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">En-tête éditorial</h2>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Sur-titre (kicker)</span>
               <input
                 type="text"
@@ -465,7 +592,7 @@ export default function PageEditViewClient({
               </span>
             </label>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Chapô (lede)</span>
               <textarea
                 rows={3}
@@ -476,9 +603,14 @@ export default function PageEditViewClient({
             </label>
           </section>
 
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Sections de la page</h2>
-            <p className="carnet-editview__section-help">
+          {/* Pas de corps sur une page fixe : son écran est composé par
+              le site — une liste d'archives, une grille de thématiques.
+              Laisser l'éditeur visible aurait promis un contenu que rien
+              n'affiche. */}
+          {!estFixe && (
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Sections de la page</h2>
+            <p className="tituba-editview__section-help">
               Empilez des sections Prose (texte rich), Figure (image)
               ou Citation. Les sections sont rendues dans l'ordre côté
               frontend ; utilisez ↑ / ↓ pour réordonner.
@@ -562,6 +694,12 @@ export default function PageEditViewClient({
                             onPatch={(p) => patchSection<ProseBlock>(i, p)}
                           />
                         )}
+                        {s.blockType === 'depliant' && (
+                          <DepliantFields
+                            value={s as DepliantBlock}
+                            onPatch={(p) => patchSection<DepliantBlock>(i, p)}
+                          />
+                        )}
                         {s.blockType === 'figure' && (
                           <FigureFields
                             value={s as FigureBlock}
@@ -591,21 +729,28 @@ export default function PageEditViewClient({
                 <span className="lbl">Ajouter une section&nbsp;:</span>
                 <button
                   type="button"
-                  className="carnet-btn carnet-btn--ghost"
+                  className="tituba-btn tituba-btn--ghost"
                   onClick={() => addSection('prose')}
                 >
                   + Prose
                 </button>
                 <button
                   type="button"
-                  className="carnet-btn carnet-btn--ghost"
+                  className="tituba-btn tituba-btn--ghost"
+                  onClick={() => addSection('depliant')}
+                >
+                  + Dépliant
+                </button>
+                <button
+                  type="button"
+                  className="tituba-btn tituba-btn--ghost"
                   onClick={() => addSection('figure')}
                 >
                   + Figure
                 </button>
                 <button
                   type="button"
-                  className="carnet-btn carnet-btn--ghost"
+                  className="tituba-btn tituba-btn--ghost"
                   onClick={() => addSection('citation_bloc')}
                 >
                   + Citation
@@ -613,12 +758,13 @@ export default function PageEditViewClient({
               </div>
             </div>
           </section>
+          )}
 
-          {data.id != null && (
-            <section className="carnet-editview__section carnet-editview__section--danger">
+          {data.id != null && !estFixe && (
+            <section className="tituba-editview__section tituba-editview__section--danger">
               <button
                 type="button"
-                className="carnet-postedit__delete"
+                className="tituba-postedit__delete"
                 onClick={() => {
                   setDeleteOpen(true);
                   setDeleteError(null);
@@ -633,17 +779,17 @@ export default function PageEditViewClient({
 
       {deleteSectionIdx != null && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget) setDeleteSectionIdx(null);
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer cette section&nbsp;?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => setDeleteSectionIdx(null)}
                 aria-label="Fermer"
               >
@@ -651,7 +797,7 @@ export default function PageEditViewClient({
               </button>
             </header>
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               {(() => {
                 const target = (data.sections ?? [])[deleteSectionIdx];
                 const kind = target ? BLOCK_LABEL[target.blockType] ?? target.blockType : '';
@@ -667,17 +813,17 @@ export default function PageEditViewClient({
               })()}
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => setDeleteSectionIdx(null)}
               >
                 Annuler
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => {
                   removeSection(deleteSectionIdx);
                   setDeleteSectionIdx(null);
@@ -692,7 +838,7 @@ export default function PageEditViewClient({
 
       {deleteOpen && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteSubmitting) {
               setDeleteOpen(false);
@@ -700,12 +846,12 @@ export default function PageEditViewClient({
             }
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer cette page&nbsp;?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => {
                   if (deleteSubmitting) return;
                   setDeleteOpen(false);
@@ -718,20 +864,20 @@ export default function PageEditViewClient({
             </header>
 
             {deleteError && (
-              <div className="carnet-modal__error">Erreur&nbsp;: {deleteError}</div>
+              <div className="tituba-modal__error">Erreur&nbsp;: {deleteError}</div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
                 «&nbsp;{data.title || data.slug || 'Sans titre'}&nbsp;» sera définitivement
                 supprimée. Cette action est irréversible.
               </p>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => {
                   setDeleteOpen(false);
                   setDeleteError(null);
@@ -742,7 +888,7 @@ export default function PageEditViewClient({
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void deletePage()}
                 disabled={deleteSubmitting}
               >
@@ -758,6 +904,40 @@ export default function PageEditViewClient({
 
 // ─── Field-sets par type de bloc ────────────────────────────────
 
+/**
+ * Champs d'un dépliant. Le titre et le contenu passent par ProseFields
+ * — c'est le même formulaire, et en écrire un second aurait garanti
+ * qu'ils divergent. Seul l'état initial du pli s'ajoute.
+ */
+function DepliantFields({
+  value,
+  onPatch,
+}: {
+  value: DepliantBlock;
+  onPatch: (p: Partial<DepliantBlock>) => void;
+}): React.ReactElement {
+  return (
+    <>
+      <ProseFields
+        value={{ blockType: 'prose', titre: value.titre, content: value.content }}
+        onPatch={(p) => onPatch(p as Partial<DepliantBlock>)}
+      />
+      <label className="tituba-editview__field tituba-editview__field--toggle">
+        <input
+          type="checkbox"
+          checked={value.ouvert === true}
+          onChange={(e) => onPatch({ ouvert: e.target.checked })}
+        />
+        <span className="lbl">Déplié par défaut</span>
+        <span className="hint">
+          Coché, le contenu est visible dès l’arrivée sur la page — le bloc ne sert plus qu’à
+          pouvoir le replier.
+        </span>
+      </label>
+    </>
+  );
+}
+
 function ProseFields({
   value,
   onPatch,
@@ -767,7 +947,7 @@ function ProseFields({
 }): React.ReactElement {
   return (
     <>
-      <label className="carnet-editview__field">
+      <label className="tituba-editview__field">
         <span className="lbl">Titre de section (optionnel)</span>
         <input
           type="text"
@@ -779,7 +959,7 @@ function ProseFields({
         </span>
       </label>
 
-      <div className="carnet-editview__field">
+      <div className="tituba-editview__field">
         <span className="lbl">Contenu</span>
         <PageProseEditor
           value={value.content ?? null}
@@ -799,7 +979,7 @@ function FigureFields({
 }): React.ReactElement {
   return (
     <>
-      <label className="carnet-editview__field">
+      <label className="tituba-editview__field">
         <span className="lbl">ID média</span>
         <input
           type="number"
@@ -814,7 +994,7 @@ function FigureFields({
         </span>
       </label>
 
-      <label className="carnet-editview__field">
+      <label className="tituba-editview__field">
         <span className="lbl">Légende</span>
         <textarea
           rows={2}
@@ -823,7 +1003,7 @@ function FigureFields({
         />
       </label>
 
-      <label className="carnet-editview__field">
+      <label className="tituba-editview__field">
         <span className="lbl">Crédit / source</span>
         <input
           type="text"
@@ -835,7 +1015,7 @@ function FigureFields({
         </span>
       </label>
 
-      <label className="carnet-editview__field">
+      <label className="tituba-editview__field">
         <span className="lbl">Alignement</span>
         <select
           value={value.align ?? 'left'}
@@ -863,7 +1043,7 @@ function CitationFields({
 }): React.ReactElement {
   return (
     <>
-      <label className="carnet-editview__field">
+      <label className="tituba-editview__field">
         <span className="lbl">Texte de la citation</span>
         <textarea
           rows={4}
@@ -873,7 +1053,7 @@ function CitationFields({
         />
       </label>
 
-      <label className="carnet-editview__field">
+      <label className="tituba-editview__field">
         <span className="lbl">Source / attribution</span>
         <input
           type="text"

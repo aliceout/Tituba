@@ -1,0 +1,84 @@
+---
+/**
+ * Bande d'abonnement à la lettre, en pied d'accueil.
+ *
+ * Renvoie vers /abonnement/ plutôt que d'embarquer le formulaire :
+ * l'inscription passe par une double confirmation par mail, et
+ * dupliquer ce parcours ici créerait un second chemin à maintenir —
+ * avec ses propres états d'erreur, de succès et de renvoi. Le bouton
+ * mène donc à la page qui gère déjà tout cela.
+ *
+ * La maquette dessinait à cet endroit un champ de saisie suivi d'un
+ * bouton. On n'en garde que la silhouette — pastille bordée, bouton
+ * plein à l'intérieur — sans le faux champ : une zone qui ressemble à
+ * un input mais navigue au clic est un piège, et la vraie saisie a lieu
+ * une page plus loin de toute façon.
+ */
+export interface Props {
+  href?: string;
+}
+const { href = '/abonnement/' } = Astro.props as Props;
+---
+
+{
+  /* Pas d’écart en pied : PageShell.page-body (72 px) et le margin-top
+    du Footer s’en chargent déjà, exactement comme sur toute autre
+    page. En ajouter un ici recreuserait le vide en trop qu’on a déjà
+    eu (Footer + LettreBand cumulés) avant que PageShell porte
+    systématiquement l’écart de fin de page. */
+}
+<section class="p-0">
+  {
+    /* Étiquette de section hors du panneau, comme « À LA UNE » : elle
+      nomme le bloc, elle n’en fait pas partie. Le libellé reprend celui
+      de l’onglet du header et de la colonne du pied — trois surfaces,
+      une seule formule pour la même chose. */
+  }
+  <div class="mb-6">
+    <span class="text-label font-mono tracking-[0.2em] text-[var(--c-vert-deep)] uppercase">
+      Nous suivre
+    </span>
+  </div>
+
+  {
+    /* Le vert clôt la série des panneaux — jaune à la une, violet au
+      sommaire, vert ici. */
+  }
+  <div
+    class="max-mobile:rounded-[18px] max-mobile:px-5 max-mobile:py-6 flex flex-wrap items-center justify-between gap-6 rounded-[var(--radius-panel)] bg-[var(--c-vert-tint)] px-12 py-9"
+  >
+    <div>
+      <div
+        class="text-label mb-2 font-mono tracking-[0.2em] text-[var(--c-vert-deep)] uppercase"
+      >
+        La lettre
+      </div>
+      <p
+        class="text-ink m-0 font-serif text-[calc(22px*var(--a11y-echelle))] font-light italic"
+      >
+        Une fois par trimestre.
+      </p>
+    </div>
+
+    {
+      /* Pastille bordée abritant le bouton plein — la silhouette du champ
+        de saisie de la maquette, sans le faux champ.
+
+        Sous 900 px elle pousserait le bloc à déborder : elle perd alors
+        son libellé d’amorce et son contour, et ne garde que le bouton. */
+    }
+    <a
+      href={href}
+      class="max-mobile:border-transparent max-mobile:p-0 flex flex-none items-center gap-3 rounded-full border-[1.5px] border-[var(--c-vert-deep)] py-2 pr-2 pl-5 transition-[background] duration-[120ms] hover:bg-[color-mix(in_srgb,var(--c-vert-deep)_8%,transparent)]"
+    >
+      <span class="text-meta max-mobile:hidden font-mono text-[var(--c-panel-mute)]">
+        Une adresse suffit
+      </span>
+      <span
+        class="rounded-full bg-[var(--c-vert-deep)] px-[18px] py-[9px] font-sans text-[calc(13px*var(--a11y-echelle))] font-medium text-[var(--c-vert-tint)]"
+      >
+        S'abonner →
+      </span>
+    </a>
+  </div>
+</section>

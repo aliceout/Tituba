@@ -1,0 +1,41 @@
+---
+/**
+ * Icône loupe du header — même traitement visuel que ThemeToggle.
+ * État actif : pastille accent-tint pour marquer qu'on est sur
+ * /recherche/ (un simple underline irait mal sur une icône).
+ */
+interface Props {
+  active: boolean;
+}
+
+const { active } = Astro.props;
+---
+
+<a
+  href="/recherche/"
+  class:list={[
+    'inline-flex items-center justify-center rounded-full p-1 transition-colors duration-100',
+    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--c-bleu-deep)]',
+    active
+      ? 'bg-[var(--c-bleu-tint)] font-normal text-[var(--c-bleu-deep)]'
+      : 'text-muted hover:bg-ink/8 hover:text-ink',
+  ]}
+  aria-label="Rechercher sur Tituba"
+  title="Rechercher"
+  aria-current={active ? 'page' : undefined}
+>
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="11" cy="11" r="7"></circle>
+    <path d="m20 20-3.5-3.5"></path>
+  </svg>
+</a>

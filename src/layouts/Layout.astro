@@ -1,24 +1,43 @@
 ---
 /**
  * Layout de base — chrome partagé : <head>, Header, slot, Footer.
- * Réf design : design_handoff_carnet/Carnet B.html (header.site, footer.site).
+ * Réf design : design_handoff_tituba/Tituba B.html (header.site, footer.site).
  */
 import '../styles/global.css';
+// Réglages d'accessibilité : toute la mise en œuvre des options du
+// panneau, pilotée par des attributs posés sur <html>. Chargée pour
+// tout le monde, y compris quand aucun réglage n'est actif — c'est une
+// feuille de règles conditionnelles, pas un thème à activer.
+import '../styles/accessibilite.css';
 
 // Polices self-hostées via @fontsource — Vite résout les fichiers WOFF2
 // depuis node_modules au build, pas de fetch externe à l'exécution.
-import '@fontsource/source-serif-4/400.css';
-import '@fontsource/source-serif-4/400-italic.css';
-import '@fontsource/source-serif-4/500.css';
-import '@fontsource/source-serif-4/600.css';
-import '@fontsource/inter/400.css';
-import '@fontsource/inter/500.css';
-import '@fontsource/inter/600.css';
-import '@fontsource/jetbrains-mono/400.css';
-import '@fontsource/jetbrains-mono/500.css';
+// Fraunces et Bricolage Grotesque sont variables : un seul fichier
+// couvre toute la plage de graisses, là où les versions statiques
+// demandaient un fichier par graisse. On prend l'axe `opsz` de
+// Fraunces — la taille optique épaissit les pleins et resserre les
+// déliés dans les petits corps, ce qui compte pour un display employé
+// de 40 à 92 px.
+import '@fontsource-variable/fraunces/opsz.css';
+import '@fontsource-variable/fraunces/opsz-italic.css';
+import '@fontsource-variable/bricolage-grotesque/opsz.css';
+import '@fontsource/dm-mono/400.css';
+import '@fontsource/dm-mono/500.css';
+// Police du réglage « dyslexie » du panneau d'accessibilité. Importer
+// sa feuille ne télécharge rien : un @font-face ne déclenche le
+// chargement du fichier que si une règle finit par employer la
+// famille — ici, seulement si quelqu'un choisit l'option. La Luciole,
+// elle, n'existe pas sur @fontsource : ses fichiers sont versionnés
+// dans public/fonts/luciole/ et déclarés dans accessibilite.css.
+import '@fontsource/opendyslexic/400.css';
+import '@fontsource/opendyslexic/700.css';
+
+import { ClientRouter } from 'astro:transitions';
 
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import PodcastDock from '../components/article/PodcastDock.astro';
+import A11yPanel from '../components/A11yPanel.astro';
 import { fetchIdentity, fetchSite, fetchSubscriptions } from '../lib/payload';
 
 interface Props {
@@ -28,15 +47,18 @@ interface Props {
   noindex?: boolean;
   /** Active la barre de progression sticky (uniquement sur les articles). */
   progressBar?: boolean;
+  /** Escamote le filet dégradé sous le header (cf Header). */
+  sansFilet?: boolean;
   /** Classes appliquées au <body> (cf. body.justify, body.notes-classic). */
   bodyClass?: string;
 }
 
 const {
   title,
-  description = 'Carnet de recherche. Auto-hébergé.',
+  description = 'Collectif féministe intersectionnel. Auto-hébergé.',
   noindex = false,
   progressBar = false,
+  sansFilet = false,
   bodyClass = '',
 } = Astro.props;
 
@@ -70,7 +92,7 @@ const BG_WHITELIST = new Set([
 let accentOverride: string | null = null;
 let accentSlug: string | null = null;
 let bgOverride: string | null = null;
-let siteName = 'Carnet';
+let siteName = 'Tituba';
 try {
   const site = await fetchSite<SiteBranding>();
   const a = site.branding?.accentColor;
@@ -118,7 +140,18 @@ const fullTitle = pageTitle
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <link rel="canonical" href={canonical} />
+    {/* Icônes. Le favicon reprend la partie illustrée du logo — le
+        lockup complet serait illisible à 32 px. */}
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta property="og:title" content={fullTitle} />
+    {/* Aperçu au partage. Version sur fond blanc : les réseaux sociaux
+        composent sur un fond variable, une PNG transparente y sortirait
+        avec un tracé violet sur fond sombre, illisible. */}
+    <meta property="og:image" content={new URL('/logo-fond-blanc.png', canonical).toString()} />
+    <meta property="og:image:width" content="1600" />
+    <meta property="og:image:height" content="820" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
@@ -158,58 +191,141 @@ const fullTitle = pageTitle
              le défaut light s'appliquer. */
         }
       })();
+
+      /* Le ClientRouter recopie les attributs du <html> entrant, qui
+         sort du serveur sans data-theme puisque celui-ci est posé par
+         ce script : sans réapplication, le site repasserait en clair à
+         chaque navigation. `astro:after-swap` court avant le premier
+         rendu de la nouvelle page, donc sans clignotement. */
+      document.addEventListener('astro:after-swap', function () {
+        try {
+          const saved = localStorage.getItem('theme');
+          if (saved === 'dark' || saved === 'light') {
+            document.documentElement.setAttribute('data-theme', saved);
+            return;
+          }
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        } catch (_) {
+          /* idem */
+        }
+      });
+    </script>
+    {/*
+      Réglages d'accessibilité — même principe que le thème, et pour la
+      même raison : quelqu'un qui a demandé un texte à 130 % ou un
+      contraste renforcé ne doit pas voir la page s'afficher d'abord
+      sans, puis se réorganiser sous ses yeux. Les attributs sont donc
+      posés sur <html> avant le premier paint, et non par le script du
+      panneau, qui ne court qu'une fois la page rendue.
+
+      Réappliqués après chaque échange de document pour la même raison
+      que le thème : le ClientRouter recopie les attributs du <html>
+      entrant, qui sort du serveur sans aucun d'eux.
+    */}
+    <script is:inline>
+      (function () {
+        const DEFAUTS = {
+    taille: '100',
+    espacement: 'normal',
+    police: 'defaut',
+    contraste: 'normal',
+    couleurs: 'normal',
+    liens: 'normal',
+    animations: 'normal',
+    guide: 'off',
+  };
+        function poser() {
+          try {
+            const brut = localStorage.getItem('a11y');
+            let r = brut ? JSON.parse(brut) : {};
+            if (!r || typeof r !== 'object') r = {};
+            for (const cle in DEFAUTS) {
+              const attr = 'data-a11y-' + cle;
+              const val = r[cle];
+              if (val && val !== DEFAUTS[cle]) {
+                document.documentElement.setAttribute(attr, val);
+              } else {
+                document.documentElement.removeAttribute(attr);
+              }
+            }
+          } catch (_) {
+            /* localStorage indisponible — le site s'affiche dans ses
+               réglages par défaut, ce qui reste un site lisible. */
+          }
+        }
+        poser();
+        document.addEventListener('astro:after-swap', poser);
+      })();
     </script>
     {/* Slot optionnel pour injecter des balises additionnelles dans
         <head> (ex. métadonnées Highwire/Zotero sur la page article).
         Vide par défaut — les pages qui n'en ont pas besoin n'ont rien
         à fournir. */}
     <slot name="head" />
+    {/* Navigation sans rechargement du document. Posée ici pour une
+        raison précise : la barre d'écoute d'un podcast doit survivre au
+        passage d'une page à l'autre, or un rechargement complet détruit
+        l'élément <audio> avec le document qui le portait.
+
+        Conséquence sur tout le site : les scripts de composant ne sont
+        plus rejoués à chaque page — un module ne s'exécute qu'une fois
+        par URL. Chacun s'accroche donc à `astro:page-load`, qui se
+        déclenche au premier chargement *et* après chaque navigation. */}
+    <ClientRouter />
   </head>
   <body class={bodyClass}>
-    {progressBar && (
-      <div class="progress" id="progress" aria-hidden="true">
-        <div class="progress-fill"></div>
-      </div>
-    )}
+    <Header progressBar={progressBar} sansFilet={sansFilet} />
 
-    <Header />
-
-    <main>
+    {/* L’écart entre le header et le hero de chaque page vivait dans
+        PageTitle ; il est ici pour que ce soit la géométrie partagée qui
+        le porte, et non un composant de contenu. Sous 720 px c’est la
+        variable qu’on redéfinit, pas le retrait : PageShell la lit
+        aussi. */}
+    <main class="mx-auto max-w-(--page-max) px-(--page-gutter) pt-(--page-pad-top) max-mobile:px-(--page-gutter-narrow) max-poche:[--page-pad-top:19px]">
       <slot />
     </main>
 
     <Footer />
 
-    <style>
-      .progress {
-        position: sticky;
-        top: 0;
-        height: 2px;
-        background: transparent;
-        z-index: 11;
-      }
-      .progress-fill {
-        height: 100%;
-        background: var(--color-accent);
-        width: 0%;
-        transition: width 0.12s;
-      }
-    </style>
+    {/* Barre d'écoute — dans le chrome et non dans la page de
+        l'épisode : c'est ce qui lui permet de survivre à la navigation
+        (cf PodcastDock). Masquée tant que rien n'a été lancé. */}
+    <PodcastDock />
 
+    {/* Panneau d'accessibilité — rendu à la racine du <body> et non
+        dans le header, dont le `z-index` créerait un contexte
+        d'empilement duquel ni le tiroir ni le guide de lecture ne
+        pourraient sortir. Le bouton du header le désigne par
+        `aria-controls`. */}
+    <A11yPanel />
+
+
+
+    {/* La barre elle-même vit dans Header (elle y remplace le filet
+        dégradé), mais le script qui la fait avancer reste ici : peu
+        importe quel composant a rendu .progress-fill, il finit dans le
+        même document. */}
     {progressBar && (
       <script is:inline>
-        (function () {
+        document.addEventListener('astro:page-load', function () {
           const fill = document.querySelector('.progress-fill');
           if (!fill) return;
+          // L'écouteur porte sur `document`, qui survit à la navigation :
+          // sans révocation il s'en empilerait un par page visitée, tous
+          // pointant vers une barre depuis longtemps détruite. Le signal
+          // les coupe net au moment de l'échange de document.
+          const ac = new AbortController();
+          document.addEventListener('astro:before-swap', () => ac.abort(), { once: true });
           function tick() {
             const h = document.documentElement;
             const max = h.scrollHeight - h.clientHeight;
             const pct = max > 0 ? Math.min(100, (h.scrollTop / max) * 100) : 0;
             fill.style.width = pct + '%';
           }
-          document.addEventListener('scroll', tick, { passive: true });
+          document.addEventListener('scroll', tick, { passive: true, signal: ac.signal });
           tick();
-        })();
+        });
       </script>
     )}
   </body>

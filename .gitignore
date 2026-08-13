@@ -22,13 +22,26 @@ pnpm-debug.log*
 .idea/
 
 # Payload — Postgres local (dev) + uploads, jamais commiter
-data/
+#
+# `/data/` et non `data/` : sans la barre de tête, le motif vise tout
+# dossier nommé « data » à n'importe quelle profondeur. Il emportait les
+# données des seeds (services/payload/scripts/data/), qui sont du code
+# versionné — et sans lesquelles les seeds n'ont rien à poser.
+/data/
 services/payload/.next/
 services/payload/dist/
 
 # Astro Node SSR
 .vercel/
 
-# Référence locale (copie d'un autre projet) — gitignored, à supprimer
-# une fois le scaffolding stable.
-/2mains/
+# Média de test à la racine — trop lourd pour le dépôt, sert seulement
+# à éprouver le lecteur audio en local.
+/podcast.mp3
+
+# Page d’essai de la migration Tailwind — locale, jamais publiée :
+# sans underscore elle est une vraie route, donc elle ne doit pas partir
+# dans le dépôt.
+src/pages/verif-composants.astro
+
+# Rapport d'audit — document de travail, pas du code livré.
+AUDIT.md

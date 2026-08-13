@@ -1,0 +1,225 @@
+---
+/**
+ * Bloc « Par mail » de la page Abonnement — un seul panneau, le choix
+ * du rythme à l'intérieur (fieldset radio) plutôt que deux panneaux
+ * côte à côte : les deux posaient deux fois la même question — « votre
+ * adresse ? » — et laissaient croire à deux inscriptions séparées,
+ * alors que c'est une adresse et un rythme.
+ */
+import Heading from '../ui/Heading.astro';
+import Lede from '../ui/Lede.astro';
+import Panel from '../ui/Panel.astro';
+import Field from '../ui/Field.astro';
+
+/** Message d'une soumission sans JavaScript, rendu par la page. */
+interface Props {
+  statut?: string;
+}
+const { statut = '' } = Astro.props;
+
+/** Les deux lignes de choix sont identiques au libellé près. */
+const CHOIX = 'flex cursor-pointer items-baseline gap-2 py-1.5';
+/**
+ * Cases à cocher et non boutons radio. Le chapô promet « ou les deux »
+ * depuis toujours, et des radios n'en laissaient prendre qu'un — la
+ * phrase décrivait un formulaire qui n'existait pas.
+ */
+const COCHE = 'm-0 flex-none self-center accent-[var(--c-vert-deep)]';
+const QUOI = 'font-serif text-courant text-ink';
+const QUAND = 'font-sans text-[calc(13px*var(--a11y-echelle))] text-[var(--c-panel-mute)]';
+---
+
+<Heading>Par mail</Heading>
+<Lede>
+  Deux rythmes, au choix — ou les deux. Désabonnement en un clic depuis chaque envoi.
+</Lede>
+
+{
+  /* Pleine largeur, comme le panneau du flux RSS juste en dessous. Une
+    largeur de lecture avait été écrite ici — 560 px — mais elle n’avait
+    jamais pris effet, faute de `:global()` sur une classe passée en prop.
+    Rendue active à la migration, elle donnait un panneau étroit posé
+    au-dessus d’un panneau large : deux blocs de même nature qui ne
+    s’alignent plus. */
+}
+<Panel famille="vert" padding="serre" class="mb-9">
+  {
+    /* `method` et `action` ne sont pas décoratifs : sans eux, un
+      navigateur sans JavaScript soumet en GET sur l’URL courante, et
+      l’adresse saisie part dans la barre d’adresse, l’historique et les
+      journaux du serveur. Avec eux, elle voyage dans le corps de la
+      requête, et le frontmatter de la page traite l’envoi. */
+  }
+  <form class="subscribe-form" method="post" action="/abonnement/" novalidate>
+    {
+      /* Pot de miel, comme sur le formulaire de contact : un champ que
+        personne ne voit et que les robots à moisson remplissent. Rempli,
+        la réponse est celle d’un succès et rien ne part.
+
+        `hidden` et non `.visually-hidden` : ce champ doit disparaître
+        POUR TOUT LE MONDE, y compris les lecteurs d’écran. Une classe de
+        masquage visuel le laisserait lisible et annonçable, et on
+        demanderait une « référence » à qui navigue à l’oreille. */
+    }
+    <div class="hidden" aria-hidden="true">
+      <label for="abo-site">Site</label>
+      <input id="abo-site" name="site" type="text" tabindex="-1" autocomplete="off" />
+    </div>
+
+    <fieldset class="m-0 mb-[18px] border-0 p-0">
+      <legend
+        class="text-label tracking-label mb-3 p-0 font-mono text-[var(--c-vert-deep)] uppercase"
+      >
+        Ce que vous voulez recevoir
+      </legend>
+      <label class={CHOIX}>
+        {
+          /* La case prend la couleur de famille plutôt que le bleu du
+            système, qui serait la seule note étrangère du panneau. */
+        }
+        <input type="checkbox" name="rythmes" value="newsletter" class={COCHE} />
+        <span class={QUOI}>La lettre</span>
+        <span class={QUAND}>une fois par trimestre</span>
+      </label>
+      {
+        /* Cochée d’avance, et c’est la seule : c’est le rythme que le
+          site sait tenir aujourd’hui. La lettre trimestrielle attend
+          encore son outil d’envoi — la proposer pré-cochée reviendrait à
+          promettre par défaut ce qu’on ne délivre pas. */
+      }
+      <label class={CHOIX}>
+        <input type="checkbox" name="rythmes" value="publications" class={COCHE} checked />
+        <span class={QUOI}>Chaque parution</span>
+        <span class={QUAND}>dès sa mise en ligne</span>
+      </label>
+    </fieldset>
+
+    <Field
+      id="abo-email"
+      label="Votre adresse mail"
+      type="email"
+      name="email"
+      placeholder="vous@example.com"
+      autocomplete="email"
+      required
+      action="S'abonner"
+      famille="vert"
+    />
+    {
+      /* Résultat d’une soumission native ; le script le remplace au vol
+        quand JavaScript est disponible. Le ton passe par un attribut et
+        non par une classe : Tailwind ne génère que les classes qu’il lit
+        dans les sources, et le script écrasait de toute façon l’attribut
+        class entier à chaque message. */
+    }
+    <p
+      class="text-muted mt-3 mb-0 min-h-[1.5em] font-sans text-[calc(13px*var(--a11y-echelle))] leading-[1.5] data-[ton=err]:text-[#b63a3a] data-[ton=ok]:text-[var(--c-vert-deep)]"
+      data-status
+      aria-live="polite"
+    >
+      {statut}
+    </p>
+  </form>
+</Panel>
+
+<script>
+  // Progressive enhancement : on intercepte le submit pour POSTer en
+  // fetch et afficher un statut inline (succès / erreur) sans recharger
+  // la page. Sans JavaScript, la soumission native part sur
+  // /abonnement/, dont le frontmatter la relaie — c'est ce chemin-là
+  // qui interdit d'exiger une preuve de travail côté serveur.
+  //
+  // Sur `astro:page-load` : avec le ClientRouter, un module ne
+  // s'exécute qu'une fois par URL — le formulaire de la page suivante
+  // repartirait en soumission classique, donc en rechargement.
+  document.addEventListener('astro:page-load', () => {
+    for (const form of document.querySelectorAll<HTMLFormElement>('.subscribe-form')) {
+      const status = form.querySelector('[data-status]') as HTMLElement;
+      const input = form.querySelector('input[name="email"]') as HTMLInputElement;
+      const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      const pot = form.querySelector('input[name="site"]') as HTMLInputElement | null;
+
+      function rythmesDe(f: HTMLFormElement): string[] {
+        return Array.from(
+          f.querySelectorAll<HTMLInputElement>('input[name="rythmes"]:checked'),
+        ).map((c) => c.value);
+      }
+
+      // On pose un attribut au lieu de réécrire `class` : les
+      // utilitaires du paragraphe vivent là, les écraser le laisserait
+      // sans mise en forme dès le premier message.
+      function setStatus(text: string, kind: 'ok' | 'err' | '' = ''): void {
+        status.textContent = text;
+        if (kind) status.dataset.ton = kind;
+        else delete status.dataset.ton;
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = input.value.trim();
+        if (!email) {
+          setStatus('Saisissez une adresse mail.', 'err');
+          input.focus();
+          return;
+        }
+        // Rien de coché : le serveur retomberait sur « chaque parution »
+        // sans le dire, et on recevrait autre chose que ce qu'on a
+        // demandé. Mieux vaut poser la question une fois de plus.
+        const rythmes = rythmesDe(form);
+        if (rythmes.length === 0) {
+          setStatus('Choisissez au moins un des deux rythmes.', 'err');
+          form.querySelector<HTMLInputElement>('input[name="rythmes"]')?.focus();
+          return;
+        }
+        submit.disabled = true;
+        setStatus('Envoi en cours…');
+
+        try {
+          const res = await fetch('/api/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // `site` est le pot de miel : vide chez une personne, il
+            // part quand même pour que les deux corps de requête aient
+            // la même forme.
+            body: JSON.stringify({ email, rythmes, site: pot?.value ?? '' }),
+          });
+          const body = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string };
+
+          if (res.ok && body.ok) {
+            setStatus(
+              "C'est noté. Un mail de confirmation vient de partir vers " +
+                email +
+                " — cliquez sur le lien qui s'y trouve pour finaliser l'inscription.",
+              'ok',
+            );
+            input.value = '';
+          } else if (res.status === 429) {
+            setStatus(
+              'Trop de tentatives sur cet appareil. Réessayez dans quelques minutes.',
+              'err',
+            );
+          } else if (body.code === 'invalid_email') {
+            setStatus('Adresse mail invalide.', 'err');
+          } else if (body.code === 'saturated') {
+            setStatus(
+              'Les inscriptions sont momentanément suspendues, le temps que le trafic retombe. Réessayez dans une heure.',
+              'err',
+            );
+          } else if (body.code === 'disabled') {
+            setStatus(
+              'Les alertes mail sont temporairement désactivées. Réessayez plus tard.',
+              'err',
+            );
+          } else {
+            setStatus('Une erreur est survenue. Réessayez plus tard.', 'err');
+          }
+        } catch (err) {
+          console.warn('subscribe:', err);
+          setStatus('Erreur réseau. Réessayez plus tard.', 'err');
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    }
+  });
+</script>

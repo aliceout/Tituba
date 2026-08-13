@@ -1,7 +1,8 @@
 'use client';
 
 // IdentityEditView (client) — vue Édition custom du global Identity.
-// Quatre champs simples (siteName, authorName, baseline, copyrightLine)
+// Cinq champs simples (siteName, authorName, baseline, copyrightLine,
+// contactEmail)
 // dans une section unique « Identité ».
 //
 // Fetch via /cms/api/globals/identity (cookies de session). Save via
@@ -18,21 +19,24 @@ type IdentityData = {
   authorName?: string;
   baseline?: string;
   copyrightLine?: string;
+  contactEmail?: string;
 };
 
 const EMPTY: IdentityData = {
-  siteName: 'Carnet',
+  siteName: 'Tituba',
   authorName: '',
   baseline: '',
   copyrightLine: '',
+  contactEmail: '',
 };
 
 function normalize(doc: IdentityData): IdentityData {
   return {
-    siteName: doc.siteName ?? 'Carnet',
+    siteName: doc.siteName ?? 'Tituba',
     authorName: doc.authorName ?? '',
     baseline: doc.baseline ?? '',
     copyrightLine: doc.copyrightLine ?? '',
+    contactEmail: doc.contactEmail ?? '',
   };
 }
 
@@ -100,22 +104,22 @@ export default function IdentityEditViewClient(): React.ReactElement {
   return (
     <CarnetPage
       variant="editview"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Identité' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Identité' }]}
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={save}
             disabled={!dirty || saving || loading}
           >
@@ -124,21 +128,21 @@ export default function IdentityEditViewClient(): React.ReactElement {
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <section className="carnet-editview__section">
-            <h2 className="carnet-editview__section-title">Identité</h2>
-            <p className="carnet-editview__section-help">
+          <section className="tituba-editview__section">
+            <h2 className="tituba-editview__section-title">Identité</h2>
+            <p className="tituba-editview__section-help">
               Le « Nom du site » est le wordmark affiché dans le header, le
               footer, le suffixe des onglets navigateur, les mails et le flux
               RSS. Le « Nom complet » apparaît dans la description meta. La
@@ -149,13 +153,13 @@ export default function IdentityEditViewClient(): React.ReactElement {
               individuellement dans Mon compte.
             </p>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Nom du site (wordmark)</span>
               <input
                 type="text"
                 value={data.siteName ?? ''}
                 onChange={(e) => update('siteName', e.target.value)}
-                placeholder="Carnet"
+                placeholder="Tituba"
               />
               <span className="hint">
                 Court de préférence (1 à 2 mots). S&apos;applique partout où le
@@ -163,7 +167,7 @@ export default function IdentityEditViewClient(): React.ReactElement {
               </span>
             </label>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Nom complet</span>
               <input
                 type="text"
@@ -173,11 +177,11 @@ export default function IdentityEditViewClient(): React.ReactElement {
               />
               <span className="hint">
                 Nom du laboratoire de recherche, de la personne, du
-                collectif… selon l&apos;utilisation du carnet.
+                collectif… selon l&apos;utilisation du site.
               </span>
             </label>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Baseline</span>
               <textarea
                 rows={3}
@@ -186,7 +190,7 @@ export default function IdentityEditViewClient(): React.ReactElement {
               />
             </label>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Ligne copyright</span>
               <input
                 type="text"
@@ -194,6 +198,21 @@ export default function IdentityEditViewClient(): React.ReactElement {
                 onChange={(e) => update('copyrightLine', e.target.value)}
               />
               <span className="hint">Affichée en mono sous la baseline.</span>
+            </label>
+
+            <label className="tituba-editview__field">
+              <span className="lbl">Adresse de réception</span>
+              <input
+                type="email"
+                value={data.contactEmail ?? ''}
+                onChange={(e) => update('contactEmail', e.target.value)}
+                placeholder="contact@exemple.org"
+              />
+              <span className="hint">
+                Destinataire des messages du formulaire de contact. Elle n’apparaît jamais sur le
+                site. Sans elle, le formulaire refuse les envois et le dit — mieux vaut une panne
+                visible qu’un message tombé dans une boîte que personne ne relève.
+              </span>
             </label>
           </section>
         </form>

@@ -2,7 +2,7 @@
 
 // Context propagé aux DecoratorNodes Lexical (BiblioInlineRenderer)
 // pour qu'ils puissent peupler leurs pickers depuis la liste de
-// références chargée par PostEditView au mount. Externalisé ici plutôt
+// références chargée par PublicationEditView au mount. Externalisé ici plutôt
 // que dans Editor.tsx pour éviter un cycle d'import avec nodes.tsx
 // (Editor importe les nodes ; les nodes importent le hook).
 
@@ -29,8 +29,20 @@ export function useBiblioOptions(): BibEntry[] {
   return React.useContext(BiblioOptionsContext);
 }
 
+// Ordre des références DANS CE BILLET : c'est lui qui numérote les
+// renvois du corps. L'éditeur doit montrer le même numéro que le site,
+// sans quoi on relit « [12] » à l'écran et « [7] » une fois publié.
+export const BiblioOrdreContext = React.createContext<Array<number | string>>([]);
+
+export function useBiblioRang(id: number | string | null): number | null {
+  const ordre = React.useContext(BiblioOrdreContext);
+  if (id == null) return null;
+  const i = ordre.findIndex((x) => String(x) === String(id));
+  return i < 0 ? null : i + 1;
+}
+
 // ─── Médias ───────────────────────────────────────────────────────
-// Liste des médias chargée par PostEditView au mount, propagée aux
+// Liste des médias chargée par PublicationEditView au mount, propagée aux
 // FigureRenderer pour qu'ils puissent peupler leur picker (search +
 // preview thumbnail) au lieu de demander à l'utilisateur·rice de
 // coller un id Payload — UX inacceptable.

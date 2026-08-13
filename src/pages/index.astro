@@ -1,58 +1,43 @@
 ---
 /**
- * Page d'accueil — hero + barre de filtres + flux d'items.
+ * Page d'accueil — hero + vitrine à la une (publication mise en avant
+ * puis sommaire des dernières parutions).
  *
- * Trois sections empilées (cf design_handoff_carnet/Carnet B.html → Home) :
- *  1. Hero : kicker meta + h1 + lede (titre/lede éditables via global Site)
- *  2. Filtres : chips Type & Thème + compteur. Filtrage côté client en JS
- *     progressif via data-attrs ; persistance en URL hash. Lecture sans JS
- *     possible (la liste complète reste rendue).
- *  3. Flux : grille `120px 1fr 200px`, gap 48 px (cf. PostCard).
- *
- * Ajout d'une "Voir toutes les archives" en pied.
+ * Passe par PageShell comme toutes les pages du site.
  */
-import Layout from '../layouts/Layout.astro';
-import Hero from '../components/Hero.astro';
-import PostCard from '../components/PostCard.astro';
-import { fetchCollection, fetchIndexPages, filterPublished } from '../lib/payload';
+import PageShell from '../components/ui/PageShell.astro';
+import SommairePanel from '../components/SommairePanel.astro';
+import LettreBand from '../components/LettreBand.astro';
+import FeaturedPublication from '../components/FeaturedPublication.astro';
+import PodcastSquare from '../components/PodcastSquare.astro';
+import { fetchIndexPages, type FeedDoc } from '../lib/payload';
+import { fetchFeed } from '../lib/publications';
 import { formatHeroLede, formatHeroTitle } from '../lib/site';
-
-type Theme = { id: number | string; slug: string; name: string };
-
-type Post = {
-  id: number | string;
-  numero: number;
-  slug: string;
-  title: string;
-  type: 'analyse' | 'note' | 'fiche';
-  themes?: Theme[] | null;
-  publishedAt: string;
-  lede: string;
-  readingTime?: number | null;
-  draft?: boolean;
-};
+import { saison, deriveUne } from '../lib/home';
 
 type IndexPagesGlobal = {
-  home?: {
-    heroTitle?: string;
-    heroLede?: string;
-  };
+  home?: { heroTitle?: string; heroLede?: string };
 };
 
 const DEFAULT_HERO_TITLE =
-  'Notes de recherche en *études de genre* et en relations internationales.';
+  'Le genre aux prismes *féministe*, *décoloniaux*, et *intersectionnels* — recherches, analyses, ressources.';
 const DEFAULT_HERO_LEDE =
-  'Analyses longues, notes de lecture et fiches thématiques sur le genre, la géopolitique et les droits LGBTQI+ dans les rapports internationaux. Principalement en français.';
+  "Association loi 1901 fondée à Paris en octobre 2024. Nous construisons un espace de ressources en accès libre autour d'une conviction : les inégalités structurelles se nouent ensemble — orientation sexuelle, construction sociale de la race, classe, colonialité — et ne se démêlent pas une à une. Dix thématiques, cinq formats, rien derrière un mur payant.";
 
-let posts: Post[] = [];
+let posts: FeedDoc[] = [];
+let featured: FeedDoc[] = [];
 let indexPages: IndexPagesGlobal = {};
 try {
-  const raw = await fetchCollection<Post>('posts', {
-    sort: '-publishedAt',
-    limit: 500,
-    depth: 2,
-  });
-  posts = filterPublished(raw);
+  // Flux fusionné des cinq formats, servi par l'endpoint SQL : trier et
+  // paginer un mélange de cinq collections côté client demanderait de
+  // sur-récupérer massivement. Le filtre brouillon/date est posé côté
+  // serveur, d'où l'absence de filterPublished ici.
+  const [feed, une] = await Promise.all([
+    fetchFeed({ limit: 200 }),
+    fetchFeed({ featured: true, limit: 1 }),
+  ]);
+  posts = feed.docs;
+  featured = une.docs;
 } catch (err) {
   console.warn('[home] fetch failed, rendering empty:', (err as Error).message);
 }
@@ -62,305 +47,22 @@ try {
   console.warn('[home] fetchIndexPages failed, using defaults:', (err as Error).message);
 }
 
-const total = posts.length;
+const { une, dernierPodcast, sommaire } = deriveUne(posts, featured);
 
 const heroTitleHtml = formatHeroTitle(
   indexPages.home?.heroTitle?.trim() || DEFAULT_HERO_TITLE,
 );
-const heroLedeHtml = formatHeroLede(
-  indexPages.home?.heroLede?.trim() || DEFAULT_HERO_LEDE,
-);
-
-// Top thèmes utilisés (pour la barre de filtres) — max 6 chips après "Tous"
-const themeUsage = new Map<string, { theme: Theme; count: number }>();
-for (const post of posts) {
-  for (const t of post.themes ?? []) {
-    if (typeof t !== 'object' || t === null) continue;
-    const cur = themeUsage.get(t.slug) ?? { theme: t, count: 0 };
-    cur.count++;
-    themeUsage.set(t.slug, cur);
-  }
-}
-const topThemes = [...themeUsage.values()]
-  .sort((a, b) => b.count - a.count)
-  .slice(0, 6)
-  .map((x) => x.theme);
-
-// Mois/année du plus ancien post — affiché dans le kicker meta « depuis … ».
-const monthLabel = (() => {
-  if (!posts.length) return '';
-  const oldest = posts.reduce((acc, p) =>
-    new Date(p.publishedAt) < new Date(acc.publishedAt) ? p : acc,
-  );
-  const d = new Date(oldest.publishedAt);
-  const months = [
-    'janvier',
-    'février',
-    'mars',
-    'avril',
-    'mai',
-    'juin',
-    'juillet',
-    'août',
-    'septembre',
-    'octobre',
-    'novembre',
-    'décembre',
-  ];
-  return `${months[d.getMonth()]} ${d.getFullYear()}`;
-})();
+const heroLedeHtml = formatHeroLede(indexPages.home?.heroLede?.trim() || DEFAULT_HERO_LEDE);
 ---
 
-<Layout bodyClass="justify">
-  <Hero
-    kicker={`Carnet · ${total} billet${total > 1 ? 's' : ''}${monthLabel ? ` · depuis ${monthLabel}` : ''}`}
-    title={heroTitleHtml}
-    lede={heroLedeHtml}
-  />
-
-  <!-- Filtres -->
-  <section class="filters" id="filters" data-total={total}>
-    <div class="container">
-      {topThemes.length > 0 && (
-        <div class="row">
-          <div class="grp" role="group" aria-label="Filtrer par thème">
-            <span class="lbl">Thème</span>
-            <button class="chip on" type="button" data-filter-theme="all">Tous</button>
-            {topThemes.map((t) => (
-              <button
-                class="chip"
-                type="button"
-                data-filter-theme={t.slug}
-                title={t.name}
-              >
-                {t.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      <div class="row">
-        <div class="grp" role="group" aria-label="Filtrer par type">
-          <span class="lbl">Type</span>
-          <button class="chip on" type="button" data-filter-type="all">Tous</button>
-          <button class="chip" type="button" data-filter-type="analyse">Articles</button>
-          <button class="chip" type="button" data-filter-type="note">Notes</button>
-          <button class="chip" type="button" data-filter-type="fiche">Fiches</button>
-        </div>
-        <div class="count" id="filter-count">
-          {total} billet{total > 1 ? 's' : ''} · tri : récent
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Flux -->
-  <section class="container feed">
-    {posts.length === 0 ? (
-      <p class="empty">Aucun billet publié pour l'instant.</p>
-    ) : (
-      posts.map((p) => (
-        <PostCard
-          numero={p.numero}
-          slug={p.slug}
-          title={p.title}
-          type={p.type}
-          themes={p.themes}
-          publishedAt={p.publishedAt}
-          lede={p.lede}
-          readingTime={p.readingTime}
-        />
-      ))
-    )}
-    <div class="archives-link">
-      <a href="/archives/" class="btn-link">Voir toutes les archives</a>
-    </div>
-  </section>
-</Layout>
-
-<style>
-  .container {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 0 80px;
+<PageShell title={heroTitleHtml} lede={heroLedeHtml} bodyClass="justify" taille="pleine">
+  {
+    une && (
+      <FeaturedPublication doc={une} eyebrow={saison(une.publishedAt)}>
+        {dernierPodcast && <PodcastSquare slot="aside" doc={dernierPodcast} />}
+      </FeaturedPublication>
+    )
   }
-  @media (max-width: 900px) {
-    .container {
-      padding: 0 24px;
-    }
-  }
-
-  /* Hero : styles centralisés dans src/components/Hero.astro */
-
-  /* Filtres */
-  .filters {
-    padding: 18px 0;
-    border-bottom: 1px solid var(--color-rule);
-    font-family: var(--font-sans);
-    font-size: 13px;
-  }
-  .filters .row {
-    display: flex;
-    gap: 24px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  /* Espacement vertical entre la ligne Thème et la ligne Type. */
-  .filters .row + .row {
-    margin-top: 10px;
-  }
-  .filters .grp {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .filters .lbl {
-    color: var(--color-muted);
-    padding-right: 8px;
-    /* Largeur fixe pour aligner les boutons « Tous » entre les deux
-       lignes de filtres (Type et Thème ont des largeurs différentes
-       sans cette contrainte). */
-    min-width: 60px;
-  }
-  .chip {
-    padding: 6px 12px;
-    border-radius: 999px;
-    border: 1px solid var(--color-rule);
-    background: transparent;
-    color: var(--color-muted);
-    cursor: pointer;
-    font: inherit;
-    transition: color 0.12s, border-color 0.12s, background 0.12s;
-  }
-  .chip.on {
-    background: var(--color-accent);
-    color: var(--color-bg);
-    border-color: var(--color-accent);
-  }
-  .chip:hover:not(.on) {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-  }
-  .filters .count {
-    margin-left: auto;
-    color: var(--color-muted);
-  }
-  .filters .sep {
-    width: 1px;
-    height: 20px;
-    background: var(--color-rule);
-  }
-
-  /* Flux */
-  .feed {
-    /* Item border-bottom déjà géré dans PostCard */
-  }
-  .feed .empty {
-    padding: 64px 0;
-    color: var(--color-muted);
-    text-align: center;
-    font-family: var(--font-sans);
-  }
-  .archives-link {
-    padding: 32px 0;
-    text-align: center;
-  }
-  .btn-link {
-    padding: 10px 24px;
-    border-radius: 999px;
-    border: 1px solid var(--color-accent);
-    color: var(--color-accent);
-    font-family: var(--font-sans);
-    font-size: 13px;
-    transition: background 0.12s, color 0.12s, border-color 0.12s;
-    display: inline-block;
-  }
-  .btn-link:hover {
-    background: var(--color-accent);
-    color: var(--color-bg);
-  }
-</style>
-
-<script>
-  // Filtres home — JS progressif. Lecture sans JS = tout est rendu.
-  // Sélection persistée en URL hash : #type=analyse&theme=queer-theory
-  // Format compact : si 'all' partout, hash retiré.
-  (function () {
-    // Le narrow `if (!x) return` n'est pas conservé dans les closures
-    // imbriquées (applyFilters, syncChipsFromState). On rebinde après la
-    // garde pour donner un type non-nullable aux fonctions internes.
-    const filtersRaw = document.getElementById('filters');
-    const countElRaw = document.getElementById('filter-count');
-    const items = Array.from(document.querySelectorAll<HTMLElement>('.item'));
-    if (!filtersRaw || !countElRaw || !items.length) return;
-    const filters: HTMLElement = filtersRaw;
-    const countEl: HTMLElement = countElRaw;
-
-    type State = { type: string; theme: string };
-    const state: State = { type: 'all', theme: 'all' };
-    const total = Number(filters.getAttribute('data-total') || items.length);
-
-    function readHash(): State {
-      const hash = window.location.hash.replace(/^#/, '');
-      if (!hash) return { type: 'all', theme: 'all' };
-      const params = new URLSearchParams(hash);
-      return {
-        type: params.get('type') || 'all',
-        theme: params.get('theme') || 'all',
-      };
-    }
-
-    function writeHash() {
-      const params = new URLSearchParams();
-      if (state.type !== 'all') params.set('type', state.type);
-      if (state.theme !== 'all') params.set('theme', state.theme);
-      const str = params.toString();
-      const newHash = str ? '#' + str : '';
-      if (newHash !== window.location.hash) {
-        history.replaceState(null, '', window.location.pathname + newHash);
-      }
-    }
-
-    function applyFilters() {
-      let visible = 0;
-      for (const item of items) {
-        const itemType = item.getAttribute('data-type') || '';
-        const itemThemes = (item.getAttribute('data-themes') || '').split(' ').filter(Boolean);
-        const okType = state.type === 'all' || itemType === state.type;
-        const okTheme = state.theme === 'all' || itemThemes.includes(state.theme);
-        const show = okType && okTheme;
-        item.style.display = show ? '' : 'none';
-        if (show) visible++;
-      }
-      countEl.textContent =
-        `${visible} billet${visible > 1 ? 's' : ''} sur ${total} · tri : récent`;
-    }
-
-    function syncChipsFromState() {
-      filters.querySelectorAll<HTMLButtonElement>('[data-filter-type]').forEach((btn) => {
-        btn.classList.toggle('on', btn.dataset.filterType === state.type);
-      });
-      filters.querySelectorAll<HTMLButtonElement>('[data-filter-theme]').forEach((btn) => {
-        btn.classList.toggle('on', btn.dataset.filterTheme === state.theme);
-      });
-    }
-
-    filters.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-filter-type], button[data-filter-theme]');
-      if (!btn) return;
-      if (btn.dataset.filterType) state.type = btn.dataset.filterType;
-      if (btn.dataset.filterTheme) state.theme = btn.dataset.filterTheme;
-      syncChipsFromState();
-      applyFilters();
-      writeHash();
-    });
-
-    // Init from URL hash
-    const initial = readHash();
-    state.type = initial.type;
-    state.theme = initial.theme;
-    syncChipsFromState();
-    applyFilters();
-  })();
-</script>
+  <SommairePanel docs={sommaire} />
+  <LettreBand />
+</PageShell>

@@ -1,0 +1,86 @@
+---
+/**
+ * Pictogramme d'un format de publication.
+ *
+ * SVG inline plutôt qu'une police d'icônes ou un sprite externe : aucune
+ * requête réseau, aucun flash au chargement, et le trait hérite de la
+ * couleur du texte (`currentColor`), donc l'icône suit automatiquement
+ * l'accent et le thème clair/sombre.
+ *
+ * Toujours accompagné du libellé côté appelant. Trois des cinq formats
+ * sont du texte — article, analyse, actu — et aucun pictogramme ne les
+ * distingue de façon évidente : l'icône sert de repère visuel, le mot
+ * porte le sens. L'élément est donc `aria-hidden`, la lecture d'écran
+ * s'appuyant sur le libellé voisin.
+ */
+import type { PublicationCollection } from '../lib/publications';
+
+export interface Props {
+  collection: PublicationCollection;
+  /** Taille en pixels, carrée. */
+  size?: number;
+}
+
+const { collection, size = 13 } = Astro.props;
+---
+
+<svg
+  class="mr-1.5 inline-block align-[-0.15em] text-current"
+  width={size}
+  height={size}
+  viewBox="0 0 16 16"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.4"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  focusable="false"
+>
+  {
+    collection === 'articles' && (
+      // Feuillet avec lignes de texte : le format le plus « document ».
+      <>
+        <path d="M3.5 1.75h6l3 3v9.5h-9z" />
+        <path d="M9.5 1.75v3h3" />
+        <path d="M5.75 8h4.5M5.75 10.5h4.5" />
+      </>
+    )
+  }
+  {
+    collection === 'analyses' && (
+      // Loupe : le regard qui s'attarde, l'examen.
+      <>
+        <circle cx="7" cy="7" r="4.25" />
+        <path d="M10.2 10.2l3.05 3.05" />
+      </>
+    )
+  }
+  {
+    collection === 'actus' && (
+      // Éclair : le rebond rapide sur l'actualité.
+      <path d="M9 1.5L3.5 9h4l-.5 5.5L13 7H9z" />
+    )
+  }
+  {
+    collection === 'podcasts' && (
+      // Micro sur pied.
+      <>
+        <rect x="6" y="1.5" width="4" height="7.5" rx="2" />
+        <path d="M3.75 7.25a4.25 4.25 0 008.5 0" />
+        <path d="M8 11.5v3M6 14.5h4" />
+      </>
+    )
+  }
+  {
+    collection === 'outils' && (
+      // Clé à molette : l'objet plutôt que le geste. Une flèche de
+      // téléchargement décrirait comment on récupère la ressource, pas ce
+      // qu'elle est — un outil de travail.
+      // Tracé sur une grille de 24, ramené à la grille de 16 du fichier.
+      <g transform="scale(0.6667)">
+        <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+      </g>
+    )
+  }
+</svg>

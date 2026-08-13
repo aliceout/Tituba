@@ -1,0 +1,2064 @@
+'use client';
+
+// PublicationEditView (client) — vue Édition custom d'un Post qui matche le
+// handoff admin (cf Design/design_handoff_admin/tituba-admin.html →
+// ScreenDoc). Layout :
+//
+//   header.top : crumbs + chip statut + actions Sauvegarder / Publier
+//   .doc grid : center 1fr | meta 300px
+//     center : .ed-card (ed-num + title + lede + divider + body Lexical)
+//              + .fn-block (notes auto-numérotées)
+//     meta   : champs du billet · Calendrier · Biblio liée
+//
+// Fetch / save via /cms/api/posts/[id] (cookies de session). Le body
+// est édité par un Lexical custom (cf body/Editor.tsx) sans aucune
+// chrome Payload — slash menu maison, theme maison, blocks rendus
+// par nos nodes décorateur.
+
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+
+// useLayoutEffect côté serveur déclenche un warning React. On bascule
+// sur useEffect pendant le SSR (pas critique : ce composant est 'use
+// client', donc le SSR n'est qu'un premier passage).
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+// Petit hook : ajuste la hauteur d'un <textarea> à son contenu, sans
+// scroll interne, sans poignée de redimensionnement (cf CSS
+// `resize: none`). Re-mesure à chaque changement de `value`.
+function useAutoGrow(value: string) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useIsoLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+  return ref;
+}
+
+import { type LexicalEditor } from 'lexical';
+
+import CarnetPage from './CarnetPage';
+import PostBodyEditor, {
+  deleteBiblioInlinesByEntry,
+  deleteFootnoteByIndex,
+  extractBiblioInlineIds,
+  extractFootnotes,
+  remplacerContenu,
+  type LexicalState,
+} from './post-editor/Editor';
+
+import {
+  emptyExtraValues,
+  getPublicationSpec,
+  pickExtraValues,
+} from './publications/registry';
+import UnsplashImagePicker from './publications/UnsplashImagePicker.client';
+import AudioUploadField from './publications/AudioUploadField.client';
+import FichierUploadField from './publications/FichierUploadField.client';
+import ImportDocument from './publications/ImportDocument.client';
+import { formatAuthorsInitiales } from '@/lib/format-authors';
+import { stripHeroMarkers } from '@/lib/hero-markers';
+
+type PostType = string;
+
+type Serie = { id: number | string; name: string };
+
+/**
+ * Identifiant de relation dans le type qu'attend la base.
+ *
+ * Payload valide les relations par le **type** de l'identifiant, pas par
+ * sa valeur : sur Postgres il exige un nombre, et rejette la chaîne
+ * « 1 » que rend nécessairement un `<select>` HTML. L'erreur est en plus
+ * illisible — « invalid relationships: 1 0 », où le 0 est un indice de
+ * tableau qu'un bug de formatage de Payload affiche comme une valeur.
+ *
+ * On ne convertit que ce qui est entièrement numérique : une base à
+ * identifiants textuels garderait les siens intacts.
+ */
+function idRelation(valeur: string): number | string {
+  return /^\d+$/.test(valeur) ? Number(valeur) : valeur;
+}
+
+type Theme = { id: number | string; slug: string; name: string };
+type Tag = { id: number | string; slug: string; name: string };
+type CarnetUser = { id: number | string; displayName?: string; email?: string };
+type PostAuthor = {
+  kind?: 'user' | 'external';
+  user?: CarnetUser | number | string | null;
+  name?: string;
+  affiliation?: string;
+};
+type BibAuthor = {
+  firstName?: string | null;
+  lastName: string;
+  role?: 'author' | 'editor' | 'translator';
+};
+type BibEntry = {
+  id: number | string;
+  slug?: string;
+  authors?: BibAuthor[] | null;
+  authorLabel?: string | null;
+  year?: number | string;
+  title?: string;
+};
+type MediaEntry = {
+  id: number | string;
+  filename?: string | null;
+  alt?: string | null;
+  title?: string | null;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+};
+
+type Post = {
+  id: number | string;
+  /** Identifiant public court — c'est lui, et non `id`, qui forme
+   *  l'URL du site (cf publicationHref côté Astro). Attribué par
+   *  Payload à la création, jamais saisi. */
+  publicId?: string | null;
+  title: string;
+  type: PostType;
+  themes?: (Theme | number | string)[] | null;
+  /** Série de rattachement — trois formats sur cinq (cf registry, ). */
+  series?: Serie | number | string | null;
+  /** Rang dans la série. Vide = ordre de parution. */
+  seriesNumber?: number | null;
+  tags?: (Tag | number | string)[] | null;
+  authors?: PostAuthor[] | null;
+  publishedAt: string;
+  updatedAt?: string;
+  lede: string;
+  body?: LexicalState | null;
+  bibliography?: (BibEntry | number | string)[] | null;
+  readingTime?: number | null;
+  draft?: boolean;
+};
+
+// Les champs propres au format (audio d'un podcast, lien d'un outil…)
+// sont décrits par `extraFields` dans le registre et ne sont donc pas
+// listés dans `Post`. On y accède via ce cast plutôt qu'avec une index
+// signature sur `Post` : une index signature élargirait tous les champs
+// de base à `unknown` et ferait perdre le typage de tout le composant.
+type WithExtras = Record<string, unknown>;
+
+type Status = 'draft' | 'scheduled' | 'published';
+
+const STATUS_LABEL: Record<Status, string> = {
+  draft: 'Brouillon',
+  scheduled: 'Planifié',
+  published: 'Publié',
+};
+
+function inferStatus(p: Pick<Post, 'draft' | 'publishedAt'>): Status {
+  if (p.draft) return 'draft';
+  if (p.publishedAt && new Date(p.publishedAt).getTime() > Date.now()) return 'scheduled';
+  return 'published';
+}
+
+function isoDate(d: string | undefined | null): string {
+  if (!d) return '';
+  return d.slice(0, 10);
+}
+
+function relativeSavedAt(at: number | null): string {
+  if (!at) return '';
+  const sec = Math.round((Date.now() - at) / 1000);
+  if (sec < 5) return 'à l’instant';
+  if (sec < 60) return `il y a ${sec} s`;
+  const m = Math.round(sec / 60);
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.round(m / 60);
+  return `il y a ${h} h`;
+}
+
+export default function PublicationEditViewClient({
+  docId,
+  collectionSlug,
+}: {
+  docId: string | null;
+  collectionSlug: string | null;
+}): React.ReactElement {
+  const spec = useMemo(() => getPublicationSpec(collectionSlug), [collectionSlug]);
+  const API_POSTS = spec.apiBase;
+  const TYPE_LABELS = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const o of spec.subtypes?.options ?? []) out[o.value] = o.label;
+    return out;
+  }, [spec]);
+
+  // Brouillon vierge dérivé du registre : les champs de format y sont
+  // initialisés depuis `extraFields`, jamais listés à la main.
+  const EMPTY_DRAFT = useMemo<Omit<Post, 'id'> & { id?: number | string | null }>(
+    () => ({
+      title: '',
+      type: spec.subtypes?.defaultValue ?? '',
+      themes: [],
+      series: null,
+      seriesNumber: null,
+      tags: [],
+      authors: [],
+      publishedAt: new Date().toISOString().slice(0, 10),
+      lede: '',
+      body: null,
+      bibliography: [],
+      draft: true,
+      ...emptyExtraValues(spec),
+    }),
+    [spec],
+  );
+
+  const [post, setPost] = useState<Post | (Omit<Post, 'id'> & { id?: number | string | null })>(
+    EMPTY_DRAFT,
+  );
+  const [initialJson, setInitialJson] = useState<string>(() => JSON.stringify(EMPTY_DRAFT));
+  const [themes, setThemes] = useState<Theme[]>([]);
+  /** Séries du format courant — le sélecteur ne propose qu elles. */
+  const [series, setSeries] = useState<Serie[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [allUsers, setAllUsers] = useState<CarnetUser[]>([]);
+  const [biblioOptions, setBiblioOptions] = useState<BibEntry[]>([]);
+  const [mediaOptions, setMediaOptions] = useState<MediaEntry[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Erreurs de validation client par champ. Affichées en rouge sous
+  // le champ concerné (cf .field.invalid dans .ed-card et le sidebar).
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  // Modale de confirmation de suppression du billet courant. open=true
+  // affiche le backdrop + dialog ; submitting bloque les boutons
+  // pendant l'appel DELETE.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Accordéons « Tutoriel » à droite des headers fn-block et bib-block.
+  // Fermés par défaut — le tutoriel ne sert que la première fois.
+  const [fnHelpOpen, setFnHelpOpen] = useState(false);
+  const [bibHelpOpen, setBibHelpOpen] = useState(false);
+
+  // Tick toutes les 30s pour rafraîchir le « il y a X min »
+  /**
+   * (Re)charge la liste des références proposées par le panneau
+   * Bibliographie liée.
+   *
+   * Rappelée après un import : les entrées qui viennent d'être créées
+   * n'existaient pas au montage, et sans ce rechargement elles
+   * s'afficheraient en « Réf. #21 » — un numéro, là où il faut un nom.
+   */
+  const chargerBiblio = useCallback(async () => {
+    try {
+      const r = await fetch('/cms/api/bibliography?limit=1000&depth=0&sort=authorLabel', {
+        credentials: 'include',
+      });
+      const data = (await r.json()) as { docs: BibEntry[] };
+      setBiblioOptions(data.docs ?? []);
+    } catch {
+      // La liste précédente vaut mieux qu'une liste vide.
+    }
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Fetch initial post + thèmes + biblio
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    const themesP = fetch('/cms/api/themes?limit=100&depth=0&sort=name', {
+      credentials: 'include',
+    })
+      .then((r) => r.json())
+      .then((data: { docs: Theme[] }) => setThemes(data.docs ?? []))
+      .catch(() => setThemes([]));
+    // Séries du format courant seulement : une émission n'accueille que
+    // des épisodes, et proposer les autres n'ouvrirait que la porte à un
+    // rattachement que la collection refuse (cf seriesField,
+    // `filterOptions`). Les brouillons sont exclus — on ne range pas un
+    // billet publié dans une série qui n'existe pas encore côté public.
+    if (spec.series) {
+      fetch(
+        `/cms/api/series?where[format][equals]=${collectionSlug}&where[draft][not_equals]=true&limit=100&depth=0&sort=name`,
+        { credentials: 'include' },
+      )
+        .then((r) => (r.ok ? r.json() : { docs: [] }))
+        .then((data: { docs?: Serie[] }) => setSeries(data.docs ?? []))
+        .catch(() => setSeries([]));
+    }
+    const tagsP = fetch('/cms/api/tags?limit=500&depth=0&sort=name', {
+      credentials: 'include',
+    })
+      .then((r) => r.json())
+      .then((data: { docs: Tag[] }) => setAllTags(data.docs ?? []))
+      .catch(() => setAllTags([]));
+    const biblioP = chargerBiblio();
+    // Liste des médias pour le picker FigureRenderer (recherche +
+    // preview thumbnail). depth=0 pour ne pas charger les relations.
+    const mediaP = fetch('/cms/api/media?limit=500&depth=0&sort=-createdAt', {
+      credentials: 'include',
+    })
+      .then((r) => r.json())
+      .then((data: { docs: MediaEntry[] }) => setMediaOptions(data.docs ?? []))
+      .catch(() => setMediaOptions([]));
+    // Liste des user·rices actifs du Tituba pour le picker auteur·ices.
+    // status='active' uniquement — on n'expose pas les pending/disabled.
+    const usersP = fetch(
+      '/cms/api/users?limit=200&depth=0&sort=displayName&where[status][equals]=active',
+      { credentials: 'include' },
+    )
+      .then((r) => r.json())
+      .then((data: { docs: CarnetUser[] }) => setAllUsers(data.docs ?? []))
+      .catch(() => setAllUsers([]));
+    // User·rice connecté·e — sert à pré-remplir authors[] dès l'ouverture
+    // d'un nouveau billet (sinon l'auto-assign n'arrive qu'au save).
+    const meP = fetch('/cms/api/users/me', { credentials: 'include' })
+      .then((r) => r.json())
+      .then(
+        (data: { user?: { id?: number | string } | null }) =>
+          (data.user?.id as number | string | undefined) ?? null,
+      )
+      .catch(() => null);
+
+    if (!docId) {
+      // Création : pas de fetch post, on part de EMPTY_DRAFT enrichi
+      // par le user connecté comme premier·ère auteur·ice.
+      Promise.all([themesP, tagsP, biblioP, mediaP, usersP, meP])
+        .then(([, , , , , meId]) => {
+          if (meId != null) {
+            const draft: typeof EMPTY_DRAFT = {
+              ...EMPTY_DRAFT,
+              authors: [{ kind: 'user', user: meId }],
+            };
+            setPost(draft);
+            setInitialJson(JSON.stringify(draft));
+          } else {
+            setInitialJson(JSON.stringify(EMPTY_DRAFT));
+          }
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
+
+    const postP = fetch(`${API_POSTS}/${encodeURIComponent(docId)}?depth=1`, {
+      credentials: 'include',
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((doc: Post) => {
+        const norm: Post = {
+          ...doc,
+          themes: Array.isArray(doc.themes) ? doc.themes : [],
+          series: doc.series ?? null,
+          seriesNumber: doc.seriesNumber ?? null,
+          tags: Array.isArray(doc.tags) ? doc.tags : [],
+          authors: Array.isArray(doc.authors) ? doc.authors : [],
+          bibliography: Array.isArray(doc.bibliography) ? doc.bibliography : [],
+          body: doc.body ?? null,
+        };
+        setPost(norm);
+        setInitialJson(JSON.stringify(norm));
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      });
+
+    Promise.all([themesP, tagsP, biblioP, mediaP, usersP, meP, postP]).finally(() =>
+      setLoading(false),
+    );
+  // API_POSTS et EMPTY_DRAFT dérivent de `spec`, lui-même mémoïsé sur
+  // collectionSlug : ils sont stables tant que la collection ne change
+  // pas. On les déclare quand même, pour que le rechargement suive si
+  // la vue était un jour montée sur une autre collection sans remount.
+  }, [docId, API_POSTS, EMPTY_DRAFT]);
+
+  const dirty = JSON.stringify(post) !== initialJson;
+  const status: Status = inferStatus(post);
+  function patch<K extends keyof Post>(key: K, value: Post[K]) {
+    setPost((p) => ({ ...p, [key]: value }));
+  }
+
+  function toggleTheme(themeId: number | string) {
+    setPost((p) => {
+      const cur = (p.themes ?? []) as (Theme | number | string)[];
+      const ids = cur.map((t) => (typeof t === 'object' ? t.id : t));
+      if (ids.includes(themeId)) {
+        return { ...p, themes: cur.filter((t) => (typeof t === 'object' ? t.id : t) !== themeId) };
+      }
+      const found = themes.find((t) => t.id === themeId);
+      return { ...p, themes: [...cur, found ?? themeId] };
+    });
+  }
+
+  function attachTag(tag: Tag) {
+    setPost((p) => {
+      const cur = (p.tags ?? []) as (Tag | number | string)[];
+      const ids = cur.map((t) => (typeof t === 'object' ? t.id : t));
+      if (ids.includes(tag.id)) return p;
+      return { ...p, tags: [...cur, tag] };
+    });
+  }
+
+  function detachTag(tagId: number | string) {
+    setPost((p) => {
+      const cur = (p.tags ?? []) as (Tag | number | string)[];
+      return {
+        ...p,
+        tags: cur.filter((t) => (typeof t === 'object' ? t.id : t) !== tagId),
+      };
+    });
+  }
+
+  // ─── Validation : body Lexical considéré vide ? ──────────────
+  // Vrai si aucun text non-whitespace ET aucun block décoratif. Un
+  // billet avec juste une figure ou une citation longue n'est PAS
+  // considéré vide. Utilisé par save() pour le check `body required`.
+  function isLexicalBodyEmpty(body: LexicalState | null): boolean {
+    if (!body?.root || !Array.isArray(body.root.children)) return true;
+    function hasContent(node: unknown): boolean {
+      if (!node || typeof node !== 'object') return false;
+      const n = node as Record<string, unknown>;
+      if (typeof n.text === 'string' && n.text.trim().length > 0) return true;
+      // Un block (figure, citation_bloc) compte comme du contenu, même
+      // sans texte rendu inline.
+      if (n.type === 'block') return true;
+      if (Array.isArray(n.children)) {
+        return (n.children as unknown[]).some(hasContent);
+      }
+      return false;
+    }
+    return !hasContent(body.root);
+  }
+
+  // ─── Normalisation Lexical avant save ────────────────────────
+  // Quand on charge un billet (depth=1), les blocks Lexical qui
+  // contiennent une relationship (biblio_inline.entry, figure.image)
+  // arrivent avec le doc populé en objet. Si on renvoie ce JSON tel
+  // quel à Payload pour un PATCH, le validateur du field rejette
+  // l'objet — il attend un ID. On walke donc le body avant save et
+  // on remplace les objets populés par leur id. Cf erreur 400
+  // « inlineBlock node failed to validate: entry … » apparue après
+  // la refonte de la collection bibliography.
+  function normalizeLexicalBody(input: LexicalState | null): LexicalState | null {
+    if (!input) return null;
+    function walk(node: unknown): unknown {
+      if (!node || typeof node !== 'object') return node;
+      const n = node as Record<string, unknown>;
+      const fields = n.fields as Record<string, unknown> | undefined;
+      const blockType = fields?.blockType as string | undefined;
+      if (
+        (n.type === 'inlineBlock' || n.type === 'block') &&
+        fields &&
+        (blockType === 'biblio_inline' || blockType === 'figure')
+      ) {
+        const relKey = blockType === 'biblio_inline' ? 'entry' : 'image';
+        const v = fields[relKey];
+        if (v && typeof v === 'object' && 'id' in (v as Record<string, unknown>)) {
+          n.fields = { ...fields, [relKey]: (v as { id: number | string }).id };
+        }
+      }
+      if (Array.isArray(n.children)) {
+        n.children = (n.children as unknown[]).map(walk);
+      }
+      return n;
+    }
+    // Le root JSON Lexical est { root: { children: [...] } }
+    const cloned = JSON.parse(JSON.stringify(input)) as LexicalState;
+    walk(cloned.root);
+    return cloned;
+  }
+
+  // ─── Auteur·ices ─────────────────────────────────────────────
+  function addAuthor(kind: 'user' | 'external') {
+    setPost((p) => {
+      const cur = p.authors ?? [];
+      const fresh: PostAuthor =
+        kind === 'user' ? { kind: 'user', user: null } : { kind: 'external', name: '', affiliation: '' };
+      return { ...p, authors: [...cur, fresh] };
+    });
+  }
+  function removeAuthor(idx: number) {
+    setPost((p) => ({
+      ...p,
+      authors: (p.authors ?? []).filter((_, i) => i !== idx),
+    }));
+  }
+  function updateAuthor(idx: number, patch: Partial<PostAuthor>) {
+    setPost((p) => {
+      const cur = [...(p.authors ?? [])];
+      cur[idx] = { ...cur[idx], ...patch };
+      return { ...p, authors: cur };
+    });
+  }
+  function moveAuthor(idx: number, delta: -1 | 1) {
+    setPost((p) => {
+      const cur = [...(p.authors ?? [])];
+      const target = idx + delta;
+      if (target < 0 || target >= cur.length) return p;
+      [cur[idx], cur[target]] = [cur[target], cur[idx]];
+      return { ...p, authors: cur };
+    });
+  }
+
+  // Crée un tag à la volée via POST /cms/api/tags, puis l'attache au
+  // billet courant. Le slug est dérivé côté serveur (hook beforeChange).
+  async function createAndAttachTag(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    // Slug calculé côté client uniquement pour le payload — le serveur
+    // l'écrasera avec sa propre slugify pour rester source de vérité.
+    const slug = trimmed
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-+|-+$)/g, '');
+    try {
+      const res = await fetch('/cms/api/tags', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed, slug }),
+      });
+      if (!res.ok) {
+        // Si le tag existe déjà (slug unique), on le récupère et on l'attache.
+        if (res.status === 400 || res.status === 409) {
+          const existing = allTags.find((t) => t.slug === slug);
+          if (existing) {
+            attachTag(existing);
+            return;
+          }
+        }
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const json = (await res.json()) as { doc?: Tag } | Tag;
+      const fresh = (json as { doc?: Tag }).doc ?? (json as Tag);
+      setAllTags((prev) =>
+        prev.find((t) => String(t.id) === String(fresh.id)) ? prev : [...prev, fresh],
+      );
+      attachTag(fresh);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
+  }
+
+  function toggleBiblio(entryId: number | string) {
+    setPost((p) => {
+      const cur = (p.bibliography ?? []) as (BibEntry | number | string)[];
+      const ids = cur.map((b) => (typeof b === 'object' ? b.id : b));
+      if (ids.includes(entryId)) {
+        return {
+          ...p,
+          bibliography: cur.filter((b) => (typeof b === 'object' ? b.id : b) !== entryId),
+        };
+      }
+      const found = biblioOptions.find((b) => b.id === entryId);
+      return { ...p, bibliography: [...cur, found ?? entryId] };
+    });
+  }
+
+  async function save(opts: { publish?: boolean } = {}) {
+    // Validation client AVANT toute requête, pour afficher les erreurs
+    // en rouge inline plutôt que recevoir un 400 générique de Payload
+    // après l'envoi. La liste des champs obligatoires vient du registre
+    // (`spec.required`) : chaque format a la sienne — un podcast peut
+    // n'avoir aucun corps rédigé, un outil aucun chapô.
+    const errs: Record<string, string> = {};
+    const req = new Set(spec.required);
+    if (req.has('title') && !post.title.trim()) errs.title = 'Champ obligatoire.';
+    if (req.has('lede') && !post.lede.trim()) errs.lede = 'Champ obligatoire.';
+    if (req.has('body') && isLexicalBodyEmpty(post.body ?? null)) {
+      errs.body = 'Le corps de l’article est vide.';
+    }
+    for (const f of spec.extraFields) {
+      if (!req.has(f.name)) continue;
+      const v = (post as WithExtras)[f.name];
+      if (v == null || (typeof v === 'string' && !v.trim())) {
+        errs[f.name] = 'Champ obligatoire.';
+      }
+    }
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      // Focus / scroll au premier champ en erreur pour signal visuel.
+      if (errs.title && titleRef.current) {
+        titleRef.current.focus();
+        titleRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (errs.lede && ledeRef.current) {
+        ledeRef.current.focus();
+        ledeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+    setFieldErrors({});
+    setSaving(true);
+    setError(null);
+    try {
+      const body: Record<string, unknown> = {
+        title: post.title,
+        // Champs de format sérialisés depuis le registre. C'est ce qui
+        // évite qu'une URL audio saisie dans l'éditeur soit
+        // silencieusement absente de la requête, donc jamais persistée.
+        ...pickExtraValues(spec, post as Record<string, unknown>),
+        themes: (post.themes ?? []).map((t) => (typeof t === 'object' ? t.id : t)),
+        // L API attend un identifiant, pas le document peuplé.
+        ...(spec.series
+          ? {
+              // Second filet : la valeur peut aussi venir d'un document
+              // peuplé par le fetch, ou d'une chaîne restée d'un état
+              // antérieur. On la ramène au type attendu dans tous les cas.
+              series:
+                post.series && typeof post.series === 'object'
+                  ? post.series.id
+                  : typeof post.series === 'string'
+                    ? idRelation(post.series)
+                    : (post.series ?? null),
+              seriesNumber: post.seriesNumber ?? null,
+            }
+          : {}),
+        tags: (post.tags ?? []).map((t) => (typeof t === 'object' ? t.id : t)),
+        // authors : on remappe l'objet user populé en simple ID pour le PATCH
+        // (Payload accepte les deux mais l'ID est plus propre côté wire).
+        authors: (post.authors ?? []).map((a) => ({
+          kind: a.kind ?? 'user',
+          user:
+            a.kind === 'user' && a.user
+              ? typeof a.user === 'object'
+                ? a.user.id
+                : a.user
+              : null,
+          name: a.kind === 'external' ? (a.name ?? '') : '',
+          affiliation: a.kind === 'external' ? (a.affiliation ?? '') : '',
+        })),
+        publishedAt: post.publishedAt,
+        lede: post.lede,
+        body: normalizeLexicalBody(post.body ?? null),
+        bibliography: (post.bibliography ?? []).map((b) => (typeof b === 'object' ? b.id : b)),
+        draft: opts.publish ? false : post.draft,
+      };
+      // `type` (sous-genre) n'existe que sur les collections qui en
+      // déclarent. Ailleurs, le format est porté par la collection
+      // elle-même et envoyer le champ ferait échouer la validation.
+      if (spec.subtypes) {
+        body.type = post.type;
+      }
+      const url =
+        post.id != null && post.id !== ''
+          ? `${API_POSTS}/${encodeURIComponent(String(post.id))}`
+          : API_POSTS;
+      const method = post.id != null && post.id !== '' ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`HTTP ${res.status} — ${t.slice(0, 200)}`);
+      }
+      const json = (await res.json()) as { doc?: Post } | Post;
+      const fresh: Post = (json as { doc?: Post }).doc ?? (json as Post);
+      // Le spread de `fresh` fait passer les champs de format sans les
+      // nommer — ne pas le remplacer par une liste explicite, ce serait
+      // rouvrir la porte au champ perdu au save.
+      const norm: Post = {
+        ...fresh,
+        themes: Array.isArray(fresh.themes) ? fresh.themes : [],
+        series: fresh.series ?? null,
+        seriesNumber: fresh.seriesNumber ?? null,
+        tags: Array.isArray(fresh.tags) ? fresh.tags : [],
+        authors: Array.isArray(fresh.authors) ? fresh.authors : [],
+        bibliography: Array.isArray(fresh.bibliography) ? fresh.bibliography : [],
+        body: fresh.body ?? null,
+      };
+      setPost(norm);
+      setInitialJson(JSON.stringify(norm));
+      setSavedAt(Date.now());
+      // Si on vient de créer, redirige vers l'URL d'édition stable
+      if (!docId && fresh.id != null) {
+        const path = `${spec.adminBase}/${fresh.id}`;
+        if (typeof window !== 'undefined') window.history.replaceState(null, '', path);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Suppression définitive du billet courant. Sur succès, redirige
+  // vers la liste — le billet n'existe plus, rester sur l'URL d'édit
+  // donnerait un 404. Échec = on garde la modale ouverte avec l'erreur.
+  async function deletePost() {
+    if (post.id == null) return;
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`${API_POSTS}/${encodeURIComponent(String(post.id))}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (typeof window !== 'undefined') {
+        window.location.href = spec.adminBase;
+      }
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Erreur inconnue');
+      setDeleteSubmitting(false);
+    }
+  }
+
+  // Raccourci ⌘S / Ctrl+S
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (dirty && !saving) void save();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, saving, post]);
+
+  // Footnotes extraites du body Lexical pour le panneau .fn-block
+  const footnotes = useMemo(() => extractFootnotes(post.body), [post.body]);
+
+  // Auto-grow refs pour le titre (multi-ligne) et le chapô
+  const titleRef = useAutoGrow(post.title);
+  const ledeRef = useAutoGrow(post.lede);
+
+  // Référence vers l'éditeur Lexical pour pouvoir supprimer des nodes
+  // (footnotes / biblio_inline) depuis le panneau pied. On walke
+  // l'arbre LIVE de l'éditeur (les keys sérialisées du JSON ne
+  // matchent pas les keys runtime de Lexical), via les helpers
+  // exportés par post-editor/Editor.
+  const editorRef = useRef<LexicalEditor | null>(null);
+
+  function deleteFootnote(index: number) {
+    const editor = editorRef.current;
+    if (!editor) return;
+    deleteFootnoteByIndex(editor, index);
+  }
+
+  function deleteBiblioRef(id: number | string) {
+    // 1. Retire de la liste explicite (si présente)
+    setPost((p) => {
+      const cur = (p.bibliography ?? []) as Array<BibEntry | number | string>;
+      const filtered = cur.filter(
+        (b) => String(typeof b === 'object' ? b.id : b) !== String(id),
+      );
+      return filtered.length === cur.length ? p : { ...p, bibliography: filtered };
+    });
+    // 2. Supprime toutes les citations inline qui pointent sur cet
+    //    entry (un même ouvrage peut être cité plusieurs fois).
+    const editor = editorRef.current;
+    if (editor) deleteBiblioInlinesByEntry(editor, id);
+  }
+
+  // Rafraîchit l'affichage relatif "il y a X min" (now est l'horloge)
+  void now;
+  const savedLabel = savedAt ? `Sauvegardé ${relativeSavedAt(savedAt)}` : '';
+
+  // Champs propres au format : mêmes déclarations, deux emplacements.
+  // Ce qui n'est pas un réglage mais le contenu même de la publication —
+  // le fichier d'un épisode — va dans la colonne centrale ; le reste
+  // reste dans la barre latérale.
+  const mainFields = spec.extraFields.filter((f) => f.zone === 'main' && !f.hidden);
+  const sidebarFields = spec.extraFields.filter((f) => f.zone !== 'main' && !f.hidden);
+
+  /**
+   * Rendu d'un champ de format. Extrait de la boucle pour que les deux
+   * colonnes partagent exactement le même code : dupliquer ce bloc
+   * serait le meilleur moyen d'ajouter un jour un type de champ d'un
+   * seul côté et de le voir disparaître silencieusement de l'autre.
+   */
+  function renderExtraField(f: (typeof spec.extraFields)[number]) {
+    return (
+      <div
+        key={f.name}
+        className={[
+          'field',
+          fieldErrors[f.name] ? 'field--invalid' : '',
+          // Un paragraphe et une liste de liens prennent toute la
+          // rangée : enfermés dans une colonne de 280 px, le premier se
+          // hache en lignes de quatre mots et la seconde n'a plus la
+          // place de mettre son intitulé à côté de son adresse.
+          f.type === 'textarea' || f.type === 'links' ? 'field--pleine' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <label>{f.label}</label>
+        {f.type === 'list' ? (
+          <ChipsInput
+            values={
+              Array.isArray((post as WithExtras)[f.name])
+                ? ((post as WithExtras)[f.name] as string[])
+                : []
+            }
+            placeholder={f.placeholder}
+            onChange={(vals) => patch(f.name as keyof Post, vals as never)}
+          />
+        ) : f.type === 'select' ? (
+          <select
+            value={String((post as WithExtras)[f.name] ?? '')}
+            onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+          >
+            {f.options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        ) : f.type === 'links' ? (
+          <LinksInput
+            values={
+              Array.isArray((post as WithExtras)[f.name])
+                ? ((post as WithExtras)[f.name] as Lien[])
+                : []
+            }
+            onChange={(v) => patch(f.name as keyof Post, v as never)}
+          />
+        ) : f.type === 'textarea' ? (
+          <textarea
+            rows={f.rows ?? 3}
+            value={String((post as WithExtras)[f.name] ?? '')}
+            placeholder={f.placeholder}
+            onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+          />
+        ) : f.type === 'upload' ? (
+          <UnsplashImagePicker
+            value={(post as WithExtras)[f.name] as never}
+            onChange={(id) => patch(f.name as keyof Post, id as never)}
+            // Carré par défaut (le hero d'un billet en montre un), sauf
+            // là où le registre déclare autre chose — une actu affiche
+            // son image en bandeau.
+            aspect={f.aspect ?? 1}
+          />
+        ) : f.type === 'audio' ? (
+          <AudioUploadField
+            value={(post as WithExtras)[f.name] as never}
+            onChange={(id) => patch(f.name as keyof Post, id as never)}
+            // La durée est lue dans le fichier au dépôt (cf
+            // AudioUploadField) : le champ « Durée » à côté se remplit
+            // tout seul, sans cesser d'être corrigeable à la main.
+            onDuration={(sec) => patch('durationSeconds' as keyof Post, sec as never)}
+          />
+        ) : f.type === 'fichier' ? (
+          <FichierUploadField
+            value={(post as WithExtras)[f.name] as never}
+            // Le tableau d entrees, dans l ordre affiche.
+            onChange={(entrees) => patch(f.name as keyof Post, entrees as never)}
+          />
+        ) : (
+          <input
+            type={f.type === 'number' ? 'number' : f.type === 'url' ? 'url' : 'text'}
+            value={String((post as WithExtras)[f.name] ?? '')}
+            placeholder={f.placeholder}
+            min={f.type === 'number' ? f.min : undefined}
+            max={f.type === 'number' ? f.max : undefined}
+            onChange={(e) => patch(f.name as keyof Post, e.target.value as never)}
+          />
+        )}
+        {f.help && <div className="hint">{f.help}</div>}
+        {fieldErrors[f.name] && <div className="err">{fieldErrors[f.name]}</div>}
+      </div>
+    );
+  }
+
+  const themeIds = (post.themes ?? []).map((t) => (typeof t === 'object' ? t.id : t));
+  const tagIds = (post.tags ?? []).map((t) => (typeof t === 'object' ? t.id : t));
+  const tagsAttached: Tag[] = (post.tags ?? [])
+    .map((t) =>
+      typeof t === 'object'
+        ? (t as Tag)
+        : (allTags.find((x) => String(x.id) === String(t)) as Tag | undefined),
+    )
+    .filter((t): t is Tag => t !== undefined);
+  const explicitBiblioIds = (post.bibliography ?? []).map((b) =>
+    typeof b === 'object' ? b.id : b,
+  );
+  // Union des refs explicitement listées (post.bibliography) et des
+  // refs citées inline dans le corps (biblio_inline blocks). Permet
+  // d'auto-peupler le panneau Bibliographie liée — l'utilisatrice
+  // n'a pas à re-lister manuellement une référence déjà citée.
+  const inlineBiblioIds = useMemo(() => extractBiblioInlineIds(post.body), [post.body]);
+  // Ordre d'APPARITION dans le texte : les citées d'abord, dans l'ordre
+  // où le corps les appelle, puis celles qui sont listées sans être
+  // citées. C'est ainsi que le site les numérote, et l'éditeur doit
+  // montrer les mêmes numéros — sinon on relit « [12] » à l'écran et
+  // « [7] » une fois publié.
+  const biblioIds = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Array<number | string> = [];
+    for (const id of [...inlineBiblioIds, ...explicitBiblioIds]) {
+      const k = String(id);
+      if (!seen.has(k)) {
+        seen.add(k);
+        out.push(id);
+      }
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(explicitBiblioIds), inlineBiblioIds]);
+
+  // Synchro auto : toute ref biblio citée inline dans le corps qui
+  // n'est pas encore dans la liste explicite `post.bibliography` y
+  // est ajoutée. Comme c'est cette liste qui est sérialisée au save
+  // et rendue en pied d'article côté frontend, sans cette synchro la
+  // citation apparaît dans le texte mais pas dans la section
+  // Bibliographie publique.
+  useEffect(() => {
+    if (inlineBiblioIds.length === 0) return;
+    setPost((p) => {
+      const cur = (p.bibliography ?? []) as Array<BibEntry | number | string>;
+      const curIds = new Set(cur.map((b) => String(typeof b === 'object' ? b.id : b)));
+      const toAdd: Array<BibEntry | number | string> = [];
+      for (const id of inlineBiblioIds) {
+        if (!curIds.has(String(id))) {
+          const entry = biblioOptions.find((b) => b.id === id);
+          toAdd.push(entry ?? id);
+        }
+      }
+      if (toAdd.length === 0) return p;
+      return { ...p, bibliography: [...cur, ...toAdd] };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inlineBiblioIds, biblioOptions]);
+
+  return (
+    <CarnetPage
+      variant="postedit"
+      fullWidth
+      crumbs={[
+        { href: '/cms/admin', label: 'Tituba' },
+        { href: spec.adminBase, label: spec.labelPlural },
+        // Le titre, pas l'identifiant : un fil d'Ariane sert à se situer,
+        // et un code opaque n'y aide personne. Tronqué, sinon un titre
+        // long pousse les actions de la barre hors de l'écran.
+        {
+          label:
+            post.title.trim().length > 48
+              ? `${post.title.trim().slice(0, 48)}…`
+              : post.title.trim() || 'Nouveau',
+        },
+      ]}
+      topbarStatus={
+        <span className={`tituba-status tituba-status--${status}`}>
+          <span className="tituba-status__dot" aria-hidden="true" />
+          {STATUS_LABEL[status]}
+        </span>
+      }
+      suppressHydrationWarningOnActions
+      topbarActions={
+        <>
+          {savedLabel && !dirty && (
+            <span className="tituba-postedit__saved" aria-live="polite">
+              {savedLabel}
+            </span>
+          )}
+          {dirty && (
+            <span className="tituba-postedit__dirty" aria-live="polite">
+              Modifications non enregistrées
+            </span>
+          )}
+          {/* `publicId` et non `id` : l'URL du site est bâtie sur
+              l'identifiant public, pas sur la clé primaire. Le lien est
+              masqué tant qu'il est absent — sur un brouillon jamais
+              enregistré, il n'y a pas encore de page à prévisualiser. */}
+          {post.publicId && (
+            <a
+              className="tituba-btn tituba-btn--ghost"
+              href={`${spec.routePrefix}/${post.publicId}/`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Aperçu ↗
+            </a>
+          )}
+          <button
+            type="button"
+            className="tituba-btn"
+            onClick={() => void save()}
+            disabled={!dirty || saving || loading}
+            title="Sauvegarder"
+            suppressHydrationWarning
+          >
+            {saving ? 'Enregistrement…' : 'Sauvegarder'}
+          </button>
+          <button
+            type="button"
+            className="tituba-btn tituba-btn--accent"
+            onClick={() => void save({ publish: true })}
+            disabled={saving || loading}
+            suppressHydrationWarning
+          >
+            {post.draft ? 'Publier' : 'Publier les modifications'}
+          </button>
+        </>
+      }
+    >
+      {error && <div className="tituba-postedit__error">Erreur : {error}</div>}
+
+      {loading ? (
+        <div className="tituba-postedit__loading">Chargement…</div>
+      ) : (
+        <div className="tituba-postedit__doc">
+          <div className="tituba-postedit__center">
+            <div className="ed-card">
+              <div className="ed-num">
+                {/* Le format, sans identifiant. `post.id` est la clé
+                    primaire de la base — séquentielle, donc elle
+                    ressemblait à une numérotation éditoriale alors
+                    qu'elle n'en est pas une. Ce qui identifie
+                    publiquement le billet, c'est `publicId`, et il
+                    figure déjà dans le fil d'Ariane. */}
+                <span className="ed-num__id">
+                  {post.id != null ? spec.labelSingular : 'Nouveau billet'}
+                </span>
+                {themeIds.length > 0 && (
+                  <span className="ed-num__themes">
+                    {themeIds.map((id, i) => {
+                      const t = themes.find((x) => x.id === id);
+                      if (!t) return null;
+                      return (
+                        <React.Fragment key={id}>
+                          {i > 0 && <span aria-hidden="true"> · </span>}
+                          <span className="tag">#{t.slug ?? t.name}</span>
+                        </React.Fragment>
+                      );
+                    })}
+                  </span>
+                )}
+              </div>
+              <textarea
+                ref={titleRef}
+                className={`ed-title${fieldErrors.title ? ' ed-title--invalid' : ''}`}
+                rows={1}
+                value={post.title}
+                placeholder="Titre du billet"
+                onKeyDown={(e) => {
+                  // Pas de retour à la ligne dans le titre — Enter
+                  // déplace simplement le focus au chapô.
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    ledeRef.current?.focus();
+                  }
+                }}
+                onChange={(e) => {
+                  patch('title', e.target.value);
+                  // Efface l'erreur dès que l'utilisatrice tape.
+                  if (fieldErrors.title) {
+                    setFieldErrors((prev) => {
+                      const { title: _omit, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
+              />
+              {fieldErrors.title && (
+                <div className="ed-title__error" role="alert">
+                  {fieldErrors.title}
+                </div>
+              )}
+              <textarea
+                ref={ledeRef}
+                className={`ed-lede${fieldErrors.lede ? ' ed-lede--invalid' : ''}`}
+                rows={1}
+                value={post.lede}
+                placeholder="Chapô — 2 à 3 phrases."
+                onChange={(e) => {
+                  patch('lede', e.target.value);
+                  if (fieldErrors.lede) {
+                    setFieldErrors((prev) => {
+                      const { lede: _omit, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
+              />
+              {fieldErrors.lede && (
+                <div className="ed-lede__error" role="alert">
+                  {fieldErrors.lede}
+                </div>
+              )}
+              <hr className="ed-divider" />
+              {/* En tête du corps, parce que c'est là qu'on arrive avec
+                  un document sous le bras — et repliée, parce que la
+                  plupart des billets s'écrivent directement ici. */}
+              <ImportDocument
+                collection={collectionSlug ?? 'articles'}
+                corpsRempli={!isLexicalBodyEmpty(post.body ?? null)}
+                onInsert={({ body, titre }) => {
+                  const editor = editorRef.current;
+                  // Par l'éditeur quand il est monté : l'insertion reste
+                  // alors annulable. Le repli sert au cas — improbable —
+                  // où la référence n'aurait pas encore été posée.
+                  if (editor) remplacerContenu(editor, body as LexicalState);
+                  else patch('body', body as LexicalState);
+                  if (titre) patch('title', titre);
+                }}
+                onLier={async (ids) => {
+                  // Les entrées viennent d'être créées : sans ce
+                  // rechargement, le panneau les afficherait par leur
+                  // numéro.
+                  await chargerBiblio();
+                  setPost((p) => {
+                    const cur = (p.bibliography ?? []) as Array<BibEntry | number | string>;
+                    const dejaLa = new Set(
+                      cur.map((b) => String(typeof b === 'object' ? b.id : b)),
+                    );
+                    // Dédoublonné DANS le lot autant que contre
+                    // l’existant : onze notes qui citent la même source à
+                    // des pages différentes envoient onze fois le même
+                    // identifiant, et la bibliographie du billet affichait
+                    // alors onze fois la même entrée — avec onze fois le
+                    // même id dans le HTML, ce qui casse au passage les
+                    // ancres de renvoi.
+                    const vus = new Set(dejaLa);
+                    const ajout = ids.filter((id) => {
+                      const cle = String(id);
+                      if (vus.has(cle)) return false;
+                      vus.add(cle);
+                      return true;
+                    });
+                    if (ajout.length === 0) return p;
+                    return { ...p, bibliography: [...cur, ...ajout] };
+                  });
+                }}
+              />
+              {fieldErrors.body && (
+                <div className="ed-body__error" role="alert">
+                  {fieldErrors.body}
+                </div>
+              )}
+              <PostBodyEditor
+                value={post.body ?? null}
+                onChange={(v) => {
+                  patch('body', v);
+                  if (fieldErrors.body) {
+                    setFieldErrors((prev) => {
+                      const { body: _omit, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
+                biblioOptions={biblioOptions}
+                biblioOrdre={biblioIds}
+                mediaOptions={mediaOptions}
+                onEditor={(editor) => {
+                  editorRef.current = editor;
+                }}
+              />
+            </div>
+
+            {/* Panneau des champs de format placés en colonne centrale
+                (cf FieldSpec.zone). Rendu seulement s'il y en a : les
+                quatre autres formats n'en déclarent aucun et n'ont donc
+                pas de panneau vide. */}
+            {mainFields.length > 0 && (
+              <div className="ep-block">
+                <div className="ep-block__h">
+                  <span>{spec.mainLabel ?? 'Champs du format'}</span>
+                </div>
+                <div className="ep-block__body">
+                  {mainFields.map((f) => renderExtraField(f))}
+                </div>
+              </div>
+            )}
+
+            <div className="fn-block">
+              <div className="fn-block__h">
+                <span>Notes de bas de page ({footnotes.length})</span>
+                <button
+                  type="button"
+                  className="fn-block__help-toggle"
+                  onClick={() => setFnHelpOpen((o) => !o)}
+                  aria-expanded={fnHelpOpen}
+                >
+                  Tutoriel
+                  <span className="caret" aria-hidden="true">
+                    {fnHelpOpen ? '▴' : '▾'}
+                  </span>
+                </button>
+              </div>
+              {fnHelpOpen && (
+                <div className="fn-block__help">
+                  Pour ajouter une note dans le corps : tapez <kbd>/</kbd> puis
+                  « Note de bas de page » — écrivez le contenu dans le panneau
+                  qui s’ouvre.
+                  <br />
+                  Les notes apparaissent ici, numérotées automatiquement.
+                </div>
+              )}
+              {footnotes.length === 0 ? (
+                <div className="fn-block__empty">Aucune note pour le moment.</div>
+              ) : (
+                footnotes.map((f) => (
+                  <div key={f.key} className="fn-row">
+                    <div className="n">[{f.index}]</div>
+                    <div className="body">{f.content || <em className="muted">Note vide</em>}</div>
+                    <button
+                      type="button"
+                      className="x"
+                      onClick={() => deleteFootnote(f.index)}
+                      aria-label="Supprimer la note dans le corps"
+                      title="Supprimer la note dans le corps"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="bib-block">
+              <div className="bib-block__h">
+                <span>Bibliographie liée ({biblioIds.length})</span>
+                <button
+                  type="button"
+                  className="bib-block__help-toggle"
+                  onClick={() => setBibHelpOpen((o) => !o)}
+                  aria-expanded={bibHelpOpen}
+                >
+                  Tutoriel
+                  <span className="caret" aria-hidden="true">
+                    {bibHelpOpen ? '▴' : '▾'}
+                  </span>
+                </button>
+              </div>
+              {bibHelpOpen && (
+                <div className="bib-block__help">
+                  Pour <em>citer</em> une référence dans le corps : tapez <kbd>/</kbd>{' '}
+                  puis « Bibliographie inline » — choisissez-la dans le panneau qui
+                  s’ouvre.
+                  <br />
+                  Pour <em>lister</em> une référence sans la citer dans le corps :
+                  ajoutez-la directement ci-dessous.
+                </div>
+              )}
+              <BiblioSearchPicker
+                options={biblioOptions}
+                attachedIds={biblioIds}
+                onPick={(id) => toggleBiblio(id)}
+              />
+              <div className="biblio-list">
+                {biblioIds.length === 0 && (
+                  <div className="b-row b-row--empty">Aucune référence liée.</div>
+                )}
+                {biblioIds.map((id, i) => {
+                  const e = biblioOptions.find((b) => b.id === id);
+                  const isInline = inlineBiblioIds.some((iid) => String(iid) === String(id));
+                  // × supprime la ref de l'explicite ET supprime
+                  // toutes les citations inline du corps qui la
+                  // pointent. Tooltip différencié si la ref est aussi
+                  // citée dans le corps, pour que l'utilisatrice sache
+                  // qu'elle va aussi modifier le texte.
+                  const title = isInline
+                    ? 'Retirer + supprimer la (les) citation(s) dans le corps'
+                    : 'Retirer de la liste';
+                  if (!e)
+                    return (
+                      <div key={String(id)} className="b-row">
+                        <div className="n">[{i + 1}]</div>
+                        <div className="body">
+                          <span className="muted">Réf. #{String(id)}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="x"
+                          onClick={() => deleteBiblioRef(id)}
+                          aria-label={title}
+                          title={title}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  return (
+                    <div key={String(id)} className="b-row">
+                      <div className="n">[{i + 1}]</div>
+                      <div className="body">
+                        <span className="au">{formatAuthorsInitiales(e.authors) || e.authorLabel || '—'}</span>
+                        {e.year && <> ({e.year})</>}
+                        {e.title && (
+                          <>
+                            , <span className="ti">{e.title}</span>
+                          </>
+                        )}
+                        .
+                      </div>
+                      <button
+                        type="button"
+                        className="x"
+                        onClick={() => deleteBiblioRef(id)}
+                        aria-label={title}
+                        title={title}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <aside className="tituba-postedit__meta">
+            <div className="row">
+              {/* Sous-genre : affiché seulement si la collection en
+                  déclare. Pour les formats de Tituba, le format est la
+                  collection, il n'y a rien à choisir ici. */}
+              {spec.subtypes && (
+                <div className="field">
+                  <label>Type</label>
+                  <select
+                    value={post.type}
+                    onChange={(e) => patch('type', e.target.value as PostType)}
+                  >
+                    {spec.subtypes.options.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {TYPE_LABELS[o.value] ?? o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="field">
+              <label>Visibilité</label>
+              <select
+                value={post.draft ? 'draft' : 'published'}
+                onChange={(e) => patch('draft', e.target.value === 'draft')}
+              >
+                <option value="draft">Brouillon — invisible côté lecteur</option>
+                <option value="published">Publié — visible côté lecteur</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Thèmes</label>
+              <details className="multi-select">
+                <summary>
+                  {themeIds.length === 0
+                    ? 'Sélectionner des thèmes…'
+                    : `${themeIds.length} thème${themeIds.length > 1 ? 's' : ''} sélectionné${
+                        themeIds.length > 1 ? 's' : ''
+                      }`}
+                </summary>
+                <div className="multi-select__list">
+                  {themes.length === 0 && (
+                    <div className="multi-select__empty">Aucun thème disponible.</div>
+                  )}
+                  {themes.map((t) => {
+                    const on = themeIds.includes(t.id);
+                    return (
+                      <label key={t.id} className="multi-select__opt">
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          onChange={() => toggleTheme(t.id)}
+                        />
+                        <span>{t.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </details>
+              {/* Tags rappelés à droite du bandeau « Billet n° 042 · site:2026-042 ».
+                  Retrait d'un thème = ouvrir le multi-select et décocher. */}
+            </div>
+
+            {/* Rattachement à une série — à côté de la taxonomie, dont il
+                a la nature : il situe le billet parmi les autres. Rendu
+                seulement pour les trois formats qui se mettent en série
+                (cf registry, `series`) ; ailleurs le champ n'existe pas
+                en base. */}
+            {spec.series && (
+              <div className="field">
+                <label>{collectionSlug === 'podcasts' ? 'Émission' : 'Série'}</label>
+                <select
+                  value={
+                    post.series && typeof post.series === 'object'
+                      ? String(post.series.id)
+                      : post.series != null
+                        ? String(post.series)
+                        : ''
+                  }
+                  onChange={(e) =>
+                    setPost((p) => ({
+                      ...p,
+                      // Converti en nombre : un <select> ne rend que des
+                      // chaînes, et Payload valide les identifiants de
+                      // relation par leur type — sur Postgres, une
+                      // chaîne « 1 » est rejetée là où 1 passe. La
+                      // conversion n'a lieu que si la valeur est
+                      // entièrement numérique, pour ne pas casser une
+                      // base à identifiants textuels.
+                      series: e.target.value === '' ? null : idRelation(e.target.value),
+                      // Un billet retiré de sa série garde sinon un rang
+                      // qui ne renvoie plus à rien.
+                      seriesNumber: e.target.value === '' ? null : p.seriesNumber,
+                    }))
+                  }
+                >
+                  <option value="">
+                    {collectionSlug === 'podcasts' ? '— hors émission —' : '— hors série —'}
+                  </option>
+                  {series.map((s) => (
+                    <option key={s.id} value={String(s.id)}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="hint">
+                  {series.length === 0
+                    ? collectionSlug === 'podcasts'
+                      ? 'Aucune émission publiée pour l’instant — à créer dans Config contenu › Émissions.'
+                      : 'Aucune série publiée pour ce format — à créer dans Config contenu › Séries d’articles.'
+                    : 'Facultatif. La plupart des billets n’appartiennent à aucune série.'}
+                </div>
+              </div>
+            )}
+
+            {/* Le rang n'a de sens qu'une fois la série choisie. Laissé
+                vide, l'ordre de la série retombe sur la date de
+                publication — ce qui convient à une émission publiée au
+                fil de l'eau. */}
+            {spec.series && post.series != null && (
+              <div className="field">
+                <label>
+                  {collectionSlug === 'podcasts' ? 'Numéro d’épisode' : 'Rang dans la série'}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={post.seriesNumber ?? ''}
+                  onChange={(e) =>
+                    setPost((p) => ({
+                      ...p,
+                      seriesNumber: e.target.value === '' ? null : Number(e.target.value),
+                    }))
+                  }
+                  placeholder="ordre de parution"
+                />
+                <div className="hint">
+                  Laissez vide pour classer par date de publication. À renseigner seulement si
+                  l’ordre de lecture diffère de l’ordre de parution.
+                </div>
+              </div>
+            )}
+
+            <div className="field">
+              <label>Tags</label>
+              <TagsPicker
+                allTags={allTags}
+                attached={tagsAttached}
+                onAttach={attachTag}
+                onDetach={detachTag}
+                onCreate={createAndAttachTag}
+              />
+            </div>
+
+            <div className="field">
+              <label>Auteur·ices</label>
+              <div className="authors-list">
+                {(post.authors ?? []).length === 0 && (
+                  <div className="authors-list__empty">
+                    Aucun·e signataire — sera auto-rempli·e à la sauvegarde.
+                  </div>
+                )}
+                {(post.authors ?? []).map((a, i) => {
+                  const k = a.kind ?? 'user';
+                  const userId =
+                    a.user && typeof a.user === 'object' ? a.user.id : (a.user ?? null);
+                  return (
+                    <div key={i} className="authors-list__row">
+                      <div className="authors-list__head">
+                        <select
+                          value={k}
+                          onChange={(e) =>
+                            updateAuthor(i, {
+                              kind: e.target.value as 'user' | 'external',
+                              // Reset des champs de l'autre kind pour pas
+                              // garder de données fantômes en BDD.
+                              ...(e.target.value === 'user'
+                                ? { name: '', affiliation: '' }
+                                : { user: null }),
+                            })
+                          }
+                        >
+                          <option value="user">Interne</option>
+                          <option value="external">Externe</option>
+                        </select>
+                        <div className="authors-list__moves">
+                          <button
+                            type="button"
+                            disabled={i === 0}
+                            onClick={() => moveAuthor(i, -1)}
+                            aria-label="Monter"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            disabled={i === (post.authors ?? []).length - 1}
+                            onClick={() => moveAuthor(i, 1)}
+                            aria-label="Descendre"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeAuthor(i)}
+                            aria-label="Retirer"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                      {k === 'user' ? (
+                        <select
+                          value={userId == null ? '' : String(userId)}
+                          onChange={(e) =>
+                            updateAuthor(i, {
+                              user:
+                                e.target.value === ''
+                                  ? null
+                                  : (Number(e.target.value) || e.target.value),
+                            })
+                          }
+                        >
+                          <option value="">— choisir un·e membre —</option>
+                          {allUsers.map((u) => (
+                            <option key={u.id} value={String(u.id)}>
+                              {stripHeroMarkers(u.displayName) ?? u.email ?? `User #${u.id}`}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <>
+                          <input
+                            type="text"
+                            placeholder="Nom complet (ex. Aïcha Touré)"
+                            value={a.name ?? ''}
+                            onChange={(e) => updateAuthor(i, { name: e.target.value })}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Rattachement (optionnel, ex. LATTS)"
+                            value={a.affiliation ?? ''}
+                            onChange={(e) => updateAuthor(i, { affiliation: e.target.value })}
+                          />
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="authors-list__add">
+                  <button type="button" onClick={() => addAuthor('user')}>
+                    + Interne
+                  </button>
+                  <button type="button" onClick={() => addAuthor('external')}>
+                    + Externe
+                  </button>
+                </div>
+              </div>
+            </div>
+
+
+            {/* Champs propres au format destinés à la barre latérale.
+                Ceux marqués `zone: 'main'` sont rendus plus haut, dans
+                la colonne centrale — même fonction de rendu pour les
+                deux, seul l'emplacement change. */}
+            {sidebarFields.map((f) => renderExtraField(f))}
+
+            <hr />
+            <h3>Calendrier</h3>
+            <div className="field">
+              <label>Publication</label>
+              <input
+                type="date"
+                value={isoDate(post.publishedAt)}
+                onChange={(e) => patch('publishedAt', e.target.value)}
+              />
+            </div>
+            {post.updatedAt && (
+              <div className="field">
+                <label>Mise à jour</label>
+                <div className="auto">{isoDate(post.updatedAt)}</div>
+              </div>
+            )}
+
+            {/* Pas de section « Auto-calculé » (ID Tituba, temps de
+                lecture) : ces deux valeurs sont dérivées à la
+                sauvegarde, rien à y régler. L'ID Tituba reste visible
+                là où il sert, dans l'en-tête du billet (.ed-num). */}
+
+            {post.id != null && (
+              <>
+                <hr />
+                <div className="field">
+                  <button
+                    type="button"
+                    className="tituba-postedit__delete"
+                    onClick={() => {
+                      setDeleteOpen(true);
+                      setDeleteError(null);
+                    }}
+                  >
+                    Supprimer ce billet
+                  </button>
+                </div>
+              </>
+            )}
+          </aside>
+        </div>
+      )}
+
+      {deleteOpen && (
+        <div
+          className="tituba-modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deleteSubmitting) {
+              setDeleteOpen(false);
+              setDeleteError(null);
+            }
+          }}
+        >
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
+              <h2>Supprimer ce billet ?</h2>
+              <button
+                type="button"
+                className="tituba-modal__close"
+                onClick={() => {
+                  if (deleteSubmitting) return;
+                  setDeleteOpen(false);
+                  setDeleteError(null);
+                }}
+                aria-label="Fermer"
+              >
+                ×
+              </button>
+            </header>
+
+            {deleteError && (
+              <div className="tituba-modal__error">Erreur : {deleteError}</div>
+            )}
+
+            <div className="tituba-modal__body">
+              <p>
+                «&nbsp;{post.title || 'Sans titre'}&nbsp;» sera définitivement supprimé. Cette action est irréversible.
+              </p>
+            </div>
+
+            <footer className="tituba-modal__footer">
+              <button
+                type="button"
+                className="tituba-btn tituba-btn--ghost"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  setDeleteError(null);
+                }}
+                disabled={deleteSubmitting}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="tituba-btn tituba-btn--danger"
+                onClick={() => void deletePost()}
+                disabled={deleteSubmitting}
+              >
+                {deleteSubmitting ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
+    </CarnetPage>
+  );
+}
+
+// ─── BiblioSearchPicker ─────────────────────────────────────────
+// Recherche live dans la bibliographie. Filtre sur authorLabel,
+// firstName / lastName, title, year, publisher, journal, slug.
+// Affiche jusqu'à 30 résultats sous l'input. Pas de saisie → pas
+// de liste affichée (sinon à 500 entrées on dérouler à l'infini).
+
+function BiblioSearchPicker({
+  options,
+  attachedIds,
+  onPick,
+}: {
+  options: BibEntry[];
+  attachedIds: Array<number | string>;
+  onPick: (id: number | string) => void;
+}): React.ReactElement {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  const attached = new Set(attachedIds.map(String));
+  const q = query.trim().toLowerCase();
+  const matches = q
+    ? options
+        .filter((b) => !attached.has(String(b.id)))
+        .filter((b) => {
+          const haystack = [
+            b.authorLabel ?? '',
+            ...(b.authors ?? []).flatMap((a) => [
+              a.firstName ?? '',
+              a.lastName ?? '',
+            ]),
+            b.title ?? '',
+            b.year != null ? String(b.year) : '',
+            (b as { publisher?: string }).publisher ?? '',
+            (b as { journal?: string }).journal ?? '',
+            b.slug ?? '',
+          ]
+            .join(' ')
+            .toLowerCase();
+          return haystack.includes(q);
+        })
+        .slice(0, 30)
+    : [];
+
+  return (
+    <div ref={ref} className="bib-picker">
+      <input
+        type="text"
+        className="bib-picker__input"
+        value={query}
+        placeholder="Chercher une référence (auteur·ice, titre, éditeur…)"
+        onFocus={() => setOpen(true)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setOpen(false);
+          if (e.key === 'Enter' && matches.length > 0) {
+            e.preventDefault();
+            onPick(matches[0].id);
+            setQuery('');
+          }
+        }}
+      />
+      {open && q.length > 0 && (
+        <div className="bib-picker__menu">
+          {matches.length === 0 && (
+            <div className="bib-picker__empty">Aucune référence ne matche.</div>
+          )}
+          {matches.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              className="bib-picker__opt"
+              onMouseDown={(e) => {
+                // mousedown — pour ne pas perdre le focus avant le click
+                e.preventDefault();
+                onPick(b.id);
+                setQuery('');
+              }}
+            >
+              <span className="au">{formatAuthorsInitiales(b.authors) || b.authorLabel || '—'}</span>
+              {b.year != null && <> ({b.year})</>}
+              {b.title && (
+                <>
+                  {' · '}
+                  <span className="ti">{b.title}</span>
+                </>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── TagsPicker ─────────────────────────────────────────────────
+// Saisie d'une liste de valeurs libres (cf FieldSpec type 'list') :
+// on tape, Entrée valide, la valeur devient une pastille. Même geste
+// que le champ Tags, mais sans collection derrière — rien à
+// rapprocher d'existant, rien à créer en base, donc ni autocomplétion
+// ni menu.
+//
+// Retour arrière sur un champ vide retire la dernière pastille : c'est
+// le comportement attendu de toute saisie en pastilles, et sans lui il
+// faudrait viser une croix à la souris pour défaire une frappe.
+
+type Lien = { label: string; url: string };
+
+/**
+ * Liste de liens libellés — chaque ligne porte un intitulé et une
+ * adresse. Pendant de ChipsInput pour les champs de type `links` : là
+ * où une pastille ne contient qu'un mot, une source demande deux
+ * valeurs, et un couple ne se saisit pas au fil de la frappe.
+ *
+ * Les lignes vides ne sont pas rejetées à la saisie — on n'interrompt
+ * pas quelqu'un qui colle une adresse avant d'écrire son intitulé.
+ * C'est `pickExtraValues` qui les écarte à l'enregistrement.
+ */
+function LinksInput({
+  values,
+  onChange,
+}: {
+  values: Lien[];
+  onChange: (v: Lien[]) => void;
+}): React.ReactElement {
+  const lignes = values.length > 0 ? values : [];
+
+  function modifier(i: number, cle: keyof Lien, valeur: string) {
+    onChange(lignes.map((l, j) => (j === i ? { ...l, [cle]: valeur } : l)));
+  }
+
+  return (
+    <div className="liens-input">
+      {lignes.map((l, i) => (
+        <div className="liens-input__ligne" key={i}>
+          <input
+            type="text"
+            value={l.label ?? ''}
+            placeholder="Intitulé — ex : Le Monde"
+            onChange={(e) => modifier(i, 'label', e.target.value)}
+          />
+          <input
+            type="url"
+            value={l.url ?? ''}
+            placeholder="https://…"
+            onChange={(e) => modifier(i, 'url', e.target.value)}
+          />
+          <button
+            type="button"
+            className="liens-input__del"
+            onClick={() => onChange(lignes.filter((_, j) => j !== i))}
+            aria-label={`Retirer ${l.label || 'cette source'}`}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="tituba-btn tituba-btn--ghost liens-input__add"
+        onClick={() => onChange([...lignes, { label: '', url: '' }])}
+      >
+        + Ajouter une source
+      </button>
+    </div>
+  );
+}
+
+function ChipsInput({
+  values,
+  placeholder,
+  onChange,
+}: {
+  values: string[];
+  placeholder?: string;
+  onChange: (values: string[]) => void;
+}): React.ReactElement {
+  const [query, setQuery] = useState('');
+
+  function ajouter() {
+    const v = query.trim();
+    if (!v) return;
+    // Doublon ignoré silencieusement : signaler une erreur pour un nom
+    // saisi deux fois serait disproportionné, et le champ vidé suffit à
+    // montrer que la frappe a été prise en compte.
+    if (!values.some((x) => x.toLowerCase() === v.toLowerCase())) {
+      onChange([...values, v]);
+    }
+    setQuery('');
+  }
+
+  return (
+    <div className="chips-input">
+      <input
+        type="text"
+        className="chips-input__field"
+        value={query}
+        placeholder={placeholder ?? 'Entrée pour ajouter…'}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            ajouter();
+          }
+          if (e.key === 'Backspace' && query === '' && values.length > 0) {
+            onChange(values.slice(0, -1));
+          }
+        }}
+        // Une valeur laissée dans le champ au moment où l'on clique
+        // ailleurs est validée plutôt que perdue : c'est presque
+        // toujours un oubli d'appuyer sur Entrée, jamais une hésitation.
+        onBlur={ajouter}
+      />
+      {values.length > 0 && (
+        <div className="chips-input__list">
+          {values.map((v, i) => (
+            <button
+              key={`${v}-${i}`}
+              type="button"
+              className="tag-chip"
+              onClick={() => onChange(values.filter((_, j) => j !== i))}
+              title="Retirer"
+            >
+              {v} <span aria-hidden="true">×</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Petit composant : input qui filtre les tags existants en
+// autocomplétion + propose « Créer ce tag » si la saisie ne matche
+// aucun tag. Les tags attachés sont rendus sous l'input en chips
+// muted avec × pour détacher.
+
+function TagsPicker({
+  allTags,
+  attached,
+  onAttach,
+  onDetach,
+  onCreate,
+}: {
+  allTags: Tag[];
+  attached: Tag[];
+  onAttach: (tag: Tag) => void;
+  onDetach: (id: number | string) => void;
+  onCreate: (name: string) => void | Promise<void>;
+}): React.ReactElement {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  const attachedIds = new Set(attached.map((t) => String(t.id)));
+  const q = query.trim().toLowerCase();
+  // Pas de q → on n'affiche rien : à 150 tags, dérouler la liste entière
+  // au focus ne sert à rien. Le menu n'apparaît que dès la première lettre.
+  const matches = q
+    ? allTags
+        .filter((t) => !attachedIds.has(String(t.id)))
+        .filter((t) => t.name.toLowerCase().includes(q) || t.slug.includes(q))
+        .slice(0, 30)
+    : [];
+  const exact = q && allTags.find((t) => t.name.toLowerCase() === q);
+
+  function pickFirst() {
+    if (matches.length > 0) {
+      onAttach(matches[0]);
+      setQuery('');
+      return;
+    }
+    if (q && !exact) {
+      void onCreate(query);
+      setQuery('');
+    }
+  }
+
+  return (
+    <div ref={ref} className="tags-picker">
+      <input
+        type="text"
+        className="tags-picker__input"
+        value={query}
+        placeholder="Tapez un tag, Entrée pour ajouter…"
+        onFocus={() => setOpen(true)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            pickFirst();
+          }
+          if (e.key === 'Escape') setOpen(false);
+        }}
+      />
+      {open && q.length > 0 && (
+        <div className="tags-picker__menu">
+          {matches.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className="tags-picker__opt"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onAttach(t);
+                setQuery('');
+              }}
+            >
+              {t.name}
+            </button>
+          ))}
+          {q && !exact && matches.length === 0 && (
+            <button
+              type="button"
+              className="tags-picker__opt tags-picker__opt--create"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                void onCreate(query);
+                setQuery('');
+              }}
+            >
+              + Créer le tag « {query.trim()} »
+            </button>
+          )}
+        </div>
+      )}
+      {attached.length > 0 && (
+        <div className="tags-picker__attached">
+          {attached.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className="tag-chip"
+              onClick={() => onDetach(t.id)}
+              title="Retirer ce tag"
+            >
+              {t.name} <span aria-hidden="true">×</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

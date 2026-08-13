@@ -1,0 +1,166 @@
+---
+/**
+ * Barre de filtres pour une liste de cartes de publication.
+ *
+ * Filtre côté client sur les attributs que `PublicationCard` pose déjà :
+ * `data-type` (la collection) et `data-themes` (les slugs de
+ * thématiques, séparés par des espaces). Aucune requête n'est refaite —
+ * la liste complète est rendue côté serveur, on ne fait que masquer.
+ *
+ * Conséquence assumée : sans JavaScript, la barre n'apparaît pas et la
+ * liste reste intégralement lisible. C'est le bon compromis pour un
+ * filtre de confort ; un filtre qui conditionnerait l'accès au contenu
+ * devrait, lui, passer par des URLs réelles.
+ *
+ * Le choix est reflété dans le hash de l'URL, donc partageable et
+ * conservé au rechargement.
+ *
+ * Vit dans le slot `sous-titre` de PageShell — donc dans <main>, qui
+ * porte déjà la gouttière. Pas de Container propre ici.
+ */
+export interface Props {
+  /** Attribut filtré : `type` pour les formats, `themes` pour la taxonomie. */
+  dimension: 'type' | 'themes';
+  label: string;
+  options: Array<{ value: string; label: string; count?: number }>;
+  /** Nombre total de cartes, pour le compteur. */
+  total: number;
+}
+
+const { dimension, label, options, total } = Astro.props as Props;
+
+/**
+ * L’état actif passe par `aria-pressed` plutôt que par une classe posée
+ * depuis le script : Tailwind ne génère que les classes qu’il lit dans
+ * les sources. Le lecteur d’écran y gagne au passage — le filtre en
+ * cours n’était annoncé nulle part, seule la couleur le disait.
+ */
+const PUCE = [
+  'cursor-pointer rounded-full border border-rule bg-transparent px-3 py-1.5',
+  'font-sans text-[calc(13px*var(--a11y-echelle))] leading-normal font-normal text-muted',
+  'transition-[color,border-color,background] duration-[120ms]',
+  'aria-pressed:border-[var(--c-bleu-deep)] aria-pressed:bg-[var(--c-bleu-deep)] aria-pressed:text-bg',
+  'aria-[pressed=false]:hover:border-[var(--c-bleu-deep)] aria-[pressed=false]:hover:text-[var(--c-bleu-deep)]',
+].join(' ');
+---
+
+{
+  options.length > 1 && (
+    <section
+      class="border-rule border-b py-[18px] font-sans text-[calc(13px*var(--a11y-echelle))]"
+      data-card-filters
+      data-dimension={dimension}
+      data-total={total}
+    >
+      <div class="flex flex-wrap items-center gap-6">
+        {/* `flex-1 min-w-0` : sans lui le groupe se dimensionne sur son
+          contenu, la boîte de puces hérite d’une largeur plus étroite que
+          l’espace disponible, et une puce part à la ligne alors qu’il
+          restait de la place. */}
+        <div
+          class="flex min-w-0 flex-1 items-baseline gap-1.5"
+          role="group"
+          aria-label={`Filtrer par ${label.toLowerCase()}`}
+        >
+          {/* Le libellé hors du flux d’enroulement, pour que les puces
+            reportées s’alignent sous « Tous ». La largeur réservée est
+            celle de l’accueil : le bord gauche de « Tous » tombe au même
+            endroit d’une page à l’autre. */}
+          <span class="text-muted flex-[0_0_96px] pr-2">{label}</span>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button class={PUCE} type="button" aria-pressed="true" data-filter-value="all">
+              Tous
+            </button>
+            {/* Option déclarée mais sans publication ici : lisible, sans
+              attirer l’œil autant que celles qui mènent quelque part —
+              sauf si c’est elle qu’on a choisie. */}
+            {options.map((o) => (
+              <button
+                class:list={[PUCE, o.count === 0 && 'opacity-55 aria-pressed:opacity-100']}
+                type="button"
+                aria-pressed="false"
+                data-filter-value={o.value}
+                title={
+                  o.count !== undefined
+                    ? `${o.label} — ${o.count} publication${o.count > 1 ? 's' : ''}`
+                    : o.label
+                }
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div class="text-muted ml-auto" data-filter-count>
+          {total} publication{total > 1 ? 's' : ''}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+<script>
+  // Filtrage client des cartes. Générique : la dimension filtrée est
+  // portée par `data-dimension`, et `data-themes` est multivalué là où
+  // `data-type` ne l'est pas — d'où la distinction ci-dessous.
+  //
+  // Sur `astro:page-load` : avec le ClientRouter, un module ne s'exécute
+  // qu'une fois par URL — la barre de la page suivante resterait sans
+  // écouteur, et les cartes sans filtre.
+  document.addEventListener('astro:page-load', () => {
+    const barEl = document.querySelector<HTMLElement>('[data-card-filters]');
+    if (!barEl) return;
+    const bar = barEl;
+    const dimension = bar.dataset.dimension === 'themes' ? 'themes' : 'type';
+    const countRaw = bar.querySelector<HTMLElement>('[data-filter-count]');
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.item'));
+    if (!cards.length || !countRaw) return;
+    const countEl = countRaw;
+    const total = Number(bar.dataset.total || cards.length);
+
+    let current = 'all';
+
+    function matches(card: HTMLElement): boolean {
+      if (current === 'all') return true;
+      if (dimension === 'themes') {
+        const list = (card.getAttribute('data-themes') || '').split(' ').filter(Boolean);
+        return list.includes(current);
+      }
+      return (card.getAttribute('data-type') || '') === current;
+    }
+
+    function apply() {
+      let visible = 0;
+      for (const card of cards) {
+        const ok = matches(card);
+        card.style.display = ok ? '' : 'none';
+        if (ok) visible++;
+      }
+      countEl.textContent =
+        current === 'all'
+          ? `${visible} publication${visible > 1 ? 's' : ''}`
+          : `${visible} publication${visible > 1 ? 's' : ''} sur ${total}`;
+      for (const b of bar.querySelectorAll<HTMLElement>('[data-filter-value]')) {
+        b.setAttribute('aria-pressed', String(b.dataset.filterValue === current));
+      }
+      const hash = current === 'all' ? '' : `#${dimension}=${current}`;
+      if (hash !== window.location.hash) {
+        history.replaceState(null, '', window.location.pathname + hash);
+      }
+    }
+
+    bar.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-filter-value]');
+      if (!btn) return;
+      current = btn.dataset.filterValue || 'all';
+      apply();
+    });
+
+    // Restaure le choix depuis l'URL au chargement.
+    const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get(
+      dimension,
+    );
+    if (fromHash) current = fromHash;
+    apply();
+  });
+</script>

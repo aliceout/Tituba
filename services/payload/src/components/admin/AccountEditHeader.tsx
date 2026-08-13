@@ -1,7 +1,7 @@
 'use client';
 
 // Header custom pour /cms/admin/account et pour /cms/admin/collections/
-// users/[id]. Affiche crumbs « Carnet / Mon compte » (ou « Carnet /
+// users/[id]. Affiche crumbs « Tituba / Mon compte » (ou « Tituba /
 // Utilisateurs / [email] » si on édite un autre user).
 //
 // Branché via Users.admin.components.edit.beforeDocumentControls.
@@ -19,31 +19,31 @@ export default function AccountEditHeader(): React.ReactElement {
   // automatiquement vers /admin/collections/users/<own-id> en interne.
   // On affiche un crumb adapté au contexte par défaut. Le path exact
   // n'est pas trivial à détecter côté client sans hook supplémentaire,
-  // donc on rend toujours « Carnet / Utilisateurs / [email] ».
+  // donc on rend toujours « Tituba / Utilisateurs / [email] ».
   const isAccountPage =
     typeof window !== 'undefined' && window.location.pathname.startsWith('/cms/admin/account');
 
   return (
-    <div className="carnet-doc-header">
-      <div className="carnet-doc-header__crumbs">
-        <a href="/cms/admin">Carnet</a>
+    <div className="tituba-doc-header">
+      <div className="tituba-doc-header__crumbs">
+        <a href="/cms/admin">Tituba</a>
         <span className="sep" aria-hidden="true">
           /
         </span>
         {isAccountPage ? (
-          <span className="carnet-doc-header__current">Mon compte</span>
+          <span className="tituba-doc-header__current">Mon compte</span>
         ) : (
           <>
             <a href="/cms/admin/collections/users">Utilisateurs</a>
             <span className="sep" aria-hidden="true">
               /
             </span>
-            <span className="carnet-doc-header__current">{email || '—'}</span>
+            <span className="tituba-doc-header__current">{email || '—'}</span>
           </>
         )}
       </div>
       {role && (
-        <span className={`carnet-role carnet-role--${role}`}>
+        <span className={`tituba-role tituba-role--${role}`}>
           {role === 'root' ? 'Root' : role === 'admin' ? 'Admin' : 'Éditeur·ice'}
         </span>
       )}

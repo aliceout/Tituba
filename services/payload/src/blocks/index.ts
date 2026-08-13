@@ -1,4 +1,4 @@
-// Index des blocks Carnet — exporte deux ensembles selon le contexte
+// Index des blocks Tituba — exporte deux ensembles selon le contexte
 // d'usage :
 //
 //   pageBlocks   — blocs empilables dans Pages.sections (champ `blocks`
@@ -17,9 +17,10 @@ import { CitationBloc } from './CitationBloc';
 import { BiblioInline } from './BiblioInline';
 import { Figure } from './Figure';
 import { Prose } from './Prose';
+import { Depliant } from './Depliant';
 
-export { Footnote, CitationBloc, BiblioInline, Figure, Prose };
+export { Footnote, CitationBloc, BiblioInline, Figure, Prose, Depliant };
 
-export const pageBlocks = [Prose, Figure, CitationBloc];
+export const pageBlocks = [Prose, Depliant, Figure, CitationBloc];
 
 export const inlineBlocks = [Footnote, CitationBloc, BiblioInline, Figure];

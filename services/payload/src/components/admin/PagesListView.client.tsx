@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import CarnetPage from './CarnetPage';
+import { stripHeroMarkers } from '@/lib/hero-markers';
 
 const PER_PAGE = 25;
 
@@ -11,6 +12,10 @@ type Page = {
   id: number | string;
   title: string;
   slug: string;
+  /** « libre » = page composée ici ; « fixe » = en-tête d'une route du site. */
+  kind?: string | null;
+  /** Affichage au menu — propre aux pages fixes. */
+  enabled?: boolean;
   updatedAt: string;
 };
 
@@ -71,18 +76,18 @@ export default function PagesListViewClient(): React.ReactElement {
     <CarnetPage
       variant="listview"
       modifier="pages"
-      crumbs={[{ href: '/cms/admin', label: 'Carnet' }, { label: 'Pages éditoriales' }]}
+      crumbs={[{ href: '/cms/admin', label: 'Tituba' }, { label: 'Pages' }]}
       topbarActions={
         <Link
           href="/cms/admin/collections/pages/create"
-          className="carnet-btn carnet-btn--accent"
+          className="tituba-btn tituba-btn--accent"
         >
           Nouvelle page
         </Link>
       }
     >
-      <div className="carnet-listview__toolbar">
-        <div className="carnet-listview__search">
+      <div className="tituba-listview__toolbar">
+        <div className="tituba-listview__search">
           <span className="ic" aria-hidden="true">
             ⌕
           </span>
@@ -95,32 +100,43 @@ export default function PagesListViewClient(): React.ReactElement {
         </div>
       </div>
 
-      {error && <div className="carnet-listview__error">Erreur : {error}</div>}
+      {error && <div className="tituba-listview__error">Erreur : {error}</div>}
 
-      <div className="carnet-listview__table" role="table">
-        <div className="carnet-listview__row carnet-listview__row--head" role="row">
+      <div className="tituba-listview__table" role="table">
+        <div className="tituba-listview__row tituba-listview__row--head" role="row">
           <div role="columnheader">Titre</div>
           <div role="columnheader">Slug</div>
+          <div role="columnheader">Nature</div>
           <div role="columnheader">Mise à jour</div>
         </div>
 
         {loading && pages.length === 0 ? (
-          <div className="carnet-listview__loading">Chargement…</div>
+          <div className="tituba-listview__loading">Chargement…</div>
         ) : pages.length === 0 ? (
-          <div className="carnet-listview__empty">Aucune page.</div>
+          <div className="tituba-listview__empty">Aucune page.</div>
         ) : (
           pages.map((p) => (
             <Link
               key={p.id}
               href={`/cms/admin/collections/pages/${p.id}`}
-              className="carnet-listview__row"
+              className="tituba-listview__row"
               role="row"
             >
               <div role="cell" className="title">
-                {p.title}
+                {stripHeroMarkers(p.title)}
               </div>
               <div role="cell" className="slug">
                 {p.slug}
+              </div>
+              {/* Ce que la ligne ne dirait pas autrement : une page fixe
+                  titre une route du site, ne se supprime pas et n'a pas
+                  de corps. On ne le découvrait qu'en l'ouvrant. */}
+              <div
+                role="cell"
+                className={p.kind === 'fixe' ? 'nature nature--fixe' : 'nature'}
+              >
+                {p.kind === 'fixe' ? 'Page fixe' : 'Page libre'}
+                {p.kind === 'fixe' && p.enabled === false && <small>masquée du menu</small>}
               </div>
               <div role="cell" className="date">
                 {isoDate(p.updatedAt)}
@@ -130,14 +146,14 @@ export default function PagesListViewClient(): React.ReactElement {
         )}
       </div>
 
-      <div className="carnet-listview__pagination">
-        <span className="carnet-listview__pagination-info">
+      <div className="tituba-listview__pagination">
+        <span className="tituba-listview__pagination-info">
           {totalDocs === 0
             ? 'Aucun résultat'
             : `Affichage ${startIdx}–${endIdx} sur ${totalDocs} · ${PER_PAGE} par page`}
         </span>
         {totalPages > 1 && (
-          <div className="carnet-listview__pagination-pages">
+          <div className="tituba-listview__pagination-pages">
             <button
               type="button"
               disabled={page <= 1}

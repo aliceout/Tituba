@@ -1,6 +1,6 @@
 /**
  * Helpers de formatage des auteur·ice·s d'une référence bibliographique
- * (style Chicago author-date — celui retenu pour le Carnet).
+ * (style Chicago author-date — celui retenu pour le Tituba).
  *
  * Source de vérité : un array `authors[]` avec `lastName` + `firstName?`
  * + `role` (author / editor / translator).
@@ -39,7 +39,7 @@ export function formatAuthorsShort(authors: BibAuthor[] | null | undefined): str
  *   2 auteurs  : « Butler, Judith, and Gayatri Spivak »
  *   3 auteurs  : « Butler, Judith, Joan Scott, and Gayatri Spivak »
  *   4+ auteurs : on garde la liste complète (Chicago accepte jusqu'à 10
- *                avant le « et al. » en biblio ; pour le Carnet on liste
+ *                avant le « et al. » en biblio ; pour le Tituba on liste
  *                tout, c'est plus honnête).
  *
  * Si seul·e·s des éditeur·ice·s (role=editor) sont présent·e·s, le label
@@ -115,4 +115,44 @@ export function getFirstAuthorLastName(authors: BibAuthor[] | null | undefined):
   );
   if (list.length === 0) return '';
   return (list[0].lastName ?? '').trim();
+}
+
+/**
+ * Forme compacte avec l'initiale du prénom — « Le Cain, B. ».
+ *
+ * Les listes d'admin n'affichaient que le nom, et deux textes du même
+ * nom s'y ressemblaient trait pour trait. L'initiale suffit à les
+ * départager sans allonger la ligne, et c'est ainsi qu'on les écrit
+ * dans une note.
+ *
+ * Un prénom déjà abrégé dans la source (« A. ») est repris tel quel :
+ * le réduire à sa première lettre reviendrait au même, mais un prénom
+ * composé (« Jean-Pierre ») y perdrait son trait d'union.
+ */
+export function formatAuthorsInitiales(authors: BibAuthor[] | null | undefined): string {
+  const list = (authors ?? [])
+    .filter((a) => a?.role === 'author' || a?.role === undefined)
+    .filter((a) => (a?.lastName ?? '').trim().length > 0);
+  if (list.length === 0) return '';
+
+  const compact = (a: BibAuthor): string => {
+    const nom = a.lastName.trim();
+    const prenom = (a.firstName ?? '').trim();
+    if (!prenom) return nom;
+    // « Jean-Pierre » → « J.-P. » ; « Sara R. » → « S. R. »
+    const initiales = prenom
+      .split(/\s+/)
+      .map((mot) =>
+        mot
+          .split('-')
+          .map((bout) => (bout.endsWith('.') ? bout : `${bout.charAt(0).toUpperCase()}.`))
+          .join('-'),
+      )
+      .join(' ');
+    return `${nom}, ${initiales}`;
+  };
+
+  if (list.length === 1) return compact(list[0]);
+  if (list.length === 2) return `${compact(list[0])} et ${compact(list[1])}`;
+  return `${compact(list[0])} et al.`;
 }

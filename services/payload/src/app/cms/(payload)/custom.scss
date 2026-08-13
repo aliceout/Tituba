@@ -1,5 +1,5 @@
 // Overrides CSS de l'admin Payload — applique la palette + typographie
-// Carnet par-dessus le thème natif Payload.
+// Tituba par-dessus le thème natif Payload.
 //
 // Réf : Design/design_handoff_admin/README.md (handoff).
 //
@@ -7,26 +7,26 @@
 // Branding) — le mapping est piloté par data-accent sur <html>, posé
 // par Nav.client.tsx au mount. Idem pour le dark mode (data-theme).
 
-// ─── Tokens Carnet en :root ──────────────────────────────────────
+// ─── Tokens Tituba en :root ──────────────────────────────────────
 // On utilise un sélecteur :root,html pour bien override les vars
 // Payload qui sont aussi en :root.
 
 :root,
 html {
-  // Largeur de la nav latérale Carnet (220px). Payload v3 utilise
+  // Largeur de la nav latérale Tituba (220px). Payload v3 utilise
   // cette var pour calculer la colonne réservée dans le grid de
   // .template-default (`grid-template-columns: var(--nav-width) auto`).
   // Sans override, Payload utilise sa valeur par défaut (~256px) qui
-  // crée un gap entre la fin de notre .carnet-nav (220px) et le bord
+  // crée un gap entre la fin de notre .tituba-nav (220px) et le bord
   // gauche du content.
   --nav-width: 220px;
 
   // Padding horizontal des pages admin (listview + editview + topbar).
   // Source de vérité unique : changer ici recale tout le layout sans
   // toucher aux enfants. Conséquence : éviter de hardcoder `24px` à
-  // gauche/droite dans .carnet-listview / .carnet-editview / .carnet-topbar
+  // gauche/droite dans .tituba-listview / .tituba-editview / .tituba-topbar
   // et leurs descendants — laisser le container gérer.
-  --carnet-pad-x: 24px;
+  --tituba-pad-x: 24px;
 
   --b-ink: #1a1d28;
   --b-bg: #fdfcf8;
@@ -123,7 +123,7 @@ html {
 
 // ─── Override des CSS vars Payload ───────────────────────────────
 // Payload expose un système de couleurs via `--theme-*` et
-// `--theme-elevation-*`. On les remappe sur la palette Carnet.
+// `--theme-elevation-*`. On les remappe sur la palette Tituba.
 
 :root,
 html {
@@ -201,18 +201,18 @@ samp {
 
 // Tagger les éléments mono explicitement (utilisé dans les composants
 // custom : numéros de billet, slugs, dates ISO, clés biblio).
-.carnet-mono {
+.tituba-mono {
   font-family: var(--font-mono);
 }
 
-.carnet-serif {
+.tituba-serif {
   font-family: var(--font-serif);
 }
 
 // ─── Nav latérale Payload ────────────────────────────────────────
 // Sélecteurs Payload v3 BEM-like : `.nav`, `.nav__link`, `.nav-group`,
 // etc. On affine sans tout réécrire (la structure reste celle de
-// Payload, juste avec la palette + typo Carnet).
+// Payload, juste avec la palette + typo Tituba).
 
 .nav {
   background: var(--b-bg);
@@ -329,16 +329,16 @@ textarea.field-type__input {
 
 // ─── Headings éditoriaux dans les vues custom ───────────────────
 // Pour les composants custom (LoginView, future dashboard) on tagge
-// les h1 avec une classe `.carnet-h1` qui applique Source Serif 4.
+// les h1 avec une classe `.tituba-h1` qui applique Source Serif 4.
 
-.carnet-h1 {
+.tituba-h1 {
   font-family: var(--font-serif);
   font-weight: 600;
   letter-spacing: -0.5px;
   color: var(--b-ink);
 }
 
-.carnet-h1--brand {
+.tituba-h1--brand {
   font-size: 64px;
   line-height: 1;
 
@@ -347,7 +347,7 @@ textarea.field-type__input {
   }
 }
 
-.carnet-kicker {
+.tituba-kicker {
   font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.14em;
@@ -361,7 +361,7 @@ textarea.field-type__input {
 // Remplace la nav native Payload par la structure éditoriale
 // Contenu / Pages / Réglages avec counts mono à droite.
 
-.carnet-nav {
+.tituba-nav {
   display: flex;
   flex-direction: column;
   width: 220px;
@@ -588,7 +588,7 @@ textarea.field-type__input {
   // Toggle dark/light dans le footer de la sidebar (à droite du user
   // info, opposé à l'avatar). Discret : pas de bordure, pas de fond
   // par défaut, pastille au hover.
-  // Le theme toggle vit maintenant dans .carnet-nav__top-actions
+  // Le theme toggle vit maintenant dans .tituba-nav__top-actions
   // (top-row, à côté du lien Voir le site et du logout icon). Style
   // aligné sur __logout-icon pour cohérence visuelle.
   &__theme-toggle {
@@ -705,7 +705,7 @@ header svg.icon--logo {
 }
 
 // Heading h1 natif sur les pages list (Pages, Media, Users) :
-// styles cohérents avec notre carnet-listview__h1 (mais on n'enlève
+// styles cohérents avec notre tituba-listview__h1 (mais on n'enlève
 // pas le h1 ici car il est la seule indication du contexte de page —
 // pas de breadcrumb natif visible)
 .collection-list h1,
@@ -718,7 +718,7 @@ header svg.icon--logo {
 }
 
 // Boutons "Create New" / "Save" / "Publish" natifs Payload :
-// forcer la palette accent Carnet (au lieu du gris-béton par défaut).
+// forcer la palette accent Tituba (au lieu du gris-béton par défaut).
 // !important nécessaire pour passer le @layer payload-default.
 //
 // Cibles MASSIVES car Payload v3 utilise plein de variantes de classes
@@ -833,7 +833,7 @@ button.btn--style-primary,
 // Composant React custom branché via admin.components.views.dashboard.
 // Remplace le rendu CollectionCards natif par un hero éditorial.
 
-.carnet-dashboard {
+.tituba-dashboard {
   max-width: 980px;
   margin: 0 auto;
   padding: 56px 32px 80px;
@@ -843,7 +843,7 @@ button.btn--style-primary,
     margin-bottom: 48px;
   }
 
-  // Burger mobile + kicker « Carnet · admin » alignés sur la même ligne
+  // Burger mobile + kicker « Tituba · admin » alignés sur la même ligne
   // (≤1440 — sur desktop, le burger est display: none donc le kicker
   // se retrouve seul, naturellement). gap modeste pour rapprocher
   // visuellement les deux.
@@ -973,7 +973,7 @@ button.btn--style-primary,
       }
     }
 
-    .carnet-mono {
+    .tituba-mono {
       font-size: 11px;
       color: var(--b-muted);
     }
@@ -1044,11 +1044,11 @@ button.btn--style-primary,
 
 // ─── Toggle switch (utilisé dans les vues custom) ──────────────
 // Switch carré CSS pur, cohérent avec le langage visuel du reste de
-// l'admin Carnet (bords nets, pas de radius arrondi). Bouton
+// l'admin Tituba (bords nets, pas de radius arrondi). Bouton
 // `role="switch"` + `aria-checked`, track muted → accent quand `--on`,
 // pastille qui slide.
 
-.carnet-toggle {
+.tituba-toggle {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -1077,7 +1077,7 @@ button.btn--style-primary,
     border-color: var(--b-accent);
     background: var(--b-accent-tint);
 
-    .carnet-toggle__thumb {
+    .tituba-toggle__thumb {
       background: var(--b-accent);
       transform: translateX(18px);
     }
@@ -1099,9 +1099,9 @@ button.btn--style-primary,
   }
 }
 
-// ─── Boutons Carnet (utilisés dans les vues custom) ─────────────
+// ─── Boutons Tituba (utilisés dans les vues custom) ─────────────
 
-.carnet-btn {
+.tituba-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1169,19 +1169,19 @@ button.btn--style-primary,
 }
 
 // ─── Page admin partagée : body avec padding horizontal ─────────
-// Wrapper rendu par <CarnetPage> entre la topbar et le contenu de la
+// Wrapper rendu par <TitubaPage> entre la topbar et le contenu de la
 // page. Source de vérité unique pour le padding horizontal du contenu
 // admin — listview, editview, postedit l'utilisent tous via le composant
-// React partagé. Le container parent (.carnet-{variant}) n'a aucun
+// React partagé. Le container parent (.tituba-{variant}) n'a aucun
 // padding horizontal pour que la topbar soit full-bleed naturellement.
 //
 // Variante --full : pas de padding (postedit l'utilise pour son
 // __doc grid qui doit prendre toute la largeur — son __center interne
 // gère son propre padding pour la zone d'édition).
-.carnet-page__body {
-  padding-inline: var(--carnet-pad-x);
+.tituba-page__body {
+  padding-inline: var(--tituba-pad-x);
 }
-.carnet-page__body--full {
+.tituba-page__body--full {
   padding-inline: 0;
 }
 
@@ -1189,11 +1189,11 @@ button.btn--style-primary,
 // Composant React custom branché via Posts.admin.components.views.list.
 // Remplace la liste native Payload par le tableau éditorial du handoff.
 
-.carnet-listview {
+.tituba-listview {
   // Container = flex column SANS padding horizontal — la topbar (enfant
   // direct) est full-bleed naturellement, pas de hack de margin-inline
   // négative. Le padding latéral du contenu est porté par le wrapper
-  // .carnet-page__body qui l'enveloppe (cf <CarnetPage>).
+  // .tituba-page__body qui l'enveloppe (cf <TitubaPage>).
   display: flex;
   flex-direction: column;
   padding-bottom: 64px;
@@ -1216,7 +1216,7 @@ button.btn--style-primary,
     align-items: center;
     gap: 10px;
     padding: 12px 0;
-    // Pas de border-top : le .carnet-topbar au-dessus a déjà un
+    // Pas de border-top : le .tituba-topbar au-dessus a déjà un
     // border-bottom — éviter la double ligne.
     margin-bottom: 0;
   }
@@ -1372,7 +1372,7 @@ button.btn--style-primary,
       border-bottom: 0;
     }
 
-    &:not(.carnet-listview__row--head):hover {
+    &:not(.tituba-listview__row--head):hover {
       background: var(--b-accent-tint);
 
       .title {
@@ -1517,7 +1517,7 @@ button.btn--style-primary,
   }
 
   @include mobile {
-    // Padding horizontal piloté par .carnet-page__body (--carnet-pad-x).
+    // Padding horizontal piloté par .tituba-page__body (--tituba-pad-x).
     // On n'ajoute rien ici sinon ça doublerait le retrait au-dessus du
     // contenu ET de la topbar.
     padding-bottom: 48px;
@@ -1538,40 +1538,59 @@ button.btn--style-primary,
   // Themes : 3 colonnes (Nom, Description, Billets). Slug retiré
   // de la liste — visible côté édition uniquement (#slug du billet
   // dans le hash). En tablette on cache la description.
-  &--themes &__row {
+  //
+  // Series partage exactement la même forme — un nom, une colonne de
+  // texte, un compte — et donc les mêmes règles plutôt qu'une copie :
+  // deux blocs jumeaux finissent toujours par diverger au premier
+  // ajustement.
+  &--themes &__row,
+  &--series &__row {
     grid-template-columns: 220px 1fr 80px;
   }
-  &--themes &__row .desc {
+  &--themes &__row .desc,
+  &--series &__row .desc {
     font-family: var(--font-serif);
     font-size: 14px;
     color: var(--b-muted);
     line-height: 1.4;
   }
-  &--themes &__row .count {
+  &--themes &__row .count,
+  &--series &__row .count {
     font-family: var(--font-mono);
     font-size: 12px;
     color: var(--b-muted);
     text-align: right;
+  }
+  // La pastille « brouillon » suit le nom dans la même cellule : c'est
+  // un état du nom, pas une colonne de plus — en ouvrir une la
+  // laisserait vide sur toutes les séries publiées.
+  &--series &__row .title .status-pill {
+    margin-left: 10px;
+    vertical-align: middle;
   }
   // En-tête « Billets » (3e cell : <div role="columnheader"> sans
   // className) aligné à droite pour matcher .count en dessous, à
   // toutes les tailles d'écran. En mobile (≤ 900) la 2e cell « Description »
   // est cachée → « Billets » devient nth-child(3) sur 2 cellules visibles
   // mais reste la 3e dans le DOM, donc ce sélecteur continue de matcher.
-  &--themes &__row--head > *:nth-child(3) {
+  &--themes &__row--head > *:nth-child(3),
+  &--series &__row--head > *:nth-child(3) {
     text-align: right;
   }
   // ≥ 901px : on garde les 3 colonnes (Nom + Description + Billets)
   // — y compris en zone tablette (901-1440). Description cachée
   // uniquement en vrai mobile (≤ 900) où elle bouffe trop de place.
   @include mobile {
-    &--themes &__row {
+    &--themes &__row,
+    &--series &__row {
       grid-template-columns: 1fr 60px;
     }
     // Hide cellule data .desc + en-tête « Description » (2e cell, sans
     // className car role=columnheader est plain <div>).
     &--themes &__row > .desc,
-    &--themes &__row--head > *:nth-child(2) {
+    &--themes &__row--head > *:nth-child(2),
+    &--series &__row > .desc,
+    &--series &__row--head > *:nth-child(2) {
       display: none;
     }
   }
@@ -1593,7 +1612,7 @@ button.btn--style-primary,
     grid-template-columns: 1fr 200px 80px 40px;
     cursor: default;
   }
-  &--tags &__row:not(.carnet-listview__row--head):hover {
+  &--tags &__row:not(.tituba-listview__row--head):hover {
     background: transparent;
 
     .title {
@@ -1712,8 +1731,12 @@ button.btn--style-primary,
   }
 
   // ─── Variante --pages ────────────────────────────────────────
+  // Quatre colonnes depuis que les pages fixes du site partagent cette
+  // liste avec les pages libres : sans colonne qui l'annonce, rien ne
+  // distinguerait une page qu'on peut supprimer d'une qui titre une
+  // route et refusera de partir.
   &--pages &__row {
-    grid-template-columns: 1fr 220px 110px;
+    grid-template-columns: 1fr 190px 120px 110px;
   }
   &--pages &__row .title {
     font-family: var(--font-serif);
@@ -1726,16 +1749,35 @@ button.btn--style-primary,
     font-size: 12px;
     color: var(--b-muted);
   }
+  &--pages &__row .nature {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--b-muted);
+  }
+  // La page fixe est l'exception dans cette liste — elle seule porte la
+  // couleur, les pages libres restant en gris. Signaler la règle aussi
+  // fort que l'exception aurait annulé le contraste.
+  &--pages &__row .nature--fixe {
+    color: var(--b-accent);
+  }
+  &--pages &__row .nature small {
+    display: block;
+    font-size: 11px;
+    color: var(--b-muted);
+  }
   &--pages &__row .date {
     font-family: var(--font-mono);
     font-size: 11.5px;
     color: var(--b-muted);
   }
   @include mobile {
+    // La nature reste, le slug part : à cette largeur, savoir ce qu'on
+    // peut faire d'une page prime sur son adresse.
     &--pages &__row {
-      grid-template-columns: 1fr 100px;
+      grid-template-columns: 1fr 110px 100px;
     }
-    &--pages &__row > .slug {
+    &--pages &__row > .slug,
+    &--pages &__row--head > *:nth-child(2) {
       display: none;
     }
   }
@@ -1851,7 +1893,7 @@ button.btn--style-primary,
   @include mobile {
     &--users &__row {
       grid-template-columns: 1fr 80px;
-      // Override align-items: baseline pour que le chip .carnet-role
+      // Override align-items: baseline pour que le chip .tituba-role
       // soit centré verticalement avec le nom potentiellement multi-
       // lignes, et que la row head (« RÔLE ») s'aligne pareil.
       align-items: center;
@@ -1872,8 +1914,98 @@ button.btn--style-primary,
   // dans la vue édition de chaque référence (champ slug en mono accent
   // en haut). On affiche à la place l'éditeur (livres) ou la revue
   // (articles). La colonne Actions est étroite (× supprimer).
+  // ── Sélection multiple ───────────────────────────────────────
+  // La colonne des cases ouvre la ligne. Elle disparaît sous 1440px,
+  // comme le faisait la croix : les actions groupées sont un travail
+  // d'écran large, et les grilles compactes n'ont pas la place.
+  // Le lien ne couvre plus la ligne entière mais ses seules colonnes
+  // de données : la case à cocher est en dehors, faute de quoi il
+  // fallait annuler son clic — et annuler le clic d'une case en
+  // rétablit l'état antérieur, que React ne réapplique pas.
+  //
+  // `display: contents` efface le lien de la grille : ses cellules
+  // redeviennent celles de la ligne, et la mise en page ne change pas.
+  &__rowlink {
+    display: contents;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  &__row .pick {    display: flex;
+    align-items: center;
+
+    // La zone qui n'ouvre pas la fiche déborde de la colonne : seize
+    // pixels de large, c'est la case et rien autour, et manquer la case
+    // de trois pixels ouvrait la référence. La cellule prend donc toute
+    // la hauteur de la ligne, la marge intérieure gauche du tableau et
+    // la moitié de la gouttière — les marges négatives lui rendent
+    // ensuite sa largeur de colonne, si bien que rien ne se déplace à
+    // l'écran.
+    align-self: stretch;
+    margin: -14px -12px -14px -20px;
+    padding: 14px 12px 14px 20px;
+
+    input {
+      cursor: pointer;
+      margin: 0;
+    }
+  }
+
+  // Actions groupées — au bout de la barre d'outils, à droite de la
+  // recherche et des filtres. Pas de ligne à elles : une ligne qui
+  // apparaît est une ligne qui pousse le tableau, et la case suivante
+  // se dérobe alors sous le curseur.
+  //
+  // `margin-left: auto` les colle à droite, quelle que soit la largeur
+  // prise par les filtres.
+  &__lot {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+    white-space: nowrap;
+
+    // Les boutons se rangent à la hauteur de la barre plutôt que
+    // l'inverse.
+    .tituba-btn {
+      font-size: 12px;
+      padding: 4px 12px;
+
+      &:disabled {
+        cursor: default;
+        opacity: 0.45;
+      }
+    }
+
+    // Le lien de dégroupage suit le même sort que les boutons.
+    .tituba-listview__lot-annuler:disabled {
+      cursor: default;
+      opacity: 0.45;
+    }
+  }
+
+  &__lot-compte {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: auto;
+
+  }
+
+
+  &__lot-annuler {
+    background: none;
+    border: 0;
+    color: var(--b-muted);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    padding: 0;
+    text-decoration: underline;
+  }
+
   &--biblio &__row {
-    grid-template-columns: 110px 130px 60px 1fr 200px 100px 36px;
+    grid-template-columns: 16px 110px 130px 60px 1fr 200px 100px;
   }
   &--biblio &__row .firstname,
   &--biblio &__row .lastname {
@@ -1970,43 +2102,46 @@ button.btn--style-primary,
       align-self: center;
       text-align: right;  // contenu collé au bord droit de la cellule
     }
-    &--biblio &__row > .type-cell,
-    &--biblio &__row > *:last-child {
+    &--biblio &__row > .pick,
+    &--biblio &__row > .type-cell {
+      display: none;
+    }
+    &--biblio &__lot {
       display: none;
     }
 
     // Head row (nth-child positional, columnheader sans className)
     // Ordre HTML : 1=Prénom, 2=Nom, 3=Année, 4=Titre, 5=Éditeur, 6=Type, 7=Actions
-    &--biblio &__row--head > *:nth-child(1) {
+    &--biblio &__row--head > *:nth-child(2) {
       // Prénom
       grid-column: 1;
       grid-row: 1;
     }
-    &--biblio &__row--head > *:nth-child(2) {
+    &--biblio &__row--head > *:nth-child(3) {
       // Nom
       grid-column: 1;
       grid-row: 2;
     }
-    &--biblio &__row--head > *:nth-child(3) {
+    &--biblio &__row--head > *:nth-child(4) {
       // Année
       grid-column: 2;
       grid-row: 1 / span 2;
       align-self: center;
     }
-    &--biblio &__row--head > *:nth-child(4) {
+    &--biblio &__row--head > *:nth-child(5) {
       // Titre
       grid-column: 3;
       grid-row: 1 / span 2;
       align-self: center;
     }
-    &--biblio &__row--head > *:nth-child(5) {
+    &--biblio &__row--head > *:nth-child(6) {
       // Éditeur / Revue
       grid-column: 4;
       grid-row: 1 / span 2;
       align-self: center;
       text-align: right;  // en-tête aligné sur les valeurs
     }
-    &--biblio &__row--head > *:nth-child(6),
+    &--biblio &__row--head > *:nth-child(1),
     &--biblio &__row--head > *:last-child {
       display: none;
     }
@@ -2051,33 +2186,36 @@ button.btn--style-primary,
       grid-row: 1 / span 2;
       align-self: center;
     }
+    &--biblio &__lot {
+      display: none;
+    }
+    &--biblio &__row > .pick,
     &--biblio &__row > .year,
     &--biblio &__row > .venue,
-    &--biblio &__row > .type-cell,
-    &--biblio &__row > *:last-child {
+    &--biblio &__row > .type-cell {
       display: none;
     }
 
     // Head row : mêmes positions, ciblées par nth-child puisque les
     // <div role="columnheader"> n'ont pas de className.
     // Ordre HTML : 1=Prénom, 2=Nom, 3=Année, 4=Titre, 5=Éditeur, 6=Type, 7=Actions.
-    &--biblio &__row--head > *:nth-child(1) {
+    &--biblio &__row--head > *:nth-child(2) {
       grid-column: 2;
       grid-row: 1;
       text-align: right;
     }
-    &--biblio &__row--head > *:nth-child(2) {
+    &--biblio &__row--head > *:nth-child(3) {
       grid-column: 2;
       grid-row: 2;
       text-align: right;
     }
-    &--biblio &__row--head > *:nth-child(4) {
+    &--biblio &__row--head > *:nth-child(5) {
       grid-column: 1;
       grid-row: 1 / span 2;
       align-self: center;
     }
-    &--biblio &__row--head > *:nth-child(3),
-    &--biblio &__row--head > *:nth-child(5),
+    &--biblio &__row--head > *:nth-child(1),
+    &--biblio &__row--head > *:nth-child(4),
     &--biblio &__row--head > *:nth-child(6),
     &--biblio &__row--head > *:last-child {
       display: none;
@@ -2172,9 +2310,36 @@ button.btn--style-primary,
   }
 }
 
+// Saisie d'une liste de valeurs libres en pastilles (cf ChipsInput).
+// Reprend .tag-chip pour les pastilles : c'est le même geste que les
+// tags, il n'y a aucune raison qu'il n'en ait pas l'air.
+.chips-input {
+  &__field {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--b-ink);
+
+    &:focus {
+      outline: none;
+      border-color: var(--b-accent);
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+}
+
 // ─── Auteur·ices d'un billet (sidebar PostEditView) ────────────
 // Liste de blocs empilés, chaque bloc = une signature (membre du
-// Carnet ou externe). Cf issue #2.
+// Tituba ou externe). Cf issue #2.
 .authors-list {
   display: flex;
   flex-direction: column;
@@ -2274,7 +2439,7 @@ button.btn--style-primary,
 }
 
 // ─── Modal réutilisable (invitation user, confirmations, etc.) ───
-.carnet-modal-backdrop {
+.tituba-modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.32);
@@ -2285,7 +2450,7 @@ button.btn--style-primary,
   padding: 20px;
 }
 
-.carnet-modal {
+.tituba-modal {
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
@@ -2344,6 +2509,24 @@ button.btn--style-primary,
     gap: 14px;
   }
 
+  // Ce sur quoi va porter une action groupée, nommé.
+  &__liste {
+    color: var(--b-muted);
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 10px 0 0;
+    max-height: 190px;
+    overflow: auto;
+    padding-left: 18px;
+  }
+
+  &__reste {
+    color: var(--b-muted);
+    font-size: 12px;
+    font-style: italic;
+    margin: 6px 0 0;
+  }
+
   &__footer {
     padding: 14px 20px;
     border-top: 1px solid var(--b-rule);
@@ -2357,7 +2540,7 @@ button.btn--style-primary,
 // Drop-zone à la création (pas de fichier encore), puis aperçu + meta
 // en édition.
 
-.carnet-media-drop {
+.tituba-media-drop {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2402,7 +2585,262 @@ button.btn--style-primary,
   }
 }
 
-.carnet-media-preview {
+// Fenêtre contextuelle de recherche Unsplash (cf
+// UnsplashImagePicker.client.tsx) : champ de recherche en haut, grille
+// de résultats en dessous. En modale et non dans la colonne du billet,
+// parce qu'une grille de vignettes lisible demande une largeur que ni
+// le sidebar meta (300px) ni la colonne centrale n'offrent.
+// Choix de la zone visible d'une photo non carrée (cf CropModal). Le
+// cadre d'aperçu reproduit exactement le hero du billet : carré,
+// `object-fit: cover`, `object-position` piloté par le point focal — ce
+// qu'on voit ici est ce qui s'affichera sur le site.
+.tituba-modal--crop {
+  max-width: min(620px, 92vw);
+}
+
+.tituba-crop {
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--b-muted);
+  }
+
+  // Le cadre montre l'image ENTIÈRE, sans aspect-ratio imposé : on doit
+  // voir ce qu'on écarte. Sa hauteur suit donc celle de la photo.
+  &__frame {
+    position: relative;
+    // `fit-content` : le cadre épouse exactement l'image affichée. C'est
+    // indispensable — les coordonnées de la zone sont des pourcentages
+    // mesurés sur ce cadre (cf pct() dans CropModal). S'il était plus
+    // large que la photo, le cadrage enregistré serait décalé.
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+    border-radius: 3px;
+    background: var(--b-bg);
+    touch-action: none;
+    user-select: none;
+    line-height: 0;
+
+    img {
+      display: block;
+      max-width: 100%;
+      max-height: 56vh;
+      width: auto;
+      height: auto;
+    }
+  }
+
+  // Voile sur les parties écartées. `box-shadow` d'un noir translucide
+  // projeté vers l'extérieur sur une très grande distance : tout ce qui
+  // entoure la zone est assombri, sans avoir à empiler quatre bandeaux.
+  &__shade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    // Indispensable : l'ombre de __hole s'étend sur 9999px dans toutes
+    // les directions. Sans découpe, elle assombrit toute la modale —
+    // texte et marges compris — au lieu de la seule image.
+    overflow: hidden;
+  }
+
+  &__hole {
+    position: absolute;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  }
+
+  &__sel {
+    position: absolute;
+    border: 2px solid #fff;
+    box-sizing: border-box;
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  // Poignée d'angle bas-droit — déborde à cheval sur le coin pour rester
+  // attrapable même quand la zone est réduite au minimum.
+  &__handle {
+    position: absolute;
+    right: -7px;
+    bottom: -7px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    border-radius: 2px;
+    cursor: nwse-resize;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+}
+
+.tituba-modal--unsplash {
+  // Nettement plus large que la modale de confirmation par défaut
+  // (480px) : on parcourt une photothèque, il faut voir plusieurs
+  // colonnes à la fois. `min()` garde une marge sur les petits écrans.
+  max-width: min(1360px, 94vw);
+  height: 86vh;
+}
+
+.tituba-unsplash {
+  &__search {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--b-rule);
+    flex: 0 0 auto;
+
+    input {
+      width: 100%;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--b-ink);
+      background: var(--b-bg);
+      border: 1px solid var(--b-rule);
+
+      &:focus {
+        outline: none;
+        border-color: var(--b-accent);
+      }
+    }
+  }
+
+  // Seule zone défilante : l'en-tête et le champ de recherche restent
+  // fixes pendant qu'on parcourt les résultats.
+  &__body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+
+  // Mosaïque : chaque photo garde ses proportions d'origine (portrait,
+  // paysage, carré), comme sur Unsplash — une grille à lignes régulières
+  // imposerait une hauteur commune, donc un recadrage.
+  //
+  // Colonnes réelles et non `columns` CSS : le multi-colonnes équilibre
+  // les hauteurs, si bien que chaque page ajoutée redistribue tout et
+  // que les photos déjà vues changent de place. La répartition est donc
+  // faite en amont (cf UnsplashSearchModal), et chaque colonne n'est
+  // qu'une pile verticale.
+  &__grid {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  &__col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__item {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  &__thumb {
+    position: relative;
+    display: block;
+    padding: 0;
+    // Pas de bordure : elle cernait chaque photo d'un liseré et hachait
+    // la mosaïque. Le fond ne sert plus qu'à occuper la place réservée
+    // avant chargement. `overflow: hidden` fait épouser l'arrondi à
+    // l'image, qui sinon déborderait aux coins.
+    border: 0;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--b-bg);
+    cursor: pointer;
+    line-height: 0;
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
+
+    // Hauteur libre : ni aspect-ratio ni object-fit, la photo s'affiche
+    // dans ses proportions réelles. Les attributs width/height posés sur
+    // la balise (cf UnsplashImagePicker) permettent au navigateur de
+    // réserver la hauteur avant chargement, sans quoi la mosaïque se
+    // réagence à chaque image qui arrive.
+    img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    // Survol : léger soulèvement + ombre portée, plutôt qu'un cerne.
+    // `transform` et `box-shadow` se peignent hors du flux — la mosaïque
+    // ne se réagence donc pas au passage de la souris, ce que ferait
+    // l'apparition d'une bordure.
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    // Respecte le réglage système « réduire les animations » : le
+    // soulèvement disparaît, l'ombre reste comme indice de survol.
+    @media (prefers-reduced-motion: reduce) {
+      transition: box-shadow 0.14s ease;
+
+      &:hover:not(:disabled) {
+        transform: none;
+      }
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+  }
+
+  &__importing {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  &__note {
+    margin: 0;
+    padding: 8px 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--b-muted);
+  }
+
+  &__error {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--b-danger, #b3261e);
+    background: rgba(179, 38, 30, 0.06);
+    border: 1px solid rgba(179, 38, 30, 0.25);
+  }
+}
+
+.tituba-media-preview {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 24px;
@@ -2430,14 +2868,14 @@ button.btn--style-primary,
 
   // Colonne droite : champs éditables (Titre + Alt) en haut, puis
   // meta read-only (Type / Taille / Dims) sous une fine règle.
-  // Les .carnet-editview__field qui vivent ici perdent leur max-width
+  // Les .tituba-editview__field qui vivent ici perdent leur max-width
   // 640 (la colonne fait 320).
   &__side {
     display: flex;
     flex-direction: column;
     gap: 22px;
 
-    .carnet-editview__field {
+    .tituba-editview__field {
       max-width: none;
       margin-bottom: 0;
       gap: 8px;
@@ -2504,13 +2942,13 @@ button.btn--style-primary,
 
 // ─── Bibliography edit view : aperçu + used-in ────────────────────
 // Réutilisés dans BibliographyEditView (vue Édition custom). Le
-// .carnet-biblio-preview affiche la citation Chicago author-date
-// formatée live ; .carnet-biblio-usedin liste les billets qui
+// .tituba-biblio-preview affiche la citation Chicago author-date
+// formatée live ; .tituba-biblio-usedin liste les billets qui
 // référencent l'entrée.
 
-.carnet-biblio-preview {
-  // Rendu à l'intérieur de .carnet-editview qui fournit déjà le padding
-  // horizontal (--carnet-pad-x) — on ne remet pas de marge sur les côtés.
+.tituba-biblio-preview {
+  // Rendu à l'intérieur de .tituba-editview qui fournit déjà le padding
+  // horizontal (--tituba-pad-x) — on ne remet pas de marge sur les côtés.
   margin: 24px 0 0;
   background: var(--b-bg);
   border-left: 2px solid var(--b-accent);
@@ -2534,8 +2972,8 @@ button.btn--style-primary,
   }
 }
 
-.carnet-biblio-usedin {
-  // Idem : .carnet-editview gère déjà le padding horizontal.
+.tituba-biblio-usedin {
+  // Idem : .tituba-editview gère déjà le padding horizontal.
   margin: 14px 0 0;
   font-family: var(--font-sans);
   font-size: 12px;
@@ -2557,7 +2995,7 @@ button.btn--style-primary,
 // beforeDocumentControls. Affiche la fil d'ariane et le chip statut
 // au-dessus de la barre d'actions native Payload.
 
-.carnet-doc-header {
+.tituba-doc-header {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -2596,10 +3034,10 @@ button.btn--style-primary,
 }
 
 // Chips statut : reproduction fidèle du style de la maquette
-// (carnet-admin.html § "Statut chip"). Border discrète --b-rule par
+// (tituba-admin.html § "Statut chip"). Border discrète --b-rule par
 // défaut (sauf published qui prend la border accent), point coloré
 // par variante.
-.carnet-status {
+.tituba-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2617,11 +3055,11 @@ button.btn--style-primary,
     background: var(--b-muted);
   }
 
-  &--draft .carnet-status__dot {
+  &--draft .tituba-status__dot {
     background: #b8842a;
   }
 
-  &--scheduled .carnet-status__dot {
+  &--scheduled .tituba-status__dot {
     background: #3a6a8a;
   }
 
@@ -2629,24 +3067,24 @@ button.btn--style-primary,
     color: var(--b-accent);
     border-color: var(--b-accent);
 
-    .carnet-status__dot {
+    .tituba-status__dot {
       background: var(--b-accent);
     }
   }
 
   // Variantes pour les status user (pending / active / disabled)
-  &--pending .carnet-status__dot {
+  &--pending .tituba-status__dot {
     background: #b8842a;
   }
   &--active {
     color: var(--b-accent);
     border-color: var(--b-accent);
 
-    .carnet-status__dot {
+    .tituba-status__dot {
       background: var(--b-accent);
     }
   }
-  &--disabled .carnet-status__dot {
+  &--disabled .tituba-status__dot {
     background: var(--b-muted);
   }
 }
@@ -2654,7 +3092,7 @@ button.btn--style-primary,
 // Petit marqueur sobre sous la date dans la liste des billets, pour
 // signaler qu'un billet contient encore au moins une zone brouillon
 // non finalisée. Cf issue #1.
-.carnet-chip-draft {
+.tituba-chip-draft {
   display: block;
   margin-top: 2px;
   font-family: var(--font-sans);
@@ -2666,7 +3104,7 @@ button.btn--style-primary,
 }
 
 // Chip de rôle pour les utilisateurs (root / admin / editor)
-.carnet-role {
+.tituba-role {
   display: inline-block;
   padding: 2px 8px;
   font-family: var(--font-sans);
@@ -2690,8 +3128,8 @@ button.btn--style-primary,
   }
 }
 
-// Méta-ligne mono « Billet n° 042 · carnet:2026-042 » en haut du form
-.carnet-doc-metaline {
+// Méta-ligne mono « Billet n° 042 · tituba:2026-042 » en haut du form
+.tituba-doc-metaline {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--b-muted);
@@ -2706,7 +3144,7 @@ button.btn--style-primary,
 
 // ─── Document edit view (Posts, etc.) ───────────────────────────
 // Pass 1 : overrides CSS sur la vue native Payload pour appliquer la
-// palette + typographie + structure éditoriale du handoff carnet-admin.
+// palette + typographie + structure éditoriale du handoff tituba-admin.
 // La mécanique reste celle de Payload (form, validation, autosave).
 //
 // Pass 2 (à faire si besoin) : composant React custom complet avec
@@ -2874,9 +3312,9 @@ button.btn--style-primary,
   margin-bottom: 4px;
 }
 
-// Champs auto-calculés (readingTime, idCarnet) : encadré dashed bg
+// Champs auto-calculés (readingTime, idTituba) : encadré dashed bg
 .field-type--name-readingTime input,
-.field-type--name-idCarnet input,
+.field-type--name-idTituba input,
 .field-type[data-readonly='true'] input {
   background: var(--b-bg);
   border: 1px dashed var(--b-rule);
@@ -2917,14 +3355,14 @@ button.btn--style-primary,
 // ─── Edit views custom (Site global + Mon compte) ───────────────
 // Vue d'édition custom — remplace entièrement le rendu natif Payload
 // pour /cms/admin/globals/site et /cms/admin/account. Suit le même
-// langage visuel que .carnet-listview (header sticky, crumbs +
+// langage visuel que .tituba-listview (header sticky, crumbs +
 // actions, sections séparées par des filets, chips de statut
 // réutilisés). Branchements : Site.admin.components.views.edit.root
 // et payload.config admin.components.views.account.
 
-.carnet-editview {
-  // Voir .carnet-listview pour la justification : flex column sans
-  // padding horizontal, padding latéral porté par .carnet-page__body.
+.tituba-editview {
+  // Voir .tituba-listview pour la justification : flex column sans
+  // padding horizontal, padding latéral porté par .tituba-page__body.
   display: flex;
   flex-direction: column;
   padding-bottom: 64px;
@@ -2997,7 +3435,7 @@ button.btn--style-primary,
   &__hero {
     margin: 28px 0 24px;
 
-    .carnet-h1 {
+    .tituba-h1 {
       font-family: var(--font-serif);
       font-size: 36px;
       line-height: 1.1;
@@ -3053,7 +3491,7 @@ button.btn--style-primary,
     // Quand un &__field est dans une row, plus de margin-bottom (le
     // gap de la grille s'en charge) et la max-width n'est plus
     // pertinente — chaque cellule prend sa colonne.
-    .carnet-editview__field {
+    .tituba-editview__field {
       margin-bottom: 0;
       max-width: none;
     }
@@ -3320,7 +3758,109 @@ button.btn--style-primary,
     }
   }
 
-  // Message d'erreur affiché sous un .carnet-editview__field--invalid.
+  // Couverture du flux podcast (cf SubscriptionsEditView). Aperçu carré
+  // à gauche, actions à droite : le carré n'est pas décoratif, c'est la
+  // proportion exigée par les applications d'écoute, et la voir en
+  // permanence rend l'écart visible avant même l'avertissement.
+  .podcast-cover {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+
+    &__img,
+    &__empty {
+      flex: 0 0 auto;
+      width: 120px;
+      height: 120px;
+      border-radius: 4px;
+      background: var(--b-bg);
+      object-fit: cover;
+    }
+
+    &__empty {
+      display: grid;
+      place-items: center;
+      border: 1px dashed var(--b-rule);
+      font-size: 11px;
+      color: var(--b-muted);
+      text-align: center;
+      padding: 0 8px;
+    }
+
+    &__side {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    &__remove {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--b-muted);
+      cursor: pointer;
+      text-decoration: underline;
+
+      &:hover:not(:disabled) {
+        color: #b63a3a;
+      }
+    }
+
+    &__dims {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--b-muted);
+    }
+
+    &__warn {
+      font-size: 11.5px;
+      color: #b63a3a;
+    }
+  }
+
+
+  // Champ en erreur. Le modificateur était posé par les vues (cf
+  // MediaEditView) sans jamais rien changer : la classe existait, ses
+  // règles non. Le filet passe au rouge, et le libellé avec — signaler
+  // par la seule couleur du cadre laisse passer un champ survolé.
+  &__field--invalid {
+    > .lbl {
+      color: #b63a3a;
+    }
+
+    input[type='text'],
+    input[type='email'],
+    input[type='url'],
+    input[type='number'],
+    select,
+    textarea {
+      border-color: #b63a3a;
+
+      &:focus {
+        border-color: #b63a3a;
+      }
+    }
+
+    // Message posé directement dans le champ, sans classe longue :
+    // il n’apparaît que là, et le nommer deux fois n’apprend rien.
+    .err {
+      color: #b63a3a;
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      margin-top: -2px;
+    }
+  }
+
+  // Astérisque des champs obligatoires. En couleur d’accent et non en
+  // rouge : elle annonce une contrainte, elle ne signale pas une faute.
+  &__field .req {
+    color: var(--b-accent);
+    margin-left: 2px;
+  }
+  // Message d'erreur affiché sous un .tituba-editview__field--invalid.
   // Margin-top négatif pour grignoter le gap du field et coller le
   // message à l'input.
   &__field-error {
@@ -3466,7 +4006,7 @@ button.btn--style-primary,
       color: var(--b-ink);
     }
 
-    .carnet-mono {
+    .tituba-mono {
       color: var(--b-muted);
       font-size: 11px;
     }
@@ -3483,14 +4023,14 @@ button.btn--style-primary,
     border-top: 0;
     padding-top: 8px;
 
-    .carnet-postedit__delete {
+    .tituba-postedit__delete {
       max-width: 320px;
     }
   }
 
   // /admin/account a une grille readonly plus dense (3 chips alignés)
   &--account {
-    .carnet-editview__readonly-grid {
+    .tituba-editview__readonly-grid {
       grid-template-columns: repeat(3, minmax(0, max-content));
       gap: 16px 32px;
     }
@@ -3632,7 +4172,7 @@ button.btn--style-primary,
     flex-direction: column;
     gap: 12px;
 
-    .carnet-editview__field {
+    .tituba-editview__field {
       margin-bottom: 0;
       max-width: none;
     }
@@ -3650,7 +4190,7 @@ button.btn--style-primary,
 
 // ─── PageProseEditor (Lexical minimal pour blocs Prose) ─────────
 // Toolbar haut sobre + zone d'édition .ed-body (theme partagé avec
-// PostBodyEditor — voir .carnet-postedit .ed-body pour la structure).
+// PostBodyEditor — voir .tituba-postedit .ed-body pour la structure).
 // On duplique seulement le minimum vital (typo, marges) pour que ça
 // rende correctement hors de la PostEditView.
 
@@ -3778,7 +4318,7 @@ button.btn--style-primary,
 // ─── Picker de couleur d'accent (Site global) ───────────────────
 // Swatch + <select> côte à côte. Utilisé dans SiteEditView. Le swatch
 // reflète la couleur actuellement choisie en temps réel.
-.carnet-accent-picker {
+.tituba-accent-picker {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -3805,13 +4345,13 @@ button.btn--style-primary,
 // rich-text Lexical interne (.ed-body) a son propre theme sans aucune
 // chrome Payload.
 
-.carnet-postedit {
+.tituba-postedit {
   display: flex;
   flex-direction: column;
   font-family: var(--font-sans);
   background: var(--b-bg);
   min-height: 100vh;
-  // Topbar (.carnet-topbar) maintenant rendue par <CarnetTopbar/>.
+  // Topbar (.tituba-topbar) maintenant rendue par <TitubaTopbar/>.
 
   &__saved,
   &__dirty {
@@ -3842,11 +4382,35 @@ button.btn--style-primary,
     font-size: 12px;
   }
 
+  // Le wrapper partagé rendu par <CarnetPage> s'intercale entre la
+  // barre du haut et la grille. Bloc ordinaire, il n'a ni hauteur à
+  // distribuer ni raison de grandir : le `flex: 1` de __doc ne
+  // s'appliquait donc à rien, et sur un billet plus court que la
+  // fenêtre le filet s'arrêtait au bas du contenu — une trentaine de
+  // pixels avant le bas de l'écran, ce qui se voit.
+  //
+  // On rétablit la chaîne : le wrapper prend la hauteur restante et la
+  // passe à la grille.
+  > .tituba-page__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  // Le filet qui sépare le corps de la barre latérale est peint par la
+  // grille et non par la barre elle-même : celle-ci est `sticky` et
+  // haute de son seul contenu, si bien qu'une bordure portée par elle
+  // s'arrêtait au dernier champ au lieu de descendre jusqu'en bas.
+  // Deux couches : le fond de la colonne, et le trait à sa gauche.
   &__doc {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 300px;
     align-items: start;
     flex: 1;
+    background:
+      linear-gradient(var(--b-rule), var(--b-rule)) right 300px top / 1px 100% no-repeat,
+      linear-gradient(var(--b-bg), var(--b-bg)) right top / 300px 100% no-repeat;
   }
 
   &__center {
@@ -3857,7 +4421,7 @@ button.btn--style-primary,
   // Bouton « Supprimer ce billet » en bas de la sidebar Métadonnées.
   // Sobre par défaut (texte muted, sans bordure) ; rouge au hover pour
   // matérialiser l'action irréversible. Le clic ouvre une modale de
-  // confirmation (cf .carnet-modal*).
+  // confirmation (cf .tituba-modal*).
   &__delete {
     display: block;
     width: 100%;
@@ -3879,7 +4443,8 @@ button.btn--style-primary,
   }
 
   &__meta {
-    border-left: 1px solid var(--b-rule);
+    // Pas de border-left ici : le filet est peint par __doc, pour
+    // qu'il descende plus bas que le dernier champ (cf plus haut).
     background: var(--b-bg);
     padding: 24px 22px 10px 22px;
     // Sticky : reste visible quand on scroll le corps du billet.
@@ -3952,6 +4517,23 @@ button.btn--style-primary,
         .mono {
           font-family: var(--font-mono);
         }
+      }
+
+      // Aide sous un champ de format (cf renderExtraField). Même corps
+      // que .help juste au-dessus : ce sont deux fois la même chose —
+      // une phrase de service sous un champ — et rien ne justifierait
+      // qu'elles ne se ressemblent pas.
+      .hint {
+        margin-top: 5px;
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--b-muted);
+      }
+
+      .err {
+        margin-top: 5px;
+        font-size: 11px;
+        color: #b63a3a;
       }
 
       // État invalide : bordure rouge sur l'input + message en dessous.
@@ -4126,95 +4708,6 @@ button.btn--style-primary,
   // Pattern <details> qui imite un <select> natif — le summary fait
   // office de "trigger" comme une caret-arrow de select, le body
   // déroule des checkboxes scrollables. Les éléments sélectionnés
-  // sont aussi repris en chips sous le multi-select pour retrait
-  // rapide.
-  .multi-select {
-    position: relative;
-
-    & > summary {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 7px 28px 7px 10px;
-      background: var(--b-paper);
-      border: 1px solid var(--b-rule);
-      font-family: inherit;
-      font-size: 12.5px;
-      color: var(--b-ink);
-      cursor: pointer;
-      list-style: none;
-      position: relative;
-
-      &::-webkit-details-marker {
-        display: none;
-      }
-
-      &::after {
-        content: '▾';
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--b-muted);
-        font-size: 11px;
-      }
-    }
-
-    &[open] > summary {
-      border-color: var(--b-accent);
-    }
-
-    &__list {
-      // Overlay : on flotte au-dessus du contenu suivant plutôt que
-      // de le pousser quand on ouvre le multi-select. Le parent
-      // .multi-select a `position: relative` (pour ancrer ce
-      // overlay).
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 100%;
-      margin-top: 2px;
-      z-index: 20;
-      max-height: 220px;
-      overflow: auto;
-      background: var(--b-paper);
-      border: 1px solid var(--b-rule);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-    }
-
-    &__opt {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 6px 10px;
-      border-bottom: 1px solid var(--b-rule);
-      font-size: 12px;
-      color: var(--b-ink);
-      cursor: pointer;
-      transition: background 0.12s;
-
-      &:last-child {
-        border-bottom: 0;
-      }
-
-      &:hover {
-        background: var(--b-accent-tint);
-      }
-
-      input {
-        margin: 0;
-        width: auto;
-        flex: 0 0 auto;
-      }
-    }
-
-    &__empty {
-      padding: 10px;
-      color: var(--b-muted);
-      font-size: 11.5px;
-      font-style: italic;
-    }
-  }
 
   // ─── Chip toggle (thèmes) ──────────────────────────────────────
   .chip-toggle {
@@ -4379,6 +4872,329 @@ button.btn--style-primary,
     color: #b63a3a;
     font-family: var(--font-sans);
     font-size: 12px;
+  }
+
+  // ─── Import d'un document ─────────────────────────────────────
+  //
+  // Repliée en un seul bouton discret : la plupart des billets
+  // s'écrivent directement dans l'éditeur, et un panneau permanent en
+  // tête du corps ferait du bruit pour tout le monde au bénéfice d'un
+  // geste occasionnel.
+  .ed-import {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 20px;
+    font-family: var(--font-sans);
+    // Ancre le champ de fichier, retiré de la vue par la géométrie.
+    position: relative;
+
+    &__open {
+      background: none;
+      border: 1px dashed var(--b-rule);
+      border-radius: 4px;
+      color: var(--b-muted);
+      cursor: pointer;
+      flex: none;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 5px 10px;
+
+      &:hover:not(:disabled) {
+        border-color: var(--b-accent);
+        color: var(--b-accent);
+      }
+
+      &:disabled {
+        cursor: progress;
+        opacity: 0.7;
+      }
+    }
+
+    &__hint {
+      color: var(--b-muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    &--open {
+      display: block;
+      background: var(--b-paper);
+      border: 1px solid var(--b-rule);
+      border-radius: 6px;
+      padding: 16px 18px;
+    }
+
+    &__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    &__close,
+    &__cancel {
+      background: none;
+      border: 0;
+      color: var(--b-muted);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      text-decoration: underline;
+      padding: 0;
+    }
+
+    // Le champ de fichier est actionné par le bouton, jamais montré :
+    // `display: none` empêcherait le clic programmatique sur certains
+    // navigateurs, d'où le retrait par la géométrie plutôt que par
+    // l'affichage.
+    &__file {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    &__error {
+      color: #b63a3a;
+      font-size: 11px;
+    }
+
+    &__result {
+      border-top: 1px solid var(--b-rule);
+      margin-top: 14px;
+      padding-top: 14px;
+    }
+
+    &__found {
+      font-size: 13px;
+      margin: 0 0 12px;
+    }
+
+    &__titre {
+      align-items: baseline;
+      display: flex;
+      font-size: 12px;
+      gap: 8px;
+      margin: 0 0 12px;
+    }
+
+    &__warnings {
+      color: var(--theme-warning-500, #b8842a);
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0 0 12px;
+      padding-left: 18px;
+    }
+
+    // Les renvois entre notes qui ne retombent sur rien. Ni une erreur
+    // de lecture ni une alerte technique : un point à trancher dans le
+    // texte, présenté comme tel.
+    &__renvois {
+      border-left: 2px solid var(--b-rule);
+      margin: 0 0 14px;
+      padding-left: 12px;
+
+      p {
+        font-size: 12px;
+        line-height: 1.5;
+        margin: 0 0 8px;
+      }
+
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      li {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 4px 0;
+      }
+    }
+
+    &__biblio {
+      margin: 0 0 14px;
+
+      h4 {
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        margin: 0 0 4px;
+        text-transform: uppercase;
+      }
+
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      li {
+        border-top: 1px solid var(--b-rule);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 7px 0;
+      }
+    }
+
+    // Deux provenances : la bibliographie finale du document, et les
+    // sources citées en entier dans les notes. Séparées à l'œil, parce
+    // qu'on ne les relit pas de la même façon.
+    &__groupe {
+      margin: 0 0 14px;
+
+      h5 {
+        color: var(--b-muted);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        margin: 0 0 6px;
+      }
+    }
+
+    &__biblio-note {
+      color: var(--b-muted);
+      font-size: 11px;
+      line-height: 1.5;
+      margin: 0 0 8px;
+
+      kbd {
+        font-family: var(--font-mono);
+      }
+    }
+
+    // La saisie de ce qui ne s'est pas laissé lire — sur la même ligne
+    // que le motif, pour qu'on voie d'un coup ce qui manque et où le
+    // dire.
+    &__manque {
+      align-items: baseline;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-left: 21px;
+
+      input {
+        background: var(--b-bg);
+        border: 1px solid var(--b-rule);
+        border-radius: 3px;
+        color: var(--b-ink);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        padding: 2px 6px;
+      }
+
+      input[type='number'] {
+        width: 74px;
+      }
+
+      input[type='text'] {
+        min-width: 180px;
+      }
+    }
+
+    &__ref-ligne {
+      align-items: baseline;
+      cursor: pointer;
+      display: flex;
+      gap: 8px;
+    }
+
+    // Aligne les lignes sans case à cocher sur celles qui en ont.
+    &__puce {
+      flex: none;
+      width: 13px;
+    }
+
+    // Ce qui sera écrit en base, sous la référence d'origine.
+    &__lu {
+      color: var(--b-muted);
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      padding-left: 21px;
+    }
+
+    &__biblio-actions {
+      align-items: center;
+      border-top: 1px solid var(--b-rule);
+      display: flex;
+      gap: 14px;
+      padding-top: 12px;
+    }
+
+    &__creer {
+      background: none;
+      border: 1px solid var(--b-accent);
+      border-radius: 4px;
+      color: var(--b-accent);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 12px;
+
+      &:disabled {
+        border-color: var(--b-rule);
+        color: var(--b-muted);
+        cursor: default;
+      }
+    }
+
+    &__ref {
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    &__match {
+      color: var(--b-accent);
+      font-size: 11px;
+
+      &--absent {
+        color: var(--b-muted);
+      }
+    }
+
+    // Ce que l'insertion fera des notes — dit avant, pas après.
+    &__notes {
+      background: var(--b-accent-tint);
+      border-left: 2px solid var(--b-accent);
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0 0 12px;
+      padding: 8px 10px;
+    }
+
+    &__warn-body {
+      background: rgba(184, 132, 42, 0.08);
+      border-left: 2px solid var(--theme-warning-500, #b8842a);
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0 0 12px;
+      padding: 8px 10px;
+
+      kbd {
+        font-family: var(--font-mono);
+      }
+    }
+
+    &__actions {
+      align-items: center;
+      display: flex;
+      gap: 14px;
+    }
+
+    &__insert {
+      background: var(--b-accent);
+      border: 0;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 7px 14px;
+    }
   }
 
   .ed-divider {
@@ -5231,7 +6047,8 @@ button.btn--style-primary,
   // (bib-block, déplacée du sidebar de droite pour mieux refléter ce
   // qu'on lit en pied d'article côté frontend).
   .fn-block,
-  .bib-block {
+  .bib-block,
+  .ep-block {
     margin: 24px 0 0;
     border: 1px solid var(--b-rule);
     background: var(--b-paper);
@@ -5371,6 +6188,320 @@ button.btn--style-primary,
           color: #b63a3a;
         }
       }
+    }
+  }
+
+  // img-block : image de couverture. Reprend le châssis commun
+  // ci-dessus (bordure, en-tête, aide) et n'ajoute que l'aperçu et la
+  // rangée d'actions. Le choix d'une photo Unsplash se fait dans une
+  // fenêtre contextuelle (cf .tituba-modal--unsplash), pas ici : la
+  // grille de résultats demande une largeur que la colonne n'a pas.
+
+  // ep-block : panneau des champs de format rendus en colonne centrale
+  // (cf FieldSpec.zone). Le châssis vient du groupe .fn-block /
+  // .bib-block plus haut ; ne restent ici que la disposition interne et
+  // les styles de champ, que la barre latérale porte de son côté et qui
+  // ne descendent pas jusqu'ici.
+  //
+  // `auto-fit` plutôt qu'un nombre de colonnes figé : le panneau ne
+  // contient aujourd'hui qu'un champ, qui prend donc toute la largeur.
+  // Une déclaration à deux colonnes en aurait laissé une vide.
+  .ep-block {
+    // Un champ qui porte du texte suivi traverse la grille : la
+    // colonne de 280 px convient à un intitulé ou à un nombre, pas à
+    // un paragraphe ni à un couple intitulé + adresse.
+    &__body .field--pleine {
+      grid-column: 1 / -1;
+    }
+    // Plancher de hauteur, au cas où un champ multiligne serait déclaré
+    // sans `rows` : deux lignes suffisent à une phrase, pas à ce qu'on
+    // met dans un panneau de la colonne centrale.
+    &__body textarea {
+      min-height: 5em;
+    }
+    &__body {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px 24px;
+      align-items: start;
+      padding: 16px 20px;
+    }
+
+    .field {
+      min-width: 0;
+
+      > label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--b-muted);
+        margin-bottom: 6px;
+      }
+
+      // `textarea` et `select` manquaient à cette liste : ils tombaient
+      // donc sur le rendu natif du navigateur au milieu de champs
+      // habillés, ce qui se voyait immédiatement. Mêmes déclarations que
+      // pour les `input` juste au-dessus — il ne s'agit pas d'inventer
+      // un traitement mais d'étendre celui qui existe.
+      input[type='number'],
+      input[type='text'],
+      input[type='url'],
+      select,
+      textarea {
+        width: 100%;
+        padding: 7px 10px;
+        background: var(--b-paper);
+        border: 1px solid var(--b-rule);
+        font-family: inherit;
+        font-size: 12.5px;
+        color: var(--b-ink);
+
+        &:focus {
+          outline: none;
+          border-color: var(--b-accent);
+        }
+      }
+
+      // Propre au multiligne : une interlettre confortable pour du texte
+      // suivi, et un redimensionnement vertical seulement — l'horizontal
+      // ferait déborder le champ de sa colonne de grille.
+      textarea {
+        line-height: 1.55;
+        resize: vertical;
+      }
+
+      .hint {
+        margin-top: 6px;
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--b-muted);
+      }
+
+      .err {
+        margin-top: 6px;
+        font-size: 11px;
+        color: #b63a3a;
+      }
+    }
+
+  }
+
+  // fichier-block : document mis à disposition par un outil. Plus
+  // simple que le bloc audio dont il descend — rien à écouter, rien à
+  // décoder : on montre ce qui est déposé, et de quoi le remplacer.
+  .fichier-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  // Liste des documents : un outil peut en réunir plusieurs.
+  .fichier-block__liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .fichier-block__current {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--b-rule);
+    border-radius: 3px;
+    background: var(--b-paper);
+  }
+  .fichier-block__infos {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    min-width: 0;
+  }
+  // Le format en premier et en capitales : c’est ce qu’on vérifie
+  // d’un coup d’œil, avant même le nom du fichier.
+  .fichier-block__type {
+    font-family: var(--font-mono, ui-monospace);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: var(--b-bg);
+    color: var(--b-muted);
+  }
+  .fichier-block__nom {
+    font-size: 13px;
+    color: var(--b-ink);
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .fichier-block__poids {
+    font-size: 11.5px;
+    color: var(--b-muted);
+  }
+  .fichier-block__links {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .fichier-block__link,
+  .fichier-block__remove {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--b-muted);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .fichier-block__link:hover {
+    color: var(--b-accent);
+  }
+  .fichier-block__remove:hover {
+    color: #b63a3a;
+  }
+  .fichier-block__empty {
+    padding: 12px 14px;
+    border: 1px dashed var(--b-rule);
+    border-radius: 3px;
+    font-size: 12.5px;
+    color: var(--b-muted);
+  }
+  .fichier-block__jauge {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--b-bg);
+    overflow: hidden;
+  }
+  .fichier-block__jauge-fill {
+    height: 100%;
+    background: var(--b-accent);
+    transition: width 0.15s linear;
+  }
+  .fichier-block__actions .tituba-btn {
+    width: 100%;
+  }
+  .fichier-block__error {
+    font-size: 12px;
+    color: #b63a3a;
+  }
+
+  // audio-block : fichier d'un épisode de podcast. Même parti que
+  // .img-block juste au-dessus — le <label> et l'aide viennent de la
+  // boucle de champs, pas d'en-tête propre.
+  .audio-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    &__current {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    &__player {
+      width: 100%;
+      height: 34px;
+    }
+
+    // Nom de fichier tronqué et non replié : dans une colonne de 300px,
+    // un nom d'export un peu long occuperait trois lignes pour une
+    // information de contrôle qu'on ne lit qu'en diagonale.
+    &__name {
+      font-size: 12px;
+      color: var(--b-ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__meta {
+      font-size: 11px;
+      color: var(--b-muted);
+      font-family: var(--font-mono);
+    }
+
+    &__links {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
+    &__link,
+    &__remove {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--b-muted);
+      cursor: pointer;
+      text-decoration: underline;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+    }
+
+    &__link:hover:not(:disabled) {
+      color: var(--b-accent);
+    }
+
+    &__remove:hover:not(:disabled) {
+      color: #b63a3a;
+    }
+
+    &__pick {
+      width: 100%;
+    }
+
+    &__empty {
+      font-size: 12px;
+      color: var(--b-muted);
+      font-style: italic;
+    }
+
+    // Jauge d'envoi : un épisode pèse des dizaines de mégaoctets, et
+    // sans elle rien ne distingue un envoi en cours d'une admin figée.
+    &__progress {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    &__bar {
+      height: 3px;
+      border-radius: 2px;
+      background: var(--b-rule);
+      overflow: hidden;
+
+      span {
+        display: block;
+        height: 100%;
+        background: var(--b-accent);
+        transition: width 0.15s linear;
+      }
+    }
+
+    &__pct {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--b-muted);
+    }
+
+    &__error {
+      font-size: 12px;
+      color: var(--b-danger, #b3261e);
     }
   }
 
@@ -5544,8 +6675,11 @@ button.btn--style-primary,
   }
 
   @media (max-width: 1100px) {
+    // Colonnes empilées : la bande peinte à droite n'a plus de colonne
+    // à souligner, et le filet redevient une bordure haute.
     &__doc {
       grid-template-columns: 1fr;
+      background: none;
     }
     &__meta {
       border-left: 0;
@@ -5560,10 +6694,10 @@ button.btn--style-primary,
   // l'œil voit deux blocs décalés.
   @include mobile {
     &__center {
-      padding-inline: var(--carnet-pad-x);
+      padding-inline: var(--tituba-pad-x);
     }
     &__meta {
-      padding-inline: var(--carnet-pad-x);
+      padding-inline: var(--tituba-pad-x);
       position: static;
       top: auto;
       max-height: none;
@@ -5583,21 +6717,21 @@ button.btn--style-primary,
   }
 }
 
-// ─── Topbar normalisée (CarnetTopbar) ─────────────────────────────
-// Seule barre supérieure utilisée dans tout l'admin Carnet — list
+// ─── Topbar normalisée (TitubaTopbar) ─────────────────────────────
+// Seule barre supérieure utilisée dans tout l'admin Tituba — list
 // views, edit views, vue Édition Posts. Définie au top-level pour
 // que toutes les pages partagent EXACTEMENT le même style. Cf
-// services/payload/src/components/admin/CarnetTopbar.tsx.
-.carnet-topbar {
+// services/payload/src/components/admin/TitubaTopbar.tsx.
+.tituba-topbar {
   display: flex;
   align-items: center;
   gap: 16px;
-  // Padding horizontal piloté par --carnet-pad-x : crumbs alignés avec
+  // Padding horizontal piloté par --tituba-pad-x : crumbs alignés avec
   // le contenu en dessous à gauche, actions décollées du bord à droite.
   // La topbar est full-bleed naturellement parce que ses containers
-  // (.carnet-listview / .carnet-editview / .carnet-postedit) ne portent
+  // (.tituba-listview / .tituba-editview / .tituba-postedit) ne portent
   // PAS de padding horizontal. Pas de hack de margin-inline.
-  padding: 0 var(--carnet-pad-x);
+  padding: 0 var(--tituba-pad-x);
   height: 56px;
   border-bottom: 1px solid var(--b-rule);
   background: var(--b-bg);
@@ -5652,7 +6786,7 @@ button.btn--style-primary,
 
 // ─── Slash menu (au top-level car rendu via portal dans <body>) ──
 // Le slash menu de l'éditeur Lexical est portalé hors de la
-// hiérarchie .carnet-postedit pour échapper aux parents avec
+// hiérarchie .tituba-postedit pour échapper aux parents avec
 // overflow/transform qui le clipperaient. Donc CSS au top-level.
 .ed-slash {
   width: 320px;
@@ -5729,26 +6863,26 @@ button.btn--style-primary,
 
 // Cache le bouton de pliage de la nav (NavToggler de Payload). Notre
 // nav custom ne respecte pas l'état "collapsed" : cliquer le bouton
-// décalait le panneau central sous la nav. Le design Carnet n'a pas
+// décalait le panneau central sous la nav. Le design Tituba n'a pas
 // de mécanisme de pliage de toute façon.
 .nav-toggler,
 [class*='mobile-nav-toggler'] {
   display: none !important;
 }
 
-// Burger mobile — rendu dans CarnetTopbar, masqué ≥ 901px.
+// Burger mobile — rendu dans TitubaTopbar, masqué ≥ 901px.
 // Backdrop : masqué par défaut, visible quand la nav est ouverte.
-.carnet-nav-burger {
+.tituba-nav-burger {
   display: none;
 }
-.carnet-nav-backdrop {
+.tituba-nav-backdrop {
   display: none;
 }
 
 // Sur écrans étroits (≤ 900px) :
 //   - .template-default sort de sa grille pour que le contenu prenne
 //     toute la largeur (display: block).
-//   - .carnet-nav est masquée par défaut, et apparaît en overlay quand
+//   - .tituba-nav est masquée par défaut, et apparaît en overlay quand
 //     .is-open est posé (par le bouton burger).
 //   - Le burger s'affiche dans la topbar (à droite des actions), pas
 //     en overlay : pas de chevauchement avec les boutons d'action.
@@ -5763,11 +6897,11 @@ button.btn--style-primary,
 
   // Crumbs masqués sur mobile : bouffent trop de place dans la topbar.
   // Le burger + le titre H1 de chaque vue suffisent à se repérer.
-  .carnet-topbar__crumbs {
+  .tituba-topbar__crumbs {
     display: none !important;
   }
 
-  // Padding horizontal piloté entièrement par --carnet-pad-x : pas de
+  // Padding horizontal piloté entièrement par --tituba-pad-x : pas de
   // règle ad-hoc qui le strippe ici. Cohérent topbar / listview /
   // editview, modifiable d'un seul endroit (cf :root).
 
@@ -5776,16 +6910,16 @@ button.btn--style-primary,
   // `minmax(0, 1fr)` au lieu de `1fr` pour autoriser les cellules à
   // shrink en dessous de leur min-content (sinon les filtres avec
   // long label « Périmètre : » débordent du viewport).
-  .carnet-listview__toolbar {
+  .tituba-listview__toolbar {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 8px !important;
   }
-  .carnet-listview__search {
+  .tituba-listview__search {
     grid-column: 1 / -1;
     max-width: none;
   }
-  .carnet-listview__filter {
+  .tituba-listview__filter {
     width: 100%;
     max-width: none;
     box-sizing: border-box;
@@ -5793,11 +6927,11 @@ button.btn--style-primary,
   // Le label "Type :" ne doit pas wrap caractère par caractère quand
   // le select prend toute la largeur. flex-shrink: 0 + nowrap, et le
   // select prend le reste via flex: 1.
-  .carnet-listview__filter .lbl {
+  .tituba-listview__filter .lbl {
     flex-shrink: 0;
     white-space: nowrap;
   }
-  .carnet-listview__filter select {
+  .tituba-listview__filter select {
     flex: 1;
     min-width: 0;
   }
@@ -5811,21 +6945,21 @@ button.btn--style-primary,
   //
   // Sous 900px (vrai mobile) le bloc @include mobile en dessous force
   // le retour à 2 colonnes et cache aussi Type.
-  .carnet-listview--posts .carnet-listview__row {
+  .tituba-listview--publication .tituba-listview__row {
     grid-template-columns: 1fr 110px 65px !important;
     gap: 12px !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
   }
-  .carnet-listview--posts .carnet-listview__row > *:not(:first-child):not(:nth-last-child(5)):not(:nth-last-child(2)) {
+  .tituba-listview--publication .tituba-listview__row > *:not(:first-child):not(:nth-last-child(5)):not(:nth-last-child(2)) {
     display: none !important;
   }
 
   // Table Themes ≤ 1440 : on conserve les 3 colonnes par défaut
   // (Nom + Description + Billets) — la description tient encore en
   // tablette. Hide / réduction à 2 colonnes uniquement en vrai mobile
-  // (cf. @include mobile dans .carnet-listview).
-  .carnet-nav {
+  // (cf. @include mobile dans .tituba-listview).
+  .tituba-nav {
     display: flex !important;
     flex-direction: column;
     position: fixed;
@@ -5839,18 +6973,18 @@ button.btn--style-primary,
     z-index: 200;
     overflow-y: auto;
   }
-  .carnet-nav.is-open {
+  .tituba-nav.is-open {
     transform: translateX(0);
     box-shadow: 4px 0 16px rgba(0, 0, 0, 0.15);
   }
 
-  // Aligné pixel-près sur .carnet-btn (padding 5px 14px, font 12.5px,
+  // Aligné pixel-près sur .tituba-btn (padding 5px 14px, font 12.5px,
   // border 1px) pour être à la même hauteur. Padding horizontal réduit
   // à 9px pour un aspect carré-ish ; le span aria-hidden est sizé en
   // font-size de l'élément (12.5px) — c'est petit mais cohérent.
   // Marge à droite (pas à gauche) puisque le burger est désormais en
   // début de topbar.
-  .carnet-nav-burger {
+  .tituba-nav-burger {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -5874,19 +7008,19 @@ button.btn--style-primary,
       line-height: 1;
     }
   }
-  .carnet-nav-burger:hover {
+  .tituba-nav-burger:hover {
     border-color: var(--b-ink);
   }
 
   // Variante standalone — utilisée par Dashboard qui n'a pas de
-  // CarnetTopbar. Le burger est placé inline avec le kicker
-  // « Carnet · admin » (cf .carnet-dashboard__kicker-row) : pas de
+  // TitubaTopbar. Le burger est placé inline avec le kicker
+  // « Tituba · admin » (cf .tituba-dashboard__kicker-row) : pas de
   // margin-right ni margin-bottom, le gap du flex parent gère l'espace.
-  .carnet-nav-burger--standalone {
+  .tituba-nav-burger--standalone {
     margin-right: 0;
   }
 
-  .carnet-nav-backdrop {
+  .tituba-nav-backdrop {
     display: block;
     position: fixed;
     inset: 0;
@@ -5899,11 +7033,11 @@ button.btn--style-primary,
 // (Titre + Statut). On cache aussi la colonne Type qui était visible
 // dans la zone 901-1440. Cf. règles ≤1440 plus haut.
 @include mobile {
-  .carnet-listview--posts .carnet-listview__row {
+  .tituba-listview--publication .tituba-listview__row {
     grid-template-columns: 1fr 65px !important;
   }
-  .carnet-listview--posts .carnet-listview__row > .type,
-  .carnet-listview--posts .carnet-listview__row--head > *:nth-last-child(5) {
+  .tituba-listview--publication .tituba-listview__row > .type,
+  .tituba-listview--publication .tituba-listview__row--head > *:nth-last-child(5) {
     display: none !important;
   }
 }
@@ -5914,13 +7048,13 @@ button.btn--style-primary,
 // Pas de marqueur visuel sur les refs Zotero dans la liste biblio :
 // avec un import majoritaire depuis Zotero, un badge ligne par ligne
 // devenait du bruit. Le filtre « Provenance » dans la toolbar et la
-// banner à l'intérieur de l'édition (`.carnet-zotero-banner`) suffisent
+// banner à l'intérieur de l'édition (`.tituba-zotero-banner`) suffisent
 // à signaler / filtrer / expliquer la lecture seule.
 
 // Banner d'avertissement affiché en haut de l'édition d'une ref Zotero,
 // pour expliquer pourquoi tout est verrouillé.
-.carnet-zotero-banner {
-  // Rendue dans .carnet-editview qui gère le padding horizontal.
+.tituba-zotero-banner {
+  // Rendue dans .tituba-editview qui gère le padding horizontal.
   margin: 16px 0 24px;
   padding: 14px 16px;
   background: var(--b-accent-tint);
@@ -5930,14 +7064,81 @@ button.btn--style-primary,
   color: var(--b-ink);
 }
 
+// Portrait de « Mon compte ». Le sélecteur d'image occupe sinon toute
+// la largeur du champ (640px), ce qui donne un aperçu de la taille
+// d'une affiche pour une vignette qui sera affichée en 120px sur le
+// site. On le ramène ici à cette taille-là, et au rond : ce qu'on voit
+// en réglant doit être ce qu'on obtient une fois publié.
+.tituba-account__portrait {
+  .img-block__cadre {
+    width: 132px;
+    border-radius: 50%;
+  }
+  // Les deux boutons suivent l'aperçu plutôt que de s'étaler sur la
+  // largeur du champ.
+  .img-block__empty {
+    max-width: 132px;
+    text-align: center;
+  }
+
+  /**
+   * Une fois le portrait déposé, les commandes passent à sa droite
+   * plutôt qu'en dessous : la vignette ne fait que 132px, et empiler
+   * trois boutons sous elle laissait une colonne de vide à côté pour
+   * une pile deux fois plus haute que l'image.
+   *
+   * Le composant les rend à deux endroits — « Ajuster »/« Retirer »
+   * dans `__meta`, « Uploader » dans `__actions`, qui n'est même pas
+   * dans le même parent. Deux `display: contents` remontent tout ce
+   * monde au niveau de la grille, sans toucher au balisage : le
+   * sélecteur d'image sert aussi les billets, où la disposition
+   * actuelle convient.
+   *
+   * `:has()` restreint la bascule au cas où une image est en place —
+   * sans lui, l'état vide hériterait d'une colonne de 132px qui ne
+   * contiendrait rien.
+   */
+  .img-block__body:has(.img-block__current) {
+    display: grid;
+    grid-template-columns: 132px 1fr;
+    gap: 8px 20px;
+    align-content: start;
+
+    .img-block__current,
+    .img-block__meta {
+      display: contents;
+    }
+    .img-block__cadre {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+    .img-block__links {
+      grid-column: 2;
+      grid-row: 1;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .img-block__actions {
+      grid-column: 2;
+      grid-row: 2;
+      align-self: start;
+    }
+    .img-block__error {
+      grid-column: 1 / -1;
+      grid-row: 3;
+    }
+  }
+}
+
 // Sécurité du compte (2FA + appareils de confiance) — embed dans
 // AccountView et UserEditView, sans accordéon. Deux groupes empilés
 // avec un titre lbl-style et un corps en texte serif.
-.carnet-account-security {
+.tituba-account-security {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  // Aligne le bord droit sur les autres .carnet-editview__field qui
+  // Aligne le bord droit sur les autres .tituba-editview__field qui
   // ont déjà un cap à 640px — sinon les paragraphes 2FA et la liste
   // d'appareils s'étendent plus loin que le bloc Verrouillage juste
   // au-dessus.
@@ -6020,7 +7221,7 @@ button.btn--style-primary,
 // Section Zotero de la page Compte. Reprend le style des autres sections
 // editview (gap, typo) avec quelques spécificités : barre de statut
 // (✓/✕), groupe d'actions horizontal, ligne de feedback (info/error).
-.carnet-zotero {
+.tituba-zotero {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -6174,12 +7375,315 @@ button.btn--style-primary,
   }
 }
 
-// Lien neutre dans une hint (carnet-zotero ou carnet-editview__field).
-.carnet-link {
+// Lien neutre dans une hint (tituba-zotero ou tituba-editview__field).
+.tituba-link {
   color: var(--b-accent);
   text-decoration: underline;
 
   &:hover {
     text-decoration: none;
   }
+}
+
+
+// ─── Sélecteur d image partagé (UnsplashImagePicker) ────────────
+// Au niveau racine et non dans .tituba-postedit : le composant sert
+// aussi bien à la couverture d un billet qu à l image d une série,
+// et deux vues différentes le rendent. Imbriqué dans l une des deux,
+// il arrivait sans le moindre style dans l autre — aperçu nu et
+// boutons bruts, alors que le composant, lui, était le bon.
+// Pas de châssis de panneau (bordure, en-tête) : le libellé et l'aide
+// sont fournis par la vue qui l'accueille, comme pour ses champs
+// voisins.
+.img-block {
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  // Colonne de 300px : l'aperçu passe au-dessus des informations, pas
+  // à côté — côte à côte, il ne resterait qu'une trentaine de pixels
+  // pour le nom du fichier.
+  &__current {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /**
+   * Fenêtre de l'aperçu — même mécanique que le hero du site (cf
+   * PublicationArticle, .hero-frame). Sa proportion est celle de
+   * l'emplacement, posée en style en ligne par le composant : carré pour
+   * la couverture d'un billet, bande large pour l'image d'une série.
+   *
+   * Sans cadrage enregistré, l'image remplit la fenêtre et c'est
+   * `object-fit` qui décide — un centrage, faute de mieux. Avec cadrage,
+   * elle est agrandie et décalée pour que la zone retenue tombe
+   * exactement dans la fenêtre : montrer une zone large de `w` % revient
+   * à afficher l'image à `100 / w × 100` % de la taille du cadre. C'est
+   * le composant qui calcule ces pourcentages, comme le fait le site.
+   */
+  &__cadre {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    border-radius: 3px;
+    background: var(--b-bg);
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+  &__cadre--cadree img {
+    position: absolute;
+    width: auto;
+    height: auto;
+    max-width: none;
+    object-fit: fill;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  // Rangée « Ajuster le cadrage · Retirer » sous l’aperçu.
+  &__links {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  &__link,
+  &__remove {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--b-muted);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  &__link:hover {
+    color: var(--b-accent);
+  }
+
+  &__remove:hover {
+    color: #b63a3a;
+  }
+
+  // Boutons empilés : « Rechercher sur Unsplash » ne tient pas à côté
+  // de « Uploader un fichier » dans une colonne de 300px.
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .tituba-btn {
+      width: 100%;
+    }
+  }
+
+  &__empty {
+    font-size: 12px;
+    color: var(--b-muted);
+    font-style: italic;
+  }
+
+  &__error {
+    font-size: 12px;
+    color: var(--b-danger, #b3261e);
+  }
+}
+
+
+// ─── Sélecteur multiple partagé ─────────────────────────────────
+// Au niveau racine, comme .img-block : la fiche d un billet et celle
+// d une série s en servent toutes deux pour choisir des thématiques.
+// Imbriqué dans l une, il arrivait sans style dans l autre.
+// sont aussi repris en chips sous le multi-select pour retrait
+// rapide.
+.multi-select {
+  position: relative;
+
+  & > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 28px 7px 10px;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--b-ink);
+    cursor: pointer;
+    list-style: none;
+    position: relative;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::after {
+      content: '▾';
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--b-muted);
+      font-size: 11px;
+    }
+  }
+
+  &[open] > summary {
+    border-color: var(--b-accent);
+  }
+
+  &__list {
+    // Overlay : on flotte au-dessus du contenu suivant plutôt que
+    // de le pousser quand on ouvre le multi-select. Le parent
+    // .multi-select a `position: relative` (pour ancrer ce
+    // overlay).
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 2px;
+    z-index: 20;
+    max-height: 220px;
+    overflow: auto;
+    background: var(--b-paper);
+    border: 1px solid var(--b-rule);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  &__opt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--b-rule);
+    font-size: 12px;
+    color: var(--b-ink);
+    cursor: pointer;
+    transition: background 0.12s;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    &:hover {
+      background: var(--b-accent-tint);
+    }
+
+    input {
+      margin: 0;
+      width: auto;
+      flex: 0 0 auto;
+    }
+  }
+
+  &__empty {
+    padding: 10px;
+    color: var(--b-muted);
+    font-size: 11.5px;
+    font-style: italic;
+  }
+}
+
+// ─── Liste de liens libellés (champs de type ) ───────────
+// Deux champs par ligne plutôt qu'un seul : une source sans intitulé
+// est une adresse qu'on ne sait pas lire, et un intitulé sans adresse
+// un lien mort. Les deux se saisissent donc ensemble, côte à côte.
+.liens-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__ligne {
+    display: grid;
+    // L'intitulé est court, l'adresse longue : elle prend ce qui reste.
+    grid-template-columns: 1fr 1.6fr 28px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  &__del {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--b-rule);
+    border-radius: 4px;
+    color: var(--b-muted);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s;
+
+    &:hover {
+      color: var(--theme-error-500, #b3261e);
+      border-color: var(--theme-error-500, #b3261e);
+    }
+  }
+
+  &__add {
+    align-self: flex-start;
+  }
+}
+
+// Pastille d etat dans le titre d une vue d edition — l h1 est en
+// serif de grande taille, la pastille garde son propre corps et se
+// cale sur la ligne de base plutot que de suivre l echelle du titre.
+.tituba-editview__hero .tituba-h1 .status-pill {
+  margin-left: 14px;
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
+}
+
+// Texte réservé aux lecteurs d ecran. Une asterisque seule ne se
+// prononce pas ; le mot qui la double se lit et ne s affiche pas.
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Champ en erreur dans une ligne d auteur ice. Pas de libelle a
+// colorer ici — les colonnes sont titrees une fois en tete du
+// tableau —, donc le filet porte seul le signal.
+.tituba-editview__authors-row .lastname.invalide {
+  border-color: #b63a3a;
+}
+.tituba-editview__authors-row .lastname.invalide:focus {
+  border-color: #b63a3a;
+}
+
+
+
+// Total tous auteur ices confondu es, accole au chiffre de la
+// personne. Corps reduit et couleur en retrait : c est le
+// denominateur du rapport, pas une seconde valeur a lire.
+.tituba-dashboard__stat .n .tot {
+  font-size: 0.5em;
+  color: var(--b-muted);
+  font-weight: 400;
+  letter-spacing: 0;
 }

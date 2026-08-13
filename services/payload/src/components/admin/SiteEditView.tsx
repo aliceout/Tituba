@@ -8,7 +8,10 @@
 import React from 'react';
 
 import SiteEditViewClient from './SiteEditView.client';
+import AccesReserve, { estAdministratrice } from './AccesReserve';
 
-export default function SiteEditView(): React.ReactElement {
+export default async function SiteEditView(): Promise<React.ReactElement> {
+  if (!(await estAdministratrice())) return <AccesReserve titre="Options" />;
+
   return <SiteEditViewClient />;
 }

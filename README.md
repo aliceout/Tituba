@@ -1,7 +1,9 @@
-# Carnet
+# Tituba
 
-Carnet de recherche personnel auto-hébergé, équivalent self-hosted d'un carnet
-Hypothèses. Astro SSR + Payload, dockerisé, sans pisteur.
+Site de l'association TITUBA, collectif féministe intersectionnel qui publie
+des contenus sur le genre (podcasts, articles de recherche, outils, billets
+d'actu et d'analyse). Auto-hébergé, Astro SSR + Payload, dockerisé, sans
+pisteur.
 
 ## Stack
 
@@ -16,9 +18,9 @@ Prérequis : Node 22+, pnpm 10+, Docker.
 
 ```bash
 # Secrets (Dev Setup VS Code ou infisical CLI)
-# Arbo Infisical Cloud : /services/carnet/{payload,postgres,smtp,web}.
-# La racine /services/carnet contient les clés communes (ADDRESS, etc.).
-infisical export --env=dev --path=/services/carnet --format=dotenv > .env
+# Arbo Infisical Cloud : /services/tituba/{payload,postgres,smtp,web}.
+# La racine /services/tituba contient les clés communes (ADDRESS, etc.).
+infisical export --env=dev --path=/services/tituba --format=dotenv > .env
 
 # Deps
 pnpm install
@@ -32,7 +34,16 @@ pnpm dev:api    # Payload → http://localhost:3001/cms/admin
 pnpm dev:web    # Astro   → http://localhost:4321
 ```
 
-Mailpit (capture des mails d'auth en local) : <http://localhost:8025>.
+Mailpit (capture des mails d'auth en local) : <http://localhost:8026>.
+
+> **Ports décalés.** Postgres écoute sur **5433** et Mailpit sur
+> **1026/8026**, pas sur les ports par défaut. Raison : le projet Carnet
+> (dont ce repo est issu) occupe 5432/1025/8025 en local, et les deux
+> bases portent le même user et le même nom. Sans ce décalage, le
+> container Tituba échoue silencieusement à binder son port et Payload
+> se connecte à la base de Carnet — sans la moindre erreur. Garder
+> `POSTGRES_PORT=5433` et `SMTP_PORT=1026` alignés dans le `.env`
+> (et dans Infisical `dev`, sinon le prochain fetch les écrase).
 
 À chaque modif de schéma Payload :
 
@@ -41,7 +52,35 @@ pnpm --dir services/payload generate:types
 pnpm --dir services/payload generate:importmap
 ```
 
-Seed de démo (idempotent, refuse en prod) : `pnpm --dir services/payload seed:dev`
+## Partir d'une base vide
+
+Trois commandes, dans cet ordre. C'est aussi ce que fait une première
+mise en ligne.
+
+```bash
+# 1. Le schéma — 47 tables, une seule migration.
+pnpm --dir services/payload migrate
+
+# 2. La configuration : réglages, pages, thématiques, navigation, et le
+#    compte administrateur. Les deux variables sont lues dans
+#    l'environnement et ne sont écrites nulle part ; sans elles, le seed
+#    s'arrête plutôt que d'inventer un mot de passe.
+SEED_ROOT_EMAIL=vous@example.org SEED_ROOT_PASSWORD='…' \
+  pnpm --dir services/payload seed:config
+
+# 3. Le jeu de démonstration — faux comptes, faux billets, fausses
+#    images. Refuse de tourner si NODE_ENV vaut « production ».
+pnpm --dir services/payload seed:test
+```
+
+Les deux seeds se relancent sans dommage : ce qui existe est laissé tel
+quel. `seed:config --forcer` réécrit réglages et pages depuis le fichier
+de données ; `seed:test:reset` efface le jeu de démonstration avant de le
+reposer.
+
+Les fichiers du jeu de démonstration ne sont pas dans le dépôt — ils sont
+fabriqués à l'exécution : images unies par sharp, son de synthèse et PDF
+écrits octet par octet. 308 ko au total, contre 38 Mo pour les vrais.
 
 ## Tests & CI
 
@@ -76,7 +115,7 @@ Push sur `main` → GitHub Actions build les images → push GHCR → webhook VP
 nouvelles images, `docker compose up -d`.
 
 Sample nginx (TLS terminé en amont, ports pilotés par Infisical
-`prod /services/carnet/web`) :
+`prod /services/tituba/web`) :
 
 ```nginx
 server {
@@ -91,24 +130,24 @@ server {
 ```
 
 Setup initial du VPS (1×) : cloner le repo, écrire les creds Infisical
-Universal Auth dans `~/.config/infisical/carnet.env`, lancer
+Universal Auth dans `~/.config/infisical/tituba.env`, lancer
 `./scripts/deploy.sh`. Cf. [`compose.yml`](compose.yml) pour les ports
 internes / volumes.
 
 ### Forker sans Infisical
 
 Notre setup utilise Infisical Cloud (même instance côté CI et côté VPS,
-arbo `/services/carnet/<sub>`) pour les secrets, mais c'est optionnel.
-Si tu fork le Carnet, deux modes sont détectés à l'exécution :
+arbo `/services/tituba/<sub>`) pour les secrets, mais c'est optionnel.
+Si tu fork Tituba, deux modes sont détectés à l'exécution :
 
 **Côté CI** ([`build.yml`](.github/workflows/build.yml)) — si le GH
 secret `INFISICAL_API_URL` est posé, le workflow fetch tout depuis
 Infisical. Sinon, il lit un GH secret `ADDRESS` directement (ex.
-`carnet.toi.org`). C'est tout ce qu'il faut côté CI : un seul secret
+`tituba.exemple.org`). C'est tout ce qu'il faut côté CI : un seul secret
 GitHub.
 
 **Côté VPS** ([`scripts/deploy.sh`](scripts/deploy.sh)) — si la CLI
-`infisical` est installée ET que `~/.config/infisical/carnet.env`
+`infisical` est installée ET que `~/.config/infisical/tituba.env`
 existe, le script régénère le `.env` à chaque deploy. Sinon, il
 suppose qu'un `.env` complet est déjà présent à la racine du repo
 sur le VPS et le respecte tel quel. À toi de le poser à la main (ou
@@ -134,7 +173,7 @@ compose.dev.yml            Compose dev (postgres + mailpit)
 
 ## Backup
 
-Données persistantes en bind mount sous `$DATA_DIR` (= `$HOME/data/carnet/`
+Données persistantes en bind mount sous `$DATA_DIR` (= `$HOME/data/tituba/`
 par défaut) :
 
 - `$DATA_DIR/postgres/` — DB Payload
@@ -155,14 +194,14 @@ docker compose up -d
 
 Trade-off conscient : data peu critique (contenu éditorial), schéma sous
 code review (toute évolution passe par PR), single-user. Voir
-[issue #18](https://github.com/aliceout/carnet/issues/18) pour le débat
+[issue #18](https://github.com/aliceout/Tituba/issues/18) pour le débat
 v2 sur les migrations formelles.
 
 ## Charte
 
 Tokens dans [`src/styles/global.css`](src/styles/global.css). Couleur
 d'accent et fond éditables depuis `/cms/admin/globals/site` (section
-*Branding*) — palette de 5 teintes accent + 6 teintes fond.
+_Branding_) — palette de 5 teintes accent + 6 teintes fond.
 
 Polices self-hostées via `@fontsource` : Source Serif 4 (corps), Inter
 (UI), JetBrains Mono (technique).

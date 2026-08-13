@@ -22,13 +22,26 @@
  */
 import type { APIRoute } from 'astro';
 
-import { postPayload } from '../../lib/payload';
+import { entetesProxy, postPayload } from '../../lib/payload';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   let email = '';
+  let site = '';
+  let rythmes: unknown = undefined;
   try {
-    const data = (await request.json()) as { email?: unknown };
+    const data = (await request.json()) as {
+      email?: unknown;
+      site?: unknown;
+      rythmes?: unknown;
+    };
     email = String(data?.email ?? '').trim();
+    // Pot de miel — recopié tel quel. Le filtrer ici, ou l'oublier,
+    // reviendrait à le désarmer : c'est Payload qui décide.
+    site = String(data?.site ?? '').trim();
+    // Recopié brut lui aussi : c'est l'endpoint qui connaît les valeurs
+    // admises, et deux listes de rythmes à tenir à jour finiraient par
+    // diverger.
+    rythmes = data?.rythmes;
   } catch {
     /* body non-JSON → email reste vide, Payload renverra invalid_email */
   }
@@ -36,7 +49,12 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const { status, body } = await postPayload<unknown>(
       '/subscribers/subscribe',
-      { email },
+      { email, site, rythmes },
+      // Sans cet en-tête, Payload voyait toutes les inscriptions
+      // arriver de la même origine inconnue : son plafond « 5 par
+      // quart d'heure et par IP » était en réalité un plafond global
+      // au site entier, donc une surface de déni de service.
+      entetesProxy(request, clientAddress),
     );
     return new Response(JSON.stringify(body), {
       status,
@@ -44,9 +62,9 @@ export const POST: APIRoute = async ({ request }) => {
     });
   } catch (err) {
     console.warn('[api/subscribe] proxy failed:', (err as Error).message);
-    return new Response(
-      JSON.stringify({ ok: false, code: 'proxy_error' }),
-      { status: 502, headers: { 'Content-Type': 'application/json' } },
-    );
+    return new Response(JSON.stringify({ ok: false, code: 'proxy_error' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 };

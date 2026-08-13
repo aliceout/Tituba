@@ -1,0 +1,164 @@
+---
+/**
+ * Vue d'ensemble des formats — /formats/
+ *
+ * Pendant de /themes/ : une page d'index par taxonomie. Les thématiques
+ * disent de quoi on parle, les formats comment on en parle.
+ *
+ * Cette page existait en creux depuis longtemps — le header propose un
+ * menu « Formats », mais un menu déroulant n'est pas une destination :
+ * il n'est pas partageable, il n'apparaît pas dans un plan de site, et
+ * sans JavaScript il ne s'ouvre pas. D'où une route réelle.
+ *
+ * Rien n'y est saisi : libellés, descriptions et racines d'URL viennent
+ * de la table PUBLICATIONS, les compteurs d'une requête SQL unique.
+ */
+import PageShell from '../../components/ui/PageShell.astro';
+import FormatIcon from '../../components/FormatIcon.astro';
+import { fetchFeed, PUBLICATIONS, PUBLICATION_ORDER } from '../../lib/publications';
+import { fetchIndexPages } from '../../lib/payload';
+import { formatHeroLede, formatHeroTitle } from '../../lib/site';
+
+type PagesFixes = { formats?: { heroTitle?: string; heroLede?: string } };
+
+// Titre et chapô écrits en dur jusqu'ici — cette page était la seule
+// des cinq à ne pas être réglable depuis l'admin. Les valeurs
+// ci-dessous restent le repli si Payload ne répond pas, comme partout
+// ailleurs : une page d'index doit s'afficher même privée du CMS.
+const TITRE_DEFAUT = 'Cinq *formats*, une même exigence.';
+const LEDE_DEFAUT =
+  "Un texte long avec son appareil de notes n'appelle pas la même lecture qu'un rebond d'actualité ou qu'un kit d'animation. Chaque format a sa place, ses codes et sa page.";
+
+let pagesFixes: PagesFixes = {};
+try {
+  pagesFixes = await fetchIndexPages<PagesFixes>();
+} catch (err) {
+  console.warn('[formats] fetchIndexPages failed:', (err as Error).message);
+}
+const heroTitre = pagesFixes.formats?.heroTitle?.trim() || TITRE_DEFAUT;
+const heroLede = pagesFixes.formats?.heroLede?.trim() || LEDE_DEFAUT;
+
+/** Familles de couleur, distribuées dans l'ordre éditorial. */
+const FAMILLES = ['bleu', 'vert', 'jaune'] as const;
+
+/**
+ * La famille de chaque carte, posée en variable plutôt que par un
+ * attribut : c’est la forme qu’emploie déjà <Panel>, et elle sert ici
+ * deux fois — la racine d’URL et le titre au survol.
+ */
+const FAMILLE_FAM: Record<string, string> = {
+  bleu: '[--fam:var(--c-bleu-deep)]',
+  vert: '[--fam:var(--c-vert-deep)]',
+  jaune: '[--fam:var(--c-jaune-deep)]',
+};
+
+// Compteur par format. L'endpoint de comptage existant groupe par
+// thématique ou par tag, pas par collection : on prend donc le flux et
+// on compte, en une seule requête. La limite de 100 est celle de
+// l'endpoint ; au-delà les compteurs sous-estimeraient, d'où le suffixe
+// « + » quand on la touche.
+let counts: Record<string, number> = {};
+let total = 0;
+let plafonne = false;
+try {
+  const feed = await fetchFeed({ limit: 100 });
+  total = feed.totalDocs;
+  plafonne = feed.docs.length < feed.totalDocs;
+  for (const c of PUBLICATION_ORDER) counts[c] = 0;
+  for (const d of feed.docs) counts[d.collection] = (counts[d.collection] ?? 0) + 1;
+} catch (err) {
+  console.warn('[formats] fetch failed:', (err as Error).message);
+}
+
+/** « 6 textes », « 1 épisode », « aucune ressource »… */
+function compteur(c: (typeof PUBLICATION_ORDER)[number], n: number): string {
+  const mot = c === 'podcasts' ? 'épisode' : c === 'outils' ? 'ressource' : 'texte';
+  if (n === 0) return `Aucun${c === 'outils' ? 'e' : ''} ${mot} pour l'instant`;
+  return `${n}${plafonne ? '+' : ''} ${mot}${n > 1 ? 's' : ''}`;
+}
+---
+
+<PageShell
+  documentTitle="Formats"
+  description="Les cinq formats de publication de Tituba : articles de recherche, analyses, actus, podcasts et outils."
+  title={formatHeroTitle(heroTitre)}
+  lede={formatHeroLede(heroLede)}
+>
+  {
+    /* Gouttière et rythme vertical viennent de PageShell : cette page ne
+      déclare plus que sa grille propre.
+
+      Deux colonnes, comme /themes/ : même registre de taxonomie, même
+      grille. Cinq entrées donnent une colonne impaire d’une carte de plus
+      que la paire — la dernière reste seule à gauche, cellule vide à sa
+      droite, ce que /themes/ ferait aussi avec un nombre impair. */
+  }
+  <div class="max-mobile:grid-cols-1 grid grid-cols-2 gap-0">
+    {
+      PUBLICATION_ORDER.map((c, i) => {
+        const spec = PUBLICATIONS[c];
+        const n = counts[c] ?? 0;
+        // Colonne de gauche ou de droite : c’était deux règles
+        // :nth-child(odd/even). Le filet vertical n’existe que tant qu’il
+        // y a deux colonnes.
+        const gauche = i % 2 === 0;
+        // Les deux dernières cartes ferment la grille en bas ; en colonne
+        // unique, seule la toute dernière la ferme.
+        const avantDerniere = i >= PUBLICATION_ORDER.length - 2;
+        const derniere = i === PUBLICATION_ORDER.length - 1;
+        return (
+          <a
+            class:list={[
+              'group border-rule grid grid-cols-[1fr_140px] items-baseline gap-6 border-t py-6 text-inherit transition-colors duration-[120ms]',
+              'max-mobile:grid-cols-[1fr] max-mobile:gap-2.5',
+              gauche
+                ? 'border-rule max-mobile:border-r-0 max-mobile:pr-0 border-r pr-6'
+                : 'max-mobile:pl-0 pl-6',
+              avantDerniere && 'border-b',
+              // Un seul utilitaire par palier, jamais deux qui se
+              // contredisent : `border-b` et `border-b-0` sous la même
+              // variante se départageraient sur l'ordre de la feuille
+              // générée, pas sur celui où on les écrit.
+              derniere ? 'max-mobile:border-b' : 'max-mobile:border-b-0',
+              FAMILLE_FAM[FAMILLES[i % FAMILLES.length]],
+            ]}
+            href={`${spec.routePrefix}/`}
+          >
+            <div>
+              {/* La famille ne colore que la racine d’URL et le titre au
+                survol. Le texte courant reste d’une seule encre — la
+                couleur signale le format, elle n’a pas à teinter ce qu’on
+                lit. */}
+              <div class="mono text-label mb-2 flex items-center font-mono tracking-[0.04em] text-(--fam)">
+                <FormatIcon collection={c} />
+                {spec.routePrefix}
+              </div>
+              <div class="font-heading m-0 mb-2 font-serif text-[calc(24px*var(--a11y-echelle))] leading-[1.2] tracking-[-0.02em] transition-colors duration-[120ms] group-hover:text-(--fam)">
+                {spec.labelPlural}
+              </div>
+              <p class="text-muted m-0 font-serif text-[calc(15px*var(--a11y-echelle))] leading-[1.55]">
+                {spec.description}
+              </p>
+            </div>
+            <div class="text-muted text-meta max-mobile:text-left text-right font-mono">
+              {compteur(c, n)}
+            </div>
+          </a>
+        );
+      })
+    }
+  </div>
+
+  <p class="text-muted text-meta mt-7 mb-0 font-mono">
+    {total} publication{total > 1 ? 's' : ''} en ligne, tous formats confondus.
+    {
+      /* Un filet sous le lien, et pas seulement la couleur : posé au milieu
+        d'une phrase, il ne se distinguait que par sa teinte — ce qui ne
+        dit rien à qui ne perçoit pas cette différence-là. */
+    }
+    <a
+      class="ml-2 border-b border-[var(--c-bleu-deep)] text-[var(--c-bleu-deep)]"
+      href="/archives/">Voir les archives →</a
+    >
+  </p>
+</PageShell>

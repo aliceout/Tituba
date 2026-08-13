@@ -3,15 +3,15 @@ import type { CollectionConfig } from 'payload';
 import { authenticated } from '../access/authenticated';
 
 /**
- * Taxonomie « Thèmes » du Carnet — appellation publique des sujets
+ * Taxonomie « Thèmes » du Tituba — appellation publique des sujets
  * de recherche. Multivaluée : un Post peut être rattaché à plusieurs
  * thèmes (ex. « queer-theory » + « postcolonial »).
  *
  * Slug = pivot URL (`/theme/{slug}/`). Description optionnelle, affichée
  * en hero de la page d'un thème individuel.
  *
- * Ref design : design_handoff_carnet/Carnet B.html → PolePage.
- *  Le mot « Pôle » du proto est remplacé par « Thème » côté Carnet (cf
+ * Ref design : design_handoff_carnet/Tituba B.html → PolePage.
+ *  Le mot « Pôle » du proto est remplacé par « Thème » côté Tituba (cf
  *  README), parce que la taxonomie est multivaluée et libre, pas une
  *  catégorie unique.
  */

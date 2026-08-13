@@ -3,8 +3,8 @@
 // ThemeEditView (client) — vue Édition custom d'un thème de la
 // taxonomie. Layout :
 //
-//   CarnetTopbar : crumbs Carnet / Thèmes / [slug] + Supprimer + Sauvegarder
-//   .carnet-editview__hero : h1 « Thème » + « clé : <slug> » mono
+//   CarnetTopbar : crumbs Tituba / Thèmes / [slug] + Supprimer + Sauvegarder
+//   .tituba-editview__hero : h1 « Thème » + « clé : <slug> » mono
 //   Champs : Nom, Slug, Description éditoriale (textarea)
 //   used-in : billets qui ont ce thème dans Post.themes
 //
@@ -52,6 +52,8 @@ export default function ThemeEditViewClient({
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Erreurs par champ, posées avant l'envoi (cf save). */
+  const [champsEnErreur, setChampsEnErreur] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [usedIn, setUsedIn] = useState<UsedInPost[]>([]);
 
@@ -99,6 +101,18 @@ export default function ThemeEditViewClient({
   }
 
   async function save() {
+    // Validation cliente avant l'envoi : sans elle, un champ oublié
+    // remonte en 400 dont le corps JSON s'affiche tel quel en tête de
+    // page — illisible, et muet sur ce qu'il faut corriger.
+    const manquants: Record<string, string> = {};
+    if (!data.name.trim()) manquants.name = 'Le nom est obligatoire.';
+    if (!data.slug.trim()) manquants.slug = 'Le slug est obligatoire — il forme l’adresse de la page.';
+    if (Object.keys(manquants).length > 0) {
+      setChampsEnErreur(manquants);
+      setError(null);
+      return;
+    }
+    setChampsEnErreur({});
     setSaving(true);
     setError(null);
     try {
@@ -174,7 +188,7 @@ export default function ThemeEditViewClient({
       variant="editview"
       modifier="theme"
       crumbs={[
-        { href: '/cms/admin', label: 'Carnet' },
+        { href: '/cms/admin', label: 'Tituba' },
         { href: '/cms/admin/collections/themes', label: 'Thèmes' },
         { label: data.slug || (docId ? '—' : 'nouveau') },
       ]}
@@ -182,19 +196,19 @@ export default function ThemeEditViewClient({
       topbarActions={
         <>
           {dirty && (
-            <span className="carnet-editview__dirty" aria-live="polite">
+            <span className="tituba-editview__dirty" aria-live="polite">
               Modifications non enregistrées
             </span>
           )}
           {!dirty && savedAt && (
-            <span className="carnet-editview__saved" aria-live="polite">
+            <span className="tituba-editview__saved" aria-live="polite">
               Enregistré
             </span>
           )}
           {data.id != null && (
             <button
               type="button"
-              className="carnet-btn carnet-btn--ghost"
+              className="tituba-btn tituba-btn--ghost"
               onClick={() => {
                 setDeleteOpen(true);
                 setDeleteError(null);
@@ -207,7 +221,7 @@ export default function ThemeEditViewClient({
           )}
           <button
             type="button"
-            className="carnet-btn carnet-btn--accent"
+            className="tituba-btn tituba-btn--accent"
             onClick={() => void save()}
             disabled={!dirty || saving || loading}
             title="Sauvegarder (⌘S)"
@@ -218,57 +232,84 @@ export default function ThemeEditViewClient({
         </>
       }
     >
-      {error && <div className="carnet-editview__error">Erreur : {error}</div>}
+      {Object.keys(champsEnErreur).length > 0 && (
+        <div className="tituba-editview__error" role="alert">
+          {Object.keys(champsEnErreur).length === 1
+            ? 'Un champ obligatoire n’est pas rempli — il est signalé ci-dessous.'
+            : `${Object.keys(champsEnErreur).length} champs obligatoires ne sont pas remplis — ils sont signalés ci-dessous.`}
+        </div>
+      )}
+      {error && <div className="tituba-editview__error">Erreur : {error}</div>}
 
       {loading ? (
-        <div className="carnet-editview__loading">Chargement…</div>
+        <div className="tituba-editview__loading">Chargement…</div>
       ) : (
         <form
-          className="carnet-editview__form"
+          className="tituba-editview__form"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
           }}
         >
-          <div className="carnet-editview__hero">
-            <h1 className="carnet-h1">Thème</h1>
+          <div className="tituba-editview__hero">
+            <h1 className="tituba-h1">Thème</h1>
             {data.slug && (
-              <p className="carnet-editview__hero-key">
+              <p className="tituba-editview__hero-key">
                 clé : <span className="mono">{data.slug}</span>
               </p>
             )}
           </div>
 
-          <section className="carnet-editview__section">
-            <label className="carnet-editview__field">
-              <span className="lbl">Nom</span>
+          <section className="tituba-editview__section">
+            <label
+              className={`tituba-editview__field${champsEnErreur.name ? ' tituba-editview__field--invalid' : ''}`}
+            >
+              <span className="lbl">
+                Nom <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.name}
-                onChange={(e) => patch('name', e.target.value)}
+                aria-invalid={champsEnErreur.name ? true : undefined}
+                onChange={(e) => {
+                  patch('name', e.target.value);
+                  if (champsEnErreur.name) setChampsEnErreur(({ name: _, ...r }) => r);
+                }}
                 placeholder="Ex : Genre & géopolitique"
               />
+              {champsEnErreur.name && <span className="err">{champsEnErreur.name}</span>}
               <span className="hint">
                 Appellation publique du thème — affichée dans les chips de billet et la page
                 /theme/&lt;slug&gt;/.
               </span>
             </label>
 
-            <label className="carnet-editview__field">
-              <span className="lbl">Slug</span>
+            <label
+              className={`tituba-editview__field${champsEnErreur.slug ? ' tituba-editview__field--invalid' : ''}`}
+            >
+              <span className="lbl">
+                Slug <span className="req" aria-hidden="true">*</span>
+                <span className="sr-only"> (obligatoire)</span>
+              </span>
               <input
                 type="text"
                 value={data.slug}
-                onChange={(e) => patch('slug', e.target.value)}
+                aria-invalid={champsEnErreur.slug ? true : undefined}
+                onChange={(e) => {
+                  patch('slug', e.target.value);
+                  if (champsEnErreur.slug) setChampsEnErreur(({ slug: _, ...r }) => r);
+                }}
                 placeholder="genre-geopolitique"
               />
+              {champsEnErreur.slug && <span className="err">{champsEnErreur.slug}</span>}
               <span className="hint">
                 Identifiant URL — sert aussi de hash de tag inline
                 (<span className="mono">#queer-theory</span>).
               </span>
             </label>
 
-            <label className="carnet-editview__field">
+            <label className="tituba-editview__field">
               <span className="lbl">Description éditoriale</span>
               <textarea
                 rows={3}
@@ -283,7 +324,7 @@ export default function ThemeEditViewClient({
           </section>
 
           {data.id != null && (
-            <div className="carnet-biblio-usedin">
+            <div className="tituba-biblio-usedin">
               {usedIn.length === 0 ? (
                 <span>Ce thème n’est utilisé dans aucun billet pour l’instant.</span>
               ) : (
@@ -306,7 +347,7 @@ export default function ThemeEditViewClient({
 
       {deleteOpen && (
         <div
-          className="carnet-modal-backdrop"
+          className="tituba-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleteSubmitting) {
               setDeleteOpen(false);
@@ -314,12 +355,12 @@ export default function ThemeEditViewClient({
             }
           }}
         >
-          <div className="carnet-modal" role="dialog" aria-modal="true">
-            <header className="carnet-modal__header">
+          <div className="tituba-modal" role="dialog" aria-modal="true">
+            <header className="tituba-modal__header">
               <h2>Supprimer ce thème&nbsp;?</h2>
               <button
                 type="button"
-                className="carnet-modal__close"
+                className="tituba-modal__close"
                 onClick={() => {
                   if (deleteSubmitting) return;
                   setDeleteOpen(false);
@@ -332,10 +373,10 @@ export default function ThemeEditViewClient({
             </header>
 
             {deleteError && (
-              <div className="carnet-modal__error">Erreur&nbsp;: {deleteError}</div>
+              <div className="tituba-modal__error">Erreur&nbsp;: {deleteError}</div>
             )}
 
-            <div className="carnet-modal__body">
+            <div className="tituba-modal__body">
               <p>
                 «&nbsp;{data.name || data.slug || data.id}&nbsp;» sera
                 définitivement supprimé. Les billets rattachés à ce thème
@@ -343,10 +384,10 @@ export default function ThemeEditViewClient({
               </p>
             </div>
 
-            <footer className="carnet-modal__footer">
+            <footer className="tituba-modal__footer">
               <button
                 type="button"
-                className="carnet-btn carnet-btn--ghost"
+                className="tituba-btn tituba-btn--ghost"
                 onClick={() => {
                   setDeleteOpen(false);
                   setDeleteError(null);
@@ -357,7 +398,7 @@ export default function ThemeEditViewClient({
               </button>
               <button
                 type="button"
-                className="carnet-btn carnet-btn--danger"
+                className="tituba-btn tituba-btn--danger"
                 onClick={() => void confirmDelete()}
                 disabled={deleteSubmitting}
               >

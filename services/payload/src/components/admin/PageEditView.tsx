@@ -5,10 +5,12 @@
 import React from 'react';
 
 import PageEditViewClient from './PageEditView.client';
+import AccesReserve, { estAdministratrice } from './AccesReserve';
 
-export default function PageEditView(props: {
+export default async function PageEditView(props: {
   routeSegments?: string[];
-}): React.ReactElement {
+}): Promise<React.ReactElement> {
+  if (!(await estAdministratrice())) return <AccesReserve titre="Pages" />;
   const segments = props.routeSegments ?? [];
   const last = segments[segments.length - 1];
   const id = !last || last === 'create' ? null : last;

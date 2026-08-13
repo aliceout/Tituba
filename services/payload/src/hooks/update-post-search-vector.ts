@@ -16,12 +16,19 @@
  * Le hook re-fetch le billet avec depth=1 pour avoir les relations
  * (thèmes, tags, auteur·ices internes) résolues en objets — leurs
  * noms entrent dans le tsvector poids D.
+ *
+ * L'UPDATE passe par `txDrizzle(req)` et non par `req.payload.db.drizzle` :
+ * ce dernier est le pool, pas la transaction du save. À la création, la
+ * ligne n'est pas encore visible depuis le pool, donc l'UPDATE matchait
+ * zéro ligne et le billet restait non indexé jusqu'au save suivant.
+ * Cf. db/tx.ts.
  */
 
 import type { CollectionAfterChangeHook } from 'payload';
 import { sql } from '@payloadcms/db-postgres/drizzle';
 
 import { buildPostSearchVectorSQL } from '../lib/post-search-vector';
+import { txDrizzle } from '../db/tx';
 
 type ResolvedRelation = { name?: string | null } | { displayName?: string | null; email?: string | null };
 
@@ -47,11 +54,23 @@ function authorName(a: AuthorEntry): string {
   return relationName(a.user);
 }
 
-export const updatePostSearchVector: CollectionAfterChangeHook = async ({
-  doc,
-  req,
-  operation,
-}) => {
+/**
+ * Forme du document telle que l'indexation la consomme. Le slug de
+ * collection n'étant connu qu'à l'exécution, Payload ne peut pas
+ * inférer le type de retour de findByID : on le décrit ici plutôt que
+ * de laisser TypeScript le réduire à `never`.
+ */
+type IndexableDoc = {
+  title?: string | null;
+  lede?: string | null;
+  body?: unknown;
+  themes?: unknown[] | null;
+  tags?: unknown[] | null;
+  authors?: unknown[] | null;
+};
+
+export function makeUpdateSearchVector(collectionSlug: string): CollectionAfterChangeHook {
+  return async ({ doc, req, operation }) => {
   // On ne ré-indexe que sur create/update — pas sur les autres
   // opérations (ex: lecture qui pourrait déclencher un afterRead).
   if (operation !== 'create' && operation !== 'update') return doc;
@@ -62,13 +81,13 @@ export const updatePostSearchVector: CollectionAfterChangeHook = async ({
     // en objets. overrideAccess=true : le hook tourne avec les
     // privilèges de l'opération courante, on a déjà passé la barrière
     // d'accès au save.
-    const fresh = await req.payload.findByID({
-      collection: 'posts',
+    const fresh = (await req.payload.findByID({
+      collection: collectionSlug as never,
       id: doc.id,
       depth: 1,
       overrideAccess: true,
       req,
-    });
+    })) as unknown as IndexableDoc;
 
     const themeNames = (Array.isArray(fresh.themes) ? fresh.themes : [])
       .map(relationName)
@@ -84,26 +103,27 @@ export const updatePostSearchVector: CollectionAfterChangeHook = async ({
       title: fresh.title as string | null | undefined,
       lede: fresh.lede as string | null | undefined,
       body: fresh.body,
-      slug: fresh.slug as string | null | undefined,
-      idCarnet: fresh.idCarnet as string | null | undefined,
       themeNames,
       tagNames,
       authorNames,
     });
 
-    // UPDATE direct sur posts. Pas de transaction explicite : le hook
-    // tourne déjà dans la transaction du save Payload.
-    await req.payload.db.drizzle.execute(
-      sql`UPDATE posts SET search_vector = ${vectorSQL} WHERE id = ${doc.id}`,
+    // UPDATE direct sur posts, via l'instance Drizzle **de la
+    // transaction en cours** (cf. db/tx.ts). Passer par le pool ici
+    // serait un bug silencieux : à la création, la ligne n'est pas
+    // encore visible hors transaction et l'UPDATE matcherait zéro ligne.
+    await txDrizzle(req).execute(
+      sql`UPDATE ${sql.raw(`"${collectionSlug}"`)} SET search_vector = ${vectorSQL} WHERE id = ${doc.id}`,
     );
   } catch (err) {
     // On log mais on ne throw pas : la recherche peut tolérer un
     // billet temporairement non-indexé, le prochain save le rattrapera.
     req.payload.logger.error(
       { err, postId: doc.id },
-      'Failed to update posts.search_vector',
+      `Failed to update ${collectionSlug}.search_vector`,
     );
   }
 
-  return doc;
-};
+    return doc;
+  };
+}
