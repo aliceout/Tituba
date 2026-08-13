@@ -252,8 +252,13 @@ export default buildConfig({
     pool: {
       user: process.env.POSTGRES_USER,
       password: process.env.POSTGRES_PASSWORD,
-      host: process.env.POSTGRES_HOST ?? 'localhost',
-      port: Number.parseInt(process.env.POSTGRES_PORT ?? '5432', 10),
+      // `||` et non `??` : une variable présente mais vide — ce que
+      // produit une ligne `POSTGRES_HOST=` copiée du modèle — passerait
+      // le test de nullité et donnerait un hôte vide à la connexion.
+      host: process.env.POSTGRES_HOST || 'localhost',
+      // Même raison qu'au-dessus : `POSTGRES_PORT=` vide donnerait NaN,
+      // et une connexion qui échoue sans dire pourquoi.
+      port: Number.parseInt(process.env.POSTGRES_PORT || '5432', 10),
       database: process.env.POSTGRES_DB,
     },
     push: process.env.NODE_ENV !== 'production',
