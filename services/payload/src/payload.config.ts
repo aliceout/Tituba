@@ -1,6 +1,7 @@
 import { postgresAdapter } from '@payloadcms/db-postgres';
 import { lexicalEditor } from '@payloadcms/richtext-lexical';
 import path from 'path';
+import type { Config } from 'payload';
 import { buildConfig } from 'payload';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
@@ -44,6 +45,40 @@ import { startRateLimitCleanup } from './auth/rate-limit';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
+
+/**
+ * Le secret, ou rien.
+ *
+ * Il valait `process.env.PAYLOAD_SECRET || ''` : sans variable
+ * d'environnement, Payload démarrait avec la chaîne vide pour clé. Tout
+ * fonctionnait — connexion, admin, site — mais chaque cookie de session,
+ * chaque jeton de confirmation d'abonnement et chaque signature de lien
+ * de désabonnement étaient alors calculés avec un secret que le monde
+ * entier connaît. Une panne bruyante au démarrage vaut mieux qu'une
+ * application qui tourne en paraissant sûre.
+ *
+ * Le seuil de 32 caractères n'est pas décoratif : un secret court se
+ * retrouve par force brute, et c'est exactement le genre de valeur qu'on
+ * pose « en attendant » avec quatre lettres.
+ */
+function secretRequis(): string {
+  const secret = process.env.PAYLOAD_SECRET?.trim();
+  if (!secret) {
+    throw new Error(
+      'PAYLOAD_SECRET est absent. Payload signe avec lui les sessions, les ' +
+        'jetons de confirmation et les liens de désabonnement : sans lui, ces ' +
+        'signatures ne valent rien. Renseignez-le avant de démarrer.',
+    );
+  }
+  if (secret.length < 32) {
+    throw new Error(
+      `PAYLOAD_SECRET fait ${secret.length} caractères, il en faut au moins 32. ` +
+        'Un secret court se retrouve par force brute, et avec lui toutes les ' +
+        'signatures du site.',
+    );
+  }
+  return secret;
+}
 
 // URL publique du site — convention Infisical : la valeur d'ADDRESS
 // est juste le domaine (sans schème). On préfixe https:// si manquant
@@ -171,7 +206,30 @@ export default buildConfig({
   ],
   editor: lexicalEditor(),
   email: buildEmailAdapter(),
-  secret: process.env.PAYLOAD_SECRET || '',
+  secret: secretRequis(),
+  /**
+   * Plafond du parseur multipart, toutes collections confondues.
+   *
+   * Calibré sur le plus gros fichier légitime — un épisode de podcast.
+   * C'est volontairement grossier : le contrôle fin, celui qui dépend du
+   * type, est dans Media (une image de 200 Mo passe ici, pas là-bas).
+   * Ce plafond-ci sert à ce qu'un transfert sans fin s'arrête avant
+   * d'avoir rempli le disque, pas à trier.
+   *
+   * `abortOnLimit` coupe et répond 413. Sans lui, Payload accepterait le
+   * fichier tronqué et l'enregistrerait comme s'il était complet — un
+   * épisode coupé au milieu, sans que rien ne le signale.
+   *
+   * `limits` n'apparaît pas dans le type de Payload, qui ne décrit qu'une
+   * partie des options ; l'objet est passé tel quel à busboy, chez qui
+   * la clé existe. D'où l'élargissement de type, et non un `as never`
+   * qui masquerait le reste.
+   */
+  upload: {
+    abortOnLimit: true,
+    responseOnLimit: 'Fichier trop lourd : 300 Mo au maximum.',
+    limits: { fileSize: 300 * 1024 * 1024 },
+  } as Config['upload'] & { limits: { fileSize: number } },
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
