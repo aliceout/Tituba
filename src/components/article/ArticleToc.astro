@@ -96,6 +96,10 @@ const ACTION = [
   'text-left font-sans text-meta transition-colors duration-[120ms]',
   'hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
   '[&_svg]:shrink-0',
+  // Confirmation de copie — même dispositif que le bouton « Copier » du
+  // bloc de citation : un attribut posé par le script plutôt qu'une
+  // classe, que Tailwind ne saurait pas générer faute de la lire.
+  'data-[copie]:text-accent',
 ].join(' ');
 ---
 
@@ -234,10 +238,18 @@ const ACTION = [
   }
 
   {
-    /* Actions rapides — non câblées : le design est posé, le clic ne fait
-        rien pour l'instant. En bas de bloc plutôt qu'en haut : ce sont des
+    /* Actions rapides. En bas de bloc plutôt qu'en haut : ce sont des
         gestes secondaires (copier, citer, télécharger), qui viennent après
         s'être repéré et avoir navigué, pas avant.
+
+        Il y en avait cinq, dont quatre sans le moindre écouteur — même
+        forme, même curseur, même survol qu'un bouton qui marche, et rien
+        au clic. Un bouton qui ne fait rien coûte plus cher qu'un bouton
+        absent : on le trouve, on l'essaie, on recommence en croyant avoir
+        mal cliqué. Les deux qui tenaient en un appel sont câblées, celle
+        qui demandait une fonctionnalité entière — « Télécharger en PDF »,
+        sans le moindre générateur de PDF derrière — est retirée. Elle
+        reviendra avec ce qu'elle promet.
 
         Sans intercalaire, le filet des repères tient lieu de séparation à
         lui seul ; l'écart, lui, reste porté par leur marge basse. */
@@ -248,7 +260,14 @@ const ACTION = [
       sansIntercalaire ? 'mt-0 pt-0' : 'border-rule mt-[18px] border-t pt-3.5',
     ]}
   >
-    <button type="button" class={ACTION} aria-label="Copier le lien de l'article">
+    {
+      /* Le libellé est dans un <span> annoncé : c'est lui qui change en
+          « Lien copié », et une copie qui ne se voit qu'à la couleur ne
+          se voit pas de tout le monde. L'`aria-label` du bouton est
+          retiré pour cette raison — il aurait masqué le texte au lecteur
+          d'écran, donc aussi son changement. */
+    }
+    <button type="button" class={ACTION} data-action="copier-lien">
       <svg
         width="16"
         height="16"
@@ -263,25 +282,36 @@ const ACTION = [
         <rect x="9" y="9" width="12" height="12" rx="2"></rect>
         <path d="M5.5 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v0.5"></path>
       </svg>
-      Copier le lien
+      <span data-libelle aria-live="polite">Copier le lien</span>
     </button>
-    <button type="button" class={ACTION} aria-label="Copier la citation de l'article">
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M7 8.5c-2 0-3.2 1.4-3.2 3.4S5 15.2 7 15.2c0 2-1.2 2.8-3 2.8"></path>
-        <path d="M16.2 8.5c-2 0-3.2 1.4-3.2 3.4s1.2 3.3 3.2 3.3c0 2-1.2 2.8-3 2.8"></path>
-      </svg>
-      Citer cet article
-    </button>
+    {
+      /* Ne s'affiche que si la page porte un bloc « Pour citer » : le
+          bouton n'a rien à copier sans lui, et c'est ce même bloc qui
+          détient le texte de la citation. */
+    }
+    {
+      hasCitation && (
+        <button type="button" class={ACTION} data-action="citer">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M7 8.5c-2 0-3.2 1.4-3.2 3.4S5 15.2 7 15.2c0 2-1.2 2.8-3 2.8" />
+            <path d="M16.2 8.5c-2 0-3.2 1.4-3.2 3.4s1.2 3.3 3.2 3.3c0 2-1.2 2.8-3 2.8" />
+          </svg>
+          <span data-libelle aria-live="polite">
+            Citer cet article
+          </span>
+        </button>
+      )
+    }
     {
       /* Les deux téléchargements se suivent : ce sont les seuls gestes
           du bloc qui font descendre un fichier, et les séparer par
@@ -313,24 +343,6 @@ const ACTION = [
         </a>
       )
     }
-    <button type="button" class={ACTION} aria-label="Télécharger l'article en PDF">
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M12 3v11"></path>
-        <path d="m7.5 10 4.5 4.5 4.5-4.5"></path>
-        <path d="M4.5 19.5h15"></path>
-      </svg>
-      Télécharger en PDF
-    </button>
   </div>
 
   {
@@ -382,7 +394,6 @@ const ACTION = [
     const tocLinks = Array.from(
       document.querySelectorAll<HTMLAnchorElement>('.toc a[data-toc]'),
     );
-    if (!tocLinks.length) return;
 
     // Les écouteurs de défilement portent sur `window`, qui survit à la
     // navigation : sans révocation il s'en empilerait un par page
@@ -427,7 +438,53 @@ const ACTION = [
       updateActive();
     }
 
-    // Smooth scroll au clic
+    // ─── Actions rapides ──────────────────────────────────────────
+    //
+    // Le presse-papier n'existe pas partout : `navigator.clipboard` est
+    // absent hors contexte sécurisé, et l'autorisation peut être
+    // refusée. Un bouton qui promet une copie et n'en fait rien est ce
+    // qu'on vient de retirer d'ici — on le cache donc quand on sait
+    // qu'il ne pourra pas tenir parole, plutôt que d'échouer au clic.
+    const actions = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.toc button[data-action]'),
+    );
+    if (!navigator.clipboard) {
+      for (const b of actions) b.hidden = true;
+    } else {
+      for (const bouton of actions) {
+        // Le texte de citation vit sur le bouton du bloc « Pour citer »,
+        // qui l'a déjà mis en forme. Le recomposer ici donnerait deux
+        // sources pour une même phrase, qui divergeraient au premier
+        // changement de format bibliographique.
+        const source =
+          document.querySelector<HTMLElement>('#cite .copy-btn')?.dataset.citation ?? '';
+        const texte = bouton.dataset.action === 'citer' ? source : location.href;
+        const libelle = bouton.querySelector<HTMLElement>('[data-libelle]');
+        const initial = libelle?.textContent ?? '';
+
+        bouton.addEventListener('click', async () => {
+          if (!texte) return;
+          try {
+            await navigator.clipboard.writeText(texte);
+          } catch {
+            // Refus du presse-papier : on ne prétend pas avoir copié.
+            return;
+          }
+          bouton.dataset.copie = '';
+          if (libelle)
+            libelle.textContent =
+              bouton.dataset.action === 'citer' ? 'Citation copiée' : 'Lien copié';
+          window.setTimeout(() => {
+            delete bouton.dataset.copie;
+            if (libelle) libelle.textContent = initial;
+          }, 2000);
+        });
+      }
+    }
+
+    // Smooth scroll au clic. Rien à faire si l'aside n'est pas monté —
+    // le repère de section et les actions ci-dessus ont déjà chacun
+    // leur propre garde.
     for (const a of tocLinks) {
       a.addEventListener('click', (e) => {
         const id = a.dataset.toc;

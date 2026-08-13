@@ -261,6 +261,13 @@ function renderNode(node: LexicalNode | unknown, ctx: RenderContext): string {
       const text = (n.children ?? [])
         .map((c) => (typeof c.text === 'string' ? c.text : ''))
         .join('');
+      // Un titre sans texte ne se rend pas du tout. L'éditeur en produit
+      // sans le vouloir — un retour à la ligne resté en style « Titre »
+      // suffit — et le résultat est un <h2> vide portant `id=""`, qui
+      // annonce une section qui n'existe pas et casse la suite des
+      // niveaux pour qui parcourt la page par ses titres. Le sommaire
+      // applique la même règle, cf. extractToc.
+      if (!text.trim()) return '';
       const id = slugify(text);
       return `<${tag} id="${id}">${inner}</${tag}>`;
     }
@@ -385,8 +392,13 @@ export function extractToc(node: LexicalNode | unknown): TocEntry[] {
       const text = (x.children ?? [])
         .map((c) => (typeof c.text === 'string' ? c.text : ''))
         .join('');
-      const level = x.tag === 'h3' ? 3 : 2;
-      out.push({ id: slugify(text), text, level });
+      // Même règle que le rendu : sans texte, pas de titre. L'entrée
+      // produite sinon était un lien vers `#`, sans libellé — donc un
+      // arrêt de tabulation qui ne s'annonce pas et ne mène nulle part.
+      if (text.trim()) {
+        const level = x.tag === 'h3' ? 3 : 2;
+        out.push({ id: slugify(text), text, level });
+      }
     }
     if (x.children) for (const c of x.children) walk(c);
   }
