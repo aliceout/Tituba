@@ -13,7 +13,7 @@
  *   compte racine    depuis SEED_ROOT_EMAIL / SEED_ROOT_PASSWORD
  *   réglages         identité, apparence, abonnements
  *   thématiques      les dix axes de classement
- *   pages            trois coquilles vides, en brouillon
+ *   pages            les cinq pages d'index, plus trois coquilles
  *   navigation       en-tête et pied, une fois les pages en place
  *
  * ─── Ce qu'il ne pose PAS, et c'est la règle ────────────────────────
@@ -24,17 +24,23 @@
  * que personne n'a écrite, et qu'on retrouve six mois plus tard en
  * croyant l'avoir voulue.
  *
- * Les cinq pages d'index (`home`, `formats`, `themes`, `archives`,
- * `subscribe`) ne sont pas posées non plus, et ce n'est pas un oubli :
- * leur titre EST le titre affiché en tête de page (cf.
- * `fetchIndexPages`). Une coquille intitulée « formats » remplacerait le
- * texte de repli du site par le mot « formats ». Ne rien poser laisse
- * ces replis en place — le site est correct dès la première seconde, et
- * créer la page depuis l'administration suffit pour les remplacer.
+ * ─── Deux sortes de pages ───────────────────────────────────────────
  *
- * Les trois pages éditoriales, elles, sont posées : en brouillon, donc
- * invisibles du public, avec un libellé qui n'est qu'une poignée pour
- * les retrouver dans l'administration. Sans elles, l'entrée
+ * Les cinq pages d'index (`home`, `formats`, `themes`, `archives`,
+ * `subscribe`) arrivent avec leur titre et leur chapô. Ce ne sont pas
+ * des textes qu'on invente ici : ce sont exactement ceux que le site
+ * sert déjà en repli, écrits en dur dans les pages d'index d'Astro. Les
+ * poser en base ne crée donc rien — ça rend éditable depuis
+ * l'administration ce qui n'existait que dans le code, et c'est bien à
+ * ça que sert une page « fixe ». Les laisser vides aurait fait
+ * l'inverse : leur titre EST le titre affiché (`fetchIndexPages` mappe
+ * `title` sur `heroTitle`), donc une coquille aurait remplacé « Cinq
+ * formats, une même exigence » par le mot « formats ».
+ *
+ * Les trois pages éditoriales — `association`, `charte`,
+ * `nous-rejoindre` — arrivent vides et en brouillon : rien à afficher
+ * tant que personne ne les a écrites, et un libellé qui n'est qu'une
+ * poignée pour les retrouver dans l'administration. Sans elles, l'entrée
  * « association » du menu ne désignerait rien.
  *
  * Le jeu de démonstration — faux comptes, faux billets, fausses images —

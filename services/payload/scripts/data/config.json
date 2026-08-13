@@ -87,6 +87,15 @@
   },
   "pages": [
     {
+      "kind": "fixe",
+      "title": "Toutes les publications, par année.",
+      "enabled": true,
+      "draft": false,
+      "slug": "archives",
+      "noindex": false,
+      "lede": "Chaque publication porte un numéro, une date de publication et, le cas échéant, une date de mise à jour."
+    },
+    {
       "kind": "libre",
       "slug": "association",
       "title": "L’association",
@@ -101,11 +110,47 @@
       "draft": true
     },
     {
+      "kind": "fixe",
+      "title": "Cinq *formats*, une même exigence.",
+      "enabled": true,
+      "draft": false,
+      "slug": "formats",
+      "noindex": false,
+      "lede": "Un texte long avec son appareil de notes n'appelle pas la même lecture qu'un rebond d'actualité ou qu'un kit d'animation. Chaque format a sa place, ses codes et sa page."
+    },
+    {
+      "kind": "fixe",
+      "title": "Le genre aux prismes *féministe*, *décoloniaux*, et *intersectionnels* — recherches, analyses, ressources.",
+      "enabled": true,
+      "draft": false,
+      "slug": "home",
+      "noindex": false,
+      "lede": "Association loi 1901 fondée à Paris en octobre 2024. Nous construisons un espace de ressources en accès libre autour d'une conviction : les inégalités structurelles se nouent ensemble — orientation sexuelle, construction sociale de la race, classe, colonialité — et ne se démêlent pas une à une. Dix thématiques, cinq formats, rien derrière un mur payant."
+    },
+    {
       "kind": "libre",
       "slug": "nous-rejoindre",
       "title": "Nous rejoindre",
       "enabled": true,
       "draft": true
+    },
+    {
+      "kind": "fixe",
+      "title": "*S'abonner* aux billets",
+      "enabled": true,
+      "draft": false,
+      "slug": "subscribe",
+      "noindex": false,
+      "lede": "Plusieurs façons de recevoir les nouveaux billets : sur les réseaux où l'autrice est présente, ou via un flux RSS — sans algorithme, sans publicité, sans pisteur."
+    },
+    {
+      "kind": "fixe",
+      "title": "Nos *thématiques*.",
+      "enabled": true,
+      "draft": false,
+      "slug": "themes",
+      "noindex": false,
+      "lede": "Chaque publication est rattachée à une ou plusieurs thématiques. La taxonomie est libre et évolue avec nos travaux."
     }
   ],
   "themes": [
