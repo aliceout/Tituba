@@ -150,9 +150,22 @@ jobs:
       # runtime VPS via deploy.sh ; tous deux fetchent sous le path
       # /services/tituba (la CI lit la racine pour ADDRESS, le VPS
       # itère sur chaque sous-dossier pour reconstruire le .env).
+      # `continue-on-error` : un échec ici ne doit plus arrêter le job.
+      # Le repli existait déjà en dessous, mais il était conditionné à
+      # l'ABSENCE d'Infisical, pas à son échec — si bien qu'une
+      # configuration Infisical incomplète bloquait la construction de
+      # l'image au lieu de retomber sur le secret GitHub. Un repli qui ne
+      # se déclenche pas quand la chose échoue n'est pas un repli.
+      #
+      # Version montée de v1.0.7 à v1.0.16 : la v1.0.7 est antérieure à
+      # la transition Node 20 → Node 24, et le runner la force sur Node
+      # 24 (cf. FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 plus haut). Elle
+      # échouait instantanément, sans message.
       - name: Fetch build-time secrets from Infisical
+        id: infisical
         if: steps.detect.outputs.use_infisical == 'true'
-        uses: Infisical/secrets-action@v1.0.7
+        continue-on-error: true
+        uses: Infisical/secrets-action@v1.0.16
         with:
           method: universal
           domain: ${{ secrets.INFISICAL_API_URL }}
@@ -171,13 +184,23 @@ jobs:
       # Si quelqu'un fork le repo, il lui suffit d'ajouter un secret
       # nommé ADDRESS pour que le build de l'image web passe (cf README,
       # section « Forker sans Infisical »).
+      # Se déclenche dans deux cas désormais : Infisical non configuré,
+      # ou Infisical configuré mais en échec. On teste la seule chose qui
+      # compte vraiment — ADDRESS est-il renseigné à ce stade ? — plutôt
+      # que de rejouer le raisonnement sur les étapes précédentes.
       - name: Read ADDRESS from GH secret (fallback)
-        if: steps.detect.outputs.use_infisical == 'false'
         env:
           ADDRESS_FROM_SECRET: ${{ secrets.ADDRESS }}
         run: |
+          if [ -n "$ADDRESS" ]; then
+            echo "→ ADDRESS fourni par Infisical, repli inutile."
+            exit 0
+          fi
+          if [ "${{ steps.infisical.outcome }}" = "failure" ]; then
+            echo "::warning::Infisical a échoué — repli sur le secret GitHub ADDRESS. La configuration Infisical de la CI est à reprendre."
+          fi
           if [ -z "$ADDRESS_FROM_SECRET" ]; then
-            echo "::error::Pas d'Infisical configuré ET pas de GH secret ADDRESS — l'image Docker ne peut pas se build sans Astro.site valide."
+            echo "::error::Ni Infisical ni le secret GitHub ADDRESS ne fournissent d'adresse — l'image ne peut pas se construire sans Astro.site valide."
             exit 1
           fi
           echo "ADDRESS=$ADDRESS_FROM_SECRET" >> "$GITHUB_ENV"
