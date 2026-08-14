@@ -28,6 +28,8 @@
  */
 import type { APIRoute } from 'astro';
 
+import { adresseSite } from '../../lib/adresse';
+
 import {
   audioFileUrl,
   fetchCollection,
@@ -65,18 +67,15 @@ function chrono(secondes: number | null | undefined): string | null {
   return h > 0 ? `${h}:${deux(m)}:${deux(s)}` : `${m}:${deux(s)}`;
 }
 
-export const GET: APIRoute = async (context) => {
+export const GET: APIRoute = async () => {
   try {
     const subs = await fetchSubscriptions<SubscriptionsGlobal>(1);
     if (subs.rssEnabled === false) {
       return new Response('Not found', { status: 404 });
     }
-    if (!context.site) {
-      throw new Error(
-        'podcasts/rss.xml.ts : context.site est undefined — vérifier `site` dans astro.config.mjs.',
-      );
-    }
-    const base = context.site.toString().replace(/\/$/, '');
+    // Lue à l'exécution, pas figée à la construction : la même image
+    // doit pouvoir servir n'importe quel domaine (cf. lib/adresse.ts).
+    const base = adresseSite();
 
     let siteName = 'Tituba';
     let authorName = '';

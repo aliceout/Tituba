@@ -27,17 +27,25 @@ import dotenv from 'dotenv';
  */
 dotenv.config({ quiet: true });
 
-// URL canonique du site — utilisée pour Astro.site, le sitemap et le
-// flux RSS. Passée en env via Infisical (ADDRESS). Fallback générique
-// pour les builds CI sans .env. Si la valeur ne contient pas déjà un
-// schème (http:// ou https://), on préfixe https:// pour qu'Astro
-// reçoive une URL valide (le validateur explose sinon avec « Invalid
-// URL »).
-const RAW_ADDRESS = process.env.ADDRESS ?? 'https://tituba.example.com';
-const ADDRESS = /^https?:\/\//.test(RAW_ADDRESS) ? RAW_ADDRESS : `https://${RAW_ADDRESS}`;
+// Plus de `site` ici, et c'est délibéré.
+//
+// Astro recopie cette valeur dans le bundle : `Astro.site` et
+// `context.site` rendent ensuite l'adresse connue à la construction,
+// quelle que soit celle sur laquelle on sert. L'image en héritait — une
+// par domaine, à reconstruire pour en changer, et impossible à fabriquer
+// sans connaître le domaine à l'avance.
+//
+// Les cinq routes qui ont besoin d'une URL absolue — canonique, citation
+// d'article, flux RSS, plan du site, robots.txt — lisent désormais
+// ADDRESS dans l'environnement au moment de répondre, ce que permet le
+// rendu à la demande. Voir src/lib/adresse.ts.
+//
+// Conséquence à connaître : `Astro.site` vaut maintenant `undefined`.
+// Rien ne l'utilise, et `astro check` le vérifie ; toute nouvelle URL
+// absolue doit passer par `urlAbsolue()`, sous peine de repointer sur
+// l'hôte de la requête — donc sur `localhost` derrière un proxy.
 
 export default defineConfig({
-  site: ADDRESS,
   trailingSlash: 'ignore',
   // SSR via Node : chaque requête tape Payload (réseau docker
   // interne en prod, localhost:3001 en dev). Pas de rebuild CI

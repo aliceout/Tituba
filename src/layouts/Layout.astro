@@ -39,6 +39,7 @@ import Footer from '../components/Footer.astro';
 import PodcastDock from '../components/article/PodcastDock.astro';
 import A11yPanel from '../components/A11yPanel.astro';
 import { fetchIdentity, fetchSite, fetchSubscriptions } from '../lib/payload';
+import { urlAbsolue } from '../lib/adresse';
 
 interface Props {
   /** Titre court de la page — Layout y ajoute le suffixe « — {siteName} ». */
@@ -62,7 +63,10 @@ const {
   bodyClass = '',
 } = Astro.props;
 
-const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+// Résolue contre l’adresse publique lue dans l’environnement, et non
+// contre `Astro.site` figé à la construction : c’est ce qui rend
+// l’image indépendante du domaine (cf. lib/adresse.ts).
+const canonical = urlAbsolue(Astro.url.pathname);
 
 // Couleurs pilotées depuis Payload (global Site → branding). Si Payload
 // n'est pas joignable au SSR, on garde les valeurs fixées dans global.css.

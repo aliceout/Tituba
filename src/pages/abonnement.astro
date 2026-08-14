@@ -22,6 +22,7 @@ import {
   postPayload,
 } from '../lib/payload';
 import { formatHeroLede, formatHeroTitle } from '../lib/site';
+import { urlAbsolue } from '../lib/adresse';
 
 type SubscriptionsGlobal = {
   rssEnabled?: boolean;
@@ -90,7 +91,7 @@ const socialEntries = [
     : null,
 ].filter((x): x is { label: string; href: string; hint: string } => x !== null);
 
-const feedUrl = new URL('/rss.xml', Astro.site).toString();
+const feedUrl = urlAbsolue('/rss.xml');
 
 /**
  * Soumission sans JavaScript du formulaire d'abonnement.

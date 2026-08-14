@@ -70,6 +70,7 @@ import { lireCouverture } from '../lib/article/couverture';
 import { lireEpisode } from '../lib/article/episode';
 import { DECK } from '../lib/article/classes';
 import { libellePublic, lireRessources } from '../lib/article/ressources';
+import { urlAbsolue } from '../lib/adresse';
 
 export interface Props {
   collection: PublicationCollection;
@@ -283,7 +284,7 @@ const postCitation = formatPostCitationChicago(postAuthors);
 const authorCitation = postCitation || 'Auteur·ice';
 
 // Citation bibliographique du billet (Chicago author-date façon Tituba)
-const articleUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const articleUrl = urlAbsolue(Astro.url.pathname);
 const citationText = `${authorCitation}. « ${titlePlain} », ${siteName}, ${publishedFr}, ${articleUrl}.`;
 
 // Métadonnées Highwire/Google Scholar pour que l'extension Zotero
