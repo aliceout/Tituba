@@ -234,6 +234,7 @@ export interface Article {
    */
   featured?: boolean | null;
   draft?: boolean | null;
+  demo?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
    */
@@ -280,6 +281,7 @@ export interface Tag {
    * Auto-dérivé du nom (slugify). Sert d’ancre URL `/tag/<slug>/`.
    */
   slug: string;
+  demo?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -330,6 +332,7 @@ export interface Series {
    * Tant que la case est cochée, la série n’a pas de page publique et son flux n’est pas publié.
    */
   draft?: boolean | null;
+  demo?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -365,6 +368,7 @@ export interface Media {
     w?: number | null;
     h?: number | null;
   };
+  demo?: boolean | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -448,6 +452,7 @@ export interface User {
         id?: string | null;
       }[]
     | null;
+  demo?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -522,6 +527,7 @@ export interface Bibliography {
   owner?: (number | null) | User;
   authorLabel?: string | null;
   displayLabel?: string | null;
+  demo?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -610,6 +616,7 @@ export interface Analysis {
    */
   featured?: boolean | null;
   draft?: boolean | null;
+  demo?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
    */
@@ -715,6 +722,7 @@ export interface Actus {
    */
   featured?: boolean | null;
   draft?: boolean | null;
+  demo?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
    */
@@ -823,6 +831,7 @@ export interface Podcast {
    */
   featured?: boolean | null;
   draft?: boolean | null;
+  demo?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
    */
@@ -919,6 +928,7 @@ export interface Outil {
    */
   featured?: boolean | null;
   draft?: boolean | null;
+  demo?: boolean | null;
   /**
    * Date à laquelle les abonné·es aux alertes mail ont été notifié·es de ce billet. Set automatiquement à la première publication, jamais re-déclenché.
    */
@@ -1225,6 +1235,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   readingTime?: T;
   featured?: T;
   draft?: T;
+  demo?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
   updatedAt?: T;
@@ -1258,6 +1269,7 @@ export interface AnalysesSelect<T extends boolean = true> {
   readingTime?: T;
   featured?: T;
   draft?: T;
+  demo?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
   updatedAt?: T;
@@ -1297,6 +1309,7 @@ export interface ActusSelect<T extends boolean = true> {
   readingTime?: T;
   featured?: T;
   draft?: T;
+  demo?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
   updatedAt?: T;
@@ -1333,6 +1346,7 @@ export interface PodcastsSelect<T extends boolean = true> {
   readingTime?: T;
   featured?: T;
   draft?: T;
+  demo?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
   updatedAt?: T;
@@ -1371,6 +1385,7 @@ export interface OutilsSelect<T extends boolean = true> {
   readingTime?: T;
   featured?: T;
   draft?: T;
+  demo?: T;
   notificationsSentAt?: T;
   hasDraftZones?: T;
   updatedAt?: T;
@@ -1405,6 +1420,7 @@ export interface SeriesSelect<T extends boolean = true> {
         ownerEmail?: T;
       };
   draft?: T;
+  demo?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1415,6 +1431,7 @@ export interface SeriesSelect<T extends boolean = true> {
 export interface TagsSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
+  demo?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1449,6 +1466,7 @@ export interface BibliographySelect<T extends boolean = true> {
   owner?: T;
   authorLabel?: T;
   displayLabel?: T;
+  demo?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1560,6 +1578,7 @@ export interface UsersSelect<T extends boolean = true> {
         expiresAt?: T;
         id?: T;
       };
+  demo?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1593,6 +1612,7 @@ export interface MediaSelect<T extends boolean = true> {
         w?: T;
         h?: T;
       };
+  demo?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1682,6 +1702,29 @@ export interface Site {
      * Le mode classique empile les notes en bas du billet (style académique). Le mode en marge les place dans une colonne à droite, alignée sur le paragraphe qui les appelle (style « Tufte »). S'applique uniformément à tous les publications de Tituba. Cf issue #6.
      */
     notesMode?: ('classic' | 'sidenotes') | null;
+  };
+  preparation?: {
+    /**
+     * Pose un « noindex » sur toutes les pages, interdit tout le site dans robots.txt et vide le plan du site. Permet de travailler en ligne sans apparaître dans les résultats de recherche. C’est une demande, pas une garantie : un moteur peut l’ignorer, et une page déjà indexée met du temps à disparaître.
+     */
+    noindex?: boolean | null;
+    /**
+     * Le site répond « en préparation » à tout le monde, sauf à qui arrive par le lien d’aperçu. L’administration reste joignable normalement.
+     */
+    accesRestreint?: boolean | null;
+    /**
+     * Laisser vide et enregistrer pour qu’une clé soit tirée au sort. Le lien complet s’affiche alors une fois — notez-le. Réenregistrer à vide en tire une nouvelle et invalide l’ancienne.
+     */
+    clefApercu?: string | null;
+    clefApercuHash?: string | null;
+    /**
+     * Coché, pose un jeu de faux billets, faux comptes et fausses images, pour montrer à quoi ressemble le site rempli. Décoché, les retire — et seulement eux : ce que vous aurez écrit n’y touche pas.
+     */
+    demoChargee?: boolean | null;
+    /**
+     * Ce qui s’est réellement passé au dernier changement. Écrit par le serveur, jamais à la main.
+     */
+    demoEtat?: string | null;
   };
   updatedAt?: string | null;
   createdAt?: string | null;
@@ -1820,6 +1863,16 @@ export interface SiteSelect<T extends boolean = true> {
     | T
     | {
         notesMode?: T;
+      };
+  preparation?:
+    | T
+    | {
+        noindex?: T;
+        accesRestreint?: T;
+        clefApercu?: T;
+        clefApercuHash?: T;
+        demoChargee?: T;
+        demoEtat?: T;
       };
   updatedAt?: T;
   createdAt?: T;

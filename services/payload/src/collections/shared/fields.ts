@@ -372,6 +372,28 @@ export function draftField(): Field {
 }
 
 /**
+ * Marque un document comme appartenant au jeu de démonstration.
+ *
+ * C'est ce qui permet de le retirer plus tard sans se tromper de cible.
+ * L'alternative — reconnaître les faux billets à leur titre — tient tant
+ * que personne n'écrit un vrai billet portant le même, et se tait le
+ * jour où ça arrive. Un marqueur en base ne se trompe pas.
+ *
+ * En lecture seule et masqué : il est posé par le chargement du jeu de
+ * démonstration, et le décocher à la main laisserait un faux billet que
+ * plus rien ne saurait retirer.
+ */
+export function demoField(): Field {
+  return {
+    name: 'demo',
+    type: 'checkbox',
+    defaultValue: false,
+    label: 'Donnée de démonstration',
+    admin: { hidden: true, readOnly: true },
+  };
+}
+
+/**
  * Date d'envoi des mails d'alerte, posée à la première publication.
  * Sert de garde d'idempotence au hook de notification : si elle est
  * remplie, on ne renvoie plus rien.

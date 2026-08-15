@@ -40,6 +40,7 @@ import PodcastDock from '../components/article/PodcastDock.astro';
 import A11yPanel from '../components/A11yPanel.astro';
 import { fetchIdentity, fetchSite, fetchSubscriptions } from '../lib/payload';
 import { urlAbsolue } from '../lib/adresse';
+import { lirePreparation } from '../lib/preparation';
 
 interface Props {
   /** Titre court de la page — Layout y ajoute le suffixe « — {siteName} ». */
@@ -67,6 +68,13 @@ const {
 // contre `Astro.site` figé à la construction : c’est ce qui rend
 // l’image indépendante du domaine (cf. lib/adresse.ts).
 const canonical = urlAbsolue(Astro.url.pathname);
+
+// Le « ne pas indexer » des Options s’ajoute à celui que la page peut
+// demander pour elle-même : une page transactionnelle reste non indexée
+// même quand le site entier l’est déjà. L’en-tête équivalent est posé
+// par le middleware, qui couvre aussi les fichiers.
+const { noindex: noindexGlobal } = await lirePreparation();
+const sansIndex = noindex || noindexGlobal;
 
 // Couleurs pilotées depuis Payload (global Site → branding). Si Payload
 // n'est pas joignable au SSR, on garde les valeurs fixées dans global.css.
@@ -142,7 +150,7 @@ const fullTitle = pageTitle
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    {sansIndex && <meta name="robots" content="noindex, nofollow" />}
     <link rel="canonical" href={canonical} />
     {/* Icônes. Le favicon reprend la partie illustrée du logo — le
         lockup complet serait illisible à 32 px. */}

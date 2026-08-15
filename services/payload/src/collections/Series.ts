@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload';
 
 import { authenticated } from '../access/authenticated';
+import { demoField } from './shared/fields';
 
 /**
  * Séries — ensembles ordonnés de publications d'un même format.
@@ -218,5 +219,6 @@ export const Series: CollectionConfig = {
           'Tant que la case est cochée, la série n’a pas de page publique et son flux n’est pas publié.',
       },
     },
+    demoField(),
   ],
 };

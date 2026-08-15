@@ -26,11 +26,22 @@
 import type { APIRoute } from 'astro';
 
 import { adresseSite } from '../lib/adresse';
+import { lirePreparation } from '../lib/preparation';
 
-export const GET: APIRoute = () => {
+export const GET: APIRoute = async () => {
   // Lue à l'exécution, pas figée à la construction : la même image
   // doit pouvoir servir n'importe quel domaine (cf. lib/adresse.ts).
   const base = adresseSite();
+
+  // « Ne pas indexer » coché dans les Options : on interdit tout, et on
+  // ne renvoie pas au plan du site — l'y laisser reviendrait à tendre la
+  // liste des pages qu'on demande d'ignorer.
+  const { noindex } = await lirePreparation();
+  if (noindex) {
+    return new Response(['User-agent: *', 'Disallow: /', ''].join('\n'), {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
 
   const corps = [
     'User-agent: *',
