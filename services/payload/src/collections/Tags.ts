@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload';
 
 import { authenticated } from '../access/authenticated';
+import { demoField } from './shared/fields';
 
 /**
  * Tags non-structurants — mots-clés libres ajoutés à la volée par
@@ -87,5 +88,6 @@ export const Tags: CollectionConfig = {
         ],
       },
     },
+    demoField(),
   ],
 };

@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload';
 
 import { authenticated } from '../access/authenticated';
+import { demoField } from './shared/fields';
 
 /**
  * Bibliographie — entrées académiques réutilisables entre billets.
@@ -329,6 +330,7 @@ export const Bibliography: CollectionConfig = {
         ],
       },
     },
+    demoField(),
   ],
 };
 

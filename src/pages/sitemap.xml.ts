@@ -24,6 +24,7 @@
 import type { APIRoute } from 'astro';
 
 import { adresseSite } from '../lib/adresse';
+import { lirePreparation } from '../lib/preparation';
 import { fetchAuthorsList, fetchCollection } from '../lib/payload';
 import { fetchFeed, publicationHref } from '../lib/publications';
 
@@ -61,6 +62,18 @@ export const GET: APIRoute = async () => {
   // site doit porter le domaine sur lequel il est servi, pas celui qu'on
   // connaissait en fabriquant l'image (cf. lib/adresse.ts).
   const base = adresseSite();
+
+  // « Ne pas indexer » coché : un plan de site est une invitation à
+  // parcourir, et l'offrir tout en demandant de ne rien indexer serait
+  // se contredire. On répond 404 — la ressource n'existe pas tant que le
+  // site n'est pas ouvert.
+  const { noindex } = await lirePreparation();
+  if (noindex) {
+    return new Response('Not found', {
+      status: 404,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
 
   const entrees: Entree[] = PAGES_FIXES.map((chemin) => ({ chemin }));
 

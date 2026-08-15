@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { authenticated } from '../access/authenticated'
+import { demoField } from './shared/fields';
 
 /**
  * Ce que la médiathèque accepte, et rien d'autre.
@@ -197,6 +198,7 @@ export const Media: CollectionConfig = {
         return `Fichier trop lourd : ${taille}, pour un maximum de ${plafond.dit}.`
       },
     },
+    demoField(),
   ],
   upload: {
     mimeTypes: [...TYPES_ACCEPTES],

@@ -3,6 +3,7 @@ import type { CollectionConfig, FieldHook } from 'payload'
 import { canMutateRole, isAdminOrRoot, isSelfOrAdmin, userRole } from '../access/roles'
 import { AUTH_CONFIG } from '../auth/config'
 import { encrypt, isEncrypted } from '../lib/crypto'
+import { demoField } from './shared/fields';
 
 // Collection users — étendue pour supporter :
 //  - rôles (root unique / admin / editor)
@@ -482,6 +483,7 @@ export const Users: CollectionConfig = {
         { name: 'expiresAt', type: 'date', required: true },
       ],
     },
+    demoField(),
   ],
 
   hooks: {
