@@ -78,9 +78,30 @@ export const Site: GlobalConfig = {
      * Le résultat réel est réécrit dans `demoEtat`, et l'interrupteur
      * remis d'aplomb en cas d'échec. Une case qui dit « chargé » alors
      * que rien ne l'est vaut moins que pas de case du tout.
+     *
+     * ─── Pourquoi le travail est détaché ────────────────────────────
+     *
+     * Poser le jeu demande une centaine d'écritures et la fabrication de
+     * dix fichiers : plusieurs secondes. Fait ici même, ce travail
+     * retient la requête d'enregistrement, et l'administration reste sur
+     * « Enregistrement… » — quand elle ne bloque pas les requêtes
+     * suivantes, Payload considérant la première comme toujours en
+     * cours. C'est le défaut qu'avait connu la suppression d'un billet,
+     * et que `hooks/notify-new-post.ts` documente au même endroit.
+     *
+     * Deuxième raison, plus sournoise : la requête tourne dans une
+     * transaction qui verrouille la ligne du global. Réécrire cette
+     * même ligne depuis le hook, hors de cette transaction, attend un
+     * verrou que seule la fin de la requête libérera — et la requête,
+     * elle, attend le hook.
+     *
+     * D'où `setImmediate` : la réponse part tout de suite, le travail
+     * se fait après, et l'état s'écrit quand il est vraiment connu. On
+     * capture `req.payload`, singleton valide au-delà de la requête, et
+     * non `req`, dont le cycle de vie s'arrête avec elle.
      */
     afterChange: [
-      async ({ context, doc, previousDoc, req }) => {
+      ({ context, doc, previousDoc, req }) => {
         // L'écriture de l'état ci-dessous repasse par ici. Sans cette
         // sortie, un chargement en échec — qui remet l'interrupteur dans
         // sa position d'avant — serait vu comme un nouveau changement, et
@@ -95,32 +116,40 @@ export const Site: GlobalConfig = {
         )
         if (avant === apres) return doc
 
-        const horodatage = new Date().toLocaleString('fr-FR')
-        let etat: string
-        let reussi = true
-        try {
-          const bilan = apres ? await chargerDemo(req.payload) : await dechargerDemo(req.payload)
-          etat = `${horodatage} — ${bilan.message}`
-        } catch (err) {
-          reussi = false
-          etat = `${horodatage} — échec : ${(err as Error).message}`
-          req.payload.logger.error({ err }, 'demo_toggle_failed')
+        const payload = req.payload
+        const prep = (doc as { preparation?: Record<string, unknown> }).preparation ?? {}
+
+        const ecrireEtat = async (etat: string, chargee: boolean): Promise<void> => {
+          try {
+            await payload.updateGlobal({
+              slug: 'site',
+              overrideAccess: true,
+              data: { preparation: { ...prep, demoChargee: chargee, demoEtat: etat } } as never,
+              context: { skipDemoHook: true },
+            })
+          } catch (err) {
+            payload.logger.error({ err }, 'demo_etat_non_ecrit')
+          }
         }
 
-        await req.payload.updateGlobal({
-          slug: 'site',
-          overrideAccess: true,
-          data: {
-            preparation: {
-              ...(doc as { preparation?: Record<string, unknown> }).preparation,
-              demoChargee: reussi ? apres : avant,
-              demoEtat: etat,
-            },
-          } as never,
-          // Sans quoi ce hook se rappellerait lui-même — et l'écriture
-          // de l'état relancerait un chargement.
-          context: { skipDemoHook: true },
+        setImmediate(async () => {
+          const debut = new Date()
+          await ecrireEtat(
+            `${debut.toLocaleString('fr-FR')} — ${apres ? 'chargement' : 'retrait'} en cours…`,
+            apres,
+          )
+          try {
+            const bilan = apres ? await chargerDemo(payload) : await dechargerDemo(payload)
+            await ecrireEtat(`${new Date().toLocaleString('fr-FR')} — ${bilan.message}`, apres)
+          } catch (err) {
+            payload.logger.error({ err }, 'demo_toggle_failed')
+            await ecrireEtat(
+              `${new Date().toLocaleString('fr-FR')} — échec : ${(err as Error).message}`,
+              avant,
+            )
+          }
         })
+
         return doc
       },
     ],
