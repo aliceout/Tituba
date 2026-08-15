@@ -88,7 +88,7 @@ const coulissesSaisies = (
 ).filter((l) => l.href && l.href.trim());
 
 /**
- * Suivi des tickets — ajouté depuis la configuration, pas depuis
+ * « Signaler un problème » — ajouté depuis la configuration, pas depuis
  * l'admin.
  *
  * C'est une adresse d'infrastructure : elle change le jour où l'on
@@ -98,11 +98,18 @@ const coulissesSaisies = (
  *
  * Absente, le lien ne s'affiche pas : un service qu'on n'a pas encore
  * ne doit pas laisser d'entrée morte dans le pied.
+ *
+ * Le libellé disait « Suivi des tickets ». « Ticket » est un mot de
+ * service après-vente, qui suppose qu'on sache déjà ce qu'il y a
+ * derrière ; et c'était le seul substantif d'une colonne qui enchaîne
+ * des infinitifs — « Nous rejoindre », « Nous écrire ». « Signaler un
+ * problème » dit à quoi ça sert, et reprend le geste que la page
+ * d'accessibilité nomme déjà « Signaler un obstacle ».
  */
 const ticketing = (process.env.TICKETING_URL ?? '').trim();
 const navCoulisses =
   ticketing && !coulissesSaisies.some((l) => l.href === ticketing)
-    ? [...coulissesSaisies, { label: 'Suivi des tickets', href: ticketing, external: true }]
+    ? [...coulissesSaisies, { label: 'Signaler un problème', href: ticketing, external: true }]
     : coulissesSaisies;
 
 // Un paragraphe par ligne saisie dans l'admin, plutôt qu'un seul bloc
