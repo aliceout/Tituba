@@ -37,11 +37,10 @@
 # projet *unique* qui contient tous les services. L'arborescence est
 # `/services/<nom-du-projet>/<sous-dossier>` — pour Tituba :
 #   /services/tituba           → clés communes (DOMAIN, ADDRESS, DNS_*, …)
-#   /services/tituba/payload   → PAYLOAD_SECRET, etc.
+#   /services/tituba/payload   → PAYLOAD_SECRET, UNSPLASH_ACCESS_KEY, etc.
 #   /services/tituba/postgres  → POSTGRES_*
 #   /services/tituba/smtp      → SMTP_*
 #   /services/tituba/web       → ADDRESS, PORT_*, TICKETING_URL
-#   /services/tituba/unsplash  → UNSPLASH_ACCESS_KEY
 #   /services/tituba/contact   → INTERNAL_PROXY_SECRET, CONTACT_POW_MAX
 # Les noms de vars n'ont pas changé, seuls les paths Infisical bougent.
 #
@@ -109,7 +108,7 @@ if [ "$USE_INFISICAL" = "true" ]; then
   : > "$ENV_FILE"
   chmod 600 "$ENV_FILE"
 
-  for subpath in "" payload postgres smtp web unsplash contact; do
+  for subpath in "" payload postgres smtp web contact; do
     path="/services/tituba${subpath:+/$subpath}"
     echo "[deploy] fetching $path"
     infisical export \
