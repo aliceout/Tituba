@@ -63,6 +63,16 @@ services:
     environment:
       NODE_ENV: production
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?PAYLOAD_SECRET is required}
+      # Compte racine — bootstrap du seul admin sur une base neuve. Lus par
+      # scripts/seed-config.ts, lancé au boot juste après `payload migrate`
+      # (cf. Dockerfile). Idempotent : une fois le compte créé, les boots
+      # suivants n'en ont plus besoin (le seed voit le compte et passe).
+      # Optionnels ici (`:-`) pour ne pas bloquer un redémarrage si on les
+      # retire une fois le site installé ; requis au tout premier boot, sinon
+      # le seed refuse de créer un site sans moyen d'y entrer. Valeurs posées
+      # dans Infisical /services/tituba/payload, récupérées par deploy.sh.
+      SEED_ROOT_EMAIL: ${SEED_ROOT_EMAIL:-}
+      SEED_ROOT_PASSWORD: ${SEED_ROOT_PASSWORD:-}
       # Formulaire de contact — cf .env.example. Optionnels tous les
       # deux : sans le secret, l'endpoint reste joignable sans passer
       # par le site (et le signale dans les journaux) ; sans la

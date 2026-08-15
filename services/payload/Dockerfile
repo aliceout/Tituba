@@ -56,6 +56,14 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget -qO- http://127.0.0.1:3001/cms/api/access > /dev/null 2>&1 || exit 1
 
-# Migrate (idempotent : no-op si déjà à jour) puis start. Les binaires
-# .bin/* sont des shell wrappers pnpm — on les appelle directement.
-CMD ["sh", "-c", "./node_modules/.bin/payload migrate && ./node_modules/.bin/next start -p 3001"]
+# Migrate puis seed puis start. Les trois sont idempotents :
+#   - `payload migrate` : no-op si le schéma est déjà à jour.
+#   - `seed-config.ts`   : ne pose que ce qui manque (compte racine si 0
+#     utilisateur, réglages/pages/thèmes absents) ; laisse tout le reste
+#     intact. Rejouable à chaque boot sans rien écraser. Le compte racine
+#     vient de SEED_ROOT_EMAIL/SEED_ROOT_PASSWORD (cf. compose.yml, posés
+#     dans Infisical) — une base neuve devient un site utilisable sans
+#     aucune étape manuelle. Une fois le compte créé, le seed n'a plus
+#     besoin de ces variables aux boots suivants.
+# Les binaires .bin/* sont des shell wrappers pnpm — on les appelle directement.
+CMD ["sh", "-c", "./node_modules/.bin/payload migrate && ./node_modules/.bin/tsx scripts/seed-config.ts && ./node_modules/.bin/next start -p 3001"]
