@@ -7,6 +7,7 @@
 import rss from '@astrojs/rss';
 import type { APIRoute } from 'astro';
 
+import { adresseSite } from '../lib/adresse';
 import { fetchIdentity, fetchSubscriptions, type FeedDoc } from '../lib/payload';
 import { fetchFeed, publicationHref } from '../lib/publications';
 
@@ -15,7 +16,7 @@ type SubscriptionsGlobal = { rssEnabled?: boolean };
 
 type Post = FeedDoc;
 
-export const GET: APIRoute = async (context) => {
+export const GET: APIRoute = async () => {
   // Flux RSS pilotable depuis Payload (Abonnements → Flux RSS activé).
   // Si décoché côté admin, on renvoie 404 — même URL, plus de contenu.
   try {
@@ -45,15 +46,13 @@ export const GET: APIRoute = async (context) => {
     console.warn('[rss] fetchIdentity failed:', (err as Error).message);
   }
 
-  if (!context.site) {
-    throw new Error(
-      'rss.xml.ts: context.site est undefined — vérifie que `site` est défini dans astro.config.mjs.',
-    );
-  }
   return rss({
     title: `${siteName} `,
     description: `${siteName} — publications de l’association. Auto-hébergé. Sans pisteur.`,
-    site: context.site,
+    // Lue à l'exécution : un flux distribue des liens absolus, et ils
+    // doivent porter le domaine qui sert le flux — pas celui qu'on
+    // connaissait en fabriquant l'image (cf. lib/adresse.ts).
+    site: adresseSite(),
     items: posts.map((p) => {
       return {
         title: p.title ?? '',

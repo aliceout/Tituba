@@ -23,6 +23,7 @@
  */
 import type { APIRoute } from 'astro';
 
+import { adresseSite } from '../lib/adresse';
 import { fetchAuthorsList, fetchCollection } from '../lib/payload';
 import { fetchFeed, publicationHref } from '../lib/publications';
 
@@ -55,13 +56,11 @@ function xml(v: unknown): string {
     .replace(/"/g, '&quot;');
 }
 
-export const GET: APIRoute = async (context) => {
-  if (!context.site) {
-    throw new Error(
-      'sitemap.xml.ts : context.site est undefined — vérifier `site` dans astro.config.mjs.',
-    );
-  }
-  const base = context.site.toString().replace(/\/$/, '');
+export const GET: APIRoute = async () => {
+  // Lue à l'exécution plutôt que figée à la construction : le plan d'un
+  // site doit porter le domaine sur lequel il est servi, pas celui qu'on
+  // connaissait en fabriquant l'image (cf. lib/adresse.ts).
+  const base = adresseSite();
 
   const entrees: Entree[] = PAGES_FIXES.map((chemin) => ({ chemin }));
 

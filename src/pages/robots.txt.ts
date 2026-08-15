@@ -25,13 +25,12 @@
  */
 import type { APIRoute } from 'astro';
 
-export const GET: APIRoute = (context) => {
-  if (!context.site) {
-    throw new Error(
-      'robots.txt.ts : context.site est undefined — vérifier `site` dans astro.config.mjs.',
-    );
-  }
-  const base = context.site.toString().replace(/\/$/, '');
+import { adresseSite } from '../lib/adresse';
+
+export const GET: APIRoute = () => {
+  // Lue à l'exécution, pas figée à la construction : la même image
+  // doit pouvoir servir n'importe quel domaine (cf. lib/adresse.ts).
+  const base = adresseSite();
 
   const corps = [
     'User-agent: *',

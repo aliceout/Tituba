@@ -18,13 +18,20 @@ WORKDIR /app
 
 RUN corepack enable
 
-# ADDRESS reçu en --build-arg depuis le workflow CI (Infisical → step
-# « Fetch build-time secrets » dans .github/workflows/build.yml). Promu
-# en ENV pour que `pnpm build` (donc astro.config.mjs → Astro.site) y
-# ait accès via process.env.ADDRESS. Baké dans dist/ : sitemap, RSS,
-# canonical URLs, JSON-LD.
-ARG ADDRESS
-ENV ADDRESS=$ADDRESS
+# Plus d'ADDRESS à la construction, et c'est le point : l'image ne
+# connaît pas le domaine qu'elle servira.
+#
+# Elle le recevait avant en --build-arg, et Astro le recopiait dans le
+# bundle — URL canoniques, flux RSS, plan du site, robots.txt. Une image
+# ne valait donc que pour un domaine, il fallait reconstruire pour en
+# changer, et la chaîne d'intégration devait connaître l'adresse pour
+# fabriquer quoi que ce soit. C'est ce qui a bloqué la première mise en
+# ligne : la CI n'arrivait pas à récupérer le domaine, donc elle ne
+# pouvait pas construire.
+#
+# Le site est rendu à la demande : ces cinq routes lisent maintenant
+# ADDRESS dans l'environnement du conteneur, au moment de répondre
+# (cf. src/lib/adresse.ts). La même image sert n'importe quel domaine.
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile

@@ -120,72 +120,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ─── Build-time secrets ──────────────────────────────────
-      # Deux modes mutuellement exclusifs détectés à l'exécution :
-      #   • Infisical (notre setup) : si INFISICAL_API_URL est défini
-      #     en GH secret, on fetch tout depuis Infisical cloud.
-      #   • Fallback GH secret (forks) : sinon, on lit ADDRESS depuis
-      #     un GH secret nommé ADDRESS. Suffit pour build une image
-      #     Docker out-of-the-box.
+      # ─── Aucun secret à récupérer avant de construire ────────
+      # Plus rien à récupérer avant de construire : l'image ne connaît
+      # pas le domaine qu'elle servira. Trois étapes vivaient ici —
+      # détection du coffre, lecture Infisical, repli sur un secret
+      # GitHub — et leur seul objet était de trouver ADDRESS pour le
+      # passer en --build-arg. Le site lit désormais cette adresse dans
+      # l'environnement du conteneur, au moment de répondre
+      # (cf. src/lib/adresse.ts), si bien que la construction du site
+      # n'a plus besoin d'aucun secret.
       #
-      # La détection passe par un step `run:` qui set un output
-      # booléen — on ne peut pas comparer un secret directement
-      # dans une condition `if:` (les secrets sont masqués).
-      # Cf issue #19.
-      - name: Detect secrets backend
-        id: detect
-        env:
-          INFISICAL_URL: ${{ secrets.INFISICAL_API_URL }}
-        run: |
-          if [ -n "$INFISICAL_URL" ]; then
-            echo "use_infisical=true" >> "$GITHUB_OUTPUT"
-            echo "→ Mode Infisical (INFISICAL_API_URL détecté)"
-          else
-            echo "use_infisical=false" >> "$GITHUB_OUTPUT"
-            echo "→ Mode GH secret (pas d'Infisical configuré)"
-          fi
-
-      # Mode Infisical — Auth Universal Auth via Machine Identity dédiée
-      # CI. Même instance Infisical Cloud que celle qui alimente le
-      # runtime VPS via deploy.sh ; tous deux fetchent sous le path
-      # /services/tituba (la CI lit la racine pour ADDRESS, le VPS
-      # itère sur chaque sous-dossier pour reconstruire le .env).
-      - name: Fetch build-time secrets from Infisical
-        if: steps.detect.outputs.use_infisical == 'true'
-        uses: Infisical/secrets-action@v1.0.7
-        with:
-          method: universal
-          domain: ${{ secrets.INFISICAL_API_URL }}
-          client-id: ${{ secrets.INFISICAL_CI_CLIENT_ID }}
-          client-secret: ${{ secrets.INFISICAL_CI_CLIENT_SECRET }}
-          # L'action exige `project-slug` (pas l'UUID). Le GH secret est
-          # nommé INFISICAL_PROJECT_ID pour des raisons historiques mais
-          # doit contenir le SLUG du projet (visible dans l'URL admin
-          # Infisical, ex. « tituba-ayz-p »).
-          project-slug: ${{ secrets.INFISICAL_PROJECT_ID }}
-          env-slug: prod
-          secret-path: /services/tituba
-          export-type: env
-
-      # Fallback fork — récupère ADDRESS depuis un GH secret unique.
-      # Si quelqu'un fork le repo, il lui suffit d'ajouter un secret
-      # nommé ADDRESS pour que le build de l'image web passe (cf README,
-      # section « Forker sans Infisical »).
-      - name: Read ADDRESS from GH secret (fallback)
-        if: steps.detect.outputs.use_infisical == 'false'
-        env:
-          ADDRESS_FROM_SECRET: ${{ secrets.ADDRESS }}
-        run: |
-          if [ -z "$ADDRESS_FROM_SECRET" ]; then
-            echo "::error::Pas d'Infisical configuré ET pas de GH secret ADDRESS — l'image Docker ne peut pas se build sans Astro.site valide."
-            exit 1
-          fi
-          echo "ADDRESS=$ADDRESS_FROM_SECRET" >> "$GITHUB_ENV"
-
-      # Récupère le commit court + le tag git le plus récent (ou le
-      # commit si aucun tag) pour l'affichage de version dans le
-      # footer site et l'admin Payload. `actions/checkout@v5` avec
-      # fetch-depth=0 ci-dessus nous donne l'historique complet.
+      # C'est ce qui bloquait la première mise en ligne : Infisical ne
+      # répondait pas, donc la CI ne pouvait pas construire — alors que
+      # la construction n'avait, au fond, aucune raison de dépendre du
+      # domaine.
       - name: Compute version info
         id: version
         run: |
@@ -197,11 +145,11 @@ jobs:
         with:
           context: .
           file: Dockerfile.site
-          # ADDRESS baké dans Astro.site au build (cf. astro.config.mjs).
-          # GIT_COMMIT / GIT_TAG affichés dans le footer du site.
-          # Reçus en ARG par le stage `builder` du Dockerfile.
+          # GIT_COMMIT / GIT_TAG affichés dans le pied de page du site.
+          # Reçus en ARG par le stage `builder` du Dockerfile. Ce sont
+          # les deux seules choses que l'image a besoin de savoir au
+          # moment où on la fabrique.
           build-args: |
-            ADDRESS=${{ env.ADDRESS }}
             GIT_COMMIT=${{ steps.version.outputs.commit }}
             GIT_TAG=${{ steps.version.outputs.tag }}
           push: true

@@ -25,6 +25,8 @@
  */
 import type { APIRoute } from 'astro';
 
+import { adresseSite } from '../../../lib/adresse';
+
 import {
   audioFileUrl,
   fetchIdentity,
@@ -84,12 +86,9 @@ export const GET: APIRoute = async (context) => {
       return new Response('Not found', { status: 404 });
     }
 
-    if (!context.site) {
-      throw new Error(
-        'series/[slug]/rss.xml.ts : context.site est undefined — vérifier `site` dans astro.config.mjs.',
-      );
-    }
-    const base = context.site.toString().replace(/\/$/, '');
+    // Lue à l'exécution, pas figée à la construction : la même image
+    // doit pouvoir servir n'importe quel domaine (cf. lib/adresse.ts).
+    const base = adresseSite();
 
     let siteName = 'Tituba';
     let authorName = '';
